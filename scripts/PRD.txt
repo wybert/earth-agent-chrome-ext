@@ -1,0 +1,265 @@
+<context>
+# Overview  
+The Google Earth Engine Agent is a Chrome extension that provides an AI-powered assistant specifically designed for the Google Earth Engine (GEE) code editor. It aims to solve the steep learning curve associated with GEE by enabling users to interact with the platform using natural language, generating code, querying datasets, debugging issues, and interpreting results. The extension targets GIS specialists, remote sensing professionals, environmental scientists, and students working with geospatial data.
+
+# Core Features  
+1. **AI-Powered Chat Interface**
+   - Provides a conversational interface for interacting with GEE
+   - Allows users to express their geospatial analysis needs in natural language
+   - Streams AI agent responses in real-time with visible thinking processes
+
+2. **GEE Dataset Catalog Search**
+   - Queries the extensive GEE dataset catalog to find relevant Earth observation data
+   - Helps users discover appropriate datasets for their specific analysis needs
+   - Provides metadata and usage examples for selected datasets
+
+3. **Code Generation and Execution**
+   - Converts natural language descriptions into executable GEE JavaScript code
+   - Inserts generated code into the GEE code editor with user permission
+   - Executes code and monitors results directly from the extension
+
+4. **Debugging and Console Integration**
+   - Captures and interprets console output and error messages
+   - Suggests fixes for common errors in GEE code
+   - Provides explanations of error messages in plain language
+
+5. **Map and Results Visualization**
+   - Takes screenshots of maps and charts for record-keeping
+   - Analyzes and summarizes visual outputs in natural language
+   - Assists in interpreting complex visualization results
+
+6. **Script Organization and Management**
+   - Creates and organizes JavaScript files for better code management
+   - Provides templates and patterns for common GEE operations
+   - Helps structure code according to best practices
+
+# User Experience  
+1. **User Personas**
+   - **Novice GEE Users**: Students and researchers new to Earth Engine who need guidance on basic operations and code structure
+   - **Intermediate Users**: Environmental scientists and GIS specialists who need help with complex analyses and optimizing code
+   - **Advanced Users**: Remote sensing experts who want to streamline workflows and automate repetitive tasks
+
+2. **Key User Flows**
+   - User opens GEE code editor and activates the extension
+   - User asks a question or describes an analysis goal in natural language
+   - Agent thinks through the problem and suggests a solution with appropriate code
+   - User reviews and approves code insertion and execution
+   - Agent helps interpret results and refine the analysis through iterative conversation
+
+3. **UI/UX Considerations**
+   - Side panel interface that doesn't obstruct the GEE editor workspace
+   - Clear distinction between agent thinking and actionable recommendations
+   - Streamlined approval process for code insertion and execution
+   - Visual indicators for agent status and processing
+   - Persistent chat history for reference and context
+</context>
+<PRD>
+# Technical Architecture  
+1. **System Components**
+   - **Chrome Extension Framework**
+     - Background script for managing extension lifecycle and messaging
+     - Content scripts for interacting with the GEE code editor DOM
+     - Side panel UI for chat interface and agent interaction
+
+   - **AI Agent Framework**
+     - Vercel AI SDK for agent development and tool orchestration
+     - Integration with user-provided LLM API keys
+     - Memory and context management system
+
+   - **GEE Integration Components**
+     - Dataset catalog API access and search capabilities
+     - Code editor interaction through DOM manipulation
+     - Console output capture and analysis
+     - Map and visualization interaction tools
+
+2. **Data Models**
+   - **Conversation Model**
+     - User messages and agent responses
+     - Context and memory storage
+     - Session state and history
+
+   - **Tool Schema**
+     - Database search parameters and results
+     - Code generation inputs and outputs
+     - Map inspection data structures
+     - Console log patterns and error types
+
+   - **Settings Model**
+     - API key storage and management
+     - User preferences and system prompts
+     - Mode selections (chat vs. agent)
+
+3. **APIs and Integrations**
+   - **LLM Integration**
+     - Connection to user-provided API keys
+     - Prompt engineering for geospatial analysis
+     - Streaming response handling
+
+   - **GEE API Integration**
+     - Access to Earth Engine JavaScript API documentation
+     - Dataset catalog integration via external resources
+     - Code editor interaction through DOM API
+
+   - **Chrome Extension APIs**
+     - Storage API for settings and chat history
+     - Side Panel API for UI rendering
+     - Message passing between extension components
+
+4. **Infrastructure Requirements**
+   - **Client-Side Processing**
+     - Extension runs entirely on the client side
+     - No server-side components required for core functionality
+     - Local storage for settings and history
+
+   - **Security Considerations**
+     - Secure storage of API keys
+     - Content security policy implementation
+     - Permission scoping to GEE domain only
+
+# Development Roadmap  
+1. **Phase 1: MVP Foundation**
+   - **Basic Extension Structure**
+     - Chrome extension setup with manifest and permissions
+     - Side panel UI with simple chat interface
+     - Basic message passing between components
+
+   - **Core Chat Functionality**
+     - Basic agent integration with LLM
+     - Simple prompt handling for GEE questions
+     - Static responses without tool usage
+
+   - **Initial GEE Integration**
+     - Basic code editor detection
+     - Simple code insertion capability
+     - Run button interaction
+
+2. **Phase 2: Essential Tools and UI Enhancements**
+   - **Tool Implementation**
+     - Database search tool for finding GEE datasets
+     - Code generation tool for basic GEE operations
+     - Console output capture and basic error detection
+
+   - **Enhanced UI**
+     - Streaming responses with thinking visualization
+     - Action buttons for code insertion and execution
+     - Settings panel for API key configuration
+
+   - **Agent Capabilities**
+     - Basic memory for maintaining conversation context
+     - Enhanced prompting for GEE-specific tasks
+     - Improved error handling and debugging suggestions
+
+3. **Phase 3: Advanced Features and Polish**
+   - **Advanced Tools**
+     - Map inspection and data extraction
+     - Screenshot capture and analysis
+     - Script management and organization
+
+   - **Advanced Agent Capabilities**
+     - Dual mode operation (chat vs. agent)
+     - Complex reasoning for multi-step GEE workflows
+     - Enhanced memory and context management
+
+   - **UI Polish and Optimization**
+     - Responsive design and animations
+     - Performance optimizations
+     - Comprehensive error handling and recovery
+
+4. **Phase 4: Integration and Extension**
+   - **MCP Tools Integration**
+     - Integration with Model Context Protocol
+     - Enhanced tool framework
+     - Support for custom tool creation
+
+   - **Advanced Visualization Support**
+     - Interactive result exploration
+     - Enhanced chart and map interpretation
+     - Comparative visualization capabilities
+
+   - **Documentation and Examples**
+     - Comprehensive user documentation
+     - Example prompts and workflows
+     - Tutorial content and guides
+
+# Logical Dependency Chain
+1. **Foundation First**
+   - Chrome extension structure and permissions setup
+   - Basic UI framework and side panel implementation
+   - Simple message passing between components
+
+2. **Functional Chat Interface**
+   - LLM integration with basic prompting
+   - Chat UI with message history
+   - Settings storage for API keys
+
+3. **Basic GEE Integration**
+   - Content script for GEE editor detection
+   - Simple DOM interaction for code insertion
+   - Run button interaction for code execution
+
+4. **Tool Development Sequence**
+   - Database search (catalog access)
+   - Code generation (text to GEE code)
+   - Code insertion and execution
+   - Console monitoring
+   - Map inspection
+   - Screenshot and analysis
+   - Script management
+
+5. **Agent Enhancement Path**
+   - Basic QA capabilities
+   - Memory and context management
+   - Thinking process visualization
+   - Mode switching (chat vs. agent)
+   - Advanced reasoning for complex workflows
+
+6. **Polish and Optimization**
+   - UI refinements and animations
+   - Performance optimization
+   - Error handling improvements
+   - Documentation and examples
+
+# Risks and Mitigations  
+1. **Technical Challenges**
+   - **DOM Interaction Complexity**
+     - Risk: GEE editor DOM structure may change or be difficult to interact with
+     - Mitigation: Use robust selectors, implement fallback mechanisms, regular testing
+
+   - **LLM Performance for GEE Tasks**
+     - Risk: General LLMs may not perform well on specialized GEE tasks
+     - Mitigation: Develop specialized prompting, provide context about GEE, consider fine-tuning
+
+   - **Browser API Limitations**
+     - Risk: Chrome extension APIs may limit certain interaction capabilities
+     - Mitigation: Design within API constraints, use content scripts where appropriate
+
+2. **MVP Scoping**
+   - **Feature Prioritization**
+     - Risk: Attempting to build too many features at once
+     - Mitigation: Focus on core search, code generation, and execution first; add advanced features later
+
+   - **Initial User Value**
+     - Risk: MVP may not provide sufficient value to justify adoption
+     - Mitigation: Ensure even basic version can help with common GEE tasks like dataset discovery and simple code generation
+
+3. **Resource Constraints**
+   - **Development Complexity**
+     - Risk: Complex integration between extension, GEE, and AI components
+     - Mitigation: Modular architecture, clear interfaces between components
+
+   - **Performance Overhead**
+     - Risk: Extension may impact GEE editor performance
+     - Mitigation: Optimize processing, use background tasks where possible, efficient DOM operations
+
+# Appendix  
+1. **Research Findings**
+   - GEE has over 800 functions and more than 30 petabytes of geospatial data
+   - Common user challenges include finding appropriate datasets, code syntax, and understanding error messages
+   - Most GEE users prefer JavaScript over Python for direct interaction with the platform
+
+2. **Technical Specifications**
+   - GEE uses an ACE editor for code editing
+   - The platform supports asynchronous operations and requires specific patterns for effective processing
+   - Chrome Extension Manifest V3 requirements and limitations apply to this project
+   - Integration with the GEE Code Editor at https://code.earthengine.google.com/
+</PRD> 
