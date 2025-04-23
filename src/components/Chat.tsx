@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useChat } from 'ai/react';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { Send, Settings as SettingsIcon, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Message } from 'ai';
 import { Settings } from './Settings';
+import { ExtensionMessage } from '@/types/extension';
 
 // Chrome storage keys
 const STORAGE_KEY = 'earth_engine_chat_history';
@@ -20,44 +22,84 @@ const WELCOME_MESSAGE: Message = {
   content: 'Hello! I\'m your Earth Engine Assistant. How can I help you with Earth Engine today?'
 };
 
-// Earth Engine system prompt with domain expertise
-const GEE_SYSTEM_PROMPT = `You are Earth Engine Assistant, an AI specialized in Google Earth Engine (GEE) geospatial analysis.
-
-Your capabilities:
-- Provide code examples for GEE tasks like image processing, classification, and visualization
-- Explain Earth Engine concepts, APIs, and best practices
-- Help troubleshoot Earth Engine code issues
-- Recommend appropriate datasets and methods for geospatial analysis
-
-Instructions:
-- Always provide code within backticks: \`code\`
-- Format Earth Engine code with proper JavaScript/Python syntax
-- When suggesting large code blocks, include comments explaining key steps
-- Cite specific Earth Engine functions and methods when relevant
-- For complex topics, break down explanations step-by-step
-- If you're unsure about something, acknowledge limitations rather than providing incorrect information
-
-Common Earth Engine patterns:
-- Image and collection loading: ee.Image(), ee.ImageCollection()
-- Filtering: .filterDate(), .filterBounds()
-- Reducing: .reduce(), .mean(), .median()
-- Visualization: Map.addLayer(), ui.Map(), ui.Chart()
-- Classification: .classify(), ee.Classifier.randomForest()
-- Exporting: Export.image.toDrive(), Export.table.toAsset()
-
-Speak in a helpful, educational tone while providing practical guidance for Earth Engine tasks.`;
-
 export function Chat() {
   const [showSettings, setShowSettings] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic'>('openai');
   const [fallbackMode, setFallbackMode] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Vercel AI SDK's useChat hook with edge runtime streaming support
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    isLoading,
+    error,
+    setMessages,
+    reload,
+    stop
+  } = useChat({
+    api: `chrome-extension://${chrome.runtime.id}/api/chat`,
+    initialMessages: [WELCOME_MESSAGE],
+    body: {
+      apiKey,
+      provider: apiProvider
+    },
+    onResponse(response) {
+      // Handle streaming response
+      if (response.body) {
+        const reader = response.body.getReader();
+        // Process the stream
+        (async () => {
+          try {
+            const decoder = new TextDecoder();
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                setIsTyping(false);
+                break;
+              }
+              // Only try to decode if value is an ArrayBuffer
+              if (value instanceof Uint8Array) {
+                const text = decoder.decode(value, { stream: true });
+                console.log('Received chunk:', text);
+                // Update the last message with the new chunk
+                setMessages(prev => {
+                  const lastMessage = prev[prev.length - 1];
+                  if (lastMessage?.role === 'assistant') {
+                    return [
+                      ...prev.slice(0, -1),
+                      { ...lastMessage, content: lastMessage.content + text }
+                    ];
+                  }
+                  return [...prev, { id: Date.now().toString(), role: 'assistant', content: text }];
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error reading stream:', error);
+            setFallbackMode(true);
+          }
+        })();
+      }
+    },
+    onFinish: () => {
+      setIsTyping(false);
+    },
+    onError: (error) => {
+      console.error("Chat API error:", error);
+      setFallbackMode(true);
+    }
+  });
+  
+  // Local state for fallback mode
+  const [localMessages, setLocalMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [localInput, setLocalInput] = useState('');
+  const [isLocalLoading, setIsLocalLoading] = useState(false);
 
   // Check if API key is configured on component mount
   useEffect(() => {
@@ -79,94 +121,28 @@ export function Chat() {
     chrome.storage.local.get([STORAGE_KEY], (result) => {
       const savedMessages = result[STORAGE_KEY];
       if (savedMessages && savedMessages.length > 0) {
+        setLocalMessages(savedMessages);
         setMessages(savedMessages);
       }
     });
-  }, []);
+  }, [setMessages]);
 
   // Save messages to Chrome storage whenever they change
   useEffect(() => {
-    if (messages.length > 0) {
-      chrome.storage.local.set({ [STORAGE_KEY]: messages });
+    // Save whichever messages are currently active
+    const messagesToSave = fallbackMode ? localMessages : messages;
+    
+    if (messagesToSave.length > 0) {
+      chrome.storage.local.set({ [STORAGE_KEY]: messagesToSave });
     }
-  }, [messages]);
+  }, [messages, localMessages, fallbackMode]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
-
-  // Direct API call to OpenAI
-  const callOpenAI = async (messages: Message[]) => {
-    try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            { role: 'system', content: GEE_SYSTEM_PROMPT },
-            ...messages.map(msg => ({
-              role: msg.role,
-              content: msg.content
-            }))
-          ],
-          temperature: 0.2,
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Error calling OpenAI API');
-      }
-
-      const data = await response.json();
-      return data.choices[0].message.content;
-    } catch (error: any) {
-      console.error('OpenAI API error:', error);
-      throw error;
-    }
-  };
-
-  // Direct API call to Anthropic
-  const callAnthropic = async (messages: Message[]) => {
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-haiku-20240307',
-          max_tokens: 4000,
-          system: GEE_SYSTEM_PROMPT,
-          messages: messages.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          temperature: 0.2,
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Error calling Anthropic API');
-      }
-
-      const data = await response.json();
-      return data.content[0].text;
-    } catch (error: any) {
-      console.error('Anthropic API error:', error);
-      throw error;
-    }
-  };
+  }, [messages, localMessages, isTyping]);
 
   // Format message content to properly render code blocks
   const formatMessageContent = (content: string) => {
@@ -221,152 +197,185 @@ export function Chat() {
     return "I can help with Earth Engine tasks like image processing, classification, and data export. Could you provide more details about what you're trying to do?";
   };
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle fallback form submission
+  const handleLocalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim() || isLoading) return;
+    if (!localInput.trim() || isLocalLoading) return;
     
     // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: localInput.trim(),
     };
     
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+    setLocalMessages(prev => [...prev, userMessage]);
+    setLocalInput('');
+    setIsLocalLoading(true);
     
-    if (fallbackMode) {
-      // Generate a response with a slight delay to simulate processing
-      setTimeout(() => {
-        const response = getGeeResponse(userMessage.content);
-        
-        // Add assistant message
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: response,
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-        setIsLoading(false);
-      }, 1000);
-    } else {
-      try {
-        // Send to the appropriate API based on provider
-        const allMessages = [...messages, userMessage]; // Include the new user message
-        let responseContent: string;
-        
-        if (apiProvider === 'openai') {
-          responseContent = await callOpenAI(allMessages);
-        } else {
-          responseContent = await callAnthropic(allMessages);
-        }
-        
-        // Add assistant message
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: responseContent,
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-        setErrorMessage(null);
-      } catch (error: any) {
-        console.error("Chat API error:", error);
-        setErrorMessage(error.message || "Error connecting to AI service");
-        
-        // Add a fallback response
-        const fallbackMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "I'm having trouble connecting to the AI service. Please check your API key in settings or try again later.",
-        };
-        
-        setMessages(prev => [...prev, fallbackMessage]);
-        
-        // Switch to fallback mode for API errors
-        if (error.message?.includes('API key') || error.message?.includes('auth')) {
-          setFallbackMode(true);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    }
+    // Generate a response with a slight delay to simulate processing
+    setTimeout(() => {
+      const response = getGeeResponse(userMessage.content);
+      
+      // Add assistant message
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response,
+      };
+      
+      setLocalMessages(prev => [...prev, assistantMessage]);
+      setIsLocalLoading(false);
+    }, 1000);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+  const handleLocalInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalInput(e.target.value);
+  };
+
+  // Set up port connection to background script
+  const [port, setPort] = useState<chrome.runtime.Port | null>(null);
+  const [currentStreamingMessage, setCurrentStreamingMessage] = useState<Message | null>(null);
+
+  // Initialize port connection
+  useEffect(() => {
+    const newPort = chrome.runtime.connect({ name: 'sidepanel' });
+    
+    newPort.onMessage.addListener((response: any) => {
+      switch (response.type) {
+        case 'CHAT_RESPONSE':
+          // Handle non-streaming response
+          if (!currentStreamingMessage) {
+            const userMessage: Message = {
+              id: Date.now().toString(),
+              role: 'user',
+              content: input.trim()
+            };
+
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: response.data?.choices?.[0]?.message?.content || 
+                       response.data?.content || 
+                       'Sorry, I could not generate a response.'
+            };
+
+            setMessages(prev => [...prev, userMessage, assistantMessage]);
+          }
+          setIsTyping(false);
+          setCurrentStreamingMessage(null);
+          break;
+
+        case 'CHAT_STREAM_CHUNK':
+          // Handle streaming chunk
+          if (!currentStreamingMessage) {
+            // Add user message if this is the first chunk
+            const userMessage: Message = {
+              id: Date.now().toString(),
+              role: 'user',
+              content: input.trim()
+            };
+            setMessages(prev => [...prev, userMessage]);
+            
+            // Create new streaming message
+            const newMessage: Message = {
+              id: response.requestId,
+              role: 'assistant',
+              content: response.chunk
+            };
+            setCurrentStreamingMessage(newMessage);
+          } else {
+            // Update existing streaming message
+            setCurrentStreamingMessage(prev => prev ? {
+              ...prev,
+              content: prev.content + response.chunk
+            } : null);
+          }
+          break;
+
+        case 'CHAT_STREAM_END':
+          // Finalize streaming message
+          if (currentStreamingMessage) {
+            setMessages(prev => [...prev, currentStreamingMessage]);
+            setCurrentStreamingMessage(null);
+          }
+          setIsTyping(false);
+          break;
+
+        case 'ERROR':
+          console.error('Chat API error:', response.error);
+          setFallbackMode(true);
+          setIsTyping(false);
+          setCurrentStreamingMessage(null);
+          break;
+      }
+    });
+
+    newPort.onDisconnect.addListener(() => {
+      console.log('Disconnected from background script');
+      setPort(null);
+      setFallbackMode(true);
+      setCurrentStreamingMessage(null);
+    });
+
+    setPort(newPort);
+
+    return () => {
+      newPort.disconnect();
+    };
+  }, []);
+
+  // Custom submit handler that uses port messaging
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading || !port) return;
+
+    setIsTyping(true);
+    setCurrentStreamingMessage(null);
+    
+    try {
+      // Send message through port
+      const message: ExtensionMessage = {
+        type: 'CHAT_MESSAGE',
+        message: input.trim(),
+        apiKey,
+        provider: apiProvider
+      };
+
+      port.postMessage(message);
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      setFallbackMode(true);
+      setIsTyping(false);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e);
+      if (fallbackMode) {
+        handleLocalSubmit(e);
+      } else {
+        handleChatSubmit(e);
+      }
     }
   };
 
-  const handleRegenerate = async () => {
-    if (messages.length >= 2 && !isLoading) {
-      // Find the index of the last user message
-      let lastUserMessageIndex = -1;
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'user') {
-          lastUserMessageIndex = i;
-          break;
-        }
-      }
-      
-      if (lastUserMessageIndex !== -1) {
-        setIsLoading(true);
-        setErrorMessage(null);
-        
-        // Keep messages up to and including the last user message
-        const updatedMessages = messages.slice(0, lastUserMessageIndex + 1);
-        setMessages(updatedMessages);
-        
-        try {
-          // Send to the appropriate API based on provider
-          let responseContent: string;
-          
-          if (apiProvider === 'openai') {
-            responseContent = await callOpenAI(updatedMessages);
-          } else {
-            responseContent = await callAnthropic(updatedMessages);
-          }
-          
-          // Add new assistant message
-          const assistantMessage: Message = {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: responseContent,
-          };
-          
-          setMessages([...updatedMessages, assistantMessage]);
-        } catch (error: any) {
-          console.error("Regeneration error:", error);
-          setErrorMessage(error.message || "Error regenerating response");
-          
-          // Add a fallback response
-          const fallbackMessage: Message = {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: "I'm having trouble regenerating a response. Please check your API key in settings or try again later.",
-          };
-          
-          setMessages([...updatedMessages, fallbackMessage]);
-        } finally {
-          setIsLoading(false);
-        }
-      }
+  const handleRegenerate = () => {
+    if (messages.length >= 2) {
+      setIsTyping(true);
+      reload();
     }
+  };
+
+  const handleStopGenerating = () => {
+    stop();
+    setIsTyping(false);
   };
 
   const handleRetryAPI = () => {
     setFallbackMode(false);
-    setErrorMessage(null);
   };
   
   if (showSettings) {
@@ -380,14 +389,23 @@ export function Chat() {
         setApiProvider(result[API_PROVIDER_STORAGE_KEY] || 'openai');
         
         if (hasApiKey) {
-          setFallbackMode(false); // Try to use API again if key was added
-          setErrorMessage(null);
+          setFallbackMode(false);
         } else {
           setFallbackMode(true);
         }
       });
     }} />;
   }
+
+  // Display messages including current streaming message
+  const displayMessages = [
+    ...fallbackMode ? localMessages : messages,
+    ...(currentStreamingMessage ? [currentStreamingMessage] : [])
+  ];
+  const currentInput = fallbackMode ? localInput : input;
+  const currentInputHandler = fallbackMode ? handleLocalInputChange : handleInputChange;
+  const currentSubmitHandler = fallbackMode ? handleLocalSubmit : handleChatSubmit;
+  const currentLoading = fallbackMode ? isLocalLoading : isLoading;
 
   return (
     <Card className="w-full h-[600px] grid grid-rows-[auto,1fr,auto]">
@@ -405,7 +423,7 @@ export function Chat() {
       
       <ScrollArea className="p-4">
         <div className="space-y-4">
-          {messages.map((message) => (
+          {displayMessages.map((message) => (
             <div
               key={message.id}
               className={cn(
@@ -419,9 +437,19 @@ export function Chat() {
             </div>
           ))}
 
-          {errorMessage && !fallbackMode && (
+          {isTyping && !fallbackMode && (
+            <div className="flex items-center gap-2 p-3 text-sm bg-muted rounded-lg w-max">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          )}
+
+          {error && !fallbackMode && (
             <div className="flex items-center gap-2 p-2 text-sm text-red-500 bg-red-50 rounded-md">
-              <span>{errorMessage}</span>
+              <span>{error.message || "Error connecting to AI service"}</span>
               <div className="flex gap-2 ml-auto">
                 <Button 
                   variant="outline" 
@@ -460,7 +488,7 @@ export function Chat() {
       </ScrollArea>
       
       <form
-        onSubmit={handleSubmit}
+        onSubmit={currentSubmitHandler}
         className="p-4 flex items-center gap-2 border-t"
       >
         <Textarea
@@ -469,20 +497,72 @@ export function Chat() {
             ? "Ask about Earth Engine..." 
             : "Configure API key in Settings to use AI features..."
           }
-          value={input}
-          onChange={handleInputChange}
+          value={currentInput}
+          onChange={currentInputHandler}
           onKeyDown={handleKeyDown}
-          disabled={isLoading || (!apiConfigured && !fallbackMode)}
+          disabled={currentLoading || (!apiConfigured && !fallbackMode)}
         />
-        <Button
-          type="submit"
-          size="icon"
-          disabled={isLoading || (!apiConfigured && !fallbackMode) || !input.trim()}
-        >
-          <Send className="h-4 w-4" />
-          {isLoading && <span className="sr-only">Sending...</span>}
-        </Button>
+        {currentLoading && !fallbackMode ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="destructive"
+            onClick={handleStopGenerating}
+          >
+            <span className="sr-only">Stop generating</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><rect width="6" height="16" x="9" y="4"/></svg>
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            size="icon"
+            disabled={currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim()}
+          >
+            <Send className="h-4 w-4" />
+            <span className="sr-only">Send message</span>
+          </Button>
+        )}
       </form>
+
+      <style>{`
+        .typing-indicator {
+          display: flex;
+          align-items: center;
+        }
+        
+        .typing-indicator span {
+          height: 8px;
+          width: 8px;
+          margin: 0 2px;
+          background-color: #9ca3af;
+          border-radius: 50%;
+          display: inline-block;
+          animation: typing 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-indicator span:nth-child(1) {
+          animation-delay: 0s;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+          0%, 100% {
+            transform: scale(0.6);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </Card>
   );
 }
