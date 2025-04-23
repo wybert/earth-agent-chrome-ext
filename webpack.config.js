@@ -8,7 +8,7 @@ module.exports = {
   entry: {
     background: './src/background/index.ts',
     content: './src/content/index.ts',
-    sidepanel: './src/sidepanel/index.ts'
+    sidepanel: './src/sidepanel/index.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -24,7 +24,21 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader']
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [
+                  'tailwindcss',
+                  'autoprefixer',
+                ],
+              },
+            },
+          },
+        ],
       }
     ]
   },
