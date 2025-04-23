@@ -22,6 +22,41 @@ chrome.action.onClicked.addListener(async (tab) => {
   }
 });
 
+// Validate server identity with better error handling
+async function validateServerIdentity(host: string, port: number): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(`http://${host}:${port}/.identity`, {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      console.error(`Invalid server response: ${response.status}`);
+      return false;
+    }
+
+    const identity = await response.json();
+
+    // Validate the server signature
+    if (identity && identity.signature === "mcp-browser-connector-24x7") {
+      return true;
+    } else {
+      console.error("Invalid server signature - not the browser tools server");
+      return false;
+    }
+  } catch (error) {
+    // Handle network errors more gracefully
+    console.error("Error validating server identity:", error);
+    
+    // Don't throw an error, just return false if we can't connect
+    return false;
+  }
+}
+
 // Handle messages from content script or side panel
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   console.log('Background script received message:', message);
@@ -30,6 +65,19 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     case 'INIT':
       // Handle initialization
       sendResponse({ status: 'initialized' });
+      break;
+    
+    case 'VALIDATE_SERVER':
+      if (message.payload && message.payload.host && message.payload.port) {
+        validateServerIdentity(message.payload.host, message.payload.port)
+          .then(isValid => {
+            sendResponse({ isValid });
+          })
+          .catch(error => {
+            sendResponse({ isValid: false, error: error.message });
+          });
+        return true; // Will respond asynchronously
+      }
       break;
     
     default:
@@ -55,4 +103,4 @@ chrome.runtime.onConnect.addListener((port) => {
       console.log('Side panel disconnected');
     });
   }
-}); 
+});
