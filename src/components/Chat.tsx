@@ -8,7 +8,7 @@ import { Send, Settings as SettingsIcon, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Message } from 'ai';
 import { Settings } from './Settings';
-import { ExtensionMessage } from '@/types/extension';
+import { ExtensionMessage } from '../types/extension';
 
 // Chrome storage keys
 const STORAGE_KEY = 'earth_engine_chat_history';
