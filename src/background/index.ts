@@ -1,9 +1,11 @@
 import { handleChatRoute } from './routes';
+import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 
 // Types for messages between components
 interface Message {
   type: string;
   payload?: any;
+  [key: string]: any; // Allow for additional properties
 }
 
 // Handle extension icon click
@@ -101,6 +103,92 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
         return true; // Will respond asynchronously
       }
       break;
+    
+    // Handle Context7 API requests
+    case 'CONTEXT7_RESOLVE_LIBRARY_ID':
+      (async () => {
+        try {
+          console.log('Resolving library ID for:', message.libraryName);
+          const result = await resolveLibraryId(message.libraryName);
+          console.log('Resolve result:', result);
+          sendResponse(result);
+        } catch (error) {
+          console.error('Error resolving library ID:', error);
+          sendResponse({
+            success: false,
+            libraryId: null,
+            message: `Error resolving library ID: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+      
+    case 'CONTEXT7_GET_DOCUMENTATION':
+      (async () => {
+        try {
+          console.log('Getting documentation for:', message.libraryId, message.topic);
+          const result = await getDocumentation(
+            message.libraryId,
+            message.topic
+          );
+          console.log('Documentation result:', result.success, result.content?.substring(0, 50));
+          sendResponse(result);
+        } catch (error) {
+          console.error('Error getting documentation:', error);
+          sendResponse({
+            success: false,
+            content: null,
+            message: `Error getting documentation: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+    
+    case 'CONTEXT7_DATASET_INFO':
+      (async () => {
+        try {
+          console.log('Getting dataset info for:', message.topic);
+          
+          // First, search for the dataset
+          const searchResult = await resolveLibraryId(`Earth Engine ${message.topic}`);
+          
+          if (!searchResult.success || !searchResult.libraryId) {
+            sendResponse({
+              success: false,
+              message: `Could not find documentation for "${message.topic}". ${searchResult.message || ''}`,
+              alternatives: searchResult.alternatives,
+            });
+            return;
+          }
+          
+          // Then get documentation
+          const docResult = await getDocumentation(
+            searchResult.libraryId,
+            message.topic
+          );
+          
+          if (!docResult.success || !docResult.content) {
+            sendResponse({
+              success: false,
+              message: `Could not find documentation for topic "${message.topic}". ${docResult.message || ''}`,
+            });
+            return;
+          }
+          
+          sendResponse({
+            success: true,
+            content: docResult.content,
+            message: `Documentation found for topic: ${message.topic}`,
+          });
+        } catch (error) {
+          console.error('Error getting dataset info:', error);
+          sendResponse({
+            success: false,
+            message: `Error retrieving Earth Engine documentation: ${error instanceof Error ? error.message : String(error)}`,
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
     
     default:
       console.warn('Unknown message type:', message.type);

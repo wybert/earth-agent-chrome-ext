@@ -8,7 +8,8 @@
     "storage"
   ],
   "host_permissions": [
-    "https://code.earthengine.google.com/*"
+    "https://code.earthengine.google.com/*",
+    "https://context7.com/*"
   ],
   "action": {
     "default_icon": {

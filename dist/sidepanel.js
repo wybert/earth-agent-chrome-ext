@@ -5922,11 +5922,17 @@ video {
 .static {
   position: static;
 }
+.fixed {
+  position: fixed;
+}
 .absolute {
   position: absolute;
 }
 .relative {
   position: relative;
+}
+.inset-0 {
+  inset: 0px;
 }
 .inset-y-0 {
   top: 0px;
@@ -5934,6 +5940,9 @@ video {
 }
 .right-0 {
   right: 0px;
+}
+.z-50 {
+  z-index: 50;
 }
 .mx-auto {
   margin-left: auto;
@@ -6018,6 +6027,12 @@ video {
 .h-full {
   height: 100%;
 }
+.max-h-60 {
+  max-height: 15rem;
+}
+.max-h-\\[90vh\\] {
+  max-height: 90vh;
+}
 .min-h-\\[60px\\] {
   min-height: 60px;
 }
@@ -6026,6 +6041,9 @@ video {
 }
 .w-10 {
   width: 2.5rem;
+}
+.w-11\\/12 {
+  width: 91.666667%;
 }
 .w-2 {
   width: 0.5rem;
@@ -6051,6 +6069,9 @@ video {
 .w-max {
   width: -moz-max-content;
   width: max-content;
+}
+.max-w-3xl {
+  max-width: 48rem;
 }
 .max-w-\\[98\\%\\] {
   max-width: 98%;
@@ -6102,6 +6123,11 @@ video {
 .gap-2 {
   gap: 0.5rem;
 }
+.space-x-2 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-x-reverse: 0;
+  margin-right: calc(0.5rem * var(--tw-space-x-reverse));
+  margin-left: calc(0.5rem * calc(1 - var(--tw-space-x-reverse)));
+}
 .space-y-1\\.5 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-y-reverse: 0;
   margin-top: calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));
@@ -6111,6 +6137,9 @@ video {
   --tw-space-y-reverse: 0;
   margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+}
+.overflow-auto {
+  overflow: auto;
 }
 .overflow-hidden {
   overflow: hidden;
@@ -6172,6 +6201,14 @@ video {
 .bg-background {
   background-color: hsl(var(--background));
 }
+.bg-black {
+  --tw-bg-opacity: 1;
+  background-color: rgb(0 0 0 / var(--tw-bg-opacity, 1));
+}
+.bg-blue-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));
+}
 .bg-border {
   background-color: hsl(var(--border));
 }
@@ -6183,6 +6220,10 @@ video {
 }
 .bg-destructive\\/10 {
   background-color: hsl(var(--destructive) / 0.1);
+}
+.bg-gray-100 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
 }
 .bg-gray-200 {
   --tw-bg-opacity: 1;
@@ -6204,8 +6245,19 @@ video {
 .bg-primary {
   background-color: hsl(var(--primary));
 }
+.bg-red-100 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 226 226 / var(--tw-bg-opacity, 1));
+}
 .bg-secondary {
   background-color: hsl(var(--secondary));
+}
+.bg-white {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+.bg-opacity-50 {
+  --tw-bg-opacity: 0.5;
 }
 .p-0 {
   padding: 0px;
@@ -6244,6 +6296,10 @@ video {
 .px-8 {
   padding-left: 2rem;
   padding-right: 2rem;
+}
+.py-1 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 .py-2 {
   padding-top: 0.5rem;
@@ -6322,6 +6378,10 @@ video {
   --tw-text-opacity: 1;
   color: rgb(75 85 99 / var(--tw-text-opacity, 1));
 }
+.text-gray-700 {
+  --tw-text-opacity: 1;
+  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
+}
 .text-green-600 {
   --tw-text-opacity: 1;
   color: rgb(22 163 74 / var(--tw-text-opacity, 1));
@@ -6339,6 +6399,10 @@ video {
   --tw-text-opacity: 1;
   color: rgb(220 38 38 / var(--tw-text-opacity, 1));
 }
+.text-red-800 {
+  --tw-text-opacity: 1;
+  color: rgb(153 27 27 / var(--tw-text-opacity, 1));
+}
 .text-secondary-foreground {
   color: hsl(var(--secondary-foreground));
 }
@@ -6352,6 +6416,11 @@ video {
 .shadow {
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.shadow-lg {
+  --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 .shadow-none {
@@ -6409,6 +6478,9 @@ video {
 .delay-300 {
   animation-delay: 300ms;
 }
+.running {
+  animation-play-state: running;
+}
 
 /* Global component styles */
 
@@ -6447,8 +6519,18 @@ video {
   background-color: hsl(var(--accent));
 }
 
+.hover\\:bg-blue-700:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
+}
+
 .hover\\:bg-destructive\\/90:hover {
   background-color: hsl(var(--destructive) / 0.9);
+}
+
+.hover\\:bg-gray-200:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
 }
 
 .hover\\:bg-gray-300:hover {
@@ -6470,6 +6552,11 @@ video {
 
 .hover\\:text-accent-foreground:hover {
   color: hsl(var(--accent-foreground));
+}
+
+.hover\\:text-gray-700:hover {
+  --tw-text-opacity: 1;
+  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
 }
 
 .hover\\:underline:hover {
@@ -6508,6 +6595,11 @@ video {
   cursor: not-allowed;
 }
 
+.disabled\\:bg-blue-300:disabled {
+  --tw-bg-opacity: 1;
+  background-color: rgb(147 197 253 / var(--tw-bg-opacity, 1));
+}
+
 .disabled\\:opacity-50:disabled {
   opacity: 0.5;
 }
@@ -6536,7 +6628,7 @@ video {
 
 .\\[\\&_svg\\]\\:shrink-0 svg {
   flex-shrink: 0;
-} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
+} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -7088,6 +7180,45 @@ const Settings = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"]
 
 
 //# sourceMappingURL=settings.js.map
+
+
+/***/ }),
+
+/***/ "./node_modules/lucide-react/dist/esm/icons/wrench.js":
+/*!************************************************************!*\
+  !*** ./node_modules/lucide-react/dist/esm/icons/wrench.js ***!
+  \************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   __iconNode: () => (/* binding */ __iconNode),
+/* harmony export */   "default": () => (/* binding */ Wrench)
+/* harmony export */ });
+/* harmony import */ var _createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../createLucideIcon.js */ "./node_modules/lucide-react/dist/esm/createLucideIcon.js");
+/**
+ * @license lucide-react v0.503.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+
+
+
+const __iconNode = [
+  [
+    "path",
+    {
+      d: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
+      key: "cbrjhi"
+    }
+  ]
+];
+const Wrench = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"])("wrench", __iconNode);
+
+
+//# sourceMappingURL=wrench.js.map
 
 
 /***/ }),
@@ -46623,16 +46754,19 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var ai_react__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ai/react */ "./node_modules/ai/react/dist/index.mjs");
+/* harmony import */ var ai_react__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ai/react */ "./node_modules/ai/react/dist/index.mjs");
 /* harmony import */ var _components_ui_card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/components/ui/card */ "./src/components/ui/card.tsx");
 /* harmony import */ var _components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/components/ui/scroll-area */ "./src/components/ui/scroll-area.tsx");
 /* harmony import */ var _components_ui_button__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/components/ui/button */ "./src/components/ui/button.tsx");
 /* harmony import */ var _components_ui_textarea__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/components/ui/textarea */ "./src/components/ui/textarea.tsx");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/settings.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/refresh-cw.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/send.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/wrench.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/settings.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/refresh-cw.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/send.js");
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
 /* harmony import */ var _Settings__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./Settings */ "./src/components/Settings.tsx");
+/* harmony import */ var _ui_ToolsTestPanel__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./ui/ToolsTestPanel */ "./src/components/ui/ToolsTestPanel.tsx");
+
 
 
 
@@ -46654,6 +46788,7 @@ const WELCOME_MESSAGE = {
 };
 function Chat() {
     const [showSettings, setShowSettings] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    const [showToolsTest, setShowToolsTest] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [apiConfigured, setApiConfigured] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
     const [apiProvider, setApiProvider] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('openai');
@@ -46661,7 +46796,7 @@ function Chat() {
     const [isTyping, setIsTyping] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const scrollRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(null);
     // Vercel AI SDK's useChat hook with edge runtime streaming support
-    const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages, reload, stop } = (0,ai_react__WEBPACK_IMPORTED_MODULE_7__.useChat)({
+    const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages, reload, stop } = (0,ai_react__WEBPACK_IMPORTED_MODULE_8__.useChat)({
         api: `chrome-extension://${chrome.runtime.id}/api/chat`,
         initialMessages: [WELCOME_MESSAGE],
         body: {
@@ -47052,8 +47187,11 @@ function Chat() {
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { className: "w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none" },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex justify-between items-center p-2 px-3 border-b" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-base font-medium" }, "Mapping through prompting"),
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "icon", rounded: "full", onClick: () => setShowSettings(true), "aria-label": "Settings", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 text-gray-600" }))),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "icon", rounded: "full", onClick: () => setShowToolsTest(true), "aria-label": "Test Tools", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-5 w-5 text-gray-600" })),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "icon", rounded: "full", onClick: () => setShowSettings(true), "aria-label": "Settings", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-5 w-5 text-gray-600" })))),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__.ScrollArea, { className: "px-2 py-4 rounded-none" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4 w-full mx-auto" },
                 displayMessages.map((message) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: message.id, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_5__.cn)('flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words', message.role === 'user'
@@ -47068,7 +47206,7 @@ function Chat() {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, error.message || "Error connecting to AI service"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2 ml-auto" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", rounded: "lg", onClick: handleRegenerate },
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-3 w-3 mr-1" }),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { className: "h-3 w-3 mr-1" }),
                             " Regenerate"),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", rounded: "lg", onClick: () => setShowSettings(true) }, "Settings")))),
                 fallbackMode && apiConfigured && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-2 text-base text-warning-foreground bg-warning/10 rounded-md" },
@@ -47082,7 +47220,8 @@ function Chat() {
             currentLoading && !fallbackMode ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "button", size: "icon", variant: "outline", rounded: "full", onClick: handleStopGenerating, "aria-label": "Stop generating", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "h-5 w-5 text-gray-600" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("rect", { width: "6", height: "16", x: "9", y: "4" })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "submit", size: "icon", variant: "outline", rounded: "full", disabled: currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim(), "aria-label": "Send message", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-5 w-5 text-gray-600" }))))));
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-5 w-5 text-gray-600" })))),
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_ToolsTestPanel__WEBPACK_IMPORTED_MODULE_7__["default"], { isOpen: showToolsTest, onClose: () => setShowToolsTest(false) })));
 }
 
 
@@ -47233,6 +47372,149 @@ function Settings({ onClose }) {
                     ? 'You can create an OpenAI API key in your OpenAI dashboard.'
                     : 'You can create an Anthropic API key in your Anthropic console.')))));
 }
+
+
+/***/ }),
+
+/***/ "./src/components/ui/ToolsTestPanel.tsx":
+/*!**********************************************!*\
+  !*** ./src/components/ui/ToolsTestPanel.tsx ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/lib/tools/context7/agentTools */ "./src/lib/tools/context7/agentTools.ts");
+/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+
+
+
+
+const ToolsTestPanel = ({ isOpen, onClose }) => {
+    const [activeTab, setActiveTab] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('resolveLibraryId');
+    const [query, setQuery] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Earth Engine');
+    const [libraryId, setLibraryId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
+    const [topic, setTopic] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Landsat');
+    const [result, setResult] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
+    const [loading, setLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    const [error, setError] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
+    const [environment, setEnvironment] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
+    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_3__.detectEnvironment)());
+    }, []);
+    if (!isOpen)
+        return null;
+    const runTest = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            let testResult;
+            switch (activeTab) {
+                case 'resolveLibraryId':
+                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
+                    // If library ID was found, update the libraryId state
+                    if (testResult.success && testResult.libraryId) {
+                        setLibraryId(testResult.libraryId);
+                    }
+                    break;
+                case 'getDocumentation':
+                    if (!libraryId) {
+                        throw new Error('Library ID is required for getDocumentation');
+                    }
+                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
+                    break;
+                case 'searchEarthEngineDatasets':
+                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
+                    // If library ID was found, update the libraryId state
+                    if (testResult.success && testResult.libraryId) {
+                        setLibraryId(testResult.libraryId);
+                    }
+                    break;
+                case 'getEarthEngineDocumentation':
+                    if (!libraryId) {
+                        throw new Error('Library ID is required for getEarthEngineDocumentation');
+                    }
+                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
+                    break;
+                case 'getEarthEngineDatasetInfo':
+                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
+                    break;
+                default:
+                    testResult = { error: 'Unknown test type' };
+            }
+            setResult(testResult);
+        }
+        catch (err) {
+            console.error('Test error:', err);
+            setError(err instanceof Error ? err.message : 'An unknown error occurred');
+            setResult(null);
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "bg-white rounded-lg shadow-lg w-11/12 max-w-3xl max-h-[90vh] overflow-hidden" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex justify-between items-center p-4 border-b" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-xl font-semibold" }, "Context7 Tools Test"),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClose, className: "text-gray-500 hover:text-gray-700" }, "\u2715")),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-4" },
+                environment && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4 p-3 bg-gray-100 rounded-md text-sm" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null,
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Environment:"),
+                        " ",
+                        environment.isBackground ? 'Background' :
+                            environment.isContentScript ? 'Content Script' :
+                                environment.isSidepanel ? 'Sidepanel' :
+                                    environment.isNodeJs ? 'Node.js' : 'Unknown'),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null,
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Using background proxy:"),
+                        " ",
+                        environment.useBackgroundProxy ? 'Yes' : 'No'),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, environment.useBackgroundProxy
+                        ? "Requests will go through the background script to avoid CORS issues."
+                        : "Direct API calls will be made. Make sure proper permissions are set."))),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'resolveLibraryId', onClick: () => setActiveTab('resolveLibraryId') }, "Resolve Library ID"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getDocumentation', onClick: () => setActiveTab('getDocumentation') }, "Get Documentation"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'searchEarthEngineDatasets', onClick: () => setActiveTab('searchEarthEngineDatasets') }, "Search Datasets"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getEarthEngineDocumentation', onClick: () => setActiveTab('getEarthEngineDocumentation') }, "Get EE Documentation"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getEarthEngineDatasetInfo', onClick: () => setActiveTab('getEarthEngineDatasetInfo') }, "Get Dataset Info")),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4" },
+                    (activeTab === 'resolveLibraryId' || activeTab === 'searchEarthEngineDatasets') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Query"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: query, onChange: (e) => setQuery(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter search query" }))),
+                    (activeTab === 'getDocumentation' || activeTab === 'getEarthEngineDocumentation') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Library ID"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: libraryId, onChange: (e) => setLibraryId(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter library ID" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" })))),
+                    activeTab === 'getEarthEngineDatasetInfo' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" }))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: runTest, disabled: loading, className: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300" }, loading ? 'Running...' : 'Run Test')),
+                    error && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 p-4 bg-red-100 text-red-800 rounded-md" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "font-bold" }, "Error:"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null, error),
+                        environment?.useBackgroundProxy && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-2 text-sm" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Note:"),
+                            " Requests are being proxied through the background script. Check the background script console for more detailed error information.")))),
+                    result && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "font-bold mb-2" }, "Result:"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "max-h-60 overflow-auto p-3 bg-gray-100 rounded-md" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "text-xs whitespace-pre-wrap" }, typeof result === 'object' ? JSON.stringify(result, null, 2) : result)))))))));
+};
+const TabButton = ({ children, active, onClick }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClick, className: `px-3 py-1 rounded-md whitespace-nowrap ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}` }, children));
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ToolsTestPanel);
 
 
 /***/ }),
@@ -47431,6 +47713,540 @@ Textarea.displayName = "Textarea";
 
 /***/ }),
 
+/***/ "./src/lib/tools/context7/agentTools.ts":
+/*!**********************************************!*\
+  !*** ./src/lib/tools/context7/agentTools.ts ***!
+  \**********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getEarthEngineDatasetInfo: () => (/* binding */ getEarthEngineDatasetInfo),
+/* harmony export */   getEarthEngineDocumentation: () => (/* binding */ getEarthEngineDocumentation),
+/* harmony export */   searchEarthEngineDatasets: () => (/* binding */ searchEarthEngineDatasets)
+/* harmony export */ });
+/* harmony import */ var _index__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./index */ "./src/lib/tools/context7/index.ts");
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Wrapper functions for the Context7 library specifically designed for AI agent usage
+ * These functions are simplified versions of the base tools that are formatted
+ * to be easily called by an AI assistant agent
+ */
+
+
+// Define the base URL for Context7 API
+const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+/**
+ * Searches for Google Earth Engine dataset documentation
+ *
+ * @param query - Search query or specific dataset name
+ * @returns Object with success status and results
+ */
+async function searchEarthEngineDatasets(query) {
+    try {
+        // First, resolve the Earth Engine dataset library ID
+        const resolveResult = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.resolveLibraryId)(`Earth Engine ${query}`);
+        if (!resolveResult.success || !resolveResult.libraryId) {
+            return {
+                success: false,
+                message: `Could not find documentation for "${query}". ${resolveResult.message || ''}`,
+                alternatives: resolveResult.alternatives,
+            };
+        }
+        return {
+            success: true,
+            libraryId: resolveResult.libraryId,
+            message: `Found documentation library: ${resolveResult.libraryId}`,
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error searching for Earth Engine datasets: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/**
+ * Gets detailed documentation about Google Earth Engine datasets
+ *
+ * @param libraryId - The library ID (from searchEarthEngineDatasets or directly specified)
+ * @param topic - Topic to filter documentation (e.g., "population", "landsat")
+ * @param options - Optional parameters for customizing the request
+ * @returns Object with documentation content or error message
+ */
+async function getEarthEngineDocumentation(libraryId, topic, options = {}) {
+    try {
+        // If no library ID is provided, try to resolve it based on the topic
+        let finalLibraryId = libraryId;
+        if (!finalLibraryId) {
+            const resolveResult = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.resolveLibraryId)('Earth Engine datasets');
+            if (resolveResult.success && resolveResult.libraryId) {
+                finalLibraryId = resolveResult.libraryId;
+            }
+            else {
+                return {
+                    success: false,
+                    message: 'Could not resolve Earth Engine dataset library ID. Please try searching first.',
+                };
+            }
+        }
+        // Get the documentation with options
+        const docResult = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.getDocumentation)(finalLibraryId, topic, options);
+        if (!docResult.success || !docResult.content) {
+            return {
+                success: false,
+                message: `Could not find documentation for topic "${topic}". ${docResult.message || ''}`,
+            };
+        }
+        return {
+            success: true,
+            content: docResult.content,
+            message: `Documentation found for topic: ${topic}`,
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error retrieving Earth Engine documentation: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/**
+ * Utility function that combines search and documentation retrieval in one call
+ * Useful for agents that want to get documentation in one step
+ *
+ * @param topic - The topic or dataset to search for
+ * @param options - Optional parameters for customizing the request
+ * @returns Object with documentation content or error message
+ */
+async function getEarthEngineDatasetInfo(topic, options = {}) {
+    // If we're in a content script or sidepanel and background is available, use a direct message
+    const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.detectEnvironment)();
+    if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+        return new Promise((resolve) => {
+            // Add a timeout to handle cases where background script doesn't respond
+            const timeoutId = setTimeout(() => {
+                console.warn('Background script connection timed out. Falling back to direct data retrieval.');
+                // Fall back to direct retrieval if background script isn't responding
+                performDirectDataRetrieval(topic, options).then(resolve);
+            }, 2000); // 2 second timeout
+            try {
+                chrome.runtime.sendMessage({
+                    type: 'CONTEXT7_DATASET_INFO',
+                    topic,
+                    options
+                }, (response) => {
+                    // Clear the timeout since we got a response
+                    clearTimeout(timeoutId);
+                    if (chrome.runtime.lastError) {
+                        console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                        console.info('Falling back to direct data retrieval...');
+                        // Fall back to direct retrieval if there's a communication error
+                        performDirectDataRetrieval(topic, options).then(resolve);
+                        return;
+                    }
+                    // We got a valid response from the background
+                    resolve(response);
+                });
+            }
+            catch (err) {
+                // Clear the timeout
+                clearTimeout(timeoutId);
+                console.error('Error sending message to background script:', err);
+                console.info('Falling back to direct data retrieval...');
+                // Fall back to direct retrieval if there's an exception
+                performDirectDataRetrieval(topic, options).then(resolve);
+            }
+        });
+    }
+    // Standard flow
+    return performDirectDataRetrieval(topic, options);
+}
+/**
+ * Helper function for direct data retrieval without going through background
+ * Used as a fallback when background script communication fails
+ */
+async function performDirectDataRetrieval(topic, options = {}) {
+    try {
+        // First, search for the dataset
+        const searchResult = await searchEarthEngineDatasets(topic);
+        if (!searchResult.success || !searchResult.libraryId) {
+            return {
+                success: false,
+                message: searchResult.message || 'No library ID found',
+                alternatives: searchResult.alternatives,
+            };
+        }
+        // Then get documentation with options
+        const docResult = await getEarthEngineDocumentation(searchResult.libraryId, topic, options);
+        return docResult;
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error in direct data retrieval: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+    searchEarthEngineDatasets,
+    getEarthEngineDocumentation,
+    getEarthEngineDatasetInfo,
+});
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/context7/getDocumentation.ts":
+/*!****************************************************!*\
+  !*** ./src/lib/tools/context7/getDocumentation.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getDocumentation: () => (/* binding */ getDocumentation)
+/* harmony export */ });
+/**
+ * Fetches documentation for Google Earth Engine datasets from Context7
+ * This tool uses a Context7-compatible library ID (obtained from resolveLibraryId)
+ * to fetch documentation about Earth Engine datasets
+ *
+ * @param context7CompatibleLibraryID - The library ID from resolveLibraryId (e.g., "wybert/earthengine-dataset-catalog-md")
+ * @param topic - Optional topic to filter documentation (e.g., "population", "landsat")
+ * @param options - Additional options for the request (tokens, folders)
+ * @returns The documentation content, success status, and any error messages
+ */
+// Define the base URL for Context7 API
+const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+const DEFAULT_TYPE = "txt";
+async function getDocumentation(context7CompatibleLibraryID, topic, options = {}) {
+    try {
+        // Check if we have a valid library ID
+        if (!context7CompatibleLibraryID) {
+            return {
+                success: false,
+                content: null,
+                message: 'Missing Context7-compatible library ID. Use resolveLibraryId first.',
+            };
+        }
+        // If running in a content script or sidepanel context, use the background script
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out. Falling back to direct API call.');
+                    // Fall back to direct API call if background script isn't responding
+                    makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'CONTEXT7_GET_DOCUMENTATION',
+                        libraryId: context7CompatibleLibraryID,
+                        topic,
+                        options
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            console.info('Falling back to direct API call...');
+                            // Fall back to direct API call if there's a communication error
+                            makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    console.info('Falling back to direct API call...');
+                    // Fall back to direct API call if there's an exception
+                    makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
+                }
+            });
+        }
+        // Direct API call when running in background script or Node.js environment
+        return makeDirectApiCall(context7CompatibleLibraryID, topic, options);
+    }
+    catch (error) {
+        return {
+            success: false,
+            content: null,
+            message: `Error fetching documentation: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/**
+ * Helper function to make a direct API call to Context7
+ * Used as a fallback when background script communication fails
+ */
+async function makeDirectApiCall(context7CompatibleLibraryID, topic, options = {}) {
+    try {
+        // Remove leading slash if present
+        if (context7CompatibleLibraryID.startsWith("/")) {
+            context7CompatibleLibraryID = context7CompatibleLibraryID.slice(1);
+        }
+        // Build the URL using URL object
+        const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${context7CompatibleLibraryID}`);
+        // Add options to URL params
+        if (options.tokens)
+            url.searchParams.set("tokens", options.tokens.toString());
+        if (options.folders)
+            url.searchParams.set("folders", options.folders);
+        if (topic)
+            url.searchParams.set("topic", topic);
+        url.searchParams.set("type", DEFAULT_TYPE);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json, text/plain',
+                'X-Context7-Source': 'earth-agent-ai-sdk',
+            },
+        });
+        if (!response.ok) {
+            return {
+                success: false,
+                content: null,
+                message: `Failed to fetch documentation: ${response.statusText}`,
+            };
+        }
+        // Get the text content directly
+        const text = await response.text();
+        // Check if the text is valid
+        if (!text || text === "No content available" || text === "No context data available") {
+            return {
+                success: false,
+                content: null,
+                message: 'No documentation content found',
+            };
+        }
+        // Try to parse as JSON in case of JSON response
+        try {
+            const data = JSON.parse(text);
+            if (data && data.content) {
+                return {
+                    success: true,
+                    content: data.content,
+                };
+            }
+        }
+        catch (e) {
+            // Not JSON, use text as is
+        }
+        // Return the text content directly
+        return {
+            success: true,
+            content: text,
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            content: null,
+            message: `Error making direct API call: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (getDocumentation);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/context7/index.ts":
+/*!*****************************************!*\
+  !*** ./src/lib/tools/context7/index.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getDocumentation: () => (/* reexport safe */ _getDocumentation__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   resolveLibraryId: () => (/* reexport safe */ _resolveLibraryId__WEBPACK_IMPORTED_MODULE_0__["default"])
+/* harmony export */ });
+/* harmony import */ var _resolveLibraryId__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./resolveLibraryId */ "./src/lib/tools/context7/resolveLibraryId.ts");
+/* harmony import */ var _getDocumentation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./getDocumentation */ "./src/lib/tools/context7/getDocumentation.ts");
+/**
+ * Context7 tools for fetching Google Earth Engine dataset documentation
+ *
+ * This module provides tools to:
+ * 1. Resolve library names to Context7-compatible IDs
+ * 2. Fetch detailed documentation about Earth Engine datasets
+ *
+ * Usage example:
+ * ```typescript
+ * import { resolveLibraryId, getDocumentation } from './lib/tools/context7';
+ *
+ * async function fetchLandsatDocs() {
+ *   // First, resolve the library ID
+ *   const resolveResult = await resolveLibraryId('Earth Engine datasets');
+ *
+ *   if (resolveResult.success && resolveResult.libraryId) {
+ *     // Then fetch documentation about Landsat
+ *     const docs = await getDocumentation(resolveResult.libraryId, 'Landsat');
+ *
+ *     if (docs.success && docs.content) {
+ *       console.log(docs.content);
+ *     }
+ *   }
+ * }
+ * ```
+ */
+
+
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/context7/resolveLibraryId.ts":
+/*!****************************************************!*\
+  !*** ./src/lib/tools/context7/resolveLibraryId.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   resolveLibraryId: () => (/* binding */ resolveLibraryId)
+/* harmony export */ });
+/**
+ * Resolves a general library name into a Context7-compatible library ID
+ * This tool is required as a first step before using getDocumentation
+ * to retrieve Earth Engine dataset documentation
+ *
+ * @param libraryName - The library name to search for (e.g., "Earth Engine", "MODIS")
+ * @returns The Context7-compatible library ID that can be used with getDocumentation
+ */
+// Define the base URL for Context7 API
+const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+async function resolveLibraryId(libraryName) {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            // Check if background script is available
+            // Add a timeout to prevent hanging if background isn't responsive
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where the background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out. Falling back to direct API call.');
+                    // Fall back to direct API call if background script isn't responding
+                    makeDirectApiCall(libraryName).then(resolve);
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'CONTEXT7_RESOLVE_LIBRARY_ID',
+                        libraryName
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        // Handle error if present
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            console.info('Falling back to direct API call...');
+                            // Fall back to direct API call if there's a communication error
+                            makeDirectApiCall(libraryName).then(resolve);
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    console.info('Falling back to direct API call...');
+                    // Fall back to direct API call if there's an exception
+                    makeDirectApiCall(libraryName).then(resolve);
+                }
+            });
+        }
+        // Direct API call when running in background script or Node.js environment
+        return makeDirectApiCall(libraryName);
+    }
+    catch (error) {
+        return {
+            success: false,
+            libraryId: null,
+            message: `Error resolving library ID: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/**
+ * Helper function to make a direct API call to Context7
+ * Used as a fallback when background script communication fails
+ */
+async function makeDirectApiCall(libraryName) {
+    try {
+        // Create URL object using the base URL
+        const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/search`);
+        // Set search params using proper URL API
+        url.searchParams.set("query", libraryName);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Context7-Source': 'earth-agent-ai-sdk',
+            },
+        });
+        if (!response.ok) {
+            return {
+                success: false,
+                libraryId: null,
+                message: `Failed to search for library ID: ${response.statusText}`,
+            };
+        }
+        const data = await response.json();
+        // Check if we got valid results
+        if (data && Array.isArray(data.results) && data.results.length > 0) {
+            // Find the best match for Earth Engine datasets
+            const earthEngineMatch = data.results.find((result) => result.id &&
+                (result.id.includes('earthengine') ||
+                    result.id.includes('earth-engine') ||
+                    result.title?.toLowerCase().includes('earth engine')));
+            if (earthEngineMatch) {
+                return {
+                    success: true,
+                    libraryId: earthEngineMatch.id,
+                };
+            }
+            // If no Earth Engine specific match, return the first result
+            return {
+                success: true,
+                libraryId: data.results[0].id,
+                alternatives: data.results.slice(1, 5).map((result) => result.id),
+            };
+        }
+        return {
+            success: false,
+            libraryId: null,
+            message: 'No matching library found',
+            alternatives: data?.results?.map((result) => result.id) || [],
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            libraryId: null,
+            message: `Error making direct API call: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (resolveLibraryId);
+
+
+/***/ }),
+
 /***/ "./src/lib/utils.ts":
 /*!**************************!*\
   !*** ./src/lib/utils.ts ***!
@@ -47440,7 +48256,8 @@ Textarea.displayName = "Textarea";
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   cn: () => (/* binding */ cn)
+/* harmony export */   cn: () => (/* binding */ cn),
+/* harmony export */   detectEnvironment: () => (/* binding */ detectEnvironment)
 /* harmony export */ });
 /* harmony import */ var clsx__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! clsx */ "./node_modules/clsx/dist/clsx.mjs");
 /* harmony import */ var tailwind_merge__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! tailwind-merge */ "./node_modules/tailwind-merge/dist/bundle-mjs.mjs");
@@ -47448,6 +48265,38 @@ __webpack_require__.r(__webpack_exports__);
 
 function cn(...inputs) {
     return (0,tailwind_merge__WEBPACK_IMPORTED_MODULE_1__.twMerge)((0,clsx__WEBPACK_IMPORTED_MODULE_0__.clsx)(inputs));
+}
+/**
+ * Detects the current execution environment
+ * @returns Information about the current environment
+ */
+function detectEnvironment() {
+    const isBackground = typeof chrome !== 'undefined' &&
+        chrome.runtime &&
+        typeof chrome.runtime.getManifest === 'function' &&
+        (chrome.extension?.getBackgroundPage?.() === window);
+    const isExtension = typeof chrome !== 'undefined' &&
+        chrome.runtime &&
+        !!chrome.runtime.id;
+    const isContentScript = isExtension &&
+        !isBackground &&
+        typeof document !== 'undefined';
+    const isSidepanel = isExtension &&
+        !isBackground &&
+        typeof document !== 'undefined' &&
+        window.location.pathname.includes('sidepanel.html');
+    const isNodeJs = typeof window === 'undefined' &&
+        typeof process !== 'undefined' &&
+        !!process.versions &&
+        !!process.versions.node;
+    return {
+        isBackground,
+        isContentScript,
+        isSidepanel,
+        isExtension,
+        isNodeJs,
+        useBackgroundProxy: (isContentScript || isSidepanel) && !isBackground
+    };
 }
 
 

@@ -105,15 +105,13 @@ describe('getDocumentation', () => {
   test('should fetch documentation successfully', async () => {
     // Mock successful response
     fetchMock.mockResponseOnce(JSON.stringify({
-      content: '# Earth Engine Landsat Dataset\n\nThis dataset contains Landsat imagery...',
-      tokens: 150
+      content: '# Earth Engine Landsat Dataset\n\nThis dataset contains Landsat imagery...'
     }));
 
     const result = await getDocumentation('wybert/earthengine-dataset-catalog-md', 'Landsat');
     
     expect(result.success).toBe(true);
     expect(result.content).toContain('Earth Engine Landsat Dataset');
-    expect(result.tokens).toBe(150);
     
     // Verify the correct URL was called with topic
     expect(fetchMock).toHaveBeenCalledWith(
@@ -125,8 +123,7 @@ describe('getDocumentation', () => {
   test('should fetch documentation without a topic', async () => {
     // Mock successful response
     fetchMock.mockResponseOnce(JSON.stringify({
-      content: '# Earth Engine Dataset Overview\n\nThis document contains...',
-      tokens: 200
+      content: '# Earth Engine Dataset Overview\n\nThis document contains...'
     }));
 
     const result = await getDocumentation('wybert/earthengine-dataset-catalog-md');
@@ -134,9 +131,9 @@ describe('getDocumentation', () => {
     expect(result.success).toBe(true);
     expect(result.content).toContain('Earth Engine Dataset Overview');
     
-    // Verify URL was called without topic but with tokens
+    // Verify URL was called without topic
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('https://context7.com/api/v1/wybert/earthengine-dataset-catalog-md?tokens='),
+      expect.stringContaining('https://context7.com/api/v1/wybert/earthengine-dataset-catalog-md'),
       expect.any(Object)
     );
   });
@@ -178,7 +175,6 @@ describe('getDocumentation', () => {
     // Mock response with missing content
     fetchMock.mockResponseOnce(JSON.stringify({
       // No content field
-      tokens: 0
     }));
 
     const result = await getDocumentation('wybert/earthengine-dataset-catalog-md', 'invalid query');
@@ -186,21 +182,5 @@ describe('getDocumentation', () => {
     expect(result.success).toBe(false);
     expect(result.content).toBeNull();
     expect(result.message).toBe('No documentation content found');
-  });
-
-  test('should respect tokens parameter', async () => {
-    // Mock successful response
-    fetchMock.mockResponseOnce(JSON.stringify({
-      content: 'Limited content',
-      tokens: 1000
-    }));
-
-    await getDocumentation('wybert/earthengine-dataset-catalog-md', 'topic', 1000);
-    
-    // Verify the tokens parameter was included
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('tokens=1000'),
-      expect.any(Object)
-    );
   });
 }); 
