@@ -367,10 +367,14 @@ async function handleChatMessage(message, port) {
                         while (true) {
                             const { done, value } = await reader.read();
                             if (done) {
-                                // Send final message with complete text
+                                console.log('Stream finished, accumulated text:', accumulatedText.length > 100 ?
+                                    accumulatedText.substring(0, 100) + '...' : accumulatedText);
+                                // Send final message with complete text in a format the frontend can use
                                 port.postMessage({
                                     type: 'CHAT_RESPONSE',
                                     requestId,
+                                    response: accumulatedText, // Add direct response field
+                                    fullText: accumulatedText, // Also include as fullText (backup)
                                     data: {
                                         choices: [{
                                                 message: {
@@ -382,7 +386,9 @@ async function handleChatMessage(message, port) {
                                 // Also send end of stream message
                                 port.postMessage({
                                     type: 'CHAT_STREAM_END',
-                                    requestId
+                                    requestId,
+                                    response: accumulatedText, // Add response field here too
+                                    fullText: accumulatedText // And fullText
                                 });
                                 break;
                             }
@@ -395,10 +401,13 @@ async function handleChatMessage(message, port) {
                                 if (line.startsWith('data: ')) {
                                     const data = line.slice(5); // Remove 'data: ' prefix
                                     // Handle [DONE] message
-                                    if (data === '[DONE]') {
+                                    if (data.trim() === '[DONE]') {
+                                        // This is just a stream completion marker, no need to parse it
+                                        console.log('Stream completed with [DONE] marker');
                                         continue;
                                     }
                                     try {
+                                        // Only try to parse if it's not the [DONE] marker
                                         const parsedData = JSON.parse(data);
                                         // Extract content from OpenAI response format
                                         if (parsedData.choices && parsedData.choices.length > 0) {
@@ -457,14 +466,17 @@ async function handleChatMessage(message, port) {
         catch (error) {
             console.error('Error processing chat:', error);
             // Use fallback mode
+            const fallbackContent = "I'm having trouble connecting to the API. Let me use my fallback mode to help you with Earth Engine.\n\n" +
+                generateFallbackResponse(message.message);
             const fallbackResponse = {
                 type: 'CHAT_RESPONSE',
                 requestId,
+                response: fallbackContent, // Add direct response field
+                fullText: fallbackContent, // Add fullText field
                 data: {
                     choices: [{
                             message: {
-                                content: "I'm having trouble connecting to the API. Let me use my fallback mode to help you with Earth Engine.\n\n" +
-                                    generateFallbackResponse(message.message)
+                                content: fallbackContent
                             }
                         }]
                 }

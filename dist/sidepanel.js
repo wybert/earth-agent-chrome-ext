@@ -5939,15 +5939,18 @@ video {
   margin-left: auto;
   margin-right: auto;
 }
-.my-2 {
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+.my-4 {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 .mb-1 {
   margin-bottom: 0.25rem;
 }
 .mb-2 {
   margin-bottom: 0.5rem;
+}
+.mb-3 {
+  margin-bottom: 0.75rem;
 }
 .mb-4 {
   margin-bottom: 1rem;
@@ -6160,6 +6163,10 @@ video {
 .border-t {
   border-top-width: 1px;
 }
+.border-gray-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-border-opacity, 1));
+}
 .border-input {
   border-color: hsl(var(--input));
 }
@@ -6192,6 +6199,10 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
 }
+.bg-gray-900 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
+}
 .bg-muted {
   background-color: hsl(var(--muted));
 }
@@ -6209,6 +6220,9 @@ video {
 }
 .p-0 {
   padding: 0px;
+}
+.p-1 {
+  padding: 0.25rem;
 }
 .p-2 {
   padding: 0.5rem;
@@ -6258,6 +6272,9 @@ video {
 }
 .pt-0 {
   padding-top: 0px;
+}
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 .text-2xl {
   font-size: 1.5rem;
@@ -6456,6 +6473,11 @@ video {
   background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
 }
 
+.hover\\:bg-gray-700:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
+}
+
 .hover\\:bg-muted:hover {
   background-color: hsl(var(--muted));
 }
@@ -6536,7 +6558,7 @@ video {
 
 .\\[\\&_svg\\]\\:shrink-0 svg {
   flex-shrink: 0;
-} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
+} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -46623,16 +46645,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var ai_react__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ai/react */ "./node_modules/ai/react/dist/index.mjs");
+/* harmony import */ var ai_react__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ai/react */ "./node_modules/ai/react/dist/index.mjs");
 /* harmony import */ var _components_ui_card__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/components/ui/card */ "./src/components/ui/card.tsx");
 /* harmony import */ var _components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/components/ui/scroll-area */ "./src/components/ui/scroll-area.tsx");
 /* harmony import */ var _components_ui_button__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/components/ui/button */ "./src/components/ui/button.tsx");
 /* harmony import */ var _components_ui_textarea__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/components/ui/textarea */ "./src/components/ui/textarea.tsx");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/settings.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/refresh-cw.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/send.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/settings.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/refresh-cw.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/send.js");
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
 /* harmony import */ var _Settings__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./Settings */ "./src/components/Settings.tsx");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
 
 
 
@@ -46642,6 +46665,41 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+// Define Zod schema for message responses
+const MessageContentSchema = zod__WEBPACK_IMPORTED_MODULE_7__.z.string().min(1);
+const OpenAIChoiceSchema = zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+    message: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+        content: MessageContentSchema
+    })
+});
+const OpenAIResponseSchema = zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+    choices: zod__WEBPACK_IMPORTED_MODULE_7__.z.array(OpenAIChoiceSchema).min(1)
+});
+// More flexible response schema that handles multiple formats
+const ChatResponseSchema = zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+    type: zod__WEBPACK_IMPORTED_MODULE_7__.z.string(),
+    requestId: zod__WEBPACK_IMPORTED_MODULE_7__.z.string(),
+}).and(zod__WEBPACK_IMPORTED_MODULE_7__.z.union([
+    // Direct response in response field
+    zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+        response: MessageContentSchema
+    }),
+    // Response in fullText field
+    zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+        fullText: MessageContentSchema
+    }),
+    // OpenAI format
+    zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+        data: OpenAIResponseSchema
+    }),
+    // Simple content field
+    zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+        data: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+            content: MessageContentSchema
+        })
+    })
+]));
 // Chrome storage keys
 const STORAGE_KEY = 'earth_engine_chat_history';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
@@ -46658,61 +46716,28 @@ function Chat() {
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
     const [apiProvider, setApiProvider] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('openai');
     const [fallbackMode, setFallbackMode] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
-    const [isTyping, setIsTyping] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    const [isLoading, setIsLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const scrollRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(null);
+    const portRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(null);
     // Vercel AI SDK's useChat hook with edge runtime streaming support
-    const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages, reload, stop } = (0,ai_react__WEBPACK_IMPORTED_MODULE_7__.useChat)({
+    const { messages, input, handleInputChange, handleSubmit, error, setMessages, reload, stop, } = (0,ai_react__WEBPACK_IMPORTED_MODULE_8__.useChat)({
         api: `chrome-extension://${chrome.runtime.id}/api/chat`,
         initialMessages: [WELCOME_MESSAGE],
         body: {
             apiKey,
             provider: apiProvider
         },
-        onResponse(response) {
-            // Handle streaming response
-            if (response.body) {
-                const reader = response.body.getReader();
-                // Process the stream
-                (async () => {
-                    try {
-                        const decoder = new TextDecoder();
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) {
-                                setIsTyping(false);
-                                break;
-                            }
-                            // Only try to decode if value is an ArrayBuffer
-                            if (value instanceof Uint8Array) {
-                                const text = decoder.decode(value, { stream: true });
-                                console.log('Received chunk:', text);
-                                // Update the last message with the new chunk
-                                setMessages(prev => {
-                                    const lastMessage = prev[prev.length - 1];
-                                    if (lastMessage?.role === 'assistant') {
-                                        return [
-                                            ...prev.slice(0, -1),
-                                            { ...lastMessage, content: lastMessage.content + text }
-                                        ];
-                                    }
-                                    return [...prev, { id: Date.now().toString(), role: 'assistant', content: text }];
-                                });
-                            }
-                        }
-                    }
-                    catch (error) {
-                        console.error('Error reading stream:', error);
-                        setFallbackMode(true);
-                    }
-                })();
-            }
+        onResponse: () => {
+            // We're not using the built-in processing 
+            console.log("API response received");
         },
         onFinish: () => {
-            setIsTyping(false);
+            setIsLoading(false);
         },
         onError: (error) => {
             console.error("Chat API error:", error);
             setFallbackMode(true);
+            setIsLoading(false);
         }
     });
     // Local state for fallback mode
@@ -46755,27 +46780,242 @@ function Chat() {
         if (scrollRef.current) {
             scrollRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages, localMessages, isTyping]);
+    }, [messages, localMessages]);
+    // Initialize port connection to background script
+    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        function setupPort() {
+            try {
+                console.log('Connecting to background script...');
+                const newPort = chrome.runtime.connect({ name: 'sidepanel' });
+                newPort.onMessage.addListener(handleResponse);
+                newPort.onDisconnect.addListener(() => {
+                    console.log('Disconnected from background script', chrome.runtime.lastError);
+                    portRef.current = null;
+                    setFallbackMode(true);
+                });
+                portRef.current = newPort;
+                console.log('Connected to background script');
+                // Send initialization message
+                newPort.postMessage({ type: 'INIT' });
+            }
+            catch (error) {
+                console.error('Failed to connect to background script:', error);
+                portRef.current = null;
+                setFallbackMode(true);
+            }
+        }
+        // Initial setup
+        setupPort();
+        // Cleanup on unmount
+        return () => {
+            if (portRef.current) {
+                try {
+                    portRef.current.disconnect();
+                    portRef.current = null;
+                }
+                catch (e) {
+                    console.error('Error disconnecting port:', e);
+                }
+            }
+        };
+    }, []);
+    // Extract response content from validated schema
+    const extractResponseContent = (validatedResponse) => {
+        if ('response' in validatedResponse) {
+            console.log('Using validated direct response field');
+            return validatedResponse.response;
+        }
+        else if ('fullText' in validatedResponse) {
+            console.log('Using validated fullText field');
+            return validatedResponse.fullText;
+        }
+        else if ('data' in validatedResponse) {
+            const data = validatedResponse.data;
+            if ('choices' in data && data.choices.length > 0) {
+                console.log('Using validated OpenAI format response');
+                return data.choices[0].message.content;
+            }
+            else if ('content' in data) {
+                console.log('Using validated simple content field');
+                return data.content;
+            }
+        }
+        // This should never happen if validation passed
+        throw new Error('Could not extract content from validated response');
+    };
+    // Handle responses from background script
+    const handleResponse = (response) => {
+        console.log('Received message from background:', response);
+        // Dump the full response object as JSON for debugging
+        try {
+            console.log('Full response object:', JSON.stringify(response, null, 2));
+        }
+        catch (e) {
+            console.log('Could not stringify response object:', e);
+        }
+        // Process message based on type
+        switch (response.type) {
+            case 'CHAT_RESPONSE':
+                // Create user message
+                const userMessage = {
+                    id: Date.now().toString(),
+                    role: 'user',
+                    content: input
+                };
+                try {
+                    // Validate response using Zod schema
+                    const validationResult = ChatResponseSchema.safeParse(response);
+                    if (validationResult.success) {
+                        // Extract response content from validated data
+                        const responseContent = extractResponseContent(validationResult.data);
+                        const assistantMessage = {
+                            id: (Date.now() + 1).toString(),
+                            role: 'assistant',
+                            content: responseContent
+                        };
+                        setMessages(prev => [...prev, userMessage, assistantMessage]);
+                        handleInputChange({ target: { value: '' } });
+                    }
+                    else {
+                        // Handle validation error - try fallback content extraction
+                        console.warn('Response validation failed:', validationResult.error);
+                        let responseContent = '';
+                        // Try the standard extraction methods
+                        if (response.response) {
+                            responseContent = response.response;
+                            console.log('Using direct response field (fallback):', responseContent.substring(0, 100) + '...');
+                        }
+                        else if (response.data) {
+                            if (response.data.choices && response.data.choices.length > 0) {
+                                responseContent = response.data.choices[0].message?.content || '';
+                                console.log('Using OpenAI format response (fallback):', responseContent.substring(0, 100) + '...');
+                            }
+                            else if (response.data.content) {
+                                responseContent = response.data.content;
+                                console.log('Using simple content field (fallback):', responseContent.substring(0, 100) + '...');
+                            }
+                            else if (typeof response.data === 'string') {
+                                responseContent = response.data;
+                                console.log('Using string response (fallback):', responseContent.substring(0, 100) + '...');
+                            }
+                        }
+                        else if (response.fullText) {
+                            responseContent = response.fullText;
+                            console.log('Using fullText field (fallback):', responseContent.substring(0, 100) + '...');
+                        }
+                        // If we still couldn't extract content, look for any string properties
+                        if (!responseContent.trim()) {
+                            console.warn('Fallback extraction failed, trying to find any text content');
+                            // Recursively search for any string property longer than 20 characters
+                            const findTextContent = (obj, depth = 0) => {
+                                if (depth > 5)
+                                    return ''; // Limit recursion depth
+                                if (typeof obj === 'string' && obj.trim().length > 20) {
+                                    console.log('Found potential text content:', obj.substring(0, 50) + '...');
+                                    return obj;
+                                }
+                                if (obj && typeof obj === 'object') {
+                                    for (const key in obj) {
+                                        const value = obj[key];
+                                        const content = findTextContent(value, depth + 1);
+                                        if (content)
+                                            return content;
+                                    }
+                                }
+                                return '';
+                            };
+                            const foundContent = findTextContent(response);
+                            if (foundContent) {
+                                console.log('Using discovered text content');
+                                responseContent = foundContent;
+                            }
+                            else {
+                                console.warn('No usable content found in the response');
+                                responseContent = 'Sorry, I could not generate a response.';
+                            }
+                        }
+                        const assistantMessage = {
+                            id: (Date.now() + 1).toString(),
+                            role: 'assistant',
+                            content: responseContent
+                        };
+                        setMessages(prev => [...prev, userMessage, assistantMessage]);
+                        handleInputChange({ target: { value: '' } });
+                    }
+                }
+                catch (error) {
+                    console.error('Error processing response:', error);
+                    // Add error message
+                    const errorAssistantMessage = {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: "Sorry, I encountered an error processing the response. Please try again."
+                    };
+                    setMessages(prev => [...prev, userMessage, errorAssistantMessage]);
+                }
+                setIsLoading(false);
+                break;
+            case 'CHAT_STREAM_END':
+                // Just mark the loading as complete, don't add a new message
+                console.log('Stream ended, loading complete');
+                setIsLoading(false);
+                break;
+            case 'ERROR':
+                console.error('Chat API error:', response.error);
+                // Add user message even when there's an error
+                const errorUserMessage = {
+                    id: Date.now().toString(),
+                    role: 'user',
+                    content: input
+                };
+                // Add error message
+                const errorAssistantMessage = {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: "Sorry, I encountered an error processing your request. Please try again or check your API configuration."
+                };
+                setMessages(prev => [...prev, errorUserMessage, errorAssistantMessage]);
+                handleInputChange({ target: { value: '' } });
+                setFallbackMode(true);
+                setIsLoading(false);
+                break;
+            // Ignore streaming chunks since we're not using streaming
+            case 'CHAT_STREAM_CHUNK':
+                // Do nothing - we're ignoring intermediate chunks
+                break;
+            default:
+                console.log('Unknown message type:', response.type);
+                break;
+        }
+    };
     // Format message content to properly render code blocks
     const formatMessageContent = (content) => {
-        // Split the content by code blocks
-        const parts = content.split(/(`{1,3})(.*?)(\1)/g);
-        if (parts.length === 1) {
+        // Check if content contains code blocks
+        if (!content.includes('```')) {
             return react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "whitespace-pre-wrap break-words" }, content);
         }
-        return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "whitespace-pre-wrap break-words" }, parts.map((part, i) => {
-            // Check if this part is a code block
-            if (i % 4 === 2 && parts[i - 1].includes('`')) {
-                return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { key: i, className: "bg-gray-800 text-gray-100 p-2 my-2 rounded overflow-x-auto" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, part)));
+        // Split by code blocks (```code```)
+        const segments = content.split(/(```(?:javascript|js)?\n[\s\S]*?\n```)/g);
+        return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "w-full" }, segments.map((segment, idx) => {
+            // Check if this is a code block
+            if (segment.startsWith('```') && segment.endsWith('```')) {
+                // Extract code without the backticks and language identifier
+                let code = segment.replace(/```(?:javascript|js)?\n/, '').replace(/\n```$/, '');
+                return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: idx, className: "my-4 w-full overflow-hidden rounded-md border border-gray-200" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, "JavaScript"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: () => navigator.clipboard.writeText(code), className: "hover:bg-gray-700 p-1 rounded", title: "Copy code" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("rect", { x: "9", y: "9", width: "13", height: "13", rx: "2", ry: "2" }),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("path", { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" })))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "bg-gray-800 text-gray-100 p-4 overflow-x-auto" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", { className: "text-sm font-mono" }, code))));
             }
-            else if (i % 4 !== 0 && i % 4 !== 3) {
-                // Skip the backtick parts
-                return null;
+            else if (segment.trim()) {
+                // Regular text content
+                return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: idx, className: "whitespace-pre-wrap break-words mb-3" }, segment));
             }
-            else {
-                return part;
-            }
+            return null;
         })));
     };
     // Fallback mode: Generate a simple response when API fails
@@ -46828,135 +47068,14 @@ function Chat() {
     const handleLocalInputChange = (e) => {
         setLocalInput(e.target.value);
     };
-    // Set up port connection to background script
-    const [port, setPort] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
-    const [currentStreamingMessage, setCurrentStreamingMessage] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
-    const [connectionAttempts, setConnectionAttempts] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
-    // Initialize port connection
-    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-        let newPort = null;
-        const connectToBackground = () => {
-            try {
-                console.log('Connecting to background script...');
-                newPort = chrome.runtime.connect({ name: 'sidepanel' });
-                newPort.onMessage.addListener((response) => {
-                    console.log('Received message:', response);
-                    switch (response.type) {
-                        case 'CHAT_RESPONSE':
-                            // Handle non-streaming response
-                            if (!currentStreamingMessage) {
-                                const userMessage = {
-                                    id: Date.now().toString(),
-                                    role: 'user',
-                                    content: input.trim()
-                                };
-                                const assistantMessage = {
-                                    id: (Date.now() + 1).toString(),
-                                    role: 'assistant',
-                                    content: response.data?.choices?.[0]?.message?.content ||
-                                        response.data?.content ||
-                                        'Sorry, I could not generate a response.'
-                                };
-                                setMessages(prev => [...prev, userMessage, assistantMessage]);
-                            }
-                            setIsTyping(false);
-                            setCurrentStreamingMessage(null);
-                            break;
-                        case 'CHAT_STREAM_CHUNK':
-                            // Handle streaming chunk
-                            if (!currentStreamingMessage) {
-                                // Add user message if this is the first chunk
-                                const userMessage = {
-                                    id: Date.now().toString(),
-                                    role: 'user',
-                                    content: input.trim()
-                                };
-                                setMessages(prev => [...prev, userMessage]);
-                                // Create new streaming message
-                                const newMessage = {
-                                    id: response.requestId,
-                                    role: 'assistant',
-                                    content: response.chunk
-                                };
-                                setCurrentStreamingMessage(newMessage);
-                            }
-                            else {
-                                // Update existing streaming message
-                                setCurrentStreamingMessage(prev => prev ? {
-                                    ...prev,
-                                    content: prev.content + response.chunk
-                                } : null);
-                            }
-                            break;
-                        case 'CHAT_STREAM_END':
-                            // Finalize streaming message
-                            if (currentStreamingMessage) {
-                                setMessages(prev => [...prev, currentStreamingMessage]);
-                                setCurrentStreamingMessage(null);
-                            }
-                            setIsTyping(false);
-                            break;
-                        case 'ERROR':
-                            console.error('Chat API error:', response.error);
-                            setFallbackMode(true);
-                            setIsTyping(false);
-                            setCurrentStreamingMessage(null);
-                            break;
-                    }
-                });
-                newPort.onDisconnect.addListener(() => {
-                    console.log('Disconnected from background script, error:', chrome.runtime.lastError);
-                    if (newPort === port) {
-                        setPort(null);
-                        // Try to reconnect if we haven't tried too many times
-                        if (connectionAttempts < 3) {
-                            console.log(`Attempting to reconnect (${connectionAttempts + 1}/3)...`);
-                            setConnectionAttempts(prev => prev + 1);
-                            setTimeout(connectToBackground, 1000);
-                        }
-                        else {
-                            setFallbackMode(true);
-                            console.error('Failed to connect after multiple attempts. Switching to fallback mode.');
-                        }
-                    }
-                });
-                setPort(newPort);
-                setConnectionAttempts(0);
-                console.log('Connected to background script');
-                // Send a ping to verify connection
-                newPort.postMessage({ type: 'PING' });
-                return newPort;
-            }
-            catch (error) {
-                console.error('Failed to connect to background script:', error);
-                setFallbackMode(true);
-                return null;
-            }
-        };
-        // Connect when component mounts or connection attempts change
-        const currentPort = connectToBackground();
-        // Clean up function
-        return () => {
-            if (currentPort) {
-                try {
-                    currentPort.disconnect();
-                }
-                catch (e) {
-                    console.error('Error disconnecting port:', e);
-                }
-            }
-        };
-    }, [connectionAttempts]); // Dependency on connectionAttempts to allow reconnection attempts
     // Custom submit handler that uses port messaging
     const handleChatSubmit = async (e) => {
         e.preventDefault();
-        // Validate input
         if (!input.trim() || isLoading)
             return;
-        setIsTyping(true);
-        setCurrentStreamingMessage(null);
+        setIsLoading(true);
         try {
-            if (port) {
+            if (portRef.current) {
                 // Send message through port
                 const message = {
                     type: 'CHAT_MESSAGE',
@@ -46965,37 +47084,19 @@ function Chat() {
                     provider: apiProvider
                 };
                 console.log('Sending message:', message);
-                port.postMessage(message);
+                portRef.current.postMessage(message);
             }
             else {
-                // Try to reconnect or fall back
+                // Try to reconnect
                 console.error('No port connection available');
-                // Attempt to reconnect
-                setConnectionAttempts(prev => prev + 1);
-                // Add user message
-                const userMessage = {
-                    id: Date.now().toString(),
-                    role: 'user',
-                    content: input.trim()
-                };
-                setMessages(prev => [...prev, userMessage]);
-                // Show a temporary response about connection issue
-                setTimeout(() => {
-                    const assistantMessage = {
-                        id: (Date.now() + 1).toString(),
-                        role: 'assistant',
-                        content: 'I\'m having trouble connecting to the backend service. Trying to reconnect...'
-                    };
-                    setMessages(prev => [...prev, assistantMessage]);
-                    setIsTyping(false);
-                    setFallbackMode(true);
-                }, 1000);
+                setFallbackMode(true);
+                setIsLoading(false);
             }
         }
         catch (error) {
             console.error('Error sending chat message:', error);
             setFallbackMode(true);
-            setIsTyping(false);
+            setIsLoading(false);
         }
     };
     const handleKeyDown = (e) => {
@@ -47011,13 +47112,13 @@ function Chat() {
     };
     const handleRegenerate = () => {
         if (messages.length >= 2) {
-            setIsTyping(true);
+            setIsLoading(true);
             reload();
         }
     };
     const handleStopGenerating = () => {
         stop();
-        setIsTyping(false);
+        setIsLoading(false);
     };
     const handleRetryAPI = () => {
         setFallbackMode(false);
@@ -47040,11 +47141,9 @@ function Chat() {
                 });
             } });
     }
-    // Display messages including current streaming message
-    const displayMessages = [
-        ...fallbackMode ? localMessages : messages,
-        ...(currentStreamingMessage ? [currentStreamingMessage] : [])
-    ];
+    // Messages to display
+    const displayMessages = [...(fallbackMode ? localMessages : messages)];
+    // Current input state
     const currentInput = fallbackMode ? localInput : input;
     const currentInputHandler = fallbackMode ? handleLocalInputChange : handleInputChange;
     const currentSubmitHandler = fallbackMode ? handleLocalSubmit : handleChatSubmit;
@@ -47053,13 +47152,13 @@ function Chat() {
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex justify-between items-center p-2 px-3 border-b" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-base font-medium" }, "Mapping through prompting"),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "icon", rounded: "full", onClick: () => setShowSettings(true), "aria-label": "Settings", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 text-gray-600" }))),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-5 w-5 text-gray-600" }))),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__.ScrollArea, { className: "px-2 py-4 rounded-none" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4 w-full mx-auto" },
                 displayMessages.map((message) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: message.id, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_5__.cn)('flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words', message.role === 'user'
                         ? 'ml-auto bg-primary text-primary-foreground'
                         : 'bg-muted'), style: { maxWidth: '98%', minWidth: 'unset', width: 'auto' } }, formatMessageContent(message.content)))),
-                isTyping && !fallbackMode && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max" },
+                currentLoading && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "typing-indicator flex gap-1" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "h-2 w-2 bg-muted-foreground rounded-full animate-pulse" }),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-150" }),
@@ -47068,7 +47167,7 @@ function Chat() {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, error.message || "Error connecting to AI service"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2 ml-auto" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", rounded: "lg", onClick: handleRegenerate },
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-3 w-3 mr-1" }),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-3 w-3 mr-1" }),
                             " Regenerate"),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", rounded: "lg", onClick: () => setShowSettings(true) }, "Settings")))),
                 fallbackMode && apiConfigured && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-2 text-base text-warning-foreground bg-warning/10 rounded-md" },
@@ -47079,10 +47178,10 @@ function Chat() {
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_textarea__WEBPACK_IMPORTED_MODULE_4__.Textarea, { className: "min-h-[60px] resize-none text-base", placeholder: apiConfigured
                     ? "Ask about Earth Engine..."
                     : "Configure API key in Settings to use AI features...", value: currentInput, onChange: currentInputHandler, onKeyDown: handleKeyDown, disabled: currentLoading || (!apiConfigured && !fallbackMode) }),
-            currentLoading && !fallbackMode ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "button", size: "icon", variant: "outline", rounded: "full", onClick: handleStopGenerating, "aria-label": "Stop generating", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
+            currentLoading ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "button", size: "icon", variant: "outline", rounded: "full", onClick: handleStopGenerating, "aria-label": "Stop generating", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "h-5 w-5 text-gray-600" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("rect", { width: "6", height: "16", x: "9", y: "4" })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "submit", size: "icon", variant: "outline", rounded: "full", disabled: currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim(), "aria-label": "Send message", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-5 w-5 text-gray-600" }))))));
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { className: "h-5 w-5 text-gray-600" }))))));
 }
 
 

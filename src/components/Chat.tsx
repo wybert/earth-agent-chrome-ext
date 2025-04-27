@@ -9,6 +9,47 @@ import { cn } from '@/lib/utils';
 import type { Message } from 'ai';
 import { Settings } from './Settings';
 import { ExtensionMessage } from '../types/extension';
+import { z } from 'zod';
+
+// Define Zod schema for message responses
+const MessageContentSchema = z.string().min(1);
+
+const OpenAIChoiceSchema = z.object({
+  message: z.object({
+    content: MessageContentSchema
+  })
+});
+
+const OpenAIResponseSchema = z.object({
+  choices: z.array(OpenAIChoiceSchema).min(1)
+});
+
+// More flexible response schema that handles multiple formats
+const ChatResponseSchema = z.object({
+  type: z.string(),
+  requestId: z.string(),
+}).and(
+  z.union([
+    // Direct response in response field
+    z.object({ 
+      response: MessageContentSchema 
+    }),
+    // Response in fullText field
+    z.object({ 
+      fullText: MessageContentSchema 
+    }),
+    // OpenAI format
+    z.object({ 
+      data: OpenAIResponseSchema 
+    }),
+    // Simple content field
+    z.object({ 
+      data: z.object({ 
+        content: MessageContentSchema 
+      }) 
+    })
+  ])
+);
 
 // Chrome storage keys
 const STORAGE_KEY = 'earth_engine_chat_history';
@@ -28,8 +69,9 @@ export function Chat() {
   const [apiKey, setApiKey] = useState('');
   const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic'>('openai');
   const [fallbackMode, setFallbackMode] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const portRef = useRef<chrome.runtime.Port | null>(null);
   
   // Vercel AI SDK's useChat hook with edge runtime streaming support
   const {
@@ -37,11 +79,10 @@ export function Chat() {
     input,
     handleInputChange,
     handleSubmit,
-    isLoading,
     error,
     setMessages,
     reload,
-    stop
+    stop,
   } = useChat({
     api: `chrome-extension://${chrome.runtime.id}/api/chat`,
     initialMessages: [WELCOME_MESSAGE],
@@ -49,50 +90,17 @@ export function Chat() {
       apiKey,
       provider: apiProvider
     },
-    onResponse(response) {
-      // Handle streaming response
-      if (response.body) {
-        const reader = response.body.getReader();
-        // Process the stream
-        (async () => {
-          try {
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) {
-                setIsTyping(false);
-                break;
-              }
-              // Only try to decode if value is an ArrayBuffer
-              if (value instanceof Uint8Array) {
-                const text = decoder.decode(value, { stream: true });
-                console.log('Received chunk:', text);
-                // Update the last message with the new chunk
-                setMessages(prev => {
-                  const lastMessage = prev[prev.length - 1];
-                  if (lastMessage?.role === 'assistant') {
-                    return [
-                      ...prev.slice(0, -1),
-                      { ...lastMessage, content: lastMessage.content + text }
-                    ];
-                  }
-                  return [...prev, { id: Date.now().toString(), role: 'assistant', content: text }];
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Error reading stream:', error);
-            setFallbackMode(true);
-          }
-        })();
-      }
+    onResponse: () => {
+      // We're not using the built-in processing 
+      console.log("API response received");
     },
     onFinish: () => {
-      setIsTyping(false);
+      setIsLoading(false);
     },
     onError: (error) => {
       console.error("Chat API error:", error);
       setFallbackMode(true);
+      setIsLoading(false);
     }
   });
   
@@ -142,33 +150,285 @@ export function Chat() {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, localMessages, isTyping]);
+  }, [messages, localMessages]);
+
+  // Initialize port connection to background script
+  useEffect(() => {
+    function setupPort() {
+      try {
+        console.log('Connecting to background script...');
+        const newPort = chrome.runtime.connect({ name: 'sidepanel' });
+        
+        newPort.onMessage.addListener(handleResponse);
+        
+        newPort.onDisconnect.addListener(() => {
+          console.log('Disconnected from background script', chrome.runtime.lastError);
+          portRef.current = null;
+          setFallbackMode(true);
+        });
+        
+        portRef.current = newPort;
+        console.log('Connected to background script');
+        
+        // Send initialization message
+        newPort.postMessage({ type: 'INIT' });
+      } catch (error) {
+        console.error('Failed to connect to background script:', error);
+        portRef.current = null;
+        setFallbackMode(true);
+      }
+    }
+    
+    // Initial setup
+    setupPort();
+    
+    // Cleanup on unmount
+    return () => {
+      if (portRef.current) {
+        try {
+          portRef.current.disconnect();
+          portRef.current = null;
+        } catch (e) {
+          console.error('Error disconnecting port:', e);
+        }
+      }
+    };
+  }, []);
+  
+  // Extract response content from validated schema
+  const extractResponseContent = (validatedResponse: z.infer<typeof ChatResponseSchema>): string => {
+    if ('response' in validatedResponse) {
+      console.log('Using validated direct response field');
+      return validatedResponse.response;
+    } 
+    else if ('fullText' in validatedResponse) {
+      console.log('Using validated fullText field');
+      return validatedResponse.fullText;
+    }
+    else if ('data' in validatedResponse) {
+      const data = validatedResponse.data;
+      if ('choices' in data && data.choices.length > 0) {
+        console.log('Using validated OpenAI format response');
+        return data.choices[0].message.content;
+      }
+      else if ('content' in data) {
+        console.log('Using validated simple content field');
+        return data.content;
+      }
+    }
+    
+    // This should never happen if validation passed
+    throw new Error('Could not extract content from validated response');
+  };
+  
+  // Handle responses from background script
+  const handleResponse = (response: any) => {
+    console.log('Received message from background:', response);
+    
+    // Dump the full response object as JSON for debugging
+    try {
+      console.log('Full response object:', JSON.stringify(response, null, 2));
+    } catch (e) {
+      console.log('Could not stringify response object:', e);
+    }
+    
+    // Process message based on type
+    switch (response.type) {
+      case 'CHAT_RESPONSE':
+        // Create user message
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input
+        };
+        
+        try {
+          // Validate response using Zod schema
+          const validationResult = ChatResponseSchema.safeParse(response);
+          
+          if (validationResult.success) {
+            // Extract response content from validated data
+            const responseContent = extractResponseContent(validationResult.data);
+            
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: responseContent
+            };
+            
+            setMessages(prev => [...prev, userMessage, assistantMessage]);
+            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+          } else {
+            // Handle validation error - try fallback content extraction
+            console.warn('Response validation failed:', validationResult.error);
+            let responseContent = '';
+            
+            // Try the standard extraction methods
+            if (response.response) {
+              responseContent = response.response;
+              console.log('Using direct response field (fallback):', responseContent.substring(0, 100) + '...');
+            } else if (response.data) {
+              if (response.data.choices && response.data.choices.length > 0) {
+                responseContent = response.data.choices[0].message?.content || '';
+                console.log('Using OpenAI format response (fallback):', responseContent.substring(0, 100) + '...');
+              } else if (response.data.content) {
+                responseContent = response.data.content;
+                console.log('Using simple content field (fallback):', responseContent.substring(0, 100) + '...');
+              } else if (typeof response.data === 'string') {
+                responseContent = response.data;
+                console.log('Using string response (fallback):', responseContent.substring(0, 100) + '...');
+              }
+            } else if (response.fullText) {
+              responseContent = response.fullText;
+              console.log('Using fullText field (fallback):', responseContent.substring(0, 100) + '...');
+            }
+            
+            // If we still couldn't extract content, look for any string properties
+            if (!responseContent.trim()) {
+              console.warn('Fallback extraction failed, trying to find any text content');
+              
+              // Recursively search for any string property longer than 20 characters
+              const findTextContent = (obj: any, depth = 0): string => {
+                if (depth > 5) return ''; // Limit recursion depth
+                
+                if (typeof obj === 'string' && obj.trim().length > 20) {
+                  console.log('Found potential text content:', obj.substring(0, 50) + '...');
+                  return obj;
+                }
+                
+                if (obj && typeof obj === 'object') {
+                  for (const key in obj) {
+                    const value = obj[key];
+                    const content = findTextContent(value, depth + 1);
+                    if (content) return content;
+                  }
+                }
+                
+                return '';
+              };
+              
+              const foundContent = findTextContent(response);
+              if (foundContent) {
+                console.log('Using discovered text content');
+                responseContent = foundContent;
+              } else {
+                console.warn('No usable content found in the response');
+                responseContent = 'Sorry, I could not generate a response.';
+              }
+            }
+            
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: responseContent
+            };
+            
+            setMessages(prev => [...prev, userMessage, assistantMessage]);
+            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+          }
+        } catch (error) {
+          console.error('Error processing response:', error);
+          
+          // Add error message
+          const errorAssistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: "Sorry, I encountered an error processing the response. Please try again."
+          };
+          
+          setMessages(prev => [...prev, userMessage, errorAssistantMessage]);
+        }
+        
+        setIsLoading(false);
+        break;
+        
+      case 'CHAT_STREAM_END':
+        // Just mark the loading as complete, don't add a new message
+        console.log('Stream ended, loading complete');
+        setIsLoading(false);
+        break;
+        
+      case 'ERROR':
+        console.error('Chat API error:', response.error);
+        
+        // Add user message even when there's an error
+        const errorUserMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input
+        };
+        
+        // Add error message
+        const errorAssistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "Sorry, I encountered an error processing your request. Please try again or check your API configuration."
+        };
+        
+        setMessages(prev => [...prev, errorUserMessage, errorAssistantMessage]);
+        handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+        setFallbackMode(true);
+        setIsLoading(false);
+        break;
+        
+      // Ignore streaming chunks since we're not using streaming
+      case 'CHAT_STREAM_CHUNK':
+        // Do nothing - we're ignoring intermediate chunks
+        break;
+        
+      default:
+        console.log('Unknown message type:', response.type);
+        break;
+    }
+  };
 
   // Format message content to properly render code blocks
   const formatMessageContent = (content: string) => {
-    // Split the content by code blocks
-    const parts = content.split(/(`{1,3})(.*?)(\1)/g);
-    
-    if (parts.length === 1) {
+    // Check if content contains code blocks
+    if (!content.includes('```')) {
       return <div className="whitespace-pre-wrap break-words">{content}</div>;
     }
     
+    // Split by code blocks (```code```)
+    const segments = content.split(/(```(?:javascript|js)?\n[\s\S]*?\n```)/g);
+    
     return (
-      <div className="whitespace-pre-wrap break-words">
-        {parts.map((part, i) => {
-          // Check if this part is a code block
-          if (i % 4 === 2 && parts[i - 1].includes('`')) {
+      <div className="w-full">
+        {segments.map((segment, idx) => {
+          // Check if this is a code block
+          if (segment.startsWith('```') && segment.endsWith('```')) {
+            // Extract code without the backticks and language identifier
+            let code = segment.replace(/```(?:javascript|js)?\n/, '').replace(/\n```$/, '');
+            
             return (
-              <pre key={i} className="bg-gray-800 text-gray-100 p-2 my-2 rounded overflow-x-auto">
-                <code>{part}</code>
-              </pre>
+              <div key={idx} className="my-4 w-full overflow-hidden rounded-md border border-gray-200">
+                <div className="bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center">
+                  <span>JavaScript</span>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(code)}
+                    className="hover:bg-gray-700 p-1 rounded"
+                    title="Copy code"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <pre className="bg-gray-800 text-gray-100 p-4 overflow-x-auto">
+                  <code className="text-sm font-mono">{code}</code>
+                </pre>
+              </div>
             );
-          } else if (i % 4 !== 0 && i % 4 !== 3) {
-            // Skip the backtick parts
-            return null;
-          } else {
-            return part;
+          } else if (segment.trim()) {
+            // Regular text content
+            return (
+              <div key={idx} className="whitespace-pre-wrap break-words mb-3">
+                {segment}
+              </div>
+            );
           }
+          return null;
         })}
       </div>
     );
@@ -234,150 +494,16 @@ export function Chat() {
     setLocalInput(e.target.value);
   };
 
-  // Set up port connection to background script
-  const [port, setPort] = useState<chrome.runtime.Port | null>(null);
-  const [currentStreamingMessage, setCurrentStreamingMessage] = useState<Message | null>(null);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
-
-  // Initialize port connection
-  useEffect(() => {
-    let newPort: chrome.runtime.Port | null = null;
-    
-    const connectToBackground = () => {
-      try {
-        console.log('Connecting to background script...');
-        newPort = chrome.runtime.connect({ name: 'sidepanel' });
-        
-        newPort.onMessage.addListener((response: any) => {
-          console.log('Received message:', response);
-          switch (response.type) {
-            case 'CHAT_RESPONSE':
-              // Handle non-streaming response
-              if (!currentStreamingMessage) {
-                const userMessage: Message = {
-                  id: Date.now().toString(),
-                  role: 'user',
-                  content: input.trim()
-                };
-
-                const assistantMessage: Message = {
-                  id: (Date.now() + 1).toString(),
-                  role: 'assistant',
-                  content: response.data?.choices?.[0]?.message?.content || 
-                          response.data?.content || 
-                          'Sorry, I could not generate a response.'
-                };
-
-                setMessages(prev => [...prev, userMessage, assistantMessage]);
-              }
-              setIsTyping(false);
-              setCurrentStreamingMessage(null);
-              break;
-
-            case 'CHAT_STREAM_CHUNK':
-              // Handle streaming chunk
-              if (!currentStreamingMessage) {
-                // Add user message if this is the first chunk
-                const userMessage: Message = {
-                  id: Date.now().toString(),
-                  role: 'user',
-                  content: input.trim()
-                };
-                setMessages(prev => [...prev, userMessage]);
-                
-                // Create new streaming message
-                const newMessage: Message = {
-                  id: response.requestId,
-                  role: 'assistant',
-                  content: response.chunk
-                };
-                setCurrentStreamingMessage(newMessage);
-              } else {
-                // Update existing streaming message
-                setCurrentStreamingMessage(prev => prev ? {
-                  ...prev,
-                  content: prev.content + response.chunk
-                } : null);
-              }
-              break;
-
-            case 'CHAT_STREAM_END':
-              // Finalize streaming message
-              if (currentStreamingMessage) {
-                setMessages(prev => [...prev, currentStreamingMessage]);
-                setCurrentStreamingMessage(null);
-              }
-              setIsTyping(false);
-              break;
-
-            case 'ERROR':
-              console.error('Chat API error:', response.error);
-              setFallbackMode(true);
-              setIsTyping(false);
-              setCurrentStreamingMessage(null);
-              break;
-          }
-        });
-
-        newPort.onDisconnect.addListener(() => {
-          console.log('Disconnected from background script, error:', chrome.runtime.lastError);
-          if (newPort === port) {
-            setPort(null);
-            
-            // Try to reconnect if we haven't tried too many times
-            if (connectionAttempts < 3) {
-              console.log(`Attempting to reconnect (${connectionAttempts + 1}/3)...`);
-              setConnectionAttempts(prev => prev + 1);
-              setTimeout(connectToBackground, 1000);
-            } else {
-              setFallbackMode(true);
-              console.error('Failed to connect after multiple attempts. Switching to fallback mode.');
-            }
-          }
-        });
-
-        setPort(newPort);
-        setConnectionAttempts(0);
-        console.log('Connected to background script');
-        
-        // Send a ping to verify connection
-        newPort.postMessage({ type: 'PING' });
-        
-        return newPort;
-      } catch (error) {
-        console.error('Failed to connect to background script:', error);
-        setFallbackMode(true);
-        return null;
-      }
-    };
-    
-    // Connect when component mounts or connection attempts change
-    const currentPort = connectToBackground();
-    
-    // Clean up function
-    return () => {
-      if (currentPort) {
-        try {
-          currentPort.disconnect();
-        } catch (e) {
-          console.error('Error disconnecting port:', e);
-        }
-      }
-    };
-  }, [connectionAttempts]); // Dependency on connectionAttempts to allow reconnection attempts
-
   // Custom submit handler that uses port messaging
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate input
     if (!input.trim() || isLoading) return;
     
-    setIsTyping(true);
-    setCurrentStreamingMessage(null);
+    setIsLoading(true);
     
     try {
-      if (port) {
+      if (portRef.current) {
         // Send message through port
         const message: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
@@ -387,40 +513,17 @@ export function Chat() {
         };
 
         console.log('Sending message:', message);
-        port.postMessage(message);
+        portRef.current.postMessage(message);
       } else {
-        // Try to reconnect or fall back
+        // Try to reconnect
         console.error('No port connection available');
-        
-        // Attempt to reconnect
-        setConnectionAttempts(prev => prev + 1);
-        
-        // Add user message
-        const userMessage: Message = {
-          id: Date.now().toString(),
-          role: 'user',
-          content: input.trim()
-        };
-        
-        setMessages(prev => [...prev, userMessage]);
-        
-        // Show a temporary response about connection issue
-        setTimeout(() => {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: 'I\'m having trouble connecting to the backend service. Trying to reconnect...'
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-          setIsTyping(false);
-          setFallbackMode(true);
-        }, 1000);
+        setFallbackMode(true);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error sending chat message:', error);
       setFallbackMode(true);
-      setIsTyping(false);
+      setIsLoading(false);
     }
   };
 
@@ -437,14 +540,14 @@ export function Chat() {
 
   const handleRegenerate = () => {
     if (messages.length >= 2) {
-      setIsTyping(true);
+      setIsLoading(true);
       reload();
     }
   };
 
   const handleStopGenerating = () => {
     stop();
-    setIsTyping(false);
+    setIsLoading(false);
   };
 
   const handleRetryAPI = () => {
@@ -470,11 +573,10 @@ export function Chat() {
     }} />;
   }
 
-  // Display messages including current streaming message
-  const displayMessages = [
-    ...fallbackMode ? localMessages : messages,
-    ...(currentStreamingMessage ? [currentStreamingMessage] : [])
-  ];
+  // Messages to display
+  const displayMessages = [...(fallbackMode ? localMessages : messages)];
+  
+  // Current input state
   const currentInput = fallbackMode ? localInput : input;
   const currentInputHandler = fallbackMode ? handleLocalInputChange : handleInputChange;
   const currentSubmitHandler = fallbackMode ? handleLocalSubmit : handleChatSubmit;
@@ -498,6 +600,7 @@ export function Chat() {
       
       <ScrollArea className="px-2 py-4 rounded-none">
         <div className="space-y-4 w-full mx-auto">
+          {/* Show messages */}
           {displayMessages.map((message) => (
             <div
               key={message.id}
@@ -513,7 +616,8 @@ export function Chat() {
             </div>
           ))}
 
-          {isTyping && !fallbackMode && (
+          {/* Simple loading indicator */}
+          {currentLoading && (
             <div className="flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max">
               <div className="typing-indicator flex gap-1">
                 <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse"></span>
@@ -581,7 +685,7 @@ export function Chat() {
           onKeyDown={handleKeyDown}
           disabled={currentLoading || (!apiConfigured && !fallbackMode)}
         />
-        {currentLoading && !fallbackMode ? (
+        {currentLoading ? (
           <Button
             type="button"
             size="icon"
