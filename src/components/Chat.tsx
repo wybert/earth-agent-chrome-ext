@@ -10,6 +10,47 @@ import type { Message } from 'ai';
 import { Settings } from './Settings';
 import { ExtensionMessage } from '../types/extension';
 import ToolsTestPanel from './ui/ToolsTestPanel';
+import { z } from 'zod';
+
+// Define Zod schema for message responses
+const MessageContentSchema = z.string().min(1);
+
+const OpenAIChoiceSchema = z.object({
+  message: z.object({
+    content: MessageContentSchema
+  })
+});
+
+const OpenAIResponseSchema = z.object({
+  choices: z.array(OpenAIChoiceSchema).min(1)
+});
+
+// More flexible response schema that handles multiple formats
+const ChatResponseSchema = z.object({
+  type: z.string(),
+  requestId: z.string().optional(),
+}).and(
+  z.union([
+    // Direct response in response field
+    z.object({ 
+      response: MessageContentSchema 
+    }),
+    // Response in fullText field
+    z.object({ 
+      fullText: MessageContentSchema 
+    }),
+    // OpenAI format
+    z.object({ 
+      data: OpenAIResponseSchema 
+    }),
+    // Simple content field
+    z.object({ 
+      data: z.object({ 
+        content: MessageContentSchema 
+      }) 
+    })
+  ])
+);
 
 // Chrome storage keys
 const STORAGE_KEY = 'earth_engine_chat_history';
@@ -146,31 +187,79 @@ export function Chat() {
     }
   }, [messages, localMessages, isTyping]);
 
+  // Extract response content from validated schema
+  const extractResponseContent = (validatedResponse: z.infer<typeof ChatResponseSchema>): string => {
+    if ('response' in validatedResponse) {
+      console.log('Using validated direct response field');
+      return validatedResponse.response;
+    } 
+    else if ('fullText' in validatedResponse) {
+      console.log('Using validated fullText field');
+      return validatedResponse.fullText;
+    }
+    else if ('data' in validatedResponse) {
+      const data = validatedResponse.data;
+      if ('choices' in data && data.choices.length > 0) {
+        console.log('Using validated OpenAI format response');
+        return data.choices[0].message.content;
+      }
+      else if ('content' in data) {
+        console.log('Using validated simple content field');
+        return data.content;
+      }
+    }
+    
+    // This should never happen if validation passed
+    throw new Error('Could not extract content from validated response');
+  };
+
   // Format message content to properly render code blocks
   const formatMessageContent = (content: string) => {
-    // Split the content by code blocks
-    const parts = content.split(/(`{1,3})(.*?)(\1)/g);
-    
-    if (parts.length === 1) {
+    // Check if content contains code blocks
+    if (!content.includes('```')) {
       return <div className="whitespace-pre-wrap break-words">{content}</div>;
     }
     
+    // Split by code blocks (```code```)
+    const segments = content.split(/(```(?:javascript|js)?\n[\s\S]*?\n```)/g);
+    
     return (
-      <div className="whitespace-pre-wrap break-words">
-        {parts.map((part, i) => {
-          // Check if this part is a code block
-          if (i % 4 === 2 && parts[i - 1].includes('`')) {
+      <div className="w-full">
+        {segments.map((segment, idx) => {
+          // Check if this is a code block
+          if (segment.startsWith('```') && segment.endsWith('```')) {
+            // Extract code without the backticks and language identifier
+            let code = segment.replace(/```(?:javascript|js)?\n/, '').replace(/\n```$/, '');
+            
             return (
-              <pre key={i} className="bg-gray-800 text-gray-100 p-2 my-2 rounded overflow-x-auto">
-                <code>{part}</code>
-              </pre>
+              <div key={idx} className="my-4 w-full overflow-hidden rounded-md border border-gray-200">
+                <div className="bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center">
+                  <span>JavaScript</span>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(code)}
+                    className="hover:bg-gray-700 p-1 rounded"
+                    title="Copy code"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                  </button>
+                </div>
+                <pre className="bg-gray-800 text-gray-100 p-4 overflow-x-auto">
+                  <code className="text-sm font-mono">{code}</code>
+                </pre>
+              </div>
             );
-          } else if (i % 4 !== 0 && i % 4 !== 3) {
-            // Skip the backtick parts
-            return null;
-          } else {
-            return part;
+          } else if (segment.trim()) {
+            // Regular text content
+            return (
+              <div key={idx} className="whitespace-pre-wrap break-words mb-3">
+                {segment}
+              </div>
+            );
           }
+          return null;
         })}
       </div>
     );
@@ -250,77 +339,8 @@ export function Chat() {
         console.log('Connecting to background script...');
         newPort = chrome.runtime.connect({ name: 'sidepanel' });
         
-        newPort.onMessage.addListener((response: any) => {
-          console.log('Received message:', response);
-          switch (response.type) {
-            case 'CHAT_RESPONSE':
-              // Handle non-streaming response
-              if (!currentStreamingMessage) {
-                const userMessage: Message = {
-                  id: Date.now().toString(),
-                  role: 'user',
-                  content: input.trim()
-                };
-
-                const assistantMessage: Message = {
-                  id: (Date.now() + 1).toString(),
-                  role: 'assistant',
-                  content: response.data?.choices?.[0]?.message?.content || 
-                          response.data?.content || 
-                          'Sorry, I could not generate a response.'
-                };
-
-                setMessages(prev => [...prev, userMessage, assistantMessage]);
-              }
-              setIsTyping(false);
-              setCurrentStreamingMessage(null);
-              break;
-
-            case 'CHAT_STREAM_CHUNK':
-              // Handle streaming chunk
-              if (!currentStreamingMessage) {
-                // Add user message if this is the first chunk
-                const userMessage: Message = {
-                  id: Date.now().toString(),
-                  role: 'user',
-                  content: input.trim()
-                };
-                setMessages(prev => [...prev, userMessage]);
-                
-                // Create new streaming message
-                const newMessage: Message = {
-                  id: response.requestId,
-                  role: 'assistant',
-                  content: response.chunk
-                };
-                setCurrentStreamingMessage(newMessage);
-              } else {
-                // Update existing streaming message
-                setCurrentStreamingMessage(prev => prev ? {
-                  ...prev,
-                  content: prev.content + response.chunk
-                } : null);
-              }
-              break;
-
-            case 'CHAT_STREAM_END':
-              // Finalize streaming message
-              if (currentStreamingMessage) {
-                setMessages(prev => [...prev, currentStreamingMessage]);
-                setCurrentStreamingMessage(null);
-              }
-              setIsTyping(false);
-              break;
-
-            case 'ERROR':
-              console.error('Chat API error:', response.error);
-              setFallbackMode(true);
-              setIsTyping(false);
-              setCurrentStreamingMessage(null);
-              break;
-          }
-        });
-
+        newPort.onMessage.addListener(handleResponse);
+        
         newPort.onDisconnect.addListener(() => {
           console.log('Disconnected from background script, error:', chrome.runtime.lastError);
           if (newPort === port) {
@@ -367,6 +387,167 @@ export function Chat() {
       }
     };
   }, [connectionAttempts]); // Dependency on connectionAttempts to allow reconnection attempts
+
+  // Handle responses from background script
+  const handleResponse = (response: any) => {
+    console.log('Received message from background:', response);
+    
+    // Dump the full response object as JSON for debugging
+    try {
+      console.log('Full response object:', JSON.stringify(response, null, 2));
+    } catch (e) {
+      console.log('Could not stringify response object:', e);
+    }
+    
+    // Process message based on type
+    switch (response.type) {
+      case 'CHAT_RESPONSE':
+        // Create user message
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input.trim()
+        };
+        
+        try {
+          // Validate response using Zod schema
+          const validationResult = ChatResponseSchema.safeParse(response);
+          
+          if (validationResult.success) {
+            // Extract response content from validated data
+            const responseContent = extractResponseContent(validationResult.data);
+            
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: responseContent
+            };
+            
+            setMessages(prev => [...prev, userMessage, assistantMessage]);
+            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+          } else {
+            // Handle validation error - try fallback content extraction
+            console.warn('Response validation failed:', validationResult.error);
+            let responseContent = '';
+            
+            // Try the standard extraction methods
+            if (response.response) {
+              responseContent = response.response;
+              console.log('Using direct response field (fallback):', responseContent.substring(0, 100) + '...');
+            } else if (response.data) {
+              if (response.data.choices && response.data.choices.length > 0) {
+                responseContent = response.data.choices[0].message?.content || '';
+                console.log('Using OpenAI format response (fallback):', responseContent.substring(0, 100) + '...');
+              } else if (response.data.content) {
+                responseContent = response.data.content;
+                console.log('Using simple content field (fallback):', responseContent.substring(0, 100) + '...');
+              } else if (typeof response.data === 'string') {
+                responseContent = response.data;
+                console.log('Using string response (fallback):', responseContent.substring(0, 100) + '...');
+              }
+            } else if (response.fullText) {
+              responseContent = response.fullText;
+              console.log('Using fullText field (fallback):', responseContent.substring(0, 100) + '...');
+            }
+            
+            // If we still couldn't extract content, look for any string properties
+            if (!responseContent.trim()) {
+              console.warn('Fallback extraction failed, trying to find any text content');
+              
+              // Recursively search for any string property longer than 20 characters
+              const findTextContent = (obj: any, depth = 0): string => {
+                if (depth > 5) return ''; // Limit recursion depth
+                
+                if (typeof obj === 'string' && obj.trim().length > 20) {
+                  console.log('Found potential text content:', obj.substring(0, 50) + '...');
+                  return obj;
+                }
+                
+                if (obj && typeof obj === 'object') {
+                  for (const key in obj) {
+                    const value = obj[key];
+                    const content = findTextContent(value, depth + 1);
+                    if (content) return content;
+                  }
+                }
+                
+                return '';
+              };
+              
+              const foundContent = findTextContent(response);
+              if (foundContent) {
+                console.log('Using discovered text content');
+                responseContent = foundContent;
+              } else {
+                console.warn('No usable content found in the response');
+                responseContent = 'Sorry, I could not generate a response.';
+              }
+            }
+            
+            const assistantMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              role: 'assistant',
+              content: responseContent
+            };
+            
+            setMessages(prev => [...prev, userMessage, assistantMessage]);
+            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+          }
+        } catch (error) {
+          console.error('Error processing response:', error);
+          
+          // Add error message
+          const errorAssistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: "Sorry, I encountered an error processing the response. Please try again."
+          };
+          
+          setMessages(prev => [...prev, userMessage, errorAssistantMessage]);
+        }
+        
+        setIsTyping(false);
+        break;
+        
+      case 'CHAT_STREAM_END':
+        // Just mark the loading as complete, don't add a new message
+        console.log('Stream ended, loading complete');
+        setIsTyping(false);
+        break;
+        
+      case 'ERROR':
+        console.error('Chat API error:', response.error);
+        
+        // Add user message even when there's an error
+        const errorUserMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input
+        };
+        
+        // Add error message
+        const errorAssistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "Sorry, I encountered an error processing your request. Please try again or check your API configuration."
+        };
+        
+        setMessages(prev => [...prev, errorUserMessage, errorAssistantMessage]);
+        handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+        setFallbackMode(true);
+        setIsTyping(false);
+        break;
+        
+      // Ignore streaming chunks since we're not using streaming
+      case 'CHAT_STREAM_CHUNK':
+        // Do nothing - we're ignoring intermediate chunks
+        break;
+        
+      default:
+        console.log('Unknown message type:', response.type);
+        break;
+    }
+  };
 
   // Custom submit handler that uses port messaging
   const handleChatSubmit = async (e: React.FormEvent) => {
