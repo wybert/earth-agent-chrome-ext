@@ -5958,6 +5958,9 @@ video {
 .mb-2 {
   margin-bottom: 0.5rem;
 }
+.mb-3 {
+  margin-bottom: 0.75rem;
+}
 .mb-4 {
   margin-bottom: 1rem;
 }
@@ -6309,11 +6312,17 @@ video {
   padding-top: 1rem;
   padding-bottom: 1rem;
 }
+.pb-2 {
+  padding-bottom: 0.5rem;
+}
 .pr-10 {
   padding-right: 2.5rem;
 }
 .pt-0 {
   padding-top: 0px;
+}
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 .text-2xl {
   font-size: 1.5rem;
@@ -6628,7 +6637,7 @@ video {
 
 .\\[\\&_svg\\]\\:shrink-0 svg {
   flex-shrink: 0;
-} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
+} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -47391,13 +47400,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/lib/tools/context7/agentTools */ "./src/lib/tools/context7/agentTools.ts");
 /* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
-/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/* harmony import */ var _lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/tools/earth-engine */ "./src/lib/tools/earth-engine/index.ts");
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+
 
 
 
 
 const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [activeTab, setActiveTab] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('resolveLibraryId');
+    const [activeSection, setActiveSection] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('context7');
     const [query, setQuery] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Earth Engine');
     const [libraryId, setLibraryId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
     const [topic, setTopic] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Landsat');
@@ -47405,8 +47417,14 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [loading, setLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [error, setError] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
     const [environment, setEnvironment] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
+    // Earth Engine tool state
+    const [eeCode, setEeCode] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('// Earth Engine code\nvar image = ee.Image(1);\nprint(image);');
+    const [eeLatitude, setEeLatitude] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(37.7749);
+    const [eeLongitude, setEeLongitude] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(-122.4194);
+    const [eeScriptId, setEeScriptId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('users/example/myScript');
+    const [eeScriptContent, setEeScriptContent] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('// Earth Engine script\nvar image = ee.Image(1);\nprint(image);');
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-        setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_3__.detectEnvironment)());
+        setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_4__.detectEnvironment)());
     }, []);
     if (!isOpen)
         return null;
@@ -47415,38 +47433,63 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
         setError(null);
         try {
             let testResult;
-            switch (activeTab) {
-                case 'resolveLibraryId':
-                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
-                    // If library ID was found, update the libraryId state
-                    if (testResult.success && testResult.libraryId) {
-                        setLibraryId(testResult.libraryId);
-                    }
-                    break;
-                case 'getDocumentation':
-                    if (!libraryId) {
-                        throw new Error('Library ID is required for getDocumentation');
-                    }
-                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
-                    break;
-                case 'searchEarthEngineDatasets':
-                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
-                    // If library ID was found, update the libraryId state
-                    if (testResult.success && testResult.libraryId) {
-                        setLibraryId(testResult.libraryId);
-                    }
-                    break;
-                case 'getEarthEngineDocumentation':
-                    if (!libraryId) {
-                        throw new Error('Library ID is required for getEarthEngineDocumentation');
-                    }
-                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
-                    break;
-                case 'getEarthEngineDatasetInfo':
-                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
-                    break;
-                default:
-                    testResult = { error: 'Unknown test type' };
+            // Context7 tools
+            if (activeSection === 'context7') {
+                switch (activeTab) {
+                    case 'resolveLibraryId':
+                        testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
+                        // If library ID was found, update the libraryId state
+                        if (testResult.success && testResult.libraryId) {
+                            setLibraryId(testResult.libraryId);
+                        }
+                        break;
+                    case 'getDocumentation':
+                        if (!libraryId) {
+                            throw new Error('Library ID is required for getDocumentation');
+                        }
+                        testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
+                        break;
+                    case 'searchEarthEngineDatasets':
+                        testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
+                        // If library ID was found, update the libraryId state
+                        if (testResult.success && testResult.libraryId) {
+                            setLibraryId(testResult.libraryId);
+                        }
+                        break;
+                    case 'getEarthEngineDocumentation':
+                        if (!libraryId) {
+                            throw new Error('Library ID is required for getEarthEngineDocumentation');
+                        }
+                        testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
+                        break;
+                    case 'getEarthEngineDatasetInfo':
+                        testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
+                        break;
+                    default:
+                        testResult = { error: 'Unknown test type' };
+                }
+            }
+            // Earth Engine tools
+            else if (activeSection === 'earthEngine') {
+                switch (activeTab) {
+                    case 'runCode':
+                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.runCode)(eeCode);
+                        break;
+                    case 'inspectMap':
+                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.inspectMap)({ lat: eeLatitude, lng: eeLongitude });
+                        break;
+                    case 'checkConsole':
+                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.checkConsole)();
+                        break;
+                    case 'getTasks':
+                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.getTasks)();
+                        break;
+                    case 'editScript':
+                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.editScript)(eeScriptId, eeScriptContent);
+                        break;
+                    default:
+                        testResult = { error: 'Unknown Earth Engine test type' };
+                }
             }
             setResult(testResult);
         }
@@ -47462,7 +47505,7 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "bg-white rounded-lg shadow-lg w-11/12 max-w-3xl max-h-[90vh] overflow-hidden" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex justify-between items-center p-4 border-b" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-xl font-semibold" }, "Context7 Tools Test"),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-xl font-semibold" }, "Tools Test Panel"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClose, className: "text-gray-500 hover:text-gray-700" }, "\u2715")),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-4" },
                 environment && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4 p-3 bg-gray-100 rounded-md text-sm" },
@@ -47480,26 +47523,66 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, environment.useBackgroundProxy
                         ? "Requests will go through the background script to avoid CORS issues."
                         : "Direct API calls will be made. Make sure proper permissions are set."))),
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex mb-3 space-x-2 border-b pb-2" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(SectionTabButton, { active: activeSection === 'context7', onClick: () => {
+                            setActiveSection('context7');
+                            setActiveTab('resolveLibraryId');
+                        } }, "Context7 Tools"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(SectionTabButton, { active: activeSection === 'earthEngine', onClick: () => {
+                            setActiveSection('earthEngine');
+                            setActiveTab('runCode');
+                        } }, "Earth Engine Tools")),
+                activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'resolveLibraryId', onClick: () => setActiveTab('resolveLibraryId') }, "Resolve Library ID"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getDocumentation', onClick: () => setActiveTab('getDocumentation') }, "Get Documentation"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'searchEarthEngineDatasets', onClick: () => setActiveTab('searchEarthEngineDatasets') }, "Search Datasets"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getEarthEngineDocumentation', onClick: () => setActiveTab('getEarthEngineDocumentation') }, "Get EE Documentation"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getEarthEngineDatasetInfo', onClick: () => setActiveTab('getEarthEngineDatasetInfo') }, "Get Dataset Info")),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getEarthEngineDatasetInfo', onClick: () => setActiveTab('getEarthEngineDatasetInfo') }, "Get Dataset Info"))),
+                activeSection === 'earthEngine' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'runCode', onClick: () => setActiveTab('runCode') }, "Run Code"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'inspectMap', onClick: () => setActiveTab('inspectMap') }, "Inspect Map"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'checkConsole', onClick: () => setActiveTab('checkConsole') }, "Check Console"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getTasks', onClick: () => setActiveTab('getTasks') }, "Get Tasks"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'editScript', onClick: () => setActiveTab('editScript') }, "Edit Script"))),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4" },
-                    (activeTab === 'resolveLibraryId' || activeTab === 'searchEarthEngineDatasets') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Query"),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: query, onChange: (e) => setQuery(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter search query" }))),
-                    (activeTab === 'getDocumentation' || activeTab === 'getEarthEngineDocumentation') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Library ID"),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: libraryId, onChange: (e) => setLibraryId(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter library ID" })),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                    activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                        (activeTab === 'resolveLibraryId' || activeTab === 'searchEarthEngineDatasets') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Query"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: query, onChange: (e) => setQuery(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter search query" }))),
+                        (activeTab === 'getDocumentation' || activeTab === 'getEarthEngineDocumentation') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Library ID"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: libraryId, onChange: (e) => setLibraryId(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter library ID" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" })))),
+                        activeTab === 'getEarthEngineDatasetInfo' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" })))),
-                    activeTab === 'getEarthEngineDatasetInfo' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" }))),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" }))))),
+                    activeSection === 'earthEngine' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                        activeTab === 'runCode' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Earth Engine Code"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { value: eeCode, onChange: (e) => setEeCode(e.target.value), className: "w-full p-2 border rounded-md font-mono text-sm", rows: 8, placeholder: "Enter Earth Engine code" }))),
+                        activeTab === 'inspectMap' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Latitude"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", value: eeLatitude, onChange: (e) => setEeLatitude(parseFloat(e.target.value)), className: "w-full p-2 border rounded-md", placeholder: "Enter latitude (-90 to 90)", min: "-90", max: "90", step: "0.0001" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Longitude"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", value: eeLongitude, onChange: (e) => setEeLongitude(parseFloat(e.target.value)), className: "w-full p-2 border rounded-md", placeholder: "Enter longitude (-180 to 180)", min: "-180", max: "180", step: "0.0001" })))),
+                        activeTab === 'checkConsole' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-3 bg-gray-100 rounded-md" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm" }, "This tool will check the Earth Engine console for errors and warnings."),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, "Make sure to have the Earth Engine page open in a tab."))),
+                        activeTab === 'getTasks' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-3 bg-gray-100 rounded-md" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm" }, "This tool will retrieve all current tasks from Earth Engine."),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, "Make sure to have the Earth Engine page open in a tab."))),
+                        activeTab === 'editScript' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Script ID"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: eeScriptId, onChange: (e) => setEeScriptId(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter script ID (e.g., users/username/scriptname)" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Script Content"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { value: eeScriptContent, onChange: (e) => setEeScriptContent(e.target.value), className: "w-full p-2 border rounded-md font-mono text-sm", rows: 8, placeholder: "Enter Earth Engine code for the script" })))))),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: runTest, disabled: loading, className: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300" }, loading ? 'Running...' : 'Run Test')),
                     error && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 p-4 bg-red-100 text-red-800 rounded-md" },
@@ -47514,6 +47597,7 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "text-xs whitespace-pre-wrap" }, typeof result === 'object' ? JSON.stringify(result, null, 2) : result)))))))));
 };
 const TabButton = ({ children, active, onClick }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClick, className: `px-3 py-1 rounded-md whitespace-nowrap ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}` }, children));
+const SectionTabButton = ({ children, active, onClick }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClick, className: `px-4 py-2 rounded-md whitespace-nowrap font-medium ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}` }, children));
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ToolsTestPanel);
 
 
@@ -48243,6 +48327,727 @@ async function makeDirectApiCall(libraryName) {
     }
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (resolveLibraryId);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/earth-engine/checkConsole.ts":
+/*!****************************************************!*\
+  !*** ./src/lib/tools/earth-engine/checkConsole.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   checkConsole: () => (/* binding */ checkConsole),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Check the Google Earth Engine console for errors
+ * This tool examines the console output panel for error and warning messages
+ *
+ * @returns Promise with success status and array of errors/warnings
+ */
+
+/**
+ * Check the Google Earth Engine console for errors and warnings
+ *
+ * @returns Promise with array of errors/warnings or error message
+ */
+async function checkConsole() {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'CHECK_CONSOLE'
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // First we need to find the Earth Engine tab
+                chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid Earth Engine tab'
+                        });
+                        return;
+                    }
+                    // Send message to the content script in the Earth Engine tab
+                    chrome.tabs.sendMessage(tabId, { type: 'CHECK_CONSOLE' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                            });
+                            return;
+                        }
+                        resolve(response);
+                    });
+                });
+            });
+        }
+        // If not in a browser environment, we can't check the console
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot check Earth Engine console in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for checking Earth Engine console'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error checking console: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (checkConsole);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/earth-engine/editScript.ts":
+/*!**************************************************!*\
+  !*** ./src/lib/tools/earth-engine/editScript.ts ***!
+  \**************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   editScript: () => (/* binding */ editScript)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Edit a script in Google Earth Engine
+ * This tool modifies an existing script or creates a new one in the Earth Engine Code Editor
+ *
+ * @param scriptId - ID of the script to edit
+ * @param content - New content to set in the script
+ * @returns Promise with success status and result message
+ */
+
+/**
+ * Edit a script in Google Earth Engine
+ *
+ * @param scriptId - ID of the script to edit
+ * @param content - New content to set in the script
+ * @returns Promise with result message or error
+ */
+async function editScript(scriptId, content) {
+    try {
+        // Validate inputs
+        if (!scriptId) {
+            return {
+                success: false,
+                error: 'Script ID is required'
+            };
+        }
+        if (!content) {
+            return {
+                success: false,
+                error: 'Script content is required'
+            };
+        }
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'EDIT_SCRIPT',
+                        scriptId,
+                        content
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // First we need to find the Earth Engine tab
+                chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid Earth Engine tab'
+                        });
+                        return;
+                    }
+                    // Send message to the content script in the Earth Engine tab
+                    chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId, content }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                            });
+                            return;
+                        }
+                        resolve(response);
+                    });
+                });
+            });
+        }
+        // If not in a browser environment, we can't edit scripts
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot edit Earth Engine scripts in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for editing Earth Engine scripts'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error editing script: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (editScript);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/earth-engine/getTasks.ts":
+/*!************************************************!*\
+  !*** ./src/lib/tools/earth-engine/getTasks.ts ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getTasks: () => (/* binding */ getTasks)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Get tasks from Google Earth Engine
+ * This tool retrieves the list of export tasks from the Earth Engine interface
+ *
+ * @returns Promise with success status and array of tasks
+ */
+
+/**
+ * Get tasks from Google Earth Engine
+ *
+ * @returns Promise with array of tasks or error message
+ */
+async function getTasks() {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'GET_TASKS'
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // First we need to find the Earth Engine tab
+                chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid Earth Engine tab'
+                        });
+                        return;
+                    }
+                    // Send message to the content script in the Earth Engine tab
+                    chrome.tabs.sendMessage(tabId, { type: 'GET_TASKS' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                            });
+                            return;
+                        }
+                        resolve(response);
+                    });
+                });
+            });
+        }
+        // If not in a browser environment, we can't get the tasks
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot get Earth Engine tasks in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for getting Earth Engine tasks'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error getting tasks: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (getTasks);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/earth-engine/index.ts":
+/*!*********************************************!*\
+  !*** ./src/lib/tools/earth-engine/index.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   checkConsole: () => (/* reexport safe */ _checkConsole__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   editScript: () => (/* reexport safe */ _editScript__WEBPACK_IMPORTED_MODULE_4__["default"]),
+/* harmony export */   getTasks: () => (/* reexport safe */ _getTasks__WEBPACK_IMPORTED_MODULE_3__["default"]),
+/* harmony export */   inspectMap: () => (/* reexport safe */ _inspectMap__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   runCode: () => (/* reexport safe */ _runCode__WEBPACK_IMPORTED_MODULE_0__["default"])
+/* harmony export */ });
+/* harmony import */ var _runCode__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./runCode */ "./src/lib/tools/earth-engine/runCode.ts");
+/* harmony import */ var _inspectMap__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./inspectMap */ "./src/lib/tools/earth-engine/inspectMap.ts");
+/* harmony import */ var _checkConsole__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./checkConsole */ "./src/lib/tools/earth-engine/checkConsole.ts");
+/* harmony import */ var _getTasks__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./getTasks */ "./src/lib/tools/earth-engine/getTasks.ts");
+/* harmony import */ var _editScript__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./editScript */ "./src/lib/tools/earth-engine/editScript.ts");
+/**
+ * Earth Engine tools for interacting with the Google Earth Engine Code Editor
+ *
+ * This module provides tools to:
+ * 1. Run code in the Earth Engine editor
+ * 2. Inspect the map at specific coordinates
+ * 3. Check the console for errors
+ * 4. Get tasks from Earth Engine
+ * 5. Edit scripts in Earth Engine
+ *
+ * Usage example:
+ * ```typescript
+ * import { runCode, checkConsole } from './lib/tools/earth-engine';
+ *
+ * async function executeCodeAndCheckErrors() {
+ *   // Run some Earth Engine code
+ *   const runResult = await runCode('var image = ee.Image(1); print(image);');
+ *
+ *   if (runResult.success) {
+ *     // Check if there were any errors
+ *     const consoleResult = await checkConsole();
+ *
+ *     if (consoleResult.success && consoleResult.errors.length === 0) {
+ *       console.log('Code executed successfully with no errors');
+ *     }
+ *   }
+ * }
+ * ```
+ */
+
+
+
+
+
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/earth-engine/inspectMap.ts":
+/*!**************************************************!*\
+  !*** ./src/lib/tools/earth-engine/inspectMap.ts ***!
+  \**************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   inspectMap: () => (/* binding */ inspectMap)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Inspect the Google Earth Engine map at specific coordinates
+ * This tool activates the inspector tool and retrieves data at the specified point
+ *
+ * @param coordinates - Optional lat/lng coordinates to inspect
+ * @returns Promise with success status and inspection data
+ */
+
+/**
+ * Inspect the Google Earth Engine map at specific coordinates
+ *
+ * @param coordinates - Optional lat/lng coordinates to inspect
+ * @returns Promise with inspection data or error
+ */
+async function inspectMap(coordinates) {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'INSPECT_MAP',
+                        coordinates
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // First we need to find the Earth Engine tab
+                chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid Earth Engine tab'
+                        });
+                        return;
+                    }
+                    // Send message to the content script in the Earth Engine tab
+                    chrome.tabs.sendMessage(tabId, { type: 'INSPECT_MAP', coordinates }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                            });
+                            return;
+                        }
+                        resolve(response);
+                    });
+                });
+            });
+        }
+        // If not in a browser environment, we can't inspect the map
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot inspect Earth Engine map in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for inspecting Earth Engine map'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error inspecting map: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (inspectMap);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/earth-engine/runCode.ts":
+/*!***********************************************!*\
+  !*** ./src/lib/tools/earth-engine/runCode.ts ***!
+  \***********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   runCode: () => (/* binding */ runCode)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Runs code in the Google Earth Engine Code Editor
+ * This tool injects code into the editor and clicks the run button
+ *
+ * @param code - JavaScript code to run in Earth Engine
+ * @returns Promise with success status and result/error message
+ */
+
+/**
+ * Run code in the Google Earth Engine Code Editor
+ *
+ * @param code - Code to inject and run
+ * @returns Promise with success status and result/error message
+ */
+async function runCode(code) {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'RUN_CODE',
+                        code
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script (which communicates with the content script)
+        // In this case, we're already in the background script that received a message from
+        // the content script or sidepanel, so we would be sending a message to the content script
+        // that's injected into the Earth Engine page
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // First we need to find the Earth Engine tab
+                chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid Earth Engine tab'
+                        });
+                        return;
+                    }
+                    // Send message to the content script in the Earth Engine tab
+                    chrome.tabs.sendMessage(tabId, { type: 'RUN_CODE', code }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                            });
+                            return;
+                        }
+                        resolve(response);
+                    });
+                });
+            });
+        }
+        // If not in a browser environment (like Node.js), we can't run Earth Engine code
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot run Earth Engine code in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for running Earth Engine code'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error running code: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (runCode);
 
 
 /***/ }),
