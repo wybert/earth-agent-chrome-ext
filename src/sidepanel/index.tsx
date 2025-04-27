@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Chat } from '../components/Chat';
+import { ConsoleLogButton } from '../components/ui';
 
 const App = () => {
   return (
@@ -10,6 +11,9 @@ const App = () => {
       </div>
       <div className="content flex-1">
         <Chat />
+        <div className="mt-6">
+          <ConsoleLogButton />
+        </div>
       </div>
       <div className="footer mt-4 pt-4 border-t">
         <p className="text-sm text-muted-foreground">Ready to assist with Earth Engine</p>

@@ -45515,6 +45515,50 @@ function Settings({ onClose }) {
 
 /***/ }),
 
+/***/ "./src/components/ui/ConsoleLogButton.tsx":
+/*!************************************************!*\
+  !*** ./src/components/ui/ConsoleLogButton.tsx ***!
+  \************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ConsoleLogButton: () => (/* binding */ ConsoleLogButton)
+/* harmony export */ });
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+/* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _button__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./button */ "./src/components/ui/button.tsx");
+/* harmony import */ var _textarea__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./textarea */ "./src/components/ui/textarea.tsx");
+/* harmony import */ var _lib_Console_log__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/Console log */ "./src/lib/Console log.ts");
+
+
+
+
+// Dummy map generation function for demonstration
+async function dummyGenerateMap() {
+    // Simulate async work and possible error
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Uncomment to simulate an error:
+    // console.error("Map generation failed!");
+}
+function ConsoleLogButton() {
+    const [result, setResult] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)("");
+    const [loading, setLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    const handleClick = async () => {
+        setLoading(true);
+        const output = await (0,_lib_Console_log__WEBPACK_IMPORTED_MODULE_3__.checkForErrorsDuringMapGeneration)();
+        setResult(output);
+        setLoading(false);
+    };
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-2" },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_button__WEBPACK_IMPORTED_MODULE_1__.Button, { onClick: handleClick, disabled: loading }, loading ? "Checking..." : "Check Map Generation Errors"),
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_textarea__WEBPACK_IMPORTED_MODULE_2__.Textarea, { value: result, readOnly: true, placeholder: "Result will appear here..." })));
+}
+
+
+/***/ }),
+
 /***/ "./src/components/ui/button.tsx":
 /*!**************************************!*\
   !*** ./src/components/ui/button.tsx ***!
@@ -45606,6 +45650,45 @@ CardFooter.displayName = "CardFooter";
 
 /***/ }),
 
+/***/ "./src/components/ui/index.ts":
+/*!************************************!*\
+  !*** ./src/components/ui/index.ts ***!
+  \************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Button: () => (/* reexport safe */ _button__WEBPACK_IMPORTED_MODULE_0__.Button),
+/* harmony export */   Card: () => (/* reexport safe */ _card__WEBPACK_IMPORTED_MODULE_4__.Card),
+/* harmony export */   CardContent: () => (/* reexport safe */ _card__WEBPACK_IMPORTED_MODULE_4__.CardContent),
+/* harmony export */   CardDescription: () => (/* reexport safe */ _card__WEBPACK_IMPORTED_MODULE_4__.CardDescription),
+/* harmony export */   CardFooter: () => (/* reexport safe */ _card__WEBPACK_IMPORTED_MODULE_4__.CardFooter),
+/* harmony export */   CardHeader: () => (/* reexport safe */ _card__WEBPACK_IMPORTED_MODULE_4__.CardHeader),
+/* harmony export */   CardTitle: () => (/* reexport safe */ _card__WEBPACK_IMPORTED_MODULE_4__.CardTitle),
+/* harmony export */   ConsoleLogButton: () => (/* reexport safe */ _ConsoleLogButton__WEBPACK_IMPORTED_MODULE_5__.ConsoleLogButton),
+/* harmony export */   Input: () => (/* reexport safe */ _input__WEBPACK_IMPORTED_MODULE_2__.Input),
+/* harmony export */   ScrollArea: () => (/* reexport safe */ _scroll_area__WEBPACK_IMPORTED_MODULE_3__.ScrollArea),
+/* harmony export */   ScrollBar: () => (/* reexport safe */ _scroll_area__WEBPACK_IMPORTED_MODULE_3__.ScrollBar),
+/* harmony export */   Textarea: () => (/* reexport safe */ _textarea__WEBPACK_IMPORTED_MODULE_1__.Textarea),
+/* harmony export */   buttonVariants: () => (/* reexport safe */ _button__WEBPACK_IMPORTED_MODULE_0__.buttonVariants)
+/* harmony export */ });
+/* harmony import */ var _button__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./button */ "./src/components/ui/button.tsx");
+/* harmony import */ var _textarea__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./textarea */ "./src/components/ui/textarea.tsx");
+/* harmony import */ var _input__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./input */ "./src/components/ui/input.tsx");
+/* harmony import */ var _scroll_area__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./scroll-area */ "./src/components/ui/scroll-area.tsx");
+/* harmony import */ var _card__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./card */ "./src/components/ui/card.tsx");
+/* harmony import */ var _ConsoleLogButton__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./ConsoleLogButton */ "./src/components/ui/ConsoleLogButton.tsx");
+
+
+
+
+
+
+
+
+/***/ }),
+
 /***/ "./src/components/ui/input.tsx":
 /*!*************************************!*\
   !*** ./src/components/ui/input.tsx ***!
@@ -45686,6 +45769,37 @@ const Textarea = react__WEBPACK_IMPORTED_MODULE_0__.forwardRef(({ className, ...
 });
 Textarea.displayName = "Textarea";
 
+
+
+/***/ }),
+
+/***/ "./src/lib/Console log.ts":
+/*!********************************!*\
+  !*** ./src/lib/Console log.ts ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   checkForErrorsDuringMapGeneration: () => (/* binding */ checkForErrorsDuringMapGeneration)
+/* harmony export */ });
+/**
+ * Requests the content of the summary span from the content script.
+ * Returns the summary text, or 'Wrong direction' if not found.
+ */
+async function checkForErrorsDuringMapGeneration() {
+    return new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: 'GET_SUMMARY_SPAN' }, (response) => {
+            if (response && typeof response.summary === 'string') {
+                resolve(response.summary);
+            }
+            else {
+                resolve('Wrong direction');
+            }
+        });
+    });
+}
 
 
 /***/ }),
@@ -45804,6 +45918,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var react_dom_client__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react-dom/client */ "./node_modules/react-dom/client.js");
 /* harmony import */ var _components_Chat__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../components/Chat */ "./src/components/Chat.tsx");
+/* harmony import */ var _components_ui__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../components/ui */ "./src/components/ui/index.ts");
+
 
 
 
@@ -45812,7 +45928,9 @@ const App = () => {
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "header mb-4" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", { className: "text-2xl font-bold" }, "Earth Engine AI Assistant")),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "content flex-1" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_Chat__WEBPACK_IMPORTED_MODULE_2__.Chat, null)),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_Chat__WEBPACK_IMPORTED_MODULE_2__.Chat, null),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-6" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui__WEBPACK_IMPORTED_MODULE_3__.ConsoleLogButton, null))),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "footer mt-4 pt-4 border-t" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-muted-foreground" }, "Ready to assist with Earth Engine"))));
 };
