@@ -15,29 +15,29 @@ Test template quality by verifying they follow GEE best practices. Validate orga
 ### Dependencies: None
 ### Description: Develop a collection of well-structured GEE script templates that users can use as starting points for different types of Earth Engine applications.
 ### Details:
-Implement a library of template scripts covering common GEE use cases (e.g., image processing, time series analysis, feature collection operations). Each template should include: 1) Clear section headers with comments, 2) Proper variable naming conventions, 3) Modular function organization, 4) Error handling patterns, 5) Performance optimization examples. Templates should be stored in a structured format that can be easily loaded into the editor. Include metadata for each template describing its purpose and use case.
+Implement a library of template scripts in TypeScript covering common GEE use cases (e.g., image processing, time series analysis, feature collection operations). Each template should include: 1) Clear section headers with comments, 2) Proper variable naming conventions, 3) Modular function organization, 4) Error handling patterns, 5) Performance optimization examples. Templates should be stored in a structured format that can be easily loaded into the editor. Include metadata for each template describing its purpose and use case.
 
 ## 2. Implement Script Organization UI Components [pending]
 ### Dependencies: 10.1
 ### Description: Create UI elements that allow users to manage, categorize, and navigate their GEE scripts in an organized manner.
 ### Details:
-Develop UI components including: 1) A hierarchical file browser for script organization, 2) Folder creation and management functionality, 3) Drag-and-drop interface for reorganizing scripts, 4) Search and filter capabilities for finding scripts, 5) Template selection interface that displays available templates from subtask 1, 6) Script metadata editor for adding tags and descriptions. Ensure the UI follows consistent design patterns and is responsive.
+Develop UI components in TypeScript including: 1) A hierarchical file browser for script organization, 2) Folder creation and management functionality, 3) Drag-and-drop interface for reorganizing scripts, 4) Search and filter capabilities for finding scripts, 5) Template selection interface that displays available templates from subtask 1, 6) Script metadata editor for adding tags and descriptions. Ensure the UI follows consistent design patterns and is responsive.
 
 ## 3. Develop Code Structure Analysis Engine [pending]
 ### Dependencies: 10.1
 ### Description: Create a system that analyzes GEE scripts to identify structure issues and suggest improvements based on best practices.
 ### Details:
-Implement code analysis functionality that: 1) Parses JavaScript GEE code to identify structural elements, 2) Detects common anti-patterns in GEE scripts, 3) Identifies performance bottlenecks in Earth Engine operations, 4) Recognizes missing documentation or comments, 5) Suggests modularization opportunities. The analysis engine should generate specific, actionable recommendations that can be displayed to users. Create a scoring system for script quality based on adherence to best practices.
+Implement code analysis functionality in TypeScript that: 1) Parses JavaScript GEE code to identify structural elements, 2) Detects common anti-patterns in GEE scripts, 3) Identifies performance bottlenecks in Earth Engine operations, 4) Recognizes missing documentation or comments, 5) Suggests modularization opportunities. The analysis engine should generate specific, actionable recommendations that can be displayed to users. Create a scoring system for script quality based on adherence to best practices.
 
 ## 4. Integrate LLM for Structure Recommendations [pending]
 ### Dependencies: 10.3
 ### Description: Connect the code analysis engine with the LLM to provide intelligent, context-aware recommendations for script organization and improvements.
 ### Details:
-Implement LLM integration that: 1) Takes analysis results from subtask 3 as input, 2) Generates natural language explanations of identified issues, 3) Provides code snippets demonstrating recommended improvements, 4) Explains GEE best practices relevant to the user's code, 5) Suggests refactoring approaches for complex scripts. Design a prompt engineering system that effectively communicates code context to the LLM and formats responses appropriately. Include caching mechanisms to improve performance for common recommendations.
+Implement LLM integration in TypeScript that: 1) Takes analysis results from subtask 3 as input, 2) Generates natural language explanations of identified issues, 3) Provides code snippets demonstrating recommended improvements, 4) Explains GEE best practices relevant to the user's code, 5) Suggests refactoring approaches for complex scripts. Design a prompt engineering system that effectively communicates code context to the LLM and formats responses appropriately. Include caching mechanisms to improve performance for common recommendations.
 
 ## 5. Create Script Optimization Suggestion System [pending]
 ### Dependencies: 10.3, 10.4
 ### Description: Develop functionality to identify and suggest GEE-specific optimizations and common patterns that improve script performance and readability.
 ### Details:
-Implement an optimization system that: 1) Identifies opportunities to apply common GEE patterns (e.g., mapping functions, scale management, proper filtering), 2) Suggests performance improvements specific to Earth Engine (e.g., reducing client-server transfers, optimizing computations), 3) Provides interactive examples of before/after optimization, 4) Integrates with the LLM to explain the rationale behind suggestions, 5) Allows one-click application of suggested optimizations. Include a library of common GEE optimization patterns that can be matched against user code. Create a UI component that displays optimization suggestions alongside the code editor.
+Implement an optimization system in TypeScript that: 1) Identifies opportunities to apply common GEE patterns (e.g., mapping functions, scale management, proper filtering), 2) Suggests performance improvements specific to Earth Engine (e.g., reducing client-server transfers, optimizing computations), 3) Provides interactive examples of before/after optimization, 4) Integrates with the LLM to explain the rationale behind suggestions, 5) Allows one-click application of suggested optimizations. Include a library of common GEE optimization patterns that can be matched against user code. Create a UI component that displays optimization suggestions alongside the code editor.
 

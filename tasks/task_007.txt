@@ -15,29 +15,29 @@ Test error capture by intentionally running code with errors and verifying the e
 ### Dependencies: None
 ### Description: Create a module that can access and extract console output from the GEE editor interface
 ### Details:
-Develop a JavaScript module that: 1) Identifies and targets the DOM elements containing console output in the GEE editor, 2) Sets up MutationObservers to detect when new console messages appear, 3) Extracts the raw text content from console output elements, distinguishing between standard output, warnings, and errors, 4) Implements a buffering mechanism to handle rapid console updates, 5) Creates a clean API that returns structured console data (timestamp, message type, content) for other modules to consume.
+Develop a TypeScript module that: 1) Identifies and targets the DOM elements containing console output in the GEE editor, 2) Sets up MutationObservers to detect when new console messages appear, 3) Extracts the raw text content from console output elements, distinguishing between standard output, warnings, and errors, 4) Implements a buffering mechanism to handle rapid console updates, 5) Creates a clean API that returns structured console data (timestamp, message type, content) for other modules to consume.
 
 ## 2. Develop Error Pattern Recognition System [pending]
 ### Dependencies: 7.1
 ### Description: Build a system to analyze, categorize, and structure error messages from GEE console output
 ### Details:
-Create a pattern recognition module that: 1) Defines common error patterns and categories specific to GEE (syntax errors, API usage errors, permission issues, etc.), 2) Implements regex patterns and heuristics to identify error types from raw console text, 3) Extracts key information from errors (line numbers, variable names, function calls), 4) Structures the error data into a standardized format for further processing, 5) Maintains an extensible architecture to easily add new error patterns as they're discovered.
+Create a pattern recognition module in TypeScript that: 1) Defines common error patterns and categories specific to GEE (syntax errors, API usage errors, permission issues, etc.), 2) Implements regex patterns and heuristics to identify error types from raw console text, 3) Extracts key information from errors (line numbers, variable names, function calls), 4) Structures the error data into a standardized format for further processing, 5) Maintains an extensible architecture to easily add new error patterns as they're discovered.
 
 ## 3. Integrate with LLM for Error Interpretation [pending]
 ### Dependencies: 7.2
 ### Description: Create a service that sends error information to the LLM and processes responses to generate human-readable explanations
 ### Details:
-Develop an LLM integration service that: 1) Constructs appropriate prompts containing error context and code snippets, 2) Sends structured error data to the LLM API, 3) Processes and parses LLM responses into standardized explanation formats, 4) Implements caching for common errors to reduce API calls, 5) Handles rate limiting and fallback mechanisms for when the LLM service is unavailable, 6) Extracts specific fix suggestions from LLM responses.
+Develop an LLM integration service in TypeScript that: 1) Constructs appropriate prompts containing error context and code snippets, 2) Sends structured error data to the LLM API, 3) Processes and parses LLM responses into standardized explanation formats, 4) Implements caching for common errors to reduce API calls, 5) Handles rate limiting and fallback mechanisms for when the LLM service is unavailable, 6) Extracts specific fix suggestions from LLM responses.
 
 ## 4. Build UI Components for Error Display [pending]
 ### Dependencies: 7.3
 ### Description: Create user interface elements to display error explanations, suggestions, and debugging information
 ### Details:
-Implement UI components that: 1) Display error messages with syntax highlighting, 2) Show LLM-generated explanations in plain language, 3) Present suggested fixes with code snippets, 4) Allow users to apply suggested fixes directly to their code, 5) Include expandable/collapsible sections for detailed error information, 6) Provide visual indicators for execution status (running, completed, error), 7) Ensure responsive design that works within the GEE interface without disrupting workflow.
+Implement UI components in TypeScript that: 1) Display error messages with syntax highlighting, 2) Show LLM-generated explanations in plain language, 3) Present suggested fixes with code snippets, 4) Allow users to apply suggested fixes directly to their code, 5) Include expandable/collapsible sections for detailed error information, 6) Provide visual indicators for execution status (running, completed, error), 7) Ensure responsive design that works within the GEE interface without disrupting workflow.
 
 ## 5. Implement Execution Status Tracking and Results Display [pending]
 ### Dependencies: 7.1, 7.4
 ### Description: Create a system to monitor script execution status and display execution results
 ### Details:
-Develop an execution tracking system that: 1) Monitors the state of script execution (queued, running, completed, failed), 2) Captures execution results and output from successful runs, 3) Displays execution time and resource usage metrics, 4) Implements a history feature to review past executions and their outputs, 5) Provides functionality to export or share execution results, 6) Integrates with the error display components to show a unified view of script execution and debugging information.
+Develop an execution tracking system in TypeScript that: 1) Monitors the state of script execution (queued, running, completed, failed), 2) Captures execution results and output from successful runs, 3) Displays execution time and resource usage metrics, 4) Implements a history feature to review past executions and their outputs, 5) Provides functionality to export or share execution results, 6) Integrates with the error display components to show a unified view of script execution and debugging information.
 

@@ -8,7 +8,9 @@
     "watch": "webpack --config webpack.config.js --watch",
     "dev": "npm run watch",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "keywords": [
     "chrome-extension",
@@ -20,6 +22,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/chrome": "^0.0.260",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.11.24",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
@@ -28,6 +31,8 @@
     "copy-webpack-plugin": "^12.0.2",
     "css-loader": "^6.10.0",
     "html-webpack-plugin": "^5.6.0",
+    "jest": "^29.7.0",
+    "jest-fetch-mock": "^3.0.3",
     "postcss": "^8.4.35",
     "postcss-loader": "^8.1.1",
     "rimraf": "^5.0.5",
@@ -35,6 +40,7 @@
     "style-loader": "^3.3.4",
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
+    "ts-jest": "^29.3.2",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",

@@ -153,78 +153,103 @@
     },
     {
       "id": 5,
-      "title": "Implement Dataset Catalog Search Tool",
-      "description": "Create a tool to search and query the GEE dataset catalog to find relevant Earth observation data.",
+      "title": "Implement Dataset Catalog Search Tool using Context7 APIs",
+      "description": "Create a tool to search and query the GEE dataset catalog using Context7 APIs to find relevant Earth observation data.",
       "status": "pending",
       "dependencies": [
         3,
         4
       ],
       "priority": "medium",
-      "details": "Develop the dataset search tool with: 1) Integration with GEE dataset catalog via external resources, 2) Search parameters and results data structures, 3) Methods to query datasets based on user requirements, 4) Display of dataset metadata and usage examples, 5) Tool integration with the LLM agent framework to process natural language queries about datasets, 6) Formatting of search results for display in the chat interface.",
-      "testStrategy": "Test dataset search with various queries and verify relevant results are returned. Validate metadata display for accuracy. Test integration with the agent by asking natural language questions about available datasets.",
+      "details": "Develop the dataset search tool with: 1) Integration with Context7 APIs for accessing GEE dataset catalog, 2) Search parameters and results data structures, 3) Methods to query datasets based on user requirements, 4) Display of dataset metadata and usage examples, 5) Tool integration with the LLM agent framework to process natural language queries about datasets, 6) Formatting of search results for display in the chat interface, 7) Separate implementation files from existing codebase, 8) Comprehensive testing with logging for tracking test results.",
+      "testStrategy": "Test dataset search with various queries and verify relevant results are returned. Validate metadata display for accuracy. Test integration with the agent by asking natural language questions about available datasets. Implement separate test files with detailed logging to track test execution and results.",
       "subtasks": [
         {
           "id": 1,
-          "title": "Create GEE Dataset Catalog API Client",
-          "description": "Develop a client module to interface with Google Earth Engine's dataset catalog API",
+          "title": "Create Context7 API Client for Dataset Catalog",
+          "description": "Develop a client module to interface with Context7 APIs for accessing the GEE dataset catalog",
           "status": "pending",
           "dependencies": [],
-          "details": "Implement a Python client that connects to GEE's dataset catalog API. This should include: 1) Authentication handling for GEE access, 2) Basic API request methods for dataset retrieval, 3) Error handling for API failures, 4) Rate limiting compliance, 5) Response parsing to convert API responses into usable Python objects. Use the 'earthengine-api' Python package as the foundation and create wrapper methods specific to catalog search operations."
+          "details": "Implement a TypeScript client that connects to Context7 APIs. This should include: 1) Authentication handling for API access, 2) Basic API request methods for dataset retrieval using endpoints like 'https://context7.com/api/v1/search?query=%22data%22', 3) Error handling for API failures, 4) Rate limiting compliance, 5) Response parsing to convert API responses into usable TypeScript objects. Create wrapper methods specific to catalog search operations. Implement in separate files from existing codebase with appropriate logging for debugging and testing."
         },
         {
           "id": 2,
           "title": "Design Dataset Search Parameters and Result Models",
-          "description": "Define data structures for search parameters and results",
+          "description": "Define data structures for search parameters and results compatible with Context7 API",
           "status": "pending",
           "dependencies": [
             1
           ],
-          "details": "Create Python classes/data models to represent: 1) Search parameters including dataset type, temporal coverage, spatial coverage, resolution, keywords, and data provider, 2) Dataset metadata results including ID, name, description, bands, resolution, update frequency, and example usage, 3) Pagination and result filtering options. Implement proper validation for search parameters and ensure the result models can be easily serialized to JSON for the frontend. Use Pydantic models for type safety and validation."
+          "details": "Create TypeScript interfaces/classes to represent: 1) Search parameters including dataset type, temporal coverage, spatial coverage, resolution, keywords, and data provider, 2) Dataset metadata results including ID, name, description, bands, resolution, update frequency, and example usage, 3) Pagination and result filtering options. Implement proper validation for search parameters and ensure the result models can be easily serialized to JSON for the frontend. Use TypeScript's type system for type safety and validation. Design models to work specifically with Context7 API response formats."
         },
         {
           "id": 3,
           "title": "Implement Dataset Search Query Engine",
-          "description": "Build the core search functionality to query datasets based on parameters",
+          "description": "Build the core search functionality to query datasets based on parameters using Context7 APIs",
           "status": "pending",
           "dependencies": [
             1,
             2
           ],
-          "details": "Develop the search engine that: 1) Takes search parameter objects and converts them to GEE API queries, 2) Executes searches against the GEE catalog API client, 3) Processes and filters results based on relevance, 4) Handles pagination for large result sets, 5) Implements sorting options (by relevance, recency, popularity), 6) Provides methods for retrieving detailed metadata for specific datasets. Include optimization for common queries and caching mechanisms for frequently accessed datasets."
+          "details": "Develop the search engine that: 1) Takes search parameter objects and converts them to Context7 API queries, 2) Executes searches against endpoints like 'https://context7.com/api/v1/search?query=%22data%22', 3) Supports topic-based searches using endpoints like 'https://context7.com/api/v1/wybert/earthengine-dataset-catalog-md?topic=population', 4) Processes and filters results based on relevance, 5) Handles pagination for large result sets, 6) Implements sorting options (by relevance, recency, popularity), 7) Provides methods for retrieving detailed metadata for specific datasets. Include optimization for common queries and caching mechanisms for frequently accessed datasets. Implement comprehensive logging for tracking query execution and performance."
         },
         {
           "id": 4,
           "title": "Create Dataset Metadata Formatter",
-          "description": "Develop utilities to format and enrich dataset metadata for display",
+          "description": "Develop utilities to format and enrich dataset metadata from Context7 API responses for display",
           "status": "pending",
           "dependencies": [
             2,
             3
           ],
-          "details": "Implement a formatter module that: 1) Enriches raw GEE dataset metadata with additional useful information, 2) Generates code snippets showing how to use each dataset in GEE, 3) Creates human-readable descriptions of technical metadata, 4) Formats band information in a structured way, 5) Generates preview links or thumbnails where available, 6) Structures metadata in a consistent format regardless of dataset type. Include methods to customize the level of detail in the formatted output based on context."
+          "details": "Implement a formatter module that: 1) Enriches raw Context7 API dataset metadata with additional useful information, 2) Generates code snippets showing how to use each dataset in GEE, 3) Creates human-readable descriptions of technical metadata, 4) Formats band information in a structured way, 5) Generates preview links or thumbnails where available, 6) Structures metadata in a consistent format regardless of dataset type. Include methods to customize the level of detail in the formatted output based on context. Implement in separate TypeScript files from existing codebase."
         },
         {
           "id": 5,
           "title": "Integrate Natural Language Query Processing",
-          "description": "Connect the search tool with the LLM agent to handle natural language dataset queries",
+          "description": "Connect the search tool with the LLM agent to handle natural language dataset queries using Context7 APIs",
           "status": "pending",
           "dependencies": [
             3,
             4
           ],
-          "details": "Develop the integration layer that: 1) Extracts search parameters from natural language queries using the LLM, 2) Converts LLM-extracted parameters into structured search parameter objects, 3) Executes searches and retrieves results, 4) Handles follow-up questions about datasets, 5) Manages conversation context to refine searches iteratively. Implement prompt templates for the LLM that guide it to extract relevant search parameters from user queries and create a feedback mechanism to improve parameter extraction over time."
+          "details": "Develop the integration layer that: 1) Extracts search parameters from natural language queries using the LLM, 2) Converts LLM-extracted parameters into structured search parameter objects for Context7 APIs, 3) Executes searches and retrieves results, 4) Handles follow-up questions about datasets, 5) Manages conversation context to refine searches iteratively. Implement prompt templates for the LLM that guide it to extract relevant search parameters from user queries and create a feedback mechanism to improve parameter extraction over time."
         },
         {
           "id": 6,
           "title": "Implement Chat Interface Result Formatting",
-          "description": "Create display formatters for presenting search results in the chat interface",
+          "description": "Create display formatters for presenting Context7 API search results in the chat interface",
           "status": "pending",
           "dependencies": [
             4,
             5
           ],
-          "details": "Build the presentation layer that: 1) Converts search results into formatted messages for the chat interface, 2) Creates concise summaries for result listings, 3) Generates detailed views for individual datasets, 4) Implements pagination controls for browsing multiple results, 5) Formats code examples in syntax-highlighted blocks, 6) Provides interactive elements like 'show more details' or 'see usage example' options. Ensure the formatting is responsive to different chat interfaces and includes both text and rich media elements where appropriate."
+          "details": "Build the presentation layer that: 1) Converts Context7 API search results into formatted messages for the chat interface, 2) Creates concise summaries for result listings, 3) Generates detailed views for individual datasets, 4) Implements pagination controls for browsing multiple results, 5) Formats code examples in syntax-highlighted blocks, 6) Provides interactive elements like 'show more details' or 'see usage example' options. Ensure the formatting is responsive to different chat interfaces and includes both text and rich media elements where appropriate."
+        },
+        {
+          "id": 7,
+          "title": "Implement Comprehensive Testing Framework",
+          "description": "Create a dedicated testing framework for the Context7 API integration",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Develop a comprehensive testing framework that: 1) Tests all aspects of the Context7 API integration, 2) Includes unit tests for individual components, 3) Implements integration tests for the complete search workflow, 4) Creates mock responses for testing without hitting the actual API, 5) Implements detailed logging to track test execution and results, 6) Tests different query types including keyword searches and topic-based searches, 7) Validates result formatting and display. Store tests in separate TypeScript files from the implementation code and ensure they can be run independently."
+        },
+        {
+          "id": 8,
+          "title": "Implement Logging System for Tracking and Debugging",
+          "description": "Create a robust logging system for tracking Context7 API interactions and debugging issues",
+          "status": "pending",
+          "dependencies": [
+            1,
+            3,
+            7
+          ],
+          "details": "Develop a logging system that: 1) Tracks all interactions with Context7 APIs, 2) Logs query parameters and response metadata, 3) Implements different log levels for development and production, 4) Creates structured log entries that can be easily analyzed, 5) Includes performance metrics for API calls, 6) Logs errors and exceptions with detailed context, 7) Supports configuration to adjust verbosity. Ensure logs are stored in a way that facilitates troubleshooting and performance optimization."
         }
       ]
     },
@@ -257,7 +282,7 @@
           "dependencies": [
             1
           ],
-          "details": "Create an API service that connects to the LLM. Implement functions to construct prompts using templates from subtask 1, combining user input with appropriate context. Handle API responses, extract generated code, and implement error handling for failed requests. Add logging for prompt-response pairs to enable future improvements. Include rate limiting and retry logic for API stability. Test with various natural language inputs to verify code generation quality."
+          "details": "Create an API service in TypeScript that connects to the LLM. Implement functions to construct prompts using templates from subtask 1, combining user input with appropriate context. Handle API responses, extract generated code, and implement error handling for failed requests. Add logging for prompt-response pairs to enable future improvements. Include rate limiting and retry logic for API stability. Test with various natural language inputs to verify code generation quality."
         },
         {
           "id": 3,
@@ -267,7 +292,7 @@
           "dependencies": [
             2
           ],
-          "details": "Implement a validation module that checks generated code for GEE-specific syntax errors. Create a code formatter that applies consistent styling to generated code. Add detection for common GEE errors like missing Earth Engine initialization, invalid band names, or incorrect method calls. Implement a feedback loop where validation errors can trigger regeneration with more specific prompts. Include helpful error messages that explain validation failures to users. Test with intentionally malformed code to verify error detection."
+          "details": "Implement a validation module in TypeScript that checks generated code for GEE-specific syntax errors. Create a code formatter that applies consistent styling to generated code. Add detection for common GEE errors like missing Earth Engine initialization, invalid band names, or incorrect method calls. Implement a feedback loop where validation errors can trigger regeneration with more specific prompts. Include helpful error messages that explain validation failures to users. Test with intentionally malformed code to verify error detection."
         },
         {
           "id": 4,
@@ -277,7 +302,7 @@
           "dependencies": [
             3
           ],
-          "details": "Design and implement a code preview component with syntax highlighting for GEE JavaScript. Add action buttons for 'Insert Code', 'Execute Code', 'Regenerate', and 'Edit'. Create a confirmation dialog for code execution to prevent accidental runs. Implement keyboard shortcuts for common actions. Add visual indicators for code validation status. Ensure the UI is responsive and accessible. Test the components with various screen sizes and assistive technologies."
+          "details": "Design and implement a code preview component with syntax highlighting for GEE JavaScript using TypeScript. Add action buttons for 'Insert Code', 'Execute Code', 'Regenerate', and 'Edit'. Create a confirmation dialog for code execution to prevent accidental runs. Implement keyboard shortcuts for common actions. Add visual indicators for code validation status. Ensure the UI is responsive and accessible. Test the components with various screen sizes and assistive technologies."
         },
         {
           "id": 5,
@@ -287,7 +312,7 @@
           "dependencies": [
             3
           ],
-          "details": "Compile a comprehensive library of GEE code patterns for common operations (filtering collections, applying algorithms, visualization, exporting, etc.). Structure templates with placeholders for dynamic values. Add metadata to templates including description, use cases, and required parameters. Implement a system to match user requests with appropriate templates. Create a mechanism to combine multiple templates for complex operations. Test template matching with various natural language descriptions to verify appropriate template selection."
+          "details": "Compile a comprehensive library of GEE code patterns for common operations (filtering collections, applying algorithms, visualization, exporting, etc.) in TypeScript. Structure templates with placeholders for dynamic values. Add metadata to templates including description, use cases, and required parameters. Implement a system to match user requests with appropriate templates. Create a mechanism to combine multiple templates for complex operations. Test template matching with various natural language descriptions to verify appropriate template selection."
         },
         {
           "id": 6,
@@ -299,7 +324,7 @@
             4,
             5
           ],
-          "details": "Develop a context management system that tracks conversation history and previously generated code. Implement logic to extract relevant context from prior interactions. Create mechanisms to reference existing variables, functions, and objects in new code generation. Add detection for potential conflicts between existing and new code. Implement smart merging of new code with existing codebase. Add user controls to specify how much context to include. Test with multi-turn conversations to verify context is properly maintained across interactions."
+          "details": "Develop a context management system in TypeScript that tracks conversation history and previously generated code. Implement logic to extract relevant context from prior interactions. Create mechanisms to reference existing variables, functions, and objects in new code generation. Add detection for potential conflicts between existing and new code. Implement smart merging of new code with existing codebase. Add user controls to specify how much context to include. Test with multi-turn conversations to verify context is properly maintained across interactions."
         }
       ]
     },
@@ -322,7 +347,7 @@
           "description": "Create a module that can access and extract console output from the GEE editor interface",
           "status": "pending",
           "dependencies": [],
-          "details": "Develop a JavaScript module that: 1) Identifies and targets the DOM elements containing console output in the GEE editor, 2) Sets up MutationObservers to detect when new console messages appear, 3) Extracts the raw text content from console output elements, distinguishing between standard output, warnings, and errors, 4) Implements a buffering mechanism to handle rapid console updates, 5) Creates a clean API that returns structured console data (timestamp, message type, content) for other modules to consume."
+          "details": "Develop a TypeScript module that: 1) Identifies and targets the DOM elements containing console output in the GEE editor, 2) Sets up MutationObservers to detect when new console messages appear, 3) Extracts the raw text content from console output elements, distinguishing between standard output, warnings, and errors, 4) Implements a buffering mechanism to handle rapid console updates, 5) Creates a clean API that returns structured console data (timestamp, message type, content) for other modules to consume."
         },
         {
           "id": 2,
@@ -332,7 +357,7 @@
           "dependencies": [
             1
           ],
-          "details": "Create a pattern recognition module that: 1) Defines common error patterns and categories specific to GEE (syntax errors, API usage errors, permission issues, etc.), 2) Implements regex patterns and heuristics to identify error types from raw console text, 3) Extracts key information from errors (line numbers, variable names, function calls), 4) Structures the error data into a standardized format for further processing, 5) Maintains an extensible architecture to easily add new error patterns as they're discovered."
+          "details": "Create a pattern recognition module in TypeScript that: 1) Defines common error patterns and categories specific to GEE (syntax errors, API usage errors, permission issues, etc.), 2) Implements regex patterns and heuristics to identify error types from raw console text, 3) Extracts key information from errors (line numbers, variable names, function calls), 4) Structures the error data into a standardized format for further processing, 5) Maintains an extensible architecture to easily add new error patterns as they're discovered."
         },
         {
           "id": 3,
@@ -342,7 +367,7 @@
           "dependencies": [
             2
           ],
-          "details": "Develop an LLM integration service that: 1) Constructs appropriate prompts containing error context and code snippets, 2) Sends structured error data to the LLM API, 3) Processes and parses LLM responses into standardized explanation formats, 4) Implements caching for common errors to reduce API calls, 5) Handles rate limiting and fallback mechanisms for when the LLM service is unavailable, 6) Extracts specific fix suggestions from LLM responses."
+          "details": "Develop an LLM integration service in TypeScript that: 1) Constructs appropriate prompts containing error context and code snippets, 2) Sends structured error data to the LLM API, 3) Processes and parses LLM responses into standardized explanation formats, 4) Implements caching for common errors to reduce API calls, 5) Handles rate limiting and fallback mechanisms for when the LLM service is unavailable, 6) Extracts specific fix suggestions from LLM responses."
         },
         {
           "id": 4,
@@ -352,7 +377,7 @@
           "dependencies": [
             3
           ],
-          "details": "Implement UI components that: 1) Display error messages with syntax highlighting, 2) Show LLM-generated explanations in plain language, 3) Present suggested fixes with code snippets, 4) Allow users to apply suggested fixes directly to their code, 5) Include expandable/collapsible sections for detailed error information, 6) Provide visual indicators for execution status (running, completed, error), 7) Ensure responsive design that works within the GEE interface without disrupting workflow."
+          "details": "Implement UI components in TypeScript that: 1) Display error messages with syntax highlighting, 2) Show LLM-generated explanations in plain language, 3) Present suggested fixes with code snippets, 4) Allow users to apply suggested fixes directly to their code, 5) Include expandable/collapsible sections for detailed error information, 6) Provide visual indicators for execution status (running, completed, error), 7) Ensure responsive design that works within the GEE interface without disrupting workflow."
         },
         {
           "id": 5,
@@ -363,7 +388,7 @@
             1,
             4
           ],
-          "details": "Develop an execution tracking system that: 1) Monitors the state of script execution (queued, running, completed, failed), 2) Captures execution results and output from successful runs, 3) Displays execution time and resource usage metrics, 4) Implements a history feature to review past executions and their outputs, 5) Provides functionality to export or share execution results, 6) Integrates with the error display components to show a unified view of script execution and debugging information."
+          "details": "Develop an execution tracking system in TypeScript that: 1) Monitors the state of script execution (queued, running, completed, failed), 2) Captures execution results and output from successful runs, 3) Displays execution time and resource usage metrics, 4) Implements a history feature to review past executions and their outputs, 5) Provides functionality to export or share execution results, 6) Integrates with the error display components to show a unified view of script execution and debugging information."
         }
       ]
     },
@@ -386,7 +411,7 @@
           "description": "Create a module to capture screenshots of maps and charts from Google Earth Engine visualizations",
           "status": "pending",
           "dependencies": [],
-          "details": "Develop a utility that can: 1) Capture the current state of GEE map or chart as an image, 2) Handle different viewport sizes and resolutions, 3) Implement options for capturing specific regions or the entire visualization, 4) Save screenshots in common formats (PNG, JPEG), 5) Add metadata about the visualization (timestamp, layers active, etc.). Use html2canvas or similar libraries for DOM-to-image conversion. Ensure the module works with GEE's specific rendering approach."
+          "details": "Develop a TypeScript utility that can: 1) Capture the current state of GEE map or chart as an image, 2) Handle different viewport sizes and resolutions, 3) Implement options for capturing specific regions or the entire visualization, 4) Save screenshots in common formats (PNG, JPEG), 5) Add metadata about the visualization (timestamp, layers active, etc.). Use html2canvas or similar libraries for DOM-to-image conversion. Ensure the module works with GEE's specific rendering approach."
         },
         {
           "id": 2,
@@ -396,7 +421,7 @@
           "dependencies": [
             1
           ],
-          "details": "Create functions that can: 1) Access and parse GEE's visualization DOM structure, 2) Extract data points, legends, and scale information from maps, 3) Retrieve values from charts and graphs, 4) Convert extracted information into structured data formats (JSON, CSV), 5) Handle different types of GEE visualizations (raster layers, vector data, charts). This will require analyzing GEE's DOM structure and creating selectors that can reliably extract data even when the UI changes slightly."
+          "details": "Create TypeScript functions that can: 1) Access and parse GEE's visualization DOM structure, 2) Extract data points, legends, and scale information from maps, 3) Retrieve values from charts and graphs, 4) Convert extracted information into structured data formats (JSON, CSV), 5) Handle different types of GEE visualizations (raster layers, vector data, charts). This will require analyzing GEE's DOM structure and creating selectors that can reliably extract data even when the UI changes slightly."
         },
         {
           "id": 3,
@@ -407,7 +432,7 @@
             1,
             2
           ],
-          "details": "Implement a system that: 1) Prepares extracted visualization data for LLM processing, 2) Constructs appropriate prompts that include visual context and extracted data, 3) Handles sending data to the LLM API and processing responses, 4) Implements specialized prompts for different visualization types (time series, spatial distributions, etc.), 5) Includes fallback mechanisms for when analysis is uncertain. Use a combination of text descriptions of the visuals and structured data from subtask 2 to give the LLM sufficient context."
+          "details": "Implement a TypeScript system that: 1) Prepares extracted visualization data for LLM processing, 2) Constructs appropriate prompts that include visual context and extracted data, 3) Handles sending data to the LLM API and processing responses, 4) Implements specialized prompts for different visualization types (time series, spatial distributions, etc.), 5) Includes fallback mechanisms for when analysis is uncertain. Use a combination of text descriptions of the visuals and structured data from subtask 2 to give the LLM sufficient context."
         },
         {
           "id": 4,
@@ -417,7 +442,7 @@
           "dependencies": [
             3
           ],
-          "details": "Build UI components that: 1) Display the original visualization alongside the LLM analysis, 2) Present key insights in an easily digestible format, 3) Allow users to expand/collapse detailed explanations, 4) Include confidence indicators for analysis results, 5) Provide options to refine or request additional analysis. Use modern frontend frameworks (React, Vue, etc.) and ensure components are responsive and accessible."
+          "details": "Build UI components in TypeScript that: 1) Display the original visualization alongside the LLM analysis, 2) Present key insights in an easily digestible format, 3) Allow users to expand/collapse detailed explanations, 4) Include confidence indicators for analysis results, 5) Provide options to refine or request additional analysis. Use modern frontend frameworks (React, Vue, etc.) and ensure components are responsive and accessible."
         },
         {
           "id": 5,
@@ -428,7 +453,7 @@
             3,
             4
           ],
-          "details": "Develop interpretation helpers that: 1) Provide contextual explanations of visualization elements (color scales, patterns, outliers), 2) Offer guided walkthroughs of complex visualizations, 3) Highlight significant features automatically, 4) Generate plain-language summaries of technical visualizations, 5) Include educational components about common GEE visualization types. Combine LLM-generated explanations with predefined guidance for common visualization patterns."
+          "details": "Develop interpretation helpers in TypeScript that: 1) Provide contextual explanations of visualization elements (color scales, patterns, outliers), 2) Offer guided walkthroughs of complex visualizations, 3) Highlight significant features automatically, 4) Generate plain-language summaries of technical visualizations, 5) Include educational components about common GEE visualization types. Combine LLM-generated explanations with predefined guidance for common visualization patterns."
         },
         {
           "id": 6,
@@ -440,7 +465,7 @@
             2,
             4
           ],
-          "details": "Create comparison tools that: 1) Allow side-by-side viewing of multiple visualizations, 2) Implement slider or swipe interfaces for before/after comparisons, 3) Calculate and highlight differences between visualizations, 4) Generate summaries of key differences, 5) Support time-series comparisons for temporal data. This should include both UI components for visual comparison and analytical tools that leverage the LLM to explain the significance of observed differences."
+          "details": "Create comparison tools in TypeScript that: 1) Allow side-by-side viewing of multiple visualizations, 2) Implement slider or swipe interfaces for before/after comparisons, 3) Calculate and highlight differences between visualizations, 4) Generate summaries of key differences, 5) Support time-series comparisons for temporal data. This should include both UI components for visual comparison and analytical tools that leverage the LLM to explain the significance of observed differences."
         }
       ]
     },
@@ -466,7 +491,7 @@
           "description": "Create a memory storage system that can persist conversation history and relevant context across user sessions",
           "status": "pending",
           "dependencies": [],
-          "details": "Implement a memory storage class that can: 1) Store conversation turns with timestamps, 2) Save user queries and agent responses, 3) Maintain metadata about the conversation context, 4) Persist data between sessions using appropriate storage mechanisms (database, file system, or in-memory with serialization). Include methods for adding, retrieving, and summarizing memory contents. Design the system to be extensible for future memory types."
+          "details": "Implement a memory storage class in TypeScript that can: 1) Store conversation turns with timestamps, 2) Save user queries and agent responses, 3) Maintain metadata about the conversation context, 4) Persist data between sessions using appropriate storage mechanisms (database, file system, or in-memory with serialization). Include methods for adding, retrieving, and summarizing memory contents. Design the system to be extensible for future memory types."
         },
         {
           "id": 2,
@@ -476,7 +501,7 @@
           "dependencies": [
             1
           ],
-          "details": "Build on the memory system to implement a context manager that: 1) Tracks the current conversation topic and intent, 2) Maintains references to GEE objects being discussed, 3) Identifies when context switching occurs, 4) Implements relevance scoring to determine which past interactions are most important for the current query, 5) Provides methods to extract relevant context for prompt construction. Test with multi-turn conversations about complex GEE workflows."
+          "details": "Build on the memory system to implement a context manager in TypeScript that: 1) Tracks the current conversation topic and intent, 2) Maintains references to GEE objects being discussed, 3) Identifies when context switching occurs, 4) Implements relevance scoring to determine which past interactions are most important for the current query, 5) Provides methods to extract relevant context for prompt construction. Test with multi-turn conversations about complex GEE workflows."
         },
         {
           "id": 3,
@@ -484,7 +509,7 @@
           "description": "Create a UI component that displays the agent's reasoning process in real-time",
           "status": "pending",
           "dependencies": [],
-          "details": "Develop a UI component that: 1) Shows the step-by-step reasoning of the agent as it processes a query, 2) Visualizes intermediate steps like parsing the query, retrieving context, planning a response, and generating code, 3) Updates in real-time as the agent thinks, 4) Can be toggled on/off by users, 5) Uses appropriate styling to distinguish between different types of thinking steps. Implement the backend support to stream this information to the frontend."
+          "details": "Develop a UI component in TypeScript that: 1) Shows the step-by-step reasoning of the agent as it processes a query, 2) Visualizes intermediate steps like parsing the query, retrieving context, planning a response, and generating code, 3) Updates in real-time as the agent thinks, 4) Can be toggled on/off by users, 5) Uses appropriate styling to distinguish between different types of thinking steps. Implement the backend support to stream this information to the frontend."
         },
         {
           "id": 4,
@@ -496,7 +521,7 @@
             2,
             3
           ],
-          "details": "Develop a mode switching mechanism that: 1) Allows users to toggle between 'simple chat' and 'advanced agent' modes, 2) In simple mode, provides direct responses without extensive reasoning or context management, 3) In advanced mode, utilizes the full memory, context, and thinking visualization capabilities, 4) Persists mode preference in user settings, 5) Updates the UI to reflect the current mode, 6) Implements appropriate prompt templates for each mode. Ensure smooth transitions between modes during ongoing conversations."
+          "details": "Develop a mode switching mechanism in TypeScript that: 1) Allows users to toggle between 'simple chat' and 'advanced agent' modes, 2) In simple mode, provides direct responses without extensive reasoning or context management, 3) In advanced mode, utilizes the full memory, context, and thinking visualization capabilities, 4) Persists mode preference in user settings, 5) Updates the UI to reflect the current mode, 6) Implements appropriate prompt templates for each mode. Ensure smooth transitions between modes during ongoing conversations."
         },
         {
           "id": 5,
@@ -506,7 +531,7 @@
           "dependencies": [
             2
           ],
-          "details": "Enhance the agent's reasoning capabilities by: 1) Implementing a planning module that breaks down complex GEE tasks into logical steps, 2) Creating specialized prompt templates for different types of GEE workflows (image processing, time series analysis, etc.), 3) Adding verification steps to ensure generated code is valid and efficient, 4) Incorporating GEE best practices into the reasoning process, 5) Developing the ability to explain the workflow steps to users. Test with complex real-world GEE use cases."
+          "details": "Enhance the agent's reasoning capabilities in TypeScript by: 1) Implementing a planning module that breaks down complex GEE tasks into logical steps, 2) Creating specialized prompt templates for different types of GEE workflows (image processing, time series analysis, etc.), 3) Adding verification steps to ensure generated code is valid and efficient, 4) Incorporating GEE best practices into the reasoning process, 5) Developing the ability to explain the workflow steps to users. Test with complex real-world GEE use cases."
         },
         {
           "id": 6,
@@ -517,7 +542,7 @@
             4,
             5
           ],
-          "details": "Improve prompt engineering by: 1) Creating a library of specialized prompt templates for different GEE domains (remote sensing, climate analysis, land use classification, etc.), 2) Implementing dynamic prompt construction that incorporates relevant context and memory, 3) Adding few-shot examples for complex GEE operations, 4) Developing techniques to handle edge cases and ambiguous queries, 5) Implementing A/B testing to compare prompt effectiveness, 6) Creating a system to continuously improve prompts based on user feedback and success metrics. Document the prompt engineering approach for future reference."
+          "details": "Improve prompt engineering in TypeScript by: 1) Creating a library of specialized prompt templates for different GEE domains (remote sensing, climate analysis, land use classification, etc.), 2) Implementing dynamic prompt construction that incorporates relevant context and memory, 3) Adding few-shot examples for complex GEE operations, 4) Developing techniques to handle edge cases and ambiguous queries, 5) Implementing A/B testing to compare prompt effectiveness, 6) Creating a system to continuously improve prompts based on user feedback and success metrics. Document the prompt engineering approach for future reference."
         }
       ]
     },
@@ -540,7 +565,7 @@
           "description": "Develop a collection of well-structured GEE script templates that users can use as starting points for different types of Earth Engine applications.",
           "status": "pending",
           "dependencies": [],
-          "details": "Implement a library of template scripts covering common GEE use cases (e.g., image processing, time series analysis, feature collection operations). Each template should include: 1) Clear section headers with comments, 2) Proper variable naming conventions, 3) Modular function organization, 4) Error handling patterns, 5) Performance optimization examples. Templates should be stored in a structured format that can be easily loaded into the editor. Include metadata for each template describing its purpose and use case."
+          "details": "Implement a library of template scripts in TypeScript covering common GEE use cases (e.g., image processing, time series analysis, feature collection operations). Each template should include: 1) Clear section headers with comments, 2) Proper variable naming conventions, 3) Modular function organization, 4) Error handling patterns, 5) Performance optimization examples. Templates should be stored in a structured format that can be easily loaded into the editor. Include metadata for each template describing its purpose and use case."
         },
         {
           "id": 2,
@@ -550,7 +575,7 @@
           "dependencies": [
             1
           ],
-          "details": "Develop UI components including: 1) A hierarchical file browser for script organization, 2) Folder creation and management functionality, 3) Drag-and-drop interface for reorganizing scripts, 4) Search and filter capabilities for finding scripts, 5) Template selection interface that displays available templates from subtask 1, 6) Script metadata editor for adding tags and descriptions. Ensure the UI follows consistent design patterns and is responsive."
+          "details": "Develop UI components in TypeScript including: 1) A hierarchical file browser for script organization, 2) Folder creation and management functionality, 3) Drag-and-drop interface for reorganizing scripts, 4) Search and filter capabilities for finding scripts, 5) Template selection interface that displays available templates from subtask 1, 6) Script metadata editor for adding tags and descriptions. Ensure the UI follows consistent design patterns and is responsive."
         },
         {
           "id": 3,
@@ -560,7 +585,7 @@
           "dependencies": [
             1
           ],
-          "details": "Implement code analysis functionality that: 1) Parses JavaScript GEE code to identify structural elements, 2) Detects common anti-patterns in GEE scripts, 3) Identifies performance bottlenecks in Earth Engine operations, 4) Recognizes missing documentation or comments, 5) Suggests modularization opportunities. The analysis engine should generate specific, actionable recommendations that can be displayed to users. Create a scoring system for script quality based on adherence to best practices."
+          "details": "Implement code analysis functionality in TypeScript that: 1) Parses JavaScript GEE code to identify structural elements, 2) Detects common anti-patterns in GEE scripts, 3) Identifies performance bottlenecks in Earth Engine operations, 4) Recognizes missing documentation or comments, 5) Suggests modularization opportunities. The analysis engine should generate specific, actionable recommendations that can be displayed to users. Create a scoring system for script quality based on adherence to best practices."
         },
         {
           "id": 4,
@@ -570,7 +595,7 @@
           "dependencies": [
             3
           ],
-          "details": "Implement LLM integration that: 1) Takes analysis results from subtask 3 as input, 2) Generates natural language explanations of identified issues, 3) Provides code snippets demonstrating recommended improvements, 4) Explains GEE best practices relevant to the user's code, 5) Suggests refactoring approaches for complex scripts. Design a prompt engineering system that effectively communicates code context to the LLM and formats responses appropriately. Include caching mechanisms to improve performance for common recommendations."
+          "details": "Implement LLM integration in TypeScript that: 1) Takes analysis results from subtask 3 as input, 2) Generates natural language explanations of identified issues, 3) Provides code snippets demonstrating recommended improvements, 4) Explains GEE best practices relevant to the user's code, 5) Suggests refactoring approaches for complex scripts. Design a prompt engineering system that effectively communicates code context to the LLM and formats responses appropriately. Include caching mechanisms to improve performance for common recommendations."
         },
         {
           "id": 5,
@@ -581,7 +606,7 @@
             3,
             4
           ],
-          "details": "Implement an optimization system that: 1) Identifies opportunities to apply common GEE patterns (e.g., mapping functions, scale management, proper filtering), 2) Suggests performance improvements specific to Earth Engine (e.g., reducing client-server transfers, optimizing computations), 3) Provides interactive examples of before/after optimization, 4) Integrates with the LLM to explain the rationale behind suggestions, 5) Allows one-click application of suggested optimizations. Include a library of common GEE optimization patterns that can be matched against user code. Create a UI component that displays optimization suggestions alongside the code editor."
+          "details": "Implement an optimization system in TypeScript that: 1) Identifies opportunities to apply common GEE patterns (e.g., mapping functions, scale management, proper filtering), 2) Suggests performance improvements specific to Earth Engine (e.g., reducing client-server transfers, optimizing computations), 3) Provides interactive examples of before/after optimization, 4) Integrates with the LLM to explain the rationale behind suggestions, 5) Allows one-click application of suggested optimizations. Include a library of common GEE optimization patterns that can be matched against user code. Create a UI component that displays optimization suggestions alongside the code editor."
         }
       ]
     }
