@@ -558,6 +558,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
 
 
+// Store information about loaded content scripts
+const contentScriptTabs = new Map();
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
     // Only open side panel if we're on the Earth Engine Code Editor
@@ -605,6 +607,81 @@ async function validateServerIdentity(host, port) {
         // Don't throw an error, just return false if we can't connect
         return false;
     }
+}
+// Forward message to Earth Engine tab
+async function sendMessageToEarthEngineTab(message) {
+    console.log('Forwarding message to Earth Engine tab:', message);
+    // Find Earth Engine tab
+    const tabs = await chrome.tabs.query({ url: "*://code.earthengine.google.com/*" });
+    if (!tabs || tabs.length === 0) {
+        console.error('No Earth Engine tab found');
+        return {
+            success: false,
+            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+        };
+    }
+    const tabId = tabs[0].id;
+    if (!tabId) {
+        console.error('Invalid Earth Engine tab');
+        return {
+            success: false,
+            error: 'Invalid Earth Engine tab'
+        };
+    }
+    // Check if we know the content script is loaded
+    if (!contentScriptTabs.has(tabId)) {
+        console.log(`Content script not registered for tab ${tabId}, checking with PING...`);
+        // Try to ping the content script first
+        try {
+            await pingContentScript(tabId);
+            console.log(`Content script responded to PING in tab ${tabId}`);
+            contentScriptTabs.set(tabId, true);
+        }
+        catch (error) {
+            console.error(`Content script did not respond to PING in tab ${tabId}:`, error);
+            return {
+                success: false,
+                error: 'Content script not loaded. Please refresh the Earth Engine tab.'
+            };
+        }
+    }
+    // Send message to the content script in the Earth Engine tab
+    try {
+        console.log(`Sending message to tab ${tabId}`);
+        const response = await chrome.tabs.sendMessage(tabId, message);
+        console.log('Received response from Earth Engine tab:', response);
+        return response;
+    }
+    catch (error) {
+        console.error('Error communicating with Earth Engine tab:', error);
+        // If communication fails, remove tab from tracked tabs so we'll try to ping again next time
+        contentScriptTabs.delete(tabId);
+        return {
+            success: false,
+            error: `Error communicating with Earth Engine tab: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+// Helper function to ping content script
+function pingContentScript(tabId) {
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            reject(new Error('Content script ping timed out'));
+        }, 2000);
+        chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+            clearTimeout(timeoutId);
+            if (chrome.runtime.lastError) {
+                reject(chrome.runtime.lastError);
+                return;
+            }
+            if (response && response.success) {
+                resolve(true);
+            }
+            else {
+                reject(new Error('Invalid ping response'));
+            }
+        });
+    });
 }
 // Handle messages from content script or side panel
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -720,6 +797,104 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
             })();
             return true; // Will respond asynchronously
+        // Earth Engine Tool Handlers
+        case 'RUN_CODE':
+            (async () => {
+                try {
+                    console.log('Running Earth Engine code, length:', message.code?.length || 0);
+                    console.log('Code snippet:', message.code?.substring(0, 50) + '...');
+                    const response = await sendMessageToEarthEngineTab(message);
+                    console.log('Code execution response:', response);
+                    sendResponse(response);
+                }
+                catch (error) {
+                    console.error('Error running Earth Engine code:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error running Earth Engine code: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'INSPECT_MAP':
+            (async () => {
+                try {
+                    console.log('Inspecting Earth Engine map at coordinates:', message.coordinates);
+                    const response = await sendMessageToEarthEngineTab(message);
+                    console.log('Map inspection response:', response);
+                    sendResponse(response);
+                }
+                catch (error) {
+                    console.error('Error inspecting Earth Engine map:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error inspecting Earth Engine map: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'CHECK_CONSOLE':
+            (async () => {
+                try {
+                    console.log('Checking Earth Engine console for errors');
+                    const response = await sendMessageToEarthEngineTab(message);
+                    console.log('Console check response:', response);
+                    sendResponse(response);
+                }
+                catch (error) {
+                    console.error('Error checking Earth Engine console:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error checking Earth Engine console: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'GET_TASKS':
+            (async () => {
+                try {
+                    console.log('Getting Earth Engine tasks');
+                    const response = await sendMessageToEarthEngineTab(message);
+                    console.log('Tasks response:', response);
+                    sendResponse(response);
+                }
+                catch (error) {
+                    console.error('Error getting Earth Engine tasks:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error getting Earth Engine tasks: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'EDIT_SCRIPT':
+            (async () => {
+                try {
+                    console.log('Editing Earth Engine script:', message.scriptId);
+                    console.log('Script content length:', message.content?.length || 0);
+                    const response = await sendMessageToEarthEngineTab(message);
+                    console.log('Script edit response:', response);
+                    sendResponse(response);
+                }
+                catch (error) {
+                    console.error('Error editing Earth Engine script:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'CONTENT_SCRIPT_LOADED':
+            if (sender.tab && sender.tab.id) {
+                console.log(`Content script loaded in tab ${sender.tab.id}:`, message.url);
+                contentScriptTabs.set(sender.tab.id, true);
+            }
+            else {
+                console.log('Content script loaded but sender tab info is missing');
+            }
+            sendResponse({ success: true, message: 'Background script acknowledged content script loading' });
+            break;
         default:
             console.warn('Unknown message type:', message.type);
             sendResponse({ error: 'Unknown message type' });
