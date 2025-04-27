@@ -52,14 +52,8 @@ The following tools needs to be implemented and the agents will call these tools
 
 ## Reference
 
-You can reference the project under the folder worth-the-click-main, becase it use AI SDK for building Chrome extensions, they has some blogs to describe it,
 
-https://dev.to/jolodev/developing-your-own-chrome-extension-in-bun-and-typescript-part-2-50h7
-https://dev.to/jolodev/developing-your-own-chrome-extension-with-openai-and-langchain-part-3-4nbl
-https://dev.to/jolodev/developing-your-own-chrome-extension-fixing-errors-with-ts-morph-and-using-buns-api-part-4-3hni
-https://dev.to/jolodev/developing-your-own-chrome-extension-fetch-with-a-proxy-and-cloudflare-workers-part-5-95j
-
-You can refer this.
+https://sdk.vercel.ai/docs/introduction#ai-sdk
 
 ## Keep in mind:
 
