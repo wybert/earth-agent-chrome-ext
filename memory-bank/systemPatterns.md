@@ -34,6 +34,37 @@ The Google Earth Engine Agent is built as a Chrome extension that integrates dir
                      └───────────────────────┘
 ```
 
+### AI & Tools Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Google Earth Engine Agent                                       │
+│                                                                 │
+│  ┌─────────────────┐        ┌─────────────────────────────┐    │
+│  │                 │        │ AI SDK                      │    │
+│  │  User Interface │◄──────►│  ┌─────────────────────┐    │    │
+│  │                 │        │  │ Provider Adapters   │    │    │
+│  └─────────────────┘        │  │  - Anthropic        │    │    │
+│           ▲                 │  │  - OpenAI           │◄───┼────┤
+│           │                 │  └─────────────────────┘    │    │
+│           │                 │  ┌─────────────────────┐    │    │
+│           │                 │  │ Tool Framework      │    │    │
+│           │                 │  │  ┌───────────────┐  │    │    │
+│  ┌────────┴────────┐        │  │  │ GEE Tools     │  │    │    │
+│  │ DOM Interaction │◄──────►│  │  │ - Dataset     │◄─┼────┼────┤
+│  │ Layer           │        │  │  │ - Code Run    │  │    │    │
+│  └─────────────────┘        │  │  │ - Inspector   │  │    │    │
+│           ▲                 │  │  │ - Console     │  │    │    │
+│           │                 │  │  │ - Tasks       │  │    │    │
+│           │                 │  │  └───────────────┘  │    │    │
+│           ▼                 │  └─────────────────────┘    │
+│  ┌─────────────────┐        └─────────────────────────────┘    │
+│  │ Google Earth    │                                           │
+│  │ Engine Interface│                                           │
+│  └─────────────────┘                                           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ## Key Technical Decisions
 
 ### 1. Chrome Extension Framework
@@ -104,6 +135,41 @@ The Google Earth Engine Agent is built as a Chrome extension that integrates dir
 - Needs prompt engineering to optimize responses
 - Context window limitations may affect complex queries
 
+### 5. Vercel AI SDK Integration
+
+**Decision**: Use Vercel AI SDK as the framework for AI integration.
+
+**Rationale**:
+- Provides consistent interfaces for multiple AI providers
+- Includes built-in streaming capabilities
+- Offers tool calling framework compatible with modern LLMs
+- Well-maintained and regularly updated
+- Good community support and documentation
+
+**Implications**:
+- Adds external dependency
+- May require custom extensions for GEE-specific functionality
+- Updates to the SDK may require adaptation
+- Need to build GEE-specific tools on top of the framework
+
+### 6. Multiple AI Provider Support
+
+**Decision**: Support multiple AI providers (Anthropic Claude, OpenAI GPT) through adapter pattern.
+
+**Rationale**:
+- Gives users choice of preferred AI provider
+- Provides fallback options if one service is unavailable
+- Different models have different strengths for specific tasks
+- Allows leveraging provider-specific features when advantageous
+- Future-proofs against changes in AI service landscape
+
+**Implications**:
+- More complex integration and testing required
+- Need to handle provider-specific API differences
+- Must optimize prompts for different model capabilities
+- User interface needs provider selection options
+- Increased maintenance overhead
+
 ## Design Patterns
 
 ### 1. Observer Pattern
@@ -123,6 +189,7 @@ Employed to transform Earth Engine interface elements and user code into structu
 - Extract relevant metadata from datasets and functions
 - Convert error messages into actionable context
 - Transform Earth Engine concepts into AI-friendly descriptions
+- Handle differences between AI provider APIs
 
 This abstraction layer allows the AI to work with consistent inputs regardless of Earth Engine updates or interface changes.
 
@@ -155,6 +222,17 @@ The sidepanel interface provides a simplified facade over the complex interactio
 - Earth Engine API integration
 
 This unifies the user experience while hiding the complexity of the underlying components.
+
+### 6. Tool Pattern
+
+The agent implements a structured tool pattern for Earth Engine operations:
+- Tools are defined with clear input/output interfaces
+- Each tool handles a specific GEE operation
+- Tools can be composed for complex operations
+- AI can select and use tools based on user needs
+- Tool execution is tracked and can be reported to the user
+
+This pattern enables the AI to interact with Earth Engine in a controlled, predictable way.
 
 ## Component Relationships
 
@@ -195,6 +273,20 @@ This unifies the user experience while hiding the complexity of the underlying c
 - Show function parameter details
 - Highlight potential issues
 
+#### AI SDK Integration
+- Manages communication with AI providers
+- Handles API key storage and usage
+- Formats prompts with Earth Engine context
+- Processes and structures AI responses
+- Implements streaming for incremental responses
+
+#### Tool Framework
+- Defines consistent interfaces for GEE tools
+- Provides tool registration and discovery
+- Manages tool execution and error handling
+- Tracks tool usage for context building
+- Supports composing tools for complex operations
+
 ### 2. Interaction Flow
 
 ```
@@ -224,6 +316,78 @@ User Action in Earth Engine
   User Interface
 ```
 
+### 3. Tool Execution Flow
+
+```
+User Request
+      │
+      ▼
+┌──────────────┐     ┌────────────────┐
+│ AI Processing │────►│ Tool Selection │
+└──────────────┘     └────────────────┘
+                            │
+                            ▼
+┌───────────────┐     ┌────────────────┐
+│ Result Display │◄────│ Tool Execution │
+└───────────────┘     └────────────────┘
+      ▲                      │
+      │                      ▼
+      │              ┌────────────────┐
+      └──────────────│ GEE Interaction│
+                     └────────────────┘
+```
+
+## Earth Engine Tools
+
+### 1. Dataset Search Tool
+- Searches the Google Earth Engine dataset catalog
+- Filters datasets by type, date range, resolution, etc.
+- Provides metadata and usage examples
+- Suggests appropriate datasets for specific analyses
+- Links to official documentation
+
+### 2. Code Generation Tool
+- Creates Earth Engine code snippets based on user requests
+- Generates complete analysis workflows
+- Provides commented code with explanations
+- Customizes code based on selected datasets
+- Offers parameter suggestions and optimizations
+
+### 3. Code Execution Tool
+- Inserts generated code into the Earth Engine editor
+- Executes code with proper error handling
+- Captures and reports execution results
+- Manages execution in background or foreground
+- Provides run status feedback
+
+### 4. Console Interaction Tool
+- Reads console output from Earth Engine
+- Captures error messages and warnings
+- Parses log messages for context
+- Monitors computation progress
+- Extracts relevant information for debugging
+
+### 5. Map Inspector Tool
+- Activates the Earth Engine inspector tool
+- Retrieves pixel values and metadata at click locations
+- Formats inspector results for display
+- Suggests analyses based on inspected values
+- Provides contextual explanation of values
+
+### 6. Task Management Tool
+- Lists running and completed Earth Engine tasks
+- Creates new export or processing tasks
+- Monitors task status and progress
+- Cancels or modifies existing tasks
+- Provides task history and results
+
+### 7. Screenshot Tool
+- Captures the current map view or visualization
+- Processes and optimizes screenshot images
+- Generates descriptions of visualizations
+- Saves screenshots for reference in conversation
+- Compares multiple visualizations
+
 ## Security & Privacy Considerations
 
 ### 1. Data Handling
@@ -248,7 +412,15 @@ User Action in Earth Engine
 - Communication with Earth Engine interface uses message passing
 - Extension components cannot modify Earth Engine functionality
 - Security sandbox ensures the extension cannot interfere with critical Earth Engine operations
-- Clear error handling for integration boundary issues
+- Tool execution requires explicit user permission by default
+
+### 4. API Key Management
+
+- User-provided API keys stored securely
+- Optional local encryption of stored keys
+- Clear display of current API usage
+- Usage tracking and quota management
+- Options for ephemeral (session-only) key usage
 
 ## Performance Considerations
 

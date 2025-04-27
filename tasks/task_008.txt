@@ -15,35 +15,35 @@ Test screenshot capture by taking screenshots of various GEE maps and verifying 
 ### Dependencies: None
 ### Description: Create a module to capture screenshots of maps and charts from Google Earth Engine visualizations
 ### Details:
-Develop a utility that can: 1) Capture the current state of GEE map or chart as an image, 2) Handle different viewport sizes and resolutions, 3) Implement options for capturing specific regions or the entire visualization, 4) Save screenshots in common formats (PNG, JPEG), 5) Add metadata about the visualization (timestamp, layers active, etc.). Use html2canvas or similar libraries for DOM-to-image conversion. Ensure the module works with GEE's specific rendering approach.
+Develop a TypeScript utility that can: 1) Capture the current state of GEE map or chart as an image, 2) Handle different viewport sizes and resolutions, 3) Implement options for capturing specific regions or the entire visualization, 4) Save screenshots in common formats (PNG, JPEG), 5) Add metadata about the visualization (timestamp, layers active, etc.). Use html2canvas or similar libraries for DOM-to-image conversion. Ensure the module works with GEE's specific rendering approach.
 
 ## 2. Build DOM Interaction Layer for Data Extraction [pending]
 ### Dependencies: 8.1
 ### Description: Develop a system to extract underlying data from GEE visualizations through DOM interaction
 ### Details:
-Create functions that can: 1) Access and parse GEE's visualization DOM structure, 2) Extract data points, legends, and scale information from maps, 3) Retrieve values from charts and graphs, 4) Convert extracted information into structured data formats (JSON, CSV), 5) Handle different types of GEE visualizations (raster layers, vector data, charts). This will require analyzing GEE's DOM structure and creating selectors that can reliably extract data even when the UI changes slightly.
+Create TypeScript functions that can: 1) Access and parse GEE's visualization DOM structure, 2) Extract data points, legends, and scale information from maps, 3) Retrieve values from charts and graphs, 4) Convert extracted information into structured data formats (JSON, CSV), 5) Handle different types of GEE visualizations (raster layers, vector data, charts). This will require analyzing GEE's DOM structure and creating selectors that can reliably extract data even when the UI changes slightly.
 
 ## 3. Develop LLM Integration for Visual Analysis [pending]
 ### Dependencies: 8.1, 8.2
 ### Description: Create an interface between captured visualizations/data and the LLM for automated analysis
 ### Details:
-Implement a system that: 1) Prepares extracted visualization data for LLM processing, 2) Constructs appropriate prompts that include visual context and extracted data, 3) Handles sending data to the LLM API and processing responses, 4) Implements specialized prompts for different visualization types (time series, spatial distributions, etc.), 5) Includes fallback mechanisms for when analysis is uncertain. Use a combination of text descriptions of the visuals and structured data from subtask 2 to give the LLM sufficient context.
+Implement a TypeScript system that: 1) Prepares extracted visualization data for LLM processing, 2) Constructs appropriate prompts that include visual context and extracted data, 3) Handles sending data to the LLM API and processing responses, 4) Implements specialized prompts for different visualization types (time series, spatial distributions, etc.), 5) Includes fallback mechanisms for when analysis is uncertain. Use a combination of text descriptions of the visuals and structured data from subtask 2 to give the LLM sufficient context.
 
 ## 4. Create UI Components for Analysis Results [pending]
 ### Dependencies: 8.3
 ### Description: Design and implement UI components to display LLM analysis of visualizations
 ### Details:
-Build UI components that: 1) Display the original visualization alongside the LLM analysis, 2) Present key insights in an easily digestible format, 3) Allow users to expand/collapse detailed explanations, 4) Include confidence indicators for analysis results, 5) Provide options to refine or request additional analysis. Use modern frontend frameworks (React, Vue, etc.) and ensure components are responsive and accessible.
+Build UI components in TypeScript that: 1) Display the original visualization alongside the LLM analysis, 2) Present key insights in an easily digestible format, 3) Allow users to expand/collapse detailed explanations, 4) Include confidence indicators for analysis results, 5) Provide options to refine or request additional analysis. Use modern frontend frameworks (React, Vue, etc.) and ensure components are responsive and accessible.
 
 ## 5. Implement Visualization Interpretation Helpers [pending]
 ### Dependencies: 8.3, 8.4
 ### Description: Create tools to help users understand complex visualization outputs
 ### Details:
-Develop interpretation helpers that: 1) Provide contextual explanations of visualization elements (color scales, patterns, outliers), 2) Offer guided walkthroughs of complex visualizations, 3) Highlight significant features automatically, 4) Generate plain-language summaries of technical visualizations, 5) Include educational components about common GEE visualization types. Combine LLM-generated explanations with predefined guidance for common visualization patterns.
+Develop interpretation helpers in TypeScript that: 1) Provide contextual explanations of visualization elements (color scales, patterns, outliers), 2) Offer guided walkthroughs of complex visualizations, 3) Highlight significant features automatically, 4) Generate plain-language summaries of technical visualizations, 5) Include educational components about common GEE visualization types. Combine LLM-generated explanations with predefined guidance for common visualization patterns.
 
 ## 6. Build Comparative Visualization Capabilities [pending]
 ### Dependencies: 8.1, 8.2, 8.4
 ### Description: Implement tools for comparing multiple visualizations or different states of the same visualization
 ### Details:
-Create comparison tools that: 1) Allow side-by-side viewing of multiple visualizations, 2) Implement slider or swipe interfaces for before/after comparisons, 3) Calculate and highlight differences between visualizations, 4) Generate summaries of key differences, 5) Support time-series comparisons for temporal data. This should include both UI components for visual comparison and analytical tools that leverage the LLM to explain the significance of observed differences.
+Create comparison tools in TypeScript that: 1) Allow side-by-side viewing of multiple visualizations, 2) Implement slider or swipe interfaces for before/after comparisons, 3) Calculate and highlight differences between visualizations, 4) Generate summaries of key differences, 5) Support time-series comparisons for temporal data. This should include both UI components for visual comparison and analytical tools that leverage the LLM to explain the significance of observed differences.
 

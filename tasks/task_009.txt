@@ -15,35 +15,35 @@ Test memory retention by verifying the agent remembers previous context in multi
 ### Dependencies: None
 ### Description: Create a memory storage system that can persist conversation history and relevant context across user sessions
 ### Details:
-Implement a memory storage class that can: 1) Store conversation turns with timestamps, 2) Save user queries and agent responses, 3) Maintain metadata about the conversation context, 4) Persist data between sessions using appropriate storage mechanisms (database, file system, or in-memory with serialization). Include methods for adding, retrieving, and summarizing memory contents. Design the system to be extensible for future memory types.
+Implement a memory storage class in TypeScript that can: 1) Store conversation turns with timestamps, 2) Save user queries and agent responses, 3) Maintain metadata about the conversation context, 4) Persist data between sessions using appropriate storage mechanisms (database, file system, or in-memory with serialization). Include methods for adding, retrieving, and summarizing memory contents. Design the system to be extensible for future memory types.
 
 ## 2. Develop context management for multi-turn conversations [pending]
 ### Dependencies: 9.1
 ### Description: Create a context manager that maintains the state of ongoing conversations about GEE workflows
 ### Details:
-Build on the memory system to implement a context manager that: 1) Tracks the current conversation topic and intent, 2) Maintains references to GEE objects being discussed, 3) Identifies when context switching occurs, 4) Implements relevance scoring to determine which past interactions are most important for the current query, 5) Provides methods to extract relevant context for prompt construction. Test with multi-turn conversations about complex GEE workflows.
+Build on the memory system to implement a context manager in TypeScript that: 1) Tracks the current conversation topic and intent, 2) Maintains references to GEE objects being discussed, 3) Identifies when context switching occurs, 4) Implements relevance scoring to determine which past interactions are most important for the current query, 5) Provides methods to extract relevant context for prompt construction. Test with multi-turn conversations about complex GEE workflows.
 
 ## 3. Implement thinking process visualization [pending]
 ### Dependencies: None
 ### Description: Create a UI component that displays the agent's reasoning process in real-time
 ### Details:
-Develop a UI component that: 1) Shows the step-by-step reasoning of the agent as it processes a query, 2) Visualizes intermediate steps like parsing the query, retrieving context, planning a response, and generating code, 3) Updates in real-time as the agent thinks, 4) Can be toggled on/off by users, 5) Uses appropriate styling to distinguish between different types of thinking steps. Implement the backend support to stream this information to the frontend.
+Develop a UI component in TypeScript that: 1) Shows the step-by-step reasoning of the agent as it processes a query, 2) Visualizes intermediate steps like parsing the query, retrieving context, planning a response, and generating code, 3) Updates in real-time as the agent thinks, 4) Can be toggled on/off by users, 5) Uses appropriate styling to distinguish between different types of thinking steps. Implement the backend support to stream this information to the frontend.
 
 ## 4. Create mode switching between simple chat and advanced capabilities [pending]
 ### Dependencies: 9.1, 9.2, 9.3
 ### Description: Implement a system to toggle between basic chat functionality and advanced agent capabilities
 ### Details:
-Develop a mode switching mechanism that: 1) Allows users to toggle between 'simple chat' and 'advanced agent' modes, 2) In simple mode, provides direct responses without extensive reasoning or context management, 3) In advanced mode, utilizes the full memory, context, and thinking visualization capabilities, 4) Persists mode preference in user settings, 5) Updates the UI to reflect the current mode, 6) Implements appropriate prompt templates for each mode. Ensure smooth transitions between modes during ongoing conversations.
+Develop a mode switching mechanism in TypeScript that: 1) Allows users to toggle between 'simple chat' and 'advanced agent' modes, 2) In simple mode, provides direct responses without extensive reasoning or context management, 3) In advanced mode, utilizes the full memory, context, and thinking visualization capabilities, 4) Persists mode preference in user settings, 5) Updates the UI to reflect the current mode, 6) Implements appropriate prompt templates for each mode. Ensure smooth transitions between modes during ongoing conversations.
 
 ## 5. Enhance reasoning for multi-step GEE workflows [pending]
 ### Dependencies: 9.2
 ### Description: Improve the agent's ability to reason through and generate complex, multi-step GEE workflows
 ### Details:
-Enhance the agent's reasoning capabilities by: 1) Implementing a planning module that breaks down complex GEE tasks into logical steps, 2) Creating specialized prompt templates for different types of GEE workflows (image processing, time series analysis, etc.), 3) Adding verification steps to ensure generated code is valid and efficient, 4) Incorporating GEE best practices into the reasoning process, 5) Developing the ability to explain the workflow steps to users. Test with complex real-world GEE use cases.
+Enhance the agent's reasoning capabilities in TypeScript by: 1) Implementing a planning module that breaks down complex GEE tasks into logical steps, 2) Creating specialized prompt templates for different types of GEE workflows (image processing, time series analysis, etc.), 3) Adding verification steps to ensure generated code is valid and efficient, 4) Incorporating GEE best practices into the reasoning process, 5) Developing the ability to explain the workflow steps to users. Test with complex real-world GEE use cases.
 
 ## 6. Optimize prompt engineering for specialized GEE tasks [pending]
 ### Dependencies: 9.4, 9.5
 ### Description: Refine prompt templates and engineering techniques for improved performance on specialized GEE tasks
 ### Details:
-Improve prompt engineering by: 1) Creating a library of specialized prompt templates for different GEE domains (remote sensing, climate analysis, land use classification, etc.), 2) Implementing dynamic prompt construction that incorporates relevant context and memory, 3) Adding few-shot examples for complex GEE operations, 4) Developing techniques to handle edge cases and ambiguous queries, 5) Implementing A/B testing to compare prompt effectiveness, 6) Creating a system to continuously improve prompts based on user feedback and success metrics. Document the prompt engineering approach for future reference.
+Improve prompt engineering in TypeScript by: 1) Creating a library of specialized prompt templates for different GEE domains (remote sensing, climate analysis, land use classification, etc.), 2) Implementing dynamic prompt construction that incorporates relevant context and memory, 3) Adding few-shot examples for complex GEE operations, 4) Developing techniques to handle edge cases and ambiguous queries, 5) Implementing A/B testing to compare prompt effectiveness, 6) Creating a system to continuously improve prompts based on user feedback and success metrics. Document the prompt engineering approach for future reference.
 
