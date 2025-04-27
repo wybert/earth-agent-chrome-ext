@@ -1,0 +1,49 @@
+# Task ID: 5
+# Title: Implement Dataset Catalog Search Tool
+# Status: pending
+# Dependencies: 3, 4
+# Priority: medium
+# Description: Create a tool to search and query the GEE dataset catalog to find relevant Earth observation data.
+# Details:
+Develop the dataset search tool with: 1) Integration with GEE dataset catalog via external resources, 2) Search parameters and results data structures, 3) Methods to query datasets based on user requirements, 4) Display of dataset metadata and usage examples, 5) Tool integration with the LLM agent framework to process natural language queries about datasets, 6) Formatting of search results for display in the chat interface.
+
+# Test Strategy:
+Test dataset search with various queries and verify relevant results are returned. Validate metadata display for accuracy. Test integration with the agent by asking natural language questions about available datasets.
+
+# Subtasks:
+## 1. Create GEE Dataset Catalog API Client [pending]
+### Dependencies: None
+### Description: Develop a client module to interface with Google Earth Engine's dataset catalog API
+### Details:
+Implement a Python client that connects to GEE's dataset catalog API. This should include: 1) Authentication handling for GEE access, 2) Basic API request methods for dataset retrieval, 3) Error handling for API failures, 4) Rate limiting compliance, 5) Response parsing to convert API responses into usable Python objects. Use the 'earthengine-api' Python package as the foundation and create wrapper methods specific to catalog search operations.
+
+## 2. Design Dataset Search Parameters and Result Models [pending]
+### Dependencies: 5.1
+### Description: Define data structures for search parameters and results
+### Details:
+Create Python classes/data models to represent: 1) Search parameters including dataset type, temporal coverage, spatial coverage, resolution, keywords, and data provider, 2) Dataset metadata results including ID, name, description, bands, resolution, update frequency, and example usage, 3) Pagination and result filtering options. Implement proper validation for search parameters and ensure the result models can be easily serialized to JSON for the frontend. Use Pydantic models for type safety and validation.
+
+## 3. Implement Dataset Search Query Engine [pending]
+### Dependencies: 5.1, 5.2
+### Description: Build the core search functionality to query datasets based on parameters
+### Details:
+Develop the search engine that: 1) Takes search parameter objects and converts them to GEE API queries, 2) Executes searches against the GEE catalog API client, 3) Processes and filters results based on relevance, 4) Handles pagination for large result sets, 5) Implements sorting options (by relevance, recency, popularity), 6) Provides methods for retrieving detailed metadata for specific datasets. Include optimization for common queries and caching mechanisms for frequently accessed datasets.
+
+## 4. Create Dataset Metadata Formatter [pending]
+### Dependencies: 5.2, 5.3
+### Description: Develop utilities to format and enrich dataset metadata for display
+### Details:
+Implement a formatter module that: 1) Enriches raw GEE dataset metadata with additional useful information, 2) Generates code snippets showing how to use each dataset in GEE, 3) Creates human-readable descriptions of technical metadata, 4) Formats band information in a structured way, 5) Generates preview links or thumbnails where available, 6) Structures metadata in a consistent format regardless of dataset type. Include methods to customize the level of detail in the formatted output based on context.
+
+## 5. Integrate Natural Language Query Processing [pending]
+### Dependencies: 5.3, 5.4
+### Description: Connect the search tool with the LLM agent to handle natural language dataset queries
+### Details:
+Develop the integration layer that: 1) Extracts search parameters from natural language queries using the LLM, 2) Converts LLM-extracted parameters into structured search parameter objects, 3) Executes searches and retrieves results, 4) Handles follow-up questions about datasets, 5) Manages conversation context to refine searches iteratively. Implement prompt templates for the LLM that guide it to extract relevant search parameters from user queries and create a feedback mechanism to improve parameter extraction over time.
+
+## 6. Implement Chat Interface Result Formatting [pending]
+### Dependencies: 5.4, 5.5
+### Description: Create display formatters for presenting search results in the chat interface
+### Details:
+Build the presentation layer that: 1) Converts search results into formatted messages for the chat interface, 2) Creates concise summaries for result listings, 3) Generates detailed views for individual datasets, 4) Implements pagination controls for browsing multiple results, 5) Formats code examples in syntax-highlighted blocks, 6) Provides interactive elements like 'show more details' or 'see usage example' options. Ensure the formatting is responsive to different chat interfaces and includes both text and rich media elements where appropriate.
+
