@@ -150,11 +150,11 @@ export function Chat() {
     const parts = content.split(/(`{1,3})(.*?)(\1)/g);
     
     if (parts.length === 1) {
-      return <div className="whitespace-pre-wrap">{content}</div>;
+      return <div className="whitespace-pre-wrap break-words">{content}</div>;
     }
     
     return (
-      <div className="whitespace-pre-wrap">
+      <div className="whitespace-pre-wrap break-words">
         {parts.map((part, i) => {
           // Check if this part is a code block
           if (i % 4 === 2 && parts[i - 1].includes('`')) {
@@ -237,113 +237,186 @@ export function Chat() {
   // Set up port connection to background script
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState<Message | null>(null);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
 
   // Initialize port connection
   useEffect(() => {
-    const newPort = chrome.runtime.connect({ name: 'sidepanel' });
+    let newPort: chrome.runtime.Port | null = null;
     
-    newPort.onMessage.addListener((response: any) => {
-      switch (response.type) {
-        case 'CHAT_RESPONSE':
-          // Handle non-streaming response
-          if (!currentStreamingMessage) {
-            const userMessage: Message = {
-              id: Date.now().toString(),
-              role: 'user',
-              content: input.trim()
-            };
+    const connectToBackground = () => {
+      try {
+        console.log('Connecting to background script...');
+        newPort = chrome.runtime.connect({ name: 'sidepanel' });
+        
+        newPort.onMessage.addListener((response: any) => {
+          console.log('Received message:', response);
+          switch (response.type) {
+            case 'CHAT_RESPONSE':
+              // Handle non-streaming response
+              if (!currentStreamingMessage) {
+                const userMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'user',
+                  content: input.trim()
+                };
 
-            const assistantMessage: Message = {
-              id: (Date.now() + 1).toString(),
-              role: 'assistant',
-              content: response.data?.choices?.[0]?.message?.content || 
-                       response.data?.content || 
-                       'Sorry, I could not generate a response.'
-            };
+                const assistantMessage: Message = {
+                  id: (Date.now() + 1).toString(),
+                  role: 'assistant',
+                  content: response.data?.choices?.[0]?.message?.content || 
+                          response.data?.content || 
+                          'Sorry, I could not generate a response.'
+                };
 
-            setMessages(prev => [...prev, userMessage, assistantMessage]);
+                setMessages(prev => [...prev, userMessage, assistantMessage]);
+              }
+              setIsTyping(false);
+              setCurrentStreamingMessage(null);
+              break;
+
+            case 'CHAT_STREAM_CHUNK':
+              // Handle streaming chunk
+              if (!currentStreamingMessage) {
+                // Add user message if this is the first chunk
+                const userMessage: Message = {
+                  id: Date.now().toString(),
+                  role: 'user',
+                  content: input.trim()
+                };
+                setMessages(prev => [...prev, userMessage]);
+                
+                // Create new streaming message
+                const newMessage: Message = {
+                  id: response.requestId,
+                  role: 'assistant',
+                  content: response.chunk
+                };
+                setCurrentStreamingMessage(newMessage);
+              } else {
+                // Update existing streaming message
+                setCurrentStreamingMessage(prev => prev ? {
+                  ...prev,
+                  content: prev.content + response.chunk
+                } : null);
+              }
+              break;
+
+            case 'CHAT_STREAM_END':
+              // Finalize streaming message
+              if (currentStreamingMessage) {
+                setMessages(prev => [...prev, currentStreamingMessage]);
+                setCurrentStreamingMessage(null);
+              }
+              setIsTyping(false);
+              break;
+
+            case 'ERROR':
+              console.error('Chat API error:', response.error);
+              setFallbackMode(true);
+              setIsTyping(false);
+              setCurrentStreamingMessage(null);
+              break;
           }
-          setIsTyping(false);
-          setCurrentStreamingMessage(null);
-          break;
+        });
 
-        case 'CHAT_STREAM_CHUNK':
-          // Handle streaming chunk
-          if (!currentStreamingMessage) {
-            // Add user message if this is the first chunk
-            const userMessage: Message = {
-              id: Date.now().toString(),
-              role: 'user',
-              content: input.trim()
-            };
-            setMessages(prev => [...prev, userMessage]);
+        newPort.onDisconnect.addListener(() => {
+          console.log('Disconnected from background script, error:', chrome.runtime.lastError);
+          if (newPort === port) {
+            setPort(null);
             
-            // Create new streaming message
-            const newMessage: Message = {
-              id: response.requestId,
-              role: 'assistant',
-              content: response.chunk
-            };
-            setCurrentStreamingMessage(newMessage);
-          } else {
-            // Update existing streaming message
-            setCurrentStreamingMessage(prev => prev ? {
-              ...prev,
-              content: prev.content + response.chunk
-            } : null);
+            // Try to reconnect if we haven't tried too many times
+            if (connectionAttempts < 3) {
+              console.log(`Attempting to reconnect (${connectionAttempts + 1}/3)...`);
+              setConnectionAttempts(prev => prev + 1);
+              setTimeout(connectToBackground, 1000);
+            } else {
+              setFallbackMode(true);
+              console.error('Failed to connect after multiple attempts. Switching to fallback mode.');
+            }
           }
-          break;
+        });
 
-        case 'CHAT_STREAM_END':
-          // Finalize streaming message
-          if (currentStreamingMessage) {
-            setMessages(prev => [...prev, currentStreamingMessage]);
-            setCurrentStreamingMessage(null);
-          }
-          setIsTyping(false);
-          break;
-
-        case 'ERROR':
-          console.error('Chat API error:', response.error);
-          setFallbackMode(true);
-          setIsTyping(false);
-          setCurrentStreamingMessage(null);
-          break;
+        setPort(newPort);
+        setConnectionAttempts(0);
+        console.log('Connected to background script');
+        
+        // Send a ping to verify connection
+        newPort.postMessage({ type: 'PING' });
+        
+        return newPort;
+      } catch (error) {
+        console.error('Failed to connect to background script:', error);
+        setFallbackMode(true);
+        return null;
       }
-    });
-
-    newPort.onDisconnect.addListener(() => {
-      console.log('Disconnected from background script');
-      setPort(null);
-      setFallbackMode(true);
-      setCurrentStreamingMessage(null);
-    });
-
-    setPort(newPort);
-
-    return () => {
-      newPort.disconnect();
     };
-  }, []);
+    
+    // Connect when component mounts or connection attempts change
+    const currentPort = connectToBackground();
+    
+    // Clean up function
+    return () => {
+      if (currentPort) {
+        try {
+          currentPort.disconnect();
+        } catch (e) {
+          console.error('Error disconnecting port:', e);
+        }
+      }
+    };
+  }, [connectionAttempts]); // Dependency on connectionAttempts to allow reconnection attempts
 
   // Custom submit handler that uses port messaging
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading || !port) return;
-
+    
+    // Validate input
+    if (!input.trim() || isLoading) return;
+    
     setIsTyping(true);
     setCurrentStreamingMessage(null);
     
     try {
-      // Send message through port
-      const message: ExtensionMessage = {
-        type: 'CHAT_MESSAGE',
-        message: input.trim(),
-        apiKey,
-        provider: apiProvider
-      };
+      if (port) {
+        // Send message through port
+        const message: ExtensionMessage = {
+          type: 'CHAT_MESSAGE',
+          message: input.trim(),
+          apiKey,
+          provider: apiProvider
+        };
 
-      port.postMessage(message);
+        console.log('Sending message:', message);
+        port.postMessage(message);
+      } else {
+        // Try to reconnect or fall back
+        console.error('No port connection available');
+        
+        // Attempt to reconnect
+        setConnectionAttempts(prev => prev + 1);
+        
+        // Add user message
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input.trim()
+        };
+        
+        setMessages(prev => [...prev, userMessage]);
+        
+        // Show a temporary response about connection issue
+        setTimeout(() => {
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: 'I\'m having trouble connecting to the backend service. Trying to reconnect...'
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+          setIsTyping(false);
+          setFallbackMode(true);
+        }, 1000);
+      }
     } catch (error) {
       console.error('Error sending chat message:', error);
       setFallbackMode(true);
@@ -408,52 +481,56 @@ export function Chat() {
   const currentLoading = fallbackMode ? isLocalLoading : isLoading;
 
   return (
-    <Card className="w-full h-[600px] grid grid-rows-[auto,1fr,auto]">
-      <div className="flex justify-between items-center p-3 border-b">
-        <h2 className="text-sm font-medium">Earth Engine Assistant</h2>
+    <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none">
+      <div className="flex justify-between items-center p-2 px-3 border-b">
+        <h2 className="text-base font-medium">Mapping through prompting</h2>
         <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-8 w-8" 
+          variant="outline"
+          size="icon"
+          rounded="full"
           onClick={() => setShowSettings(true)}
+          aria-label="Settings"
+          className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
         >
-          <SettingsIcon className="h-4 w-4" />
+          <SettingsIcon className="h-5 w-5 text-gray-600" />
         </Button>
       </div>
       
-      <ScrollArea className="p-4">
-        <div className="space-y-4">
+      <ScrollArea className="px-2 py-4 rounded-none">
+        <div className="space-y-4 w-full mx-auto">
           {displayMessages.map((message) => (
             <div
               key={message.id}
               className={cn(
-                'flex w-max max-w-[90%] flex-col gap-2 rounded-lg px-3 py-2 text-sm',
+                'flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words',
                 message.role === 'user'
                   ? 'ml-auto bg-primary text-primary-foreground'
                   : 'bg-muted'
               )}
+              style={{ maxWidth: '98%', minWidth: 'unset', width: 'auto' }}
             >
               {formatMessageContent(message.content)}
             </div>
           ))}
 
           {isTyping && !fallbackMode && (
-            <div className="flex items-center gap-2 p-3 text-sm bg-muted rounded-lg w-max">
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+            <div className="flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max">
+              <div className="typing-indicator flex gap-1">
+                <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse"></span>
+                <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-150"></span>
+                <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-300"></span>
               </div>
             </div>
           )}
 
           {error && !fallbackMode && (
-            <div className="flex items-center gap-2 p-2 text-sm text-red-500 bg-red-50 rounded-md">
+            <div className="flex items-center gap-2 p-2 text-base text-destructive bg-destructive/10 rounded-md">
               <span>{error.message || "Error connecting to AI service"}</span>
               <div className="flex gap-2 ml-auto">
                 <Button 
                   variant="outline" 
                   size="sm"
+                  rounded="lg"
                   onClick={handleRegenerate}
                 >
                   <RefreshCw className="h-3 w-3 mr-1" /> Regenerate
@@ -461,6 +538,7 @@ export function Chat() {
                 <Button 
                   variant="outline" 
                   size="sm"
+                  rounded="lg"
                   onClick={() => setShowSettings(true)}
                 >
                   Settings
@@ -470,11 +548,12 @@ export function Chat() {
           )}
 
           {fallbackMode && apiConfigured && (
-            <div className="flex items-center gap-2 p-2 text-sm text-amber-600 bg-amber-50 rounded-md">
+            <div className="flex items-center gap-2 p-2 text-base text-warning-foreground bg-warning/10 rounded-md">
               <span>Using local responses. API connection failed.</span>
               <Button 
-                variant="outline" 
-                size="sm" 
+                variant="warning" 
+                size="sm"
+                rounded="lg"
                 className="ml-auto"
                 onClick={handleRetryAPI}
               >
@@ -489,10 +568,10 @@ export function Chat() {
       
       <form
         onSubmit={currentSubmitHandler}
-        className="p-4 flex items-center gap-2 border-t"
+        className="p-2 px-3 flex items-center gap-2 border-t"
       >
         <Textarea
-          className="min-h-[60px] resize-none"
+          className="min-h-[60px] resize-none text-base"
           placeholder={apiConfigured 
             ? "Ask about Earth Engine..." 
             : "Configure API key in Settings to use AI features..."
@@ -506,63 +585,28 @@ export function Chat() {
           <Button
             type="button"
             size="icon"
-            variant="destructive"
+            variant="outline"
+            rounded="full"
             onClick={handleStopGenerating}
+            aria-label="Stop generating"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
           >
-            <span className="sr-only">Stop generating</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><rect width="6" height="16" x="9" y="4"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-600"><rect width="6" height="16" x="9" y="4"/></svg>
           </Button>
         ) : (
           <Button
             type="submit"
             size="icon"
+            variant="outline"
+            rounded="full"
             disabled={currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim()}
+            aria-label="Send message"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
           >
-            <Send className="h-4 w-4" />
-            <span className="sr-only">Send message</span>
+            <Send className="h-5 w-5 text-gray-600" />
           </Button>
         )}
       </form>
-
-      <style>{`
-        .typing-indicator {
-          display: flex;
-          align-items: center;
-        }
-        
-        .typing-indicator span {
-          height: 8px;
-          width: 8px;
-          margin: 0 2px;
-          background-color: #9ca3af;
-          border-radius: 50%;
-          display: inline-block;
-          animation: typing 1.4s infinite ease-in-out both;
-        }
-        
-        .typing-indicator span:nth-child(1) {
-          animation-delay: 0s;
-        }
-        
-        .typing-indicator span:nth-child(2) {
-          animation-delay: 0.2s;
-        }
-        
-        .typing-indicator span:nth-child(3) {
-          animation-delay: 0.4s;
-        }
-        
-        @keyframes typing {
-          0%, 100% {
-            transform: scale(0.6);
-            opacity: 0.6;
-          }
-          50% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </Card>
   );
 }
