@@ -4,11 +4,12 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Settings as SettingsIcon, RefreshCw } from 'lucide-react';
+import { Send, Settings as SettingsIcon, RefreshCw, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Message } from 'ai';
 import { Settings } from './Settings';
 import { ExtensionMessage } from '../types/extension';
+import ToolsTestPanel from './ui/ToolsTestPanel';
 
 // Chrome storage keys
 const STORAGE_KEY = 'earth_engine_chat_history';
@@ -24,6 +25,7 @@ const WELCOME_MESSAGE: Message = {
 
 export function Chat() {
   const [showSettings, setShowSettings] = useState(false);
+  const [showToolsTest, setShowToolsTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic'>('openai');
@@ -484,16 +486,28 @@ export function Chat() {
     <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none">
       <div className="flex justify-between items-center p-2 px-3 border-b">
         <h2 className="text-base font-medium">Mapping through prompting</h2>
-        <Button 
-          variant="outline"
-          size="icon"
-          rounded="full"
-          onClick={() => setShowSettings(true)}
-          aria-label="Settings"
-          className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
-        >
-          <SettingsIcon className="h-5 w-5 text-gray-600" />
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            size="icon"
+            rounded="full"
+            onClick={() => setShowToolsTest(true)}
+            aria-label="Test Tools"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
+          >
+            <Wrench className="h-5 w-5 text-gray-600" />
+          </Button>
+          <Button 
+            variant="outline"
+            size="icon"
+            rounded="full"
+            onClick={() => setShowSettings(true)}
+            aria-label="Settings"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
+          >
+            <SettingsIcon className="h-5 w-5 text-gray-600" />
+          </Button>
+        </div>
       </div>
       
       <ScrollArea className="px-2 py-4 rounded-none">
@@ -607,6 +621,8 @@ export function Chat() {
           </Button>
         )}
       </form>
+
+      <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
     </Card>
   );
 }

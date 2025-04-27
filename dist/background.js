@@ -144,6 +144,351 @@ async function streamAnthropicResponse(apiKey, messages) {
 }
 
 
+/***/ }),
+
+/***/ "./src/lib/tools/context7/getDocumentation.ts":
+/*!****************************************************!*\
+  !*** ./src/lib/tools/context7/getDocumentation.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getDocumentation: () => (/* binding */ getDocumentation)
+/* harmony export */ });
+/**
+ * Fetches documentation for Google Earth Engine datasets from Context7
+ * This tool uses a Context7-compatible library ID (obtained from resolveLibraryId)
+ * to fetch documentation about Earth Engine datasets
+ *
+ * @param context7CompatibleLibraryID - The library ID from resolveLibraryId (e.g., "wybert/earthengine-dataset-catalog-md")
+ * @param topic - Optional topic to filter documentation (e.g., "population", "landsat")
+ * @param options - Additional options for the request (tokens, folders)
+ * @returns The documentation content, success status, and any error messages
+ */
+// Define the base URL for Context7 API
+const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+const DEFAULT_TYPE = "txt";
+async function getDocumentation(context7CompatibleLibraryID, topic, options = {}) {
+    try {
+        // Check if we have a valid library ID
+        if (!context7CompatibleLibraryID) {
+            return {
+                success: false,
+                content: null,
+                message: 'Missing Context7-compatible library ID. Use resolveLibraryId first.',
+            };
+        }
+        // If running in a content script or sidepanel context, use the background script
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out. Falling back to direct API call.');
+                    // Fall back to direct API call if background script isn't responding
+                    makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'CONTEXT7_GET_DOCUMENTATION',
+                        libraryId: context7CompatibleLibraryID,
+                        topic,
+                        options
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            console.info('Falling back to direct API call...');
+                            // Fall back to direct API call if there's a communication error
+                            makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    console.info('Falling back to direct API call...');
+                    // Fall back to direct API call if there's an exception
+                    makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
+                }
+            });
+        }
+        // Direct API call when running in background script or Node.js environment
+        return makeDirectApiCall(context7CompatibleLibraryID, topic, options);
+    }
+    catch (error) {
+        return {
+            success: false,
+            content: null,
+            message: `Error fetching documentation: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/**
+ * Helper function to make a direct API call to Context7
+ * Used as a fallback when background script communication fails
+ */
+async function makeDirectApiCall(context7CompatibleLibraryID, topic, options = {}) {
+    try {
+        // Remove leading slash if present
+        if (context7CompatibleLibraryID.startsWith("/")) {
+            context7CompatibleLibraryID = context7CompatibleLibraryID.slice(1);
+        }
+        // Build the URL using URL object
+        const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${context7CompatibleLibraryID}`);
+        // Add options to URL params
+        if (options.tokens)
+            url.searchParams.set("tokens", options.tokens.toString());
+        if (options.folders)
+            url.searchParams.set("folders", options.folders);
+        if (topic)
+            url.searchParams.set("topic", topic);
+        url.searchParams.set("type", DEFAULT_TYPE);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json, text/plain',
+                'X-Context7-Source': 'earth-agent-ai-sdk',
+            },
+        });
+        if (!response.ok) {
+            return {
+                success: false,
+                content: null,
+                message: `Failed to fetch documentation: ${response.statusText}`,
+            };
+        }
+        // Get the text content directly
+        const text = await response.text();
+        // Check if the text is valid
+        if (!text || text === "No content available" || text === "No context data available") {
+            return {
+                success: false,
+                content: null,
+                message: 'No documentation content found',
+            };
+        }
+        // Try to parse as JSON in case of JSON response
+        try {
+            const data = JSON.parse(text);
+            if (data && data.content) {
+                return {
+                    success: true,
+                    content: data.content,
+                };
+            }
+        }
+        catch (e) {
+            // Not JSON, use text as is
+        }
+        // Return the text content directly
+        return {
+            success: true,
+            content: text,
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            content: null,
+            message: `Error making direct API call: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (getDocumentation);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/context7/index.ts":
+/*!*****************************************!*\
+  !*** ./src/lib/tools/context7/index.ts ***!
+  \*****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getDocumentation: () => (/* reexport safe */ _getDocumentation__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   resolveLibraryId: () => (/* reexport safe */ _resolveLibraryId__WEBPACK_IMPORTED_MODULE_0__["default"])
+/* harmony export */ });
+/* harmony import */ var _resolveLibraryId__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./resolveLibraryId */ "./src/lib/tools/context7/resolveLibraryId.ts");
+/* harmony import */ var _getDocumentation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./getDocumentation */ "./src/lib/tools/context7/getDocumentation.ts");
+/**
+ * Context7 tools for fetching Google Earth Engine dataset documentation
+ *
+ * This module provides tools to:
+ * 1. Resolve library names to Context7-compatible IDs
+ * 2. Fetch detailed documentation about Earth Engine datasets
+ *
+ * Usage example:
+ * ```typescript
+ * import { resolveLibraryId, getDocumentation } from './lib/tools/context7';
+ *
+ * async function fetchLandsatDocs() {
+ *   // First, resolve the library ID
+ *   const resolveResult = await resolveLibraryId('Earth Engine datasets');
+ *
+ *   if (resolveResult.success && resolveResult.libraryId) {
+ *     // Then fetch documentation about Landsat
+ *     const docs = await getDocumentation(resolveResult.libraryId, 'Landsat');
+ *
+ *     if (docs.success && docs.content) {
+ *       console.log(docs.content);
+ *     }
+ *   }
+ * }
+ * ```
+ */
+
+
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/context7/resolveLibraryId.ts":
+/*!****************************************************!*\
+  !*** ./src/lib/tools/context7/resolveLibraryId.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   resolveLibraryId: () => (/* binding */ resolveLibraryId)
+/* harmony export */ });
+/**
+ * Resolves a general library name into a Context7-compatible library ID
+ * This tool is required as a first step before using getDocumentation
+ * to retrieve Earth Engine dataset documentation
+ *
+ * @param libraryName - The library name to search for (e.g., "Earth Engine", "MODIS")
+ * @returns The Context7-compatible library ID that can be used with getDocumentation
+ */
+// Define the base URL for Context7 API
+const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+async function resolveLibraryId(libraryName) {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            // Check if background script is available
+            // Add a timeout to prevent hanging if background isn't responsive
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where the background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out. Falling back to direct API call.');
+                    // Fall back to direct API call if background script isn't responding
+                    makeDirectApiCall(libraryName).then(resolve);
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'CONTEXT7_RESOLVE_LIBRARY_ID',
+                        libraryName
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        // Handle error if present
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            console.info('Falling back to direct API call...');
+                            // Fall back to direct API call if there's a communication error
+                            makeDirectApiCall(libraryName).then(resolve);
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    console.info('Falling back to direct API call...');
+                    // Fall back to direct API call if there's an exception
+                    makeDirectApiCall(libraryName).then(resolve);
+                }
+            });
+        }
+        // Direct API call when running in background script or Node.js environment
+        return makeDirectApiCall(libraryName);
+    }
+    catch (error) {
+        return {
+            success: false,
+            libraryId: null,
+            message: `Error resolving library ID: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/**
+ * Helper function to make a direct API call to Context7
+ * Used as a fallback when background script communication fails
+ */
+async function makeDirectApiCall(libraryName) {
+    try {
+        // Create URL object using the base URL
+        const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/search`);
+        // Set search params using proper URL API
+        url.searchParams.set("query", libraryName);
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Context7-Source': 'earth-agent-ai-sdk',
+            },
+        });
+        if (!response.ok) {
+            return {
+                success: false,
+                libraryId: null,
+                message: `Failed to search for library ID: ${response.statusText}`,
+            };
+        }
+        const data = await response.json();
+        // Check if we got valid results
+        if (data && Array.isArray(data.results) && data.results.length > 0) {
+            // Find the best match for Earth Engine datasets
+            const earthEngineMatch = data.results.find((result) => result.id &&
+                (result.id.includes('earthengine') ||
+                    result.id.includes('earth-engine') ||
+                    result.title?.toLowerCase().includes('earth engine')));
+            if (earthEngineMatch) {
+                return {
+                    success: true,
+                    libraryId: earthEngineMatch.id,
+                };
+            }
+            // If no Earth Engine specific match, return the first result
+            return {
+                success: true,
+                libraryId: data.results[0].id,
+                alternatives: data.results.slice(1, 5).map((result) => result.id),
+            };
+        }
+        return {
+            success: false,
+            libraryId: null,
+            message: 'No matching library found',
+            alternatives: data?.results?.map((result) => result.id) || [],
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            libraryId: null,
+            message: `Error making direct API call: ${error instanceof Error ? error.message : String(error)}`,
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (resolveLibraryId);
+
+
 /***/ })
 
 /******/ 	});
@@ -210,6 +555,8 @@ var __webpack_exports__ = {};
   \*********************************/
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _routes__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./routes */ "./src/background/routes.ts");
+/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -298,6 +645,81 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 return true; // Will respond asynchronously
             }
             break;
+        // Handle Context7 API requests
+        case 'CONTEXT7_RESOLVE_LIBRARY_ID':
+            (async () => {
+                try {
+                    console.log('Resolving library ID for:', message.libraryName);
+                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__.resolveLibraryId)(message.libraryName);
+                    console.log('Resolve result:', result);
+                    sendResponse(result);
+                }
+                catch (error) {
+                    console.error('Error resolving library ID:', error);
+                    sendResponse({
+                        success: false,
+                        libraryId: null,
+                        message: `Error resolving library ID: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'CONTEXT7_GET_DOCUMENTATION':
+            (async () => {
+                try {
+                    console.log('Getting documentation for:', message.libraryId, message.topic);
+                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__.getDocumentation)(message.libraryId, message.topic);
+                    console.log('Documentation result:', result.success, result.content?.substring(0, 50));
+                    sendResponse(result);
+                }
+                catch (error) {
+                    console.error('Error getting documentation:', error);
+                    sendResponse({
+                        success: false,
+                        content: null,
+                        message: `Error getting documentation: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'CONTEXT7_DATASET_INFO':
+            (async () => {
+                try {
+                    console.log('Getting dataset info for:', message.topic);
+                    // First, search for the dataset
+                    const searchResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__.resolveLibraryId)(`Earth Engine ${message.topic}`);
+                    if (!searchResult.success || !searchResult.libraryId) {
+                        sendResponse({
+                            success: false,
+                            message: `Could not find documentation for "${message.topic}". ${searchResult.message || ''}`,
+                            alternatives: searchResult.alternatives,
+                        });
+                        return;
+                    }
+                    // Then get documentation
+                    const docResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__.getDocumentation)(searchResult.libraryId, message.topic);
+                    if (!docResult.success || !docResult.content) {
+                        sendResponse({
+                            success: false,
+                            message: `Could not find documentation for topic "${message.topic}". ${docResult.message || ''}`,
+                        });
+                        return;
+                    }
+                    sendResponse({
+                        success: true,
+                        content: docResult.content,
+                        message: `Documentation found for topic: ${message.topic}`,
+                    });
+                }
+                catch (error) {
+                    console.error('Error getting dataset info:', error);
+                    sendResponse({
+                        success: false,
+                        message: `Error retrieving Earth Engine documentation: ${error instanceof Error ? error.message : String(error)}`,
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
         default:
             console.warn('Unknown message type:', message.type);
             sendResponse({ error: 'Unknown message type' });
