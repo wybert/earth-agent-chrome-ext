@@ -5295,6 +5295,1375 @@ function r(e){var t,f,n="";if("string"==typeof e||"number"==typeof e)n+=e;else i
 
 /***/ }),
 
+/***/ "./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/assets/styles/globals.css":
+/*!***************************************************************************************************************************************************!*\
+  !*** ./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/assets/styles/globals.css ***!
+  \***************************************************************************************************************************************************/
+/***/ ((module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/sourceMaps.js */ "./node_modules/css-loader/dist/runtime/sourceMaps.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../node_modules/css-loader/dist/runtime/api.js */ "./node_modules/css-loader/dist/runtime/api.js");
+/* harmony import */ var _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1__);
+// Imports
+
+
+var ___CSS_LOADER_EXPORT___ = _node_modules_css_loader_dist_runtime_api_js__WEBPACK_IMPORTED_MODULE_1___default()((_node_modules_css_loader_dist_runtime_sourceMaps_js__WEBPACK_IMPORTED_MODULE_0___default()));
+// Module
+___CSS_LOADER_EXPORT___.push([module.id, `*, ::before, ::after {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+  --tw-contain-size:  ;
+  --tw-contain-layout:  ;
+  --tw-contain-paint:  ;
+  --tw-contain-style:  ;
+}
+
+::backdrop {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+  --tw-contain-size:  ;
+  --tw-contain-layout:  ;
+  --tw-contain-paint:  ;
+  --tw-contain-style:  ;
+}/*
+! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com
+*//*
+1. Prevent padding and border from affecting element width. (https://github.com/mozdevs/cssremedy/issues/4)
+2. Allow adding a border to an element by just adding a border-width. (https://github.com/tailwindcss/tailwindcss/pull/116)
+*/
+
+*,
+::before,
+::after {
+  box-sizing: border-box; /* 1 */
+  border-width: 0; /* 2 */
+  border-style: solid; /* 2 */
+  border-color: #e5e7eb; /* 2 */
+}
+
+::before,
+::after {
+  --tw-content: '';
+}
+
+/*
+1. Use a consistent sensible line-height in all browsers.
+2. Prevent adjustments of font size after orientation changes in iOS.
+3. Use a more readable tab size.
+4. Use the user's configured \`sans\` font-family by default.
+5. Use the user's configured \`sans\` font-feature-settings by default.
+6. Use the user's configured \`sans\` font-variation-settings by default.
+7. Disable tap highlights on iOS
+*/
+
+html,
+:host {
+  line-height: 1.5; /* 1 */
+  -webkit-text-size-adjust: 100%; /* 2 */
+  -moz-tab-size: 4; /* 3 */
+  -o-tab-size: 4;
+     tab-size: 4; /* 3 */
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */
+  font-feature-settings: normal; /* 5 */
+  font-variation-settings: normal; /* 6 */
+  -webkit-tap-highlight-color: transparent; /* 7 */
+}
+
+/*
+1. Remove the margin in all browsers.
+2. Inherit line-height from \`html\` so users can set them as a class directly on the \`html\` element.
+*/
+
+body {
+  margin: 0; /* 1 */
+  line-height: inherit; /* 2 */
+}
+
+/*
+1. Add the correct height in Firefox.
+2. Correct the inheritance of border color in Firefox. (https://bugzilla.mozilla.org/show_bug.cgi?id=190655)
+3. Ensure horizontal rules are visible by default.
+*/
+
+hr {
+  height: 0; /* 1 */
+  color: inherit; /* 2 */
+  border-top-width: 1px; /* 3 */
+}
+
+/*
+Add the correct text decoration in Chrome, Edge, and Safari.
+*/
+
+abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+          text-decoration: underline dotted;
+}
+
+/*
+Remove the default font size and weight for headings.
+*/
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+/*
+Reset links to optimize for opt-in styling instead of opt-out.
+*/
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+/*
+Add the correct font weight in Edge and Safari.
+*/
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+/*
+1. Use the user's configured \`mono\` font-family by default.
+2. Use the user's configured \`mono\` font-feature-settings by default.
+3. Use the user's configured \`mono\` font-variation-settings by default.
+4. Correct the odd \`em\` font sizing in all browsers.
+*/
+
+code,
+kbd,
+samp,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; /* 1 */
+  font-feature-settings: normal; /* 2 */
+  font-variation-settings: normal; /* 3 */
+  font-size: 1em; /* 4 */
+}
+
+/*
+Add the correct font size in all browsers.
+*/
+
+small {
+  font-size: 80%;
+}
+
+/*
+Prevent \`sub\` and \`sup\` elements from affecting the line height in all browsers.
+*/
+
+sub,
+sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+sub {
+  bottom: -0.25em;
+}
+
+sup {
+  top: -0.5em;
+}
+
+/*
+1. Remove text indentation from table contents in Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=999088, https://bugs.webkit.org/show_bug.cgi?id=201297)
+2. Correct table border color inheritance in all Chrome and Safari. (https://bugs.chromium.org/p/chromium/issues/detail?id=935729, https://bugs.webkit.org/show_bug.cgi?id=195016)
+3. Remove gaps between table borders by default.
+*/
+
+table {
+  text-indent: 0; /* 1 */
+  border-color: inherit; /* 2 */
+  border-collapse: collapse; /* 3 */
+}
+
+/*
+1. Change the font styles in all browsers.
+2. Remove the margin in Firefox and Safari.
+3. Remove default padding in all browsers.
+*/
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font-family: inherit; /* 1 */
+  font-feature-settings: inherit; /* 1 */
+  font-variation-settings: inherit; /* 1 */
+  font-size: 100%; /* 1 */
+  font-weight: inherit; /* 1 */
+  line-height: inherit; /* 1 */
+  letter-spacing: inherit; /* 1 */
+  color: inherit; /* 1 */
+  margin: 0; /* 2 */
+  padding: 0; /* 3 */
+}
+
+/*
+Remove the inheritance of text transform in Edge and Firefox.
+*/
+
+button,
+select {
+  text-transform: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Remove default button styles.
+*/
+
+button,
+input:where([type='button']),
+input:where([type='reset']),
+input:where([type='submit']) {
+  -webkit-appearance: button; /* 1 */
+  background-color: transparent; /* 2 */
+  background-image: none; /* 2 */
+}
+
+/*
+Use the modern Firefox focus style for all focusable elements.
+*/
+
+:-moz-focusring {
+  outline: auto;
+}
+
+/*
+Remove the additional \`:invalid\` styles in Firefox. (https://github.com/mozilla/gecko-dev/blob/2f9eacd9d3d995c937b4251a5557d95d494c9be1/layout/style/res/forms.css#L728-L737)
+*/
+
+:-moz-ui-invalid {
+  box-shadow: none;
+}
+
+/*
+Add the correct vertical alignment in Chrome and Firefox.
+*/
+
+progress {
+  vertical-align: baseline;
+}
+
+/*
+Correct the cursor style of increment and decrement buttons in Safari.
+*/
+
+::-webkit-inner-spin-button,
+::-webkit-outer-spin-button {
+  height: auto;
+}
+
+/*
+1. Correct the odd appearance in Chrome and Safari.
+2. Correct the outline style in Safari.
+*/
+
+[type='search'] {
+  -webkit-appearance: textfield; /* 1 */
+  outline-offset: -2px; /* 2 */
+}
+
+/*
+Remove the inner padding in Chrome and Safari on macOS.
+*/
+
+::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+/*
+1. Correct the inability to style clickable types in iOS and Safari.
+2. Change font properties to \`inherit\` in Safari.
+*/
+
+::-webkit-file-upload-button {
+  -webkit-appearance: button; /* 1 */
+  font: inherit; /* 2 */
+}
+
+/*
+Add the correct display in Chrome and Safari.
+*/
+
+summary {
+  display: list-item;
+}
+
+/*
+Removes the default spacing and border for appropriate elements.
+*/
+
+blockquote,
+dl,
+dd,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+hr,
+figure,
+p,
+pre {
+  margin: 0;
+}
+
+fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+legend {
+  padding: 0;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+Reset default styling for dialogs.
+*/
+dialog {
+  padding: 0;
+}
+
+/*
+Prevent resizing textareas horizontally by default.
+*/
+
+textarea {
+  resize: vertical;
+}
+
+/*
+1. Reset the default placeholder opacity in Firefox. (https://github.com/tailwindlabs/tailwindcss/issues/3300)
+2. Set the default placeholder color to the user's configured gray 400 color.
+*/
+
+input::-moz-placeholder, textarea::-moz-placeholder {
+  opacity: 1; /* 1 */
+  color: #9ca3af; /* 2 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1; /* 1 */
+  color: #9ca3af; /* 2 */
+}
+
+/*
+Set the default cursor for buttons.
+*/
+
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/*
+Make sure disabled buttons don't get the pointer cursor.
+*/
+:disabled {
+  cursor: default;
+}
+
+/*
+1. Make replaced elements \`display: block\` by default. (https://github.com/mozdevs/cssremedy/issues/14)
+2. Add \`vertical-align: middle\` to align replaced elements more sensibly by default. (https://github.com/jensimmons/cssremedy/issues/14#issuecomment-634934210)
+   This can trigger a poorly considered lint error in some tools but is included by design.
+*/
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block; /* 1 */
+  vertical-align: middle; /* 2 */
+}
+
+/*
+Constrain images and videos to the parent width and preserve their intrinsic aspect ratio. (https://github.com/mozdevs/cssremedy/issues/14)
+*/
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Make elements with the HTML hidden attribute stay hidden by default */
+[hidden]:where(:not([hidden="until-found"])) {
+  display: none;
+}
+  :root {
+    /* Modern color palette with HSL values for better control */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    
+    /* Modern primary color - a vibrant blue */
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    /* Accent color for subtle highlights */
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    /* Success, warning, and destructive colors */
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 8.9%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    /* Input and border styles */
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 221.2 83.2% 53.3%;
+    
+    /* Border radius for consistent component styling */
+    --radius: 0.5rem;
+  }
+  * {
+  border-color: hsl(var(--border));
+}
+  
+  body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+}
+  
+  /* Improve default focus styles */
+  :focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  --tw-ring-color: hsl(var(--ring));
+  --tw-ring-offset-width: 2px;
+}
+  
+  /* Smooth scrolling for better UX */
+  html {
+    scroll-behavior: smooth;
+  }
+.container {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 2rem;
+  padding-left: 2rem;
+}
+@media (min-width: 1400px) {
+
+  .container {
+    max-width: 1400px;
+  }
+}
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  max-width: 80rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 768px) {
+
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+
+  .container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+.static {
+  position: static;
+}
+.absolute {
+  position: absolute;
+}
+.relative {
+  position: relative;
+}
+.inset-y-0 {
+  top: 0px;
+  bottom: 0px;
+}
+.right-0 {
+  right: 0px;
+}
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+.my-2 {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+.mb-4 {
+  margin-bottom: 1rem;
+}
+.ml-auto {
+  margin-left: auto;
+}
+.mr-1 {
+  margin-right: 0.25rem;
+}
+.mt-1 {
+  margin-top: 0.25rem;
+}
+.mt-2 {
+  margin-top: 0.5rem;
+}
+.mt-4 {
+  margin-top: 1rem;
+}
+.block {
+  display: block;
+}
+.flex {
+  display: flex;
+}
+.inline-flex {
+  display: inline-flex;
+}
+.table {
+  display: table;
+}
+.grid {
+  display: grid;
+}
+.aspect-square {
+  aspect-ratio: 1 / 1;
+}
+.h-10 {
+  height: 2.5rem;
+}
+.h-11 {
+  height: 2.75rem;
+}
+.h-12 {
+  height: 3rem;
+}
+.h-2 {
+  height: 0.5rem;
+}
+.h-2\\.5 {
+  height: 0.625rem;
+}
+.h-3 {
+  height: 0.75rem;
+}
+.h-4 {
+  height: 1rem;
+}
+.h-5 {
+  height: 1.25rem;
+}
+.h-8 {
+  height: 2rem;
+}
+.h-9 {
+  height: 2.25rem;
+}
+.h-full {
+  height: 100%;
+}
+.min-h-\\[60px\\] {
+  min-height: 60px;
+}
+.min-h-\\[80px\\] {
+  min-height: 80px;
+}
+.w-10 {
+  width: 2.5rem;
+}
+.w-2 {
+  width: 0.5rem;
+}
+.w-2\\.5 {
+  width: 0.625rem;
+}
+.w-3 {
+  width: 0.75rem;
+}
+.w-4 {
+  width: 1rem;
+}
+.w-5 {
+  width: 1.25rem;
+}
+.w-8 {
+  width: 2rem;
+}
+.w-full {
+  width: 100%;
+}
+.w-max {
+  width: -moz-max-content;
+  width: max-content;
+}
+.max-w-\\[98\\%\\] {
+  max-width: 98%;
+}
+.flex-1 {
+  flex: 1 1 0%;
+}
+.transform {
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+@keyframes pulse {
+
+  50% {
+    opacity: .5;
+  }
+}
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.touch-none {
+  touch-action: none;
+}
+.select-none {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+.resize-none {
+  resize: none;
+}
+.grid-rows-\\[auto\\2c 1fr\\2c auto\\] {
+  grid-template-rows: auto 1fr auto;
+}
+.flex-col {
+  flex-direction: column;
+}
+.items-center {
+  align-items: center;
+}
+.justify-center {
+  justify-content: center;
+}
+.justify-between {
+  justify-content: space-between;
+}
+.gap-1 {
+  gap: 0.25rem;
+}
+.gap-2 {
+  gap: 0.5rem;
+}
+.space-y-1\\.5 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.375rem * var(--tw-space-y-reverse));
+}
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+}
+.overflow-hidden {
+  overflow: hidden;
+}
+.overflow-x-auto {
+  overflow-x: auto;
+}
+.whitespace-nowrap {
+  white-space: nowrap;
+}
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+.break-words {
+  overflow-wrap: break-word;
+}
+.rounded {
+  border-radius: 0.25rem;
+}
+.rounded-\\[inherit\\] {
+  border-radius: inherit;
+}
+.rounded-full {
+  border-radius: 9999px;
+}
+.rounded-lg {
+  border-radius: var(--radius);
+}
+.rounded-md {
+  border-radius: calc(var(--radius) - 2px);
+}
+.rounded-none {
+  border-radius: 0px;
+}
+.border {
+  border-width: 1px;
+}
+.border-0 {
+  border-width: 0px;
+}
+.border-b {
+  border-bottom-width: 1px;
+}
+.border-l {
+  border-left-width: 1px;
+}
+.border-t {
+  border-top-width: 1px;
+}
+.border-input {
+  border-color: hsl(var(--input));
+}
+.border-l-transparent {
+  border-left-color: transparent;
+}
+.border-t-transparent {
+  border-top-color: transparent;
+}
+.bg-background {
+  background-color: hsl(var(--background));
+}
+.bg-border {
+  background-color: hsl(var(--border));
+}
+.bg-card {
+  background-color: hsl(var(--card));
+}
+.bg-destructive {
+  background-color: hsl(var(--destructive));
+}
+.bg-destructive\\/10 {
+  background-color: hsl(var(--destructive) / 0.1);
+}
+.bg-gray-200 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
+}
+.bg-gray-800 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
+}
+.bg-muted {
+  background-color: hsl(var(--muted));
+}
+.bg-muted-foreground {
+  background-color: hsl(var(--muted-foreground));
+}
+.bg-muted\\/50 {
+  background-color: hsl(var(--muted) / 0.5);
+}
+.bg-primary {
+  background-color: hsl(var(--primary));
+}
+.bg-secondary {
+  background-color: hsl(var(--secondary));
+}
+.p-0 {
+  padding: 0px;
+}
+.p-2 {
+  padding: 0.5rem;
+}
+.p-3 {
+  padding: 0.75rem;
+}
+.p-4 {
+  padding: 1rem;
+}
+.p-6 {
+  padding: 1.5rem;
+}
+.p-\\[1px\\] {
+  padding: 1px;
+}
+.px-10 {
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+}
+.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.px-3 {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.px-8 {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+.py-4 {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.pr-10 {
+  padding-right: 2.5rem;
+}
+.pt-0 {
+  padding-top: 0px;
+}
+.text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+.text-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+.text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+.text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+.text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+.font-bold {
+  font-weight: 700;
+}
+.font-medium {
+  font-weight: 500;
+}
+.font-semibold {
+  font-weight: 600;
+}
+.leading-none {
+  line-height: 1;
+}
+.tracking-tight {
+  letter-spacing: -0.025em;
+}
+.text-card-foreground {
+  color: hsl(var(--card-foreground));
+}
+.text-destructive {
+  color: hsl(var(--destructive));
+}
+.text-destructive-foreground {
+  color: hsl(var(--destructive-foreground));
+}
+.text-foreground {
+  color: hsl(var(--foreground));
+}
+.text-gray-100 {
+  --tw-text-opacity: 1;
+  color: rgb(243 244 246 / var(--tw-text-opacity, 1));
+}
+.text-gray-500 {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
+}
+.text-gray-600 {
+  --tw-text-opacity: 1;
+  color: rgb(75 85 99 / var(--tw-text-opacity, 1));
+}
+.text-green-600 {
+  --tw-text-opacity: 1;
+  color: rgb(22 163 74 / var(--tw-text-opacity, 1));
+}
+.text-muted-foreground {
+  color: hsl(var(--muted-foreground));
+}
+.text-primary {
+  color: hsl(var(--primary));
+}
+.text-primary-foreground {
+  color: hsl(var(--primary-foreground));
+}
+.text-red-600 {
+  --tw-text-opacity: 1;
+  color: rgb(220 38 38 / var(--tw-text-opacity, 1));
+}
+.text-secondary-foreground {
+  color: hsl(var(--secondary-foreground));
+}
+.text-white {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+}
+.underline-offset-4 {
+  text-underline-offset: 4px;
+}
+.shadow {
+  --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.shadow-none {
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.shadow-sm {
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.outline {
+  outline-style: solid;
+}
+.ring-offset-background {
+  --tw-ring-offset-color: hsl(var(--background));
+}
+.filter {
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+.delay-150 {
+  transition-delay: 150ms;
+}
+.delay-300 {
+  transition-delay: 300ms;
+}
+@keyframes enter {
+
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1)) rotate(var(--tw-enter-rotate, 0));
+  }
+}
+@keyframes exit {
+
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
+  }
+}
+.delay-150 {
+  animation-delay: 150ms;
+}
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Global component styles */
+
+/* Utility classes */
+
+.file\\:border-0::file-selector-button {
+  border-width: 0px;
+}
+
+.file\\:bg-transparent::file-selector-button {
+  background-color: transparent;
+}
+
+.file\\:text-sm::file-selector-button {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.file\\:font-medium::file-selector-button {
+  font-weight: 500;
+}
+
+.file\\:text-foreground::file-selector-button {
+  color: hsl(var(--foreground));
+}
+
+.placeholder\\:text-muted-foreground::-moz-placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.placeholder\\:text-muted-foreground::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+.hover\\:bg-accent:hover {
+  background-color: hsl(var(--accent));
+}
+
+.hover\\:bg-destructive\\/90:hover {
+  background-color: hsl(var(--destructive) / 0.9);
+}
+
+.hover\\:bg-gray-300:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
+}
+
+.hover\\:bg-muted:hover {
+  background-color: hsl(var(--muted));
+}
+
+.hover\\:bg-primary\\/90:hover {
+  background-color: hsl(var(--primary) / 0.9);
+}
+
+.hover\\:bg-secondary\\/80:hover {
+  background-color: hsl(var(--secondary) / 0.8);
+}
+
+.hover\\:text-accent-foreground:hover {
+  color: hsl(var(--accent-foreground));
+}
+
+.hover\\:underline:hover {
+  text-decoration-line: underline;
+}
+
+.focus-visible\\:outline-none:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.focus-visible\\:ring-2:focus-visible {
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+
+.focus-visible\\:ring-ring:focus-visible {
+  --tw-ring-color: hsl(var(--ring));
+}
+
+.focus-visible\\:ring-offset-2:focus-visible {
+  --tw-ring-offset-width: 2px;
+}
+
+.active\\:translate-y-0\\.5:active {
+  --tw-translate-y: 0.125rem;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.disabled\\:pointer-events-none:disabled {
+  pointer-events: none;
+}
+
+.disabled\\:cursor-not-allowed:disabled {
+  cursor: not-allowed;
+}
+
+.disabled\\:opacity-50:disabled {
+  opacity: 0.5;
+}
+
+@media (min-width: 768px) {
+
+  .md\\:text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+}
+
+.\\[\\&_svg\\]\\:pointer-events-none svg {
+  pointer-events: none;
+}
+
+.\\[\\&_svg\\]\\:size-3\\.5 svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.\\[\\&_svg\\]\\:size-4 svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.\\[\\&_svg\\]\\:shrink-0 svg {
+  flex-shrink: 0;
+} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
+// Exports
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
+
+
+/***/ }),
+
+/***/ "./node_modules/css-loader/dist/runtime/api.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/css-loader/dist/runtime/api.js ***!
+  \*****************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/*
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
+*/
+module.exports = function (cssWithMappingToString) {
+  var list = [];
+
+  // return the list of modules as css string
+  list.toString = function toString() {
+    return this.map(function (item) {
+      var content = "";
+      var needLayer = typeof item[5] !== "undefined";
+      if (item[4]) {
+        content += "@supports (".concat(item[4], ") {");
+      }
+      if (item[2]) {
+        content += "@media ".concat(item[2], " {");
+      }
+      if (needLayer) {
+        content += "@layer".concat(item[5].length > 0 ? " ".concat(item[5]) : "", " {");
+      }
+      content += cssWithMappingToString(item);
+      if (needLayer) {
+        content += "}";
+      }
+      if (item[2]) {
+        content += "}";
+      }
+      if (item[4]) {
+        content += "}";
+      }
+      return content;
+    }).join("");
+  };
+
+  // import a list of modules into the list
+  list.i = function i(modules, media, dedupe, supports, layer) {
+    if (typeof modules === "string") {
+      modules = [[null, modules, undefined]];
+    }
+    var alreadyImportedModules = {};
+    if (dedupe) {
+      for (var k = 0; k < this.length; k++) {
+        var id = this[k][0];
+        if (id != null) {
+          alreadyImportedModules[id] = true;
+        }
+      }
+    }
+    for (var _k = 0; _k < modules.length; _k++) {
+      var item = [].concat(modules[_k]);
+      if (dedupe && alreadyImportedModules[item[0]]) {
+        continue;
+      }
+      if (typeof layer !== "undefined") {
+        if (typeof item[5] === "undefined") {
+          item[5] = layer;
+        } else {
+          item[1] = "@layer".concat(item[5].length > 0 ? " ".concat(item[5]) : "", " {").concat(item[1], "}");
+          item[5] = layer;
+        }
+      }
+      if (media) {
+        if (!item[2]) {
+          item[2] = media;
+        } else {
+          item[1] = "@media ".concat(item[2], " {").concat(item[1], "}");
+          item[2] = media;
+        }
+      }
+      if (supports) {
+        if (!item[4]) {
+          item[4] = "".concat(supports);
+        } else {
+          item[1] = "@supports (".concat(item[4], ") {").concat(item[1], "}");
+          item[4] = supports;
+        }
+      }
+      list.push(item);
+    }
+  };
+  return list;
+};
+
+/***/ }),
+
+/***/ "./node_modules/css-loader/dist/runtime/sourceMaps.js":
+/*!************************************************************!*\
+  !*** ./node_modules/css-loader/dist/runtime/sourceMaps.js ***!
+  \************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = function (item) {
+  var content = item[1];
+  var cssMapping = item[3];
+  if (!cssMapping) {
+    return content;
+  }
+  if (typeof btoa === "function") {
+    var base64 = btoa(unescape(encodeURIComponent(JSON.stringify(cssMapping))));
+    var data = "sourceMappingURL=data:application/json;charset=utf-8;base64,".concat(base64);
+    var sourceMapping = "/*# ".concat(data, " */");
+    return [content].concat([sourceMapping]).join("\n");
+  }
+  return [content].join("\n");
+};
+
+/***/ }),
+
 /***/ "./node_modules/dequal/lite/index.mjs":
 /*!********************************************!*\
   !*** ./node_modules/dequal/lite/index.mjs ***!
@@ -33549,6 +34918,279 @@ module.exports.scan = filter
 
 /***/ }),
 
+/***/ "./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js":
+/*!****************************************************************************!*\
+  !*** ./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js ***!
+  \****************************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+var stylesInDOM = [];
+function getIndexByIdentifier(identifier) {
+  var result = -1;
+  for (var i = 0; i < stylesInDOM.length; i++) {
+    if (stylesInDOM[i].identifier === identifier) {
+      result = i;
+      break;
+    }
+  }
+  return result;
+}
+function modulesToDom(list, options) {
+  var idCountMap = {};
+  var identifiers = [];
+  for (var i = 0; i < list.length; i++) {
+    var item = list[i];
+    var id = options.base ? item[0] + options.base : item[0];
+    var count = idCountMap[id] || 0;
+    var identifier = "".concat(id, " ").concat(count);
+    idCountMap[id] = count + 1;
+    var indexByIdentifier = getIndexByIdentifier(identifier);
+    var obj = {
+      css: item[1],
+      media: item[2],
+      sourceMap: item[3],
+      supports: item[4],
+      layer: item[5]
+    };
+    if (indexByIdentifier !== -1) {
+      stylesInDOM[indexByIdentifier].references++;
+      stylesInDOM[indexByIdentifier].updater(obj);
+    } else {
+      var updater = addElementStyle(obj, options);
+      options.byIndex = i;
+      stylesInDOM.splice(i, 0, {
+        identifier: identifier,
+        updater: updater,
+        references: 1
+      });
+    }
+    identifiers.push(identifier);
+  }
+  return identifiers;
+}
+function addElementStyle(obj, options) {
+  var api = options.domAPI(options);
+  api.update(obj);
+  var updater = function updater(newObj) {
+    if (newObj) {
+      if (newObj.css === obj.css && newObj.media === obj.media && newObj.sourceMap === obj.sourceMap && newObj.supports === obj.supports && newObj.layer === obj.layer) {
+        return;
+      }
+      api.update(obj = newObj);
+    } else {
+      api.remove();
+    }
+  };
+  return updater;
+}
+module.exports = function (list, options) {
+  options = options || {};
+  list = list || [];
+  var lastIdentifiers = modulesToDom(list, options);
+  return function update(newList) {
+    newList = newList || [];
+    for (var i = 0; i < lastIdentifiers.length; i++) {
+      var identifier = lastIdentifiers[i];
+      var index = getIndexByIdentifier(identifier);
+      stylesInDOM[index].references--;
+    }
+    var newLastIdentifiers = modulesToDom(newList, options);
+    for (var _i = 0; _i < lastIdentifiers.length; _i++) {
+      var _identifier = lastIdentifiers[_i];
+      var _index = getIndexByIdentifier(_identifier);
+      if (stylesInDOM[_index].references === 0) {
+        stylesInDOM[_index].updater();
+        stylesInDOM.splice(_index, 1);
+      }
+    }
+    lastIdentifiers = newLastIdentifiers;
+  };
+};
+
+/***/ }),
+
+/***/ "./node_modules/style-loader/dist/runtime/insertBySelector.js":
+/*!********************************************************************!*\
+  !*** ./node_modules/style-loader/dist/runtime/insertBySelector.js ***!
+  \********************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+var memo = {};
+
+/* istanbul ignore next  */
+function getTarget(target) {
+  if (typeof memo[target] === "undefined") {
+    var styleTarget = document.querySelector(target);
+
+    // Special case to return head of iframe instead of iframe itself
+    if (window.HTMLIFrameElement && styleTarget instanceof window.HTMLIFrameElement) {
+      try {
+        // This will throw an exception if access to iframe is blocked
+        // due to cross-origin restrictions
+        styleTarget = styleTarget.contentDocument.head;
+      } catch (e) {
+        // istanbul ignore next
+        styleTarget = null;
+      }
+    }
+    memo[target] = styleTarget;
+  }
+  return memo[target];
+}
+
+/* istanbul ignore next  */
+function insertBySelector(insert, style) {
+  var target = getTarget(insert);
+  if (!target) {
+    throw new Error("Couldn't find a style target. This probably means that the value for the 'insert' parameter is invalid.");
+  }
+  target.appendChild(style);
+}
+module.exports = insertBySelector;
+
+/***/ }),
+
+/***/ "./node_modules/style-loader/dist/runtime/insertStyleElement.js":
+/*!**********************************************************************!*\
+  !*** ./node_modules/style-loader/dist/runtime/insertStyleElement.js ***!
+  \**********************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function insertStyleElement(options) {
+  var element = document.createElement("style");
+  options.setAttributes(element, options.attributes);
+  options.insert(element, options.options);
+  return element;
+}
+module.exports = insertStyleElement;
+
+/***/ }),
+
+/***/ "./node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js":
+/*!**********************************************************************************!*\
+  !*** ./node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js ***!
+  \**********************************************************************************/
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function setAttributesWithoutAttributes(styleElement) {
+  var nonce =  true ? __webpack_require__.nc : 0;
+  if (nonce) {
+    styleElement.setAttribute("nonce", nonce);
+  }
+}
+module.exports = setAttributesWithoutAttributes;
+
+/***/ }),
+
+/***/ "./node_modules/style-loader/dist/runtime/styleDomAPI.js":
+/*!***************************************************************!*\
+  !*** ./node_modules/style-loader/dist/runtime/styleDomAPI.js ***!
+  \***************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function apply(styleElement, options, obj) {
+  var css = "";
+  if (obj.supports) {
+    css += "@supports (".concat(obj.supports, ") {");
+  }
+  if (obj.media) {
+    css += "@media ".concat(obj.media, " {");
+  }
+  var needLayer = typeof obj.layer !== "undefined";
+  if (needLayer) {
+    css += "@layer".concat(obj.layer.length > 0 ? " ".concat(obj.layer) : "", " {");
+  }
+  css += obj.css;
+  if (needLayer) {
+    css += "}";
+  }
+  if (obj.media) {
+    css += "}";
+  }
+  if (obj.supports) {
+    css += "}";
+  }
+  var sourceMap = obj.sourceMap;
+  if (sourceMap && typeof btoa !== "undefined") {
+    css += "\n/*# sourceMappingURL=data:application/json;base64,".concat(btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))), " */");
+  }
+
+  // For old IE
+  /* istanbul ignore if  */
+  options.styleTagTransform(css, styleElement, options.options);
+}
+function removeStyleElement(styleElement) {
+  // istanbul ignore if
+  if (styleElement.parentNode === null) {
+    return false;
+  }
+  styleElement.parentNode.removeChild(styleElement);
+}
+
+/* istanbul ignore next  */
+function domAPI(options) {
+  if (typeof document === "undefined") {
+    return {
+      update: function update() {},
+      remove: function remove() {}
+    };
+  }
+  var styleElement = options.insertStyleElement(options);
+  return {
+    update: function update(obj) {
+      apply(styleElement, options, obj);
+    },
+    remove: function remove() {
+      removeStyleElement(styleElement);
+    }
+  };
+}
+module.exports = domAPI;
+
+/***/ }),
+
+/***/ "./node_modules/style-loader/dist/runtime/styleTagTransform.js":
+/*!*********************************************************************!*\
+  !*** ./node_modules/style-loader/dist/runtime/styleTagTransform.js ***!
+  \*********************************************************************/
+/***/ ((module) => {
+
+"use strict";
+
+
+/* istanbul ignore next  */
+function styleTagTransform(css, styleElement) {
+  if (styleElement.styleSheet) {
+    styleElement.styleSheet.cssText = css;
+  } else {
+    while (styleElement.firstChild) {
+      styleElement.removeChild(styleElement.firstChild);
+    }
+    styleElement.appendChild(document.createTextNode(css));
+  }
+}
+module.exports = styleTagTransform;
+
+/***/ }),
+
 /***/ "./node_modules/swr/dist/_internal/config-context-client-v7VOFo66.mjs":
 /*!****************************************************************************!*\
   !*** ./node_modules/swr/dist/_internal/config-context-client-v7VOFo66.mjs ***!
@@ -44913,6 +46555,61 @@ var z = /*#__PURE__*/Object.freeze({
 
 /***/ }),
 
+/***/ "./src/assets/styles/globals.css":
+/*!***************************************!*\
+  !*** ./src/assets/styles/globals.css ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js */ "./node_modules/style-loader/dist/runtime/injectStylesIntoStyleTag.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/styleDomAPI.js */ "./node_modules/style-loader/dist/runtime/styleDomAPI.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/insertBySelector.js */ "./node_modules/style-loader/dist/runtime/insertBySelector.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js */ "./node_modules/style-loader/dist/runtime/setAttributesWithoutAttributes.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/insertStyleElement.js */ "./node_modules/style-loader/dist/runtime/insertStyleElement.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! !../../../node_modules/style-loader/dist/runtime/styleTagTransform.js */ "./node_modules/style-loader/dist/runtime/styleTagTransform.js");
+/* harmony import */ var _node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5__);
+/* harmony import */ var _node_modules_css_loader_dist_cjs_js_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_1_use_2_globals_css__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! !!../../../node_modules/css-loader/dist/cjs.js!../../../node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./globals.css */ "./node_modules/css-loader/dist/cjs.js!./node_modules/postcss-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/assets/styles/globals.css");
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+
+var options = {};
+
+options.styleTagTransform = (_node_modules_style_loader_dist_runtime_styleTagTransform_js__WEBPACK_IMPORTED_MODULE_5___default());
+options.setAttributes = (_node_modules_style_loader_dist_runtime_setAttributesWithoutAttributes_js__WEBPACK_IMPORTED_MODULE_3___default());
+
+      options.insert = _node_modules_style_loader_dist_runtime_insertBySelector_js__WEBPACK_IMPORTED_MODULE_2___default().bind(null, "head");
+    
+options.domAPI = (_node_modules_style_loader_dist_runtime_styleDomAPI_js__WEBPACK_IMPORTED_MODULE_1___default());
+options.insertStyleElement = (_node_modules_style_loader_dist_runtime_insertStyleElement_js__WEBPACK_IMPORTED_MODULE_4___default());
+
+var update = _node_modules_style_loader_dist_runtime_injectStylesIntoStyleTag_js__WEBPACK_IMPORTED_MODULE_0___default()(_node_modules_css_loader_dist_cjs_js_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_1_use_2_globals_css__WEBPACK_IMPORTED_MODULE_6__["default"], options);
+
+
+
+
+       /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (_node_modules_css_loader_dist_cjs_js_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_1_use_2_globals_css__WEBPACK_IMPORTED_MODULE_6__["default"] && _node_modules_css_loader_dist_cjs_js_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_1_use_2_globals_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals ? _node_modules_css_loader_dist_cjs_js_node_modules_postcss_loader_dist_cjs_js_ruleSet_1_rules_1_use_2_globals_css__WEBPACK_IMPORTED_MODULE_6__["default"].locals : undefined);
+
+
+/***/ }),
+
 /***/ "./src/components/Chat.tsx":
 /*!*********************************!*\
   !*** ./src/components/Chat.tsx ***!
@@ -45064,9 +46761,9 @@ function Chat() {
         // Split the content by code blocks
         const parts = content.split(/(`{1,3})(.*?)(\1)/g);
         if (parts.length === 1) {
-            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "whitespace-pre-wrap" }, content);
+            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "whitespace-pre-wrap break-words" }, content);
         }
-        return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "whitespace-pre-wrap" }, parts.map((part, i) => {
+        return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "whitespace-pre-wrap break-words" }, parts.map((part, i) => {
             // Check if this part is a code block
             if (i % 4 === 2 && parts[i - 1].includes('`')) {
                 return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { key: i, className: "bg-gray-800 text-gray-100 p-2 my-2 rounded overflow-x-auto" },
@@ -45134,100 +46831,166 @@ function Chat() {
     // Set up port connection to background script
     const [port, setPort] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
     const [currentStreamingMessage, setCurrentStreamingMessage] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
+    const [connectionAttempts, setConnectionAttempts] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     // Initialize port connection
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-        const newPort = chrome.runtime.connect({ name: 'sidepanel' });
-        newPort.onMessage.addListener((response) => {
-            switch (response.type) {
-                case 'CHAT_RESPONSE':
-                    // Handle non-streaming response
-                    if (!currentStreamingMessage) {
-                        const userMessage = {
-                            id: Date.now().toString(),
-                            role: 'user',
-                            content: input.trim()
-                        };
-                        const assistantMessage = {
-                            id: (Date.now() + 1).toString(),
-                            role: 'assistant',
-                            content: response.data?.choices?.[0]?.message?.content ||
-                                response.data?.content ||
-                                'Sorry, I could not generate a response.'
-                        };
-                        setMessages(prev => [...prev, userMessage, assistantMessage]);
+        let newPort = null;
+        const connectToBackground = () => {
+            try {
+                console.log('Connecting to background script...');
+                newPort = chrome.runtime.connect({ name: 'sidepanel' });
+                newPort.onMessage.addListener((response) => {
+                    console.log('Received message:', response);
+                    switch (response.type) {
+                        case 'CHAT_RESPONSE':
+                            // Handle non-streaming response
+                            if (!currentStreamingMessage) {
+                                const userMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'user',
+                                    content: input.trim()
+                                };
+                                const assistantMessage = {
+                                    id: (Date.now() + 1).toString(),
+                                    role: 'assistant',
+                                    content: response.data?.choices?.[0]?.message?.content ||
+                                        response.data?.content ||
+                                        'Sorry, I could not generate a response.'
+                                };
+                                setMessages(prev => [...prev, userMessage, assistantMessage]);
+                            }
+                            setIsTyping(false);
+                            setCurrentStreamingMessage(null);
+                            break;
+                        case 'CHAT_STREAM_CHUNK':
+                            // Handle streaming chunk
+                            if (!currentStreamingMessage) {
+                                // Add user message if this is the first chunk
+                                const userMessage = {
+                                    id: Date.now().toString(),
+                                    role: 'user',
+                                    content: input.trim()
+                                };
+                                setMessages(prev => [...prev, userMessage]);
+                                // Create new streaming message
+                                const newMessage = {
+                                    id: response.requestId,
+                                    role: 'assistant',
+                                    content: response.chunk
+                                };
+                                setCurrentStreamingMessage(newMessage);
+                            }
+                            else {
+                                // Update existing streaming message
+                                setCurrentStreamingMessage(prev => prev ? {
+                                    ...prev,
+                                    content: prev.content + response.chunk
+                                } : null);
+                            }
+                            break;
+                        case 'CHAT_STREAM_END':
+                            // Finalize streaming message
+                            if (currentStreamingMessage) {
+                                setMessages(prev => [...prev, currentStreamingMessage]);
+                                setCurrentStreamingMessage(null);
+                            }
+                            setIsTyping(false);
+                            break;
+                        case 'ERROR':
+                            console.error('Chat API error:', response.error);
+                            setFallbackMode(true);
+                            setIsTyping(false);
+                            setCurrentStreamingMessage(null);
+                            break;
                     }
-                    setIsTyping(false);
-                    setCurrentStreamingMessage(null);
-                    break;
-                case 'CHAT_STREAM_CHUNK':
-                    // Handle streaming chunk
-                    if (!currentStreamingMessage) {
-                        // Add user message if this is the first chunk
-                        const userMessage = {
-                            id: Date.now().toString(),
-                            role: 'user',
-                            content: input.trim()
-                        };
-                        setMessages(prev => [...prev, userMessage]);
-                        // Create new streaming message
-                        const newMessage = {
-                            id: response.requestId,
-                            role: 'assistant',
-                            content: response.chunk
-                        };
-                        setCurrentStreamingMessage(newMessage);
+                });
+                newPort.onDisconnect.addListener(() => {
+                    console.log('Disconnected from background script, error:', chrome.runtime.lastError);
+                    if (newPort === port) {
+                        setPort(null);
+                        // Try to reconnect if we haven't tried too many times
+                        if (connectionAttempts < 3) {
+                            console.log(`Attempting to reconnect (${connectionAttempts + 1}/3)...`);
+                            setConnectionAttempts(prev => prev + 1);
+                            setTimeout(connectToBackground, 1000);
+                        }
+                        else {
+                            setFallbackMode(true);
+                            console.error('Failed to connect after multiple attempts. Switching to fallback mode.');
+                        }
                     }
-                    else {
-                        // Update existing streaming message
-                        setCurrentStreamingMessage(prev => prev ? {
-                            ...prev,
-                            content: prev.content + response.chunk
-                        } : null);
-                    }
-                    break;
-                case 'CHAT_STREAM_END':
-                    // Finalize streaming message
-                    if (currentStreamingMessage) {
-                        setMessages(prev => [...prev, currentStreamingMessage]);
-                        setCurrentStreamingMessage(null);
-                    }
-                    setIsTyping(false);
-                    break;
-                case 'ERROR':
-                    console.error('Chat API error:', response.error);
-                    setFallbackMode(true);
-                    setIsTyping(false);
-                    setCurrentStreamingMessage(null);
-                    break;
+                });
+                setPort(newPort);
+                setConnectionAttempts(0);
+                console.log('Connected to background script');
+                // Send a ping to verify connection
+                newPort.postMessage({ type: 'PING' });
+                return newPort;
             }
-        });
-        newPort.onDisconnect.addListener(() => {
-            console.log('Disconnected from background script');
-            setPort(null);
-            setFallbackMode(true);
-            setCurrentStreamingMessage(null);
-        });
-        setPort(newPort);
-        return () => {
-            newPort.disconnect();
+            catch (error) {
+                console.error('Failed to connect to background script:', error);
+                setFallbackMode(true);
+                return null;
+            }
         };
-    }, []);
+        // Connect when component mounts or connection attempts change
+        const currentPort = connectToBackground();
+        // Clean up function
+        return () => {
+            if (currentPort) {
+                try {
+                    currentPort.disconnect();
+                }
+                catch (e) {
+                    console.error('Error disconnecting port:', e);
+                }
+            }
+        };
+    }, [connectionAttempts]); // Dependency on connectionAttempts to allow reconnection attempts
     // Custom submit handler that uses port messaging
     const handleChatSubmit = async (e) => {
         e.preventDefault();
-        if (!input.trim() || isLoading || !port)
+        // Validate input
+        if (!input.trim() || isLoading)
             return;
         setIsTyping(true);
         setCurrentStreamingMessage(null);
         try {
-            // Send message through port
-            const message = {
-                type: 'CHAT_MESSAGE',
-                message: input.trim(),
-                apiKey,
-                provider: apiProvider
-            };
-            port.postMessage(message);
+            if (port) {
+                // Send message through port
+                const message = {
+                    type: 'CHAT_MESSAGE',
+                    message: input.trim(),
+                    apiKey,
+                    provider: apiProvider
+                };
+                console.log('Sending message:', message);
+                port.postMessage(message);
+            }
+            else {
+                // Try to reconnect or fall back
+                console.error('No port connection available');
+                // Attempt to reconnect
+                setConnectionAttempts(prev => prev + 1);
+                // Add user message
+                const userMessage = {
+                    id: Date.now().toString(),
+                    role: 'user',
+                    content: input.trim()
+                };
+                setMessages(prev => [...prev, userMessage]);
+                // Show a temporary response about connection issue
+                setTimeout(() => {
+                    const assistantMessage = {
+                        id: (Date.now() + 1).toString(),
+                        role: 'assistant',
+                        content: 'I\'m having trouble connecting to the backend service. Trying to reconnect...'
+                    };
+                    setMessages(prev => [...prev, assistantMessage]);
+                    setIsTyping(false);
+                    setFallbackMode(true);
+                }, 1000);
+            }
         }
         catch (error) {
             console.error('Error sending chat message:', error);
@@ -45286,81 +47049,40 @@ function Chat() {
     const currentInputHandler = fallbackMode ? handleLocalInputChange : handleInputChange;
     const currentSubmitHandler = fallbackMode ? handleLocalSubmit : handleChatSubmit;
     const currentLoading = fallbackMode ? isLocalLoading : isLoading;
-    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { className: "w-full h-[600px] grid grid-rows-[auto,1fr,auto]" },
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex justify-between items-center p-3 border-b" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-sm font-medium" }, "Earth Engine Assistant"),
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "ghost", size: "icon", className: "h-8 w-8", onClick: () => setShowSettings(true) },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-4 w-4" }))),
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__.ScrollArea, { className: "p-4" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4" },
-                displayMessages.map((message) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: message.id, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_5__.cn)('flex w-max max-w-[90%] flex-col gap-2 rounded-lg px-3 py-2 text-sm', message.role === 'user'
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { className: "w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none" },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex justify-between items-center p-2 px-3 border-b" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-base font-medium" }, "Mapping through prompting"),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "icon", rounded: "full", onClick: () => setShowSettings(true), "aria-label": "Settings", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 text-gray-600" }))),
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__.ScrollArea, { className: "px-2 py-4 rounded-none" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4 w-full mx-auto" },
+                displayMessages.map((message) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: message.id, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_5__.cn)('flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words', message.role === 'user'
                         ? 'ml-auto bg-primary text-primary-foreground'
-                        : 'bg-muted') }, formatMessageContent(message.content)))),
-                isTyping && !fallbackMode && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-3 text-sm bg-muted rounded-lg w-max" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "typing-indicator" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null)))),
-                error && !fallbackMode && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-2 text-sm text-red-500 bg-red-50 rounded-md" },
+                        : 'bg-muted'), style: { maxWidth: '98%', minWidth: 'unset', width: 'auto' } }, formatMessageContent(message.content)))),
+                isTyping && !fallbackMode && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "typing-indicator flex gap-1" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "h-2 w-2 bg-muted-foreground rounded-full animate-pulse" }),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-150" }),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-300" })))),
+                error && !fallbackMode && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-2 text-base text-destructive bg-destructive/10 rounded-md" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, error.message || "Error connecting to AI service"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2 ml-auto" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", onClick: handleRegenerate },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", rounded: "lg", onClick: handleRegenerate },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-3 w-3 mr-1" }),
                             " Regenerate"),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", onClick: () => setShowSettings(true) }, "Settings")))),
-                fallbackMode && apiConfigured && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-2 text-sm text-amber-600 bg-amber-50 rounded-md" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", rounded: "lg", onClick: () => setShowSettings(true) }, "Settings")))),
+                fallbackMode && apiConfigured && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-2 text-base text-warning-foreground bg-warning/10 rounded-md" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, "Using local responses. API connection failed."),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "outline", size: "sm", className: "ml-auto", onClick: handleRetryAPI }, "Retry API"))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: "warning", size: "sm", rounded: "lg", className: "ml-auto", onClick: handleRetryAPI }, "Retry API"))),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { ref: scrollRef }))),
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("form", { onSubmit: currentSubmitHandler, className: "p-4 flex items-center gap-2 border-t" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_textarea__WEBPACK_IMPORTED_MODULE_4__.Textarea, { className: "min-h-[60px] resize-none", placeholder: apiConfigured
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("form", { onSubmit: currentSubmitHandler, className: "p-2 px-3 flex items-center gap-2 border-t" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_textarea__WEBPACK_IMPORTED_MODULE_4__.Textarea, { className: "min-h-[60px] resize-none text-base", placeholder: apiConfigured
                     ? "Ask about Earth Engine..."
                     : "Configure API key in Settings to use AI features...", value: currentInput, onChange: currentInputHandler, onKeyDown: handleKeyDown, disabled: currentLoading || (!apiConfigured && !fallbackMode) }),
-            currentLoading && !fallbackMode ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "button", size: "icon", variant: "destructive", onClick: handleStopGenerating },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "sr-only" }, "Stop generating"),
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "h-4 w-4" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("rect", { width: "6", height: "16", x: "9", y: "4" })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "submit", size: "icon", disabled: currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim() },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-4 w-4" }),
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "sr-only" }, "Send message")))),
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("style", null, `
-        .typing-indicator {
-          display: flex;
-          align-items: center;
-        }
-        
-        .typing-indicator span {
-          height: 8px;
-          width: 8px;
-          margin: 0 2px;
-          background-color: #9ca3af;
-          border-radius: 50%;
-          display: inline-block;
-          animation: typing 1.4s infinite ease-in-out both;
-        }
-        
-        .typing-indicator span:nth-child(1) {
-          animation-delay: 0s;
-        }
-        
-        .typing-indicator span:nth-child(2) {
-          animation-delay: 0.2s;
-        }
-        
-        .typing-indicator span:nth-child(3) {
-          animation-delay: 0.4s;
-        }
-        
-        @keyframes typing {
-          0%, 100% {
-            transform: scale(0.6);
-            opacity: 0.6;
-          }
-          50% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-      `)));
+            currentLoading && !fallbackMode ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "button", size: "icon", variant: "outline", rounded: "full", onClick: handleStopGenerating, "aria-label": "Stop generating", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", className: "h-5 w-5 text-gray-600" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("rect", { width: "6", height: "16", x: "9", y: "4" })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { type: "submit", size: "icon", variant: "outline", rounded: "full", disabled: currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim(), "aria-label": "Send message", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-5 w-5 text-gray-600" }))))));
 }
 
 
@@ -45536,31 +47258,50 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const buttonVariants = (0,class_variance_authority__WEBPACK_IMPORTED_MODULE_1__.cva)("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0", {
+const buttonVariants = (0,class_variance_authority__WEBPACK_IMPORTED_MODULE_1__.cva)("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0", {
     variants: {
         variant: {
-            default: "bg-primary text-primary-foreground hover:bg-primary/90",
-            destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-            outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-            secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+            default: "bg-primary text-primary-foreground shadow hover:bg-primary/90 active:translate-y-0.5",
+            destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:translate-y-0.5",
+            outline: "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground active:translate-y-0.5",
+            secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 active:translate-y-0.5",
             ghost: "hover:bg-accent hover:text-accent-foreground",
             link: "text-primary underline-offset-4 hover:underline",
+            subtle: "bg-muted/50 text-foreground hover:bg-muted active:translate-y-0.5",
+            success: "bg-success text-success-foreground shadow-sm hover:bg-success/90 active:translate-y-0.5",
+            warning: "bg-warning text-warning-foreground shadow-sm hover:bg-warning/90 active:translate-y-0.5",
         },
         size: {
             default: "h-10 px-4 py-2",
-            sm: "h-9 rounded-md px-3",
-            lg: "h-11 rounded-md px-8",
+            sm: "h-9 rounded-md px-3 text-xs",
+            lg: "h-11 rounded-md px-8 text-base",
+            xl: "h-12 rounded-md px-10 text-base",
             icon: "h-10 w-10",
+            "icon-sm": "h-8 w-8 [&_svg]:size-3.5",
         },
+        rounded: {
+            default: "rounded-md",
+            full: "rounded-full",
+            none: "rounded-none",
+            lg: "rounded-lg",
+        }
     },
     defaultVariants: {
         variant: "default",
         size: "default",
+        rounded: "default",
     },
 });
-const Button = react__WEBPACK_IMPORTED_MODULE_0__.forwardRef(({ className, variant, size, asChild = false, ...props }, ref) => {
+const Button = react__WEBPACK_IMPORTED_MODULE_0__.forwardRef(({ className, variant, size, rounded, asChild = false, ...props }, ref) => {
     const Comp = asChild ? _radix_ui_react_slot__WEBPACK_IMPORTED_MODULE_3__.Slot : "button";
-    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(Comp, { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)(buttonVariants({ variant, size, className })), ref: ref, ...props }));
+    // Ensure click handler works properly
+    const handleClick = (e) => {
+        // Call the original onClick handler if it exists
+        if (props.onClick) {
+            props.onClick(e);
+        }
+    };
+    return (react__WEBPACK_IMPORTED_MODULE_0__.createElement(Comp, { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)(buttonVariants({ variant, size, rounded, className })), ref: ref, ...props, onClick: handleClick }));
 });
 Button.displayName = "Button";
 
@@ -45791,6 +47532,11 @@ function cn(...inputs) {
 /******/ 		};
 /******/ 	})();
 /******/ 	
+/******/ 	/* webpack/runtime/nonce */
+/******/ 	(() => {
+/******/ 		__webpack_require__.nc = undefined;
+/******/ 	})();
+/******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
 // This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
@@ -45804,21 +47550,68 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var react_dom_client__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! react-dom/client */ "./node_modules/react-dom/client.js");
 /* harmony import */ var _components_Chat__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../components/Chat */ "./src/components/Chat.tsx");
+/* harmony import */ var _assets_styles_globals_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../assets/styles/globals.css */ "./src/assets/styles/globals.css");
 
 
 
+
+// Simple error boundary component
+class ChatErrorBoundary extends (react__WEBPACK_IMPORTED_MODULE_0___default().Component) {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+    static getDerivedStateFromError(error) {
+        // Update state so the next render will show the fallback UI
+        return { hasError: true };
+    }
+    componentDidCatch(error, errorInfo) {
+        console.error('Chat component error:', error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            // Fallback UI when Chat component fails
+            return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-4 border rounded-md bg-destructive/10 text-destructive" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "font-bold mb-2 text-base" }, "Something went wrong with the chat component"),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-base" }, "Please try reloading the extension or check the console for more details."),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { className: "mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 text-base", onClick: () => this.setState({ hasError: false }) }, "Try Again")));
+        }
+        return this.props.children;
+    }
+}
 const App = () => {
-    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "container p-4" },
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "header mb-4" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", { className: "text-2xl font-bold" }, "Earth Engine AI Assistant")),
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "content flex-1" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_Chat__WEBPACK_IMPORTED_MODULE_2__.Chat, null)),
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "footer mt-4 pt-4 border-t" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-muted-foreground" }, "Ready to assist with Earth Engine"))));
+    // Ensure the app doesn't crash if the CSS isn't loaded
+    react__WEBPACK_IMPORTED_MODULE_0___default().useEffect(() => {
+        // Check if the CSS is properly loaded
+        const styleCheck = document.createElement('div');
+        styleCheck.className = 'text-primary';
+        document.body.appendChild(styleCheck);
+        const styles = window.getComputedStyle(styleCheck);
+        const hasStyles = styles.color !== 'rgb(0, 0, 0)';
+        if (!hasStyles) {
+            console.warn('CSS may not be properly loaded. Check the imports and paths.');
+        }
+        document.body.removeChild(styleCheck);
+    }, []);
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "container px-2 py-4 flex flex-col h-full max-w-[98%] mx-auto" },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "header mb-2" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", { className: "text-xl font-bold" }, "Earth Engine AI Assistant")),
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "content flex-1 w-full" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ChatErrorBoundary, null,
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_Chat__WEBPACK_IMPORTED_MODULE_2__.Chat, null)))));
 };
-const root = (0,react_dom_client__WEBPACK_IMPORTED_MODULE_1__.createRoot)(document.getElementById('root'));
-root.render(react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().StrictMode), null,
-    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(App, null)));
+// Make sure the root element exists before mounting
+document.addEventListener('DOMContentLoaded', () => {
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+        const root = (0,react_dom_client__WEBPACK_IMPORTED_MODULE_1__.createRoot)(rootElement);
+        root.render(react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().StrictMode), null,
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(App, null)));
+    }
+    else {
+        console.error('Root element not found. Make sure the HTML has an element with id="root"');
+    }
+});
 
 })();
 
