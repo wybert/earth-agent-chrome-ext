@@ -318,16 +318,56 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
               <>
                 {activeTab === 'runCode' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Earth Engine Code
-                    </label>
-                    <textarea
-                      value={eeCode}
-                      onChange={(e) => setEeCode(e.target.value)}
-                      className="w-full p-2 border rounded-md font-mono text-sm"
-                      rows={8}
-                      placeholder="Enter Earth Engine code"
-                    />
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                      <h3 className="text-sm font-medium text-blue-800 mb-1">Run Button Test Options</h3>
+                      <p className="text-xs text-gray-600 mb-3">
+                        This tool clicks the "Run" button in the Google Earth Engine Code Editor.
+                        Make sure you have the Earth Engine Code Editor open in a browser tab.
+                      </p>
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          onClick={async () => {
+                            setLoading(true);
+                            setError(null);
+                            try {
+                              // Run the test with empty code - this will just click the run button
+                              const testResult = await runCode("");
+                              setResult(testResult);
+                            } catch (err) {
+                              console.error('Test error:', err);
+                              setError(err instanceof Error ? err.message : 'An unknown error occurred');
+                              setResult(null);
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          disabled={loading}
+                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-300"
+                        >
+                          {loading ? 'Running...' : 'Just Click Run Button'}
+                        </button>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          ← Click this to execute current code in the editor without changing it
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-4 mt-4">
+                      <h3 className="text-sm font-medium mb-2">Or Run Custom Code:</h3>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Earth Engine Code
+                      </label>
+                      <textarea
+                        value={eeCode}
+                        onChange={(e) => setEeCode(e.target.value)}
+                        className="w-full p-2 border rounded-md font-mono text-sm"
+                        rows={8}
+                        placeholder="Enter Earth Engine code"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Note: This option is not currently working correctly. Use "Just Click Run Button" option above instead.
+                      </p>
+                    </div>
                   </div>
                 )}
                 
