@@ -93,10 +93,10 @@ export async function type(params: TypeParams): Promise<TypeResponse> {
     }
     
     // If running in the background script
-    if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+    if (env.isBackground && typeof chrome !== 'undefined' && chrome.scripting) {
       return new Promise<TypeResponse>((resolve) => {
         // Get the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
           if (!tabs || tabs.length === 0) {
             resolve({
               success: false,
@@ -114,76 +114,72 @@ export async function type(params: TypeParams): Promise<TypeResponse> {
             return;
           }
           
-          // Execute script in the tab to type text
-          chrome.tabs.executeScript(
-            tabId,
-            {
-              code: `
-                (function() {
-                  try {
-                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-                    if (!element) {
-                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
-                    }
+          try {
+            // Execute script in the tab to type text
+            const results = await chrome.scripting.executeScript({
+              target: { tabId },
+              func: (selector: string, text: string) => {
+                try {
+                  const element = document.querySelector(selector);
+                  if (!element) {
+                    return { success: false, error: `Element not found with selector: ${selector}` };
+                  }
+                  
+                  // Scroll element into view
+                  element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                  
+                  // Focus the element
+                  (element as HTMLElement).focus();
+                  
+                  // Handle different types of elements
+                  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                    // For standard form elements
+                    element.value = text;
                     
-                    // Scroll element into view
-                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                    // Trigger input and change events
+                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    element.dispatchEvent(new Event('change', { bubbles: true }));
+                  } else if ((element as HTMLElement).isContentEditable) {
+                    // For contentEditable elements
+                    element.textContent = text;
                     
-                    // Focus the element
-                    element.focus();
-                    
-                    // Handle different types of elements
-                    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-                      // For standard form elements
-                      element.value = \`${text.replace(/`/g, '\\`')}\`;
-                      
-                      // Trigger input and change events
-                      element.dispatchEvent(new Event('input', { bubbles: true }));
-                      element.dispatchEvent(new Event('change', { bubbles: true }));
-                    } else if (element.isContentEditable) {
-                      // For contentEditable elements
-                      element.textContent = \`${text.replace(/`/g, '\\`')}\`;
-                      
-                      // Trigger input event for React and other frameworks
-                      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-                    } else {
-                      return { 
-                        success: false, 
-                        error: 'Element is not an input, textarea, or contentEditable element' 
-                      };
-                    }
-                    
-                    return { success: true, message: 'Text typed successfully' };
-                  } catch (error) {
+                    // Trigger input event for React and other frameworks
+                    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                  } else {
                     return { 
                       success: false, 
-                      error: 'Error typing text: ' + (error.message || String(error))
+                      error: 'Element is not an input, textarea, or contentEditable element' 
                     };
                   }
-                })();
-              `
-            },
-            (results) => {
-              if (chrome.runtime.lastError) {
-                resolve({
-                  success: false,
-                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
-                });
-                return;
-              }
-              
-              if (!results || results.length === 0) {
-                resolve({
-                  success: false,
-                  error: 'No result from tab script execution'
-                });
-                return;
-              }
-              
-              // Return the result from the executed script
-              resolve(results[0]);
+                  
+                  return { success: true, message: 'Text typed successfully' };
+                } catch (error) {
+                  return { 
+                    success: false, 
+                    error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`
+                  };
+                }
+              },
+              args: [selector, text]
+            });
+
+            if (!results || results.length === 0) {
+              resolve({
+                success: false,
+                error: 'No result from script execution'
+              });
+              return;
             }
-          );
+
+            // Return the result from the executed script
+            const scriptResult = results[0].result as TypeResponse;
+            resolve(scriptResult);
+          } catch (error) {
+            resolve({
+              success: false,
+              error: `Error executing script: ${error instanceof Error ? error.message : String(error)}`
+            });
+          }
         });
       });
     }
