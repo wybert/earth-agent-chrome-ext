@@ -422,29 +422,82 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 
                 {activeTab === 'editScript' && (
                   <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Script ID
-                      </label>
-                      <input
-                        type="text"
-                        value={eeScriptId}
-                        onChange={(e) => setEeScriptId(e.target.value)}
-                        className="w-full p-2 border rounded-md"
-                        placeholder="Enter script ID (e.g., users/username/scriptname)"
-                      />
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+                      <h3 className="text-sm font-medium text-blue-800 mb-1">Edit Script Instructions</h3>
+                      <p className="text-xs text-gray-600 mb-2">
+                        This tool replaces the content of the current script in the Google Earth Engine Code Editor.
+                        Make sure you have the Earth Engine Code Editor open in a browser tab.
+                      </p>
+                      <p className="text-xs text-gray-600 mb-2">
+                        <strong>Note:</strong> The Script ID is mostly for future functionality. Currently, this tool
+                        just replaces the content in the active editor regardless of the Script ID.
+                      </p>
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          onClick={async () => {
+                            setLoading(true);
+                            setError(null);
+                            try {
+                              // Use a simple test script
+                              const testCode = `// Earth Engine test script - ${new Date().toISOString()}
+var image = ee.Image(1);
+Map.centerObject(image);
+Map.addLayer(image, {min: 0, max: 1}, 'Constant Image');
+print('Script updated by Earth Agent SDK');`;
+                              
+                              setEeScriptContent(testCode);
+                              const testResult = await editScript(eeScriptId, testCode);
+                              setResult(testResult);
+                            } catch (err) {
+                              console.error('Test error:', err);
+                              setError(err instanceof Error ? err.message : 'An unknown error occurred');
+                              setResult(null);
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          disabled={loading}
+                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-300"
+                        >
+                          {loading ? 'Running...' : 'Insert Test Script'}
+                        </button>
+                        <div className="text-xs text-gray-500 flex items-center">
+                          ← Click to insert a simple test script in the Earth Engine editor
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Script Content
-                      </label>
-                      <textarea
-                        value={eeScriptContent}
-                        onChange={(e) => setEeScriptContent(e.target.value)}
-                        className="w-full p-2 border rounded-md font-mono text-sm"
-                        rows={8}
-                        placeholder="Enter Earth Engine code for the script"
-                      />
+                    
+                    <div className="border-t pt-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Script ID (currently just for reference)
+                        </label>
+                        <input
+                          type="text"
+                          value={eeScriptId}
+                          onChange={(e) => setEeScriptId(e.target.value)}
+                          className="w-full p-2 border rounded-md"
+                          placeholder="Enter script ID (e.g., users/username/scriptname)"
+                        />
+                      </div>
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Script Content
+                        </label>
+                        <textarea
+                          value={eeScriptContent}
+                          onChange={(e) => setEeScriptContent(e.target.value)}
+                          className="w-full p-2 border rounded-md font-mono text-sm"
+                          rows={8}
+                          placeholder="Enter Earth Engine code for the script"
+                        />
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500">
+                          Enter the Earth Engine code you want to insert into the current editor.
+                          This will replace any existing code in the editor.
+                        </p>
+                      </div>
                     </div>
                   </>
                 )}

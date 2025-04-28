@@ -11,6 +11,11 @@ interface Message {
 // Store information about loaded content scripts
 const contentScriptTabs = new Map<number, boolean>();
 
+// Timing constants
+const CONTENT_SCRIPT_PING_TIMEOUT = 5000; // 5 seconds
+const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
+const MAX_TAB_ACTION_RETRIES = 3;
+
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
   // Only open side panel if we're on the Earth Engine Code Editor
@@ -64,73 +69,134 @@ async function validateServerIdentity(host: string, port: number): Promise<boole
   }
 }
 
-// Forward message to Earth Engine tab
-async function sendMessageToEarthEngineTab(message: any): Promise<any> {
+// Forward message to Earth Engine tab with improved error handling and retries
+async function sendMessageToEarthEngineTab(message: any, options?: { timeout?: number, retries?: number }): Promise<any> {
+  const timeout = options?.timeout || CONTENT_SCRIPT_PING_TIMEOUT;
+  const maxRetries = options?.retries || MAX_TAB_ACTION_RETRIES;
+  let retryCount = 0;
+  
   console.log('Forwarding message to Earth Engine tab:', message);
   
-  // Find Earth Engine tab
-  const tabs = await chrome.tabs.query({ url: "*://code.earthengine.google.com/*" });
-  
-  if (!tabs || tabs.length === 0) {
-    console.error('No Earth Engine tab found');
-    return {
-      success: false,
-      error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
-    };
-  }
-  
-  const tabId = tabs[0].id;
-  if (!tabId) {
-    console.error('Invalid Earth Engine tab');
-    return {
-      success: false,
-      error: 'Invalid Earth Engine tab'
-    };
-  }
-
-  // Check if we know the content script is loaded
-  if (!contentScriptTabs.has(tabId)) {
-    console.log(`Content script not registered for tab ${tabId}, checking with PING...`);
+  async function attemptSend(): Promise<any> {
+    // Find Earth Engine tab
+    const tabs = await chrome.tabs.query({ url: "*://code.earthengine.google.com/*" });
     
-    // Try to ping the content script first
-    try {
-      await pingContentScript(tabId);
-      console.log(`Content script responded to PING in tab ${tabId}`);
-      contentScriptTabs.set(tabId, true);
-    } catch (error) {
-      console.error(`Content script did not respond to PING in tab ${tabId}:`, error);
+    if (!tabs || tabs.length === 0) {
+      console.error('No Earth Engine tab found');
       return {
         success: false,
-        error: 'Content script not loaded. Please refresh the Earth Engine tab.'
+        error: 'No Earth Engine tab found. Please open Google Earth Engine at https://code.earthengine.google.com/ in a tab and try again.'
+      };
+    }
+    
+    const tabId = tabs[0].id;
+    if (!tabId) {
+      console.error('Invalid Earth Engine tab');
+      return {
+        success: false,
+        error: 'Invalid Earth Engine tab'
+      };
+    }
+
+    // Check if we know the content script is loaded
+    if (!contentScriptTabs.has(tabId)) {
+      console.log(`Content script not registered for tab ${tabId}, checking with PING...`);
+      
+      // Try to ping the content script first
+      try {
+        await pingContentScript(tabId, timeout);
+        console.log(`Content script responded to PING in tab ${tabId}`);
+        contentScriptTabs.set(tabId, true);
+      } catch (error) {
+        console.error(`Content script did not respond to PING in tab ${tabId}:`, error);
+        
+        // If we've already retried too many times, give up
+        if (retryCount >= maxRetries) {
+          return {
+            success: false,
+            error: `Content script did not respond after ${maxRetries} attempts. Please ensure you have the Google Earth Engine tab open and fully loaded at https://code.earthengine.google.com/`
+          };
+        }
+        
+        // Try to reload the content script by refreshing the tab
+        try {
+          console.log(`Attempting to reload content script in tab ${tabId}...`);
+          await chrome.tabs.reload(tabId);
+          
+          // Wait for the page to reload and content script to initialize
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Increment retry count and try again
+          retryCount++;
+          console.log(`Retrying after tab reload (attempt ${retryCount}/${maxRetries})...`);
+          return attemptSend();
+        } catch (reloadError) {
+          return {
+            success: false,
+            error: 'Content script not loaded and tab refresh failed. Please ensure the Earth Engine tab is open and refresh it manually.'
+          };
+        }
+      }
+    }
+    
+    // Send message to the content script in the Earth Engine tab
+    try {
+      console.log(`Sending message to tab ${tabId}`);
+      
+      // Use a timeout promise to handle cases where chrome.tabs.sendMessage doesn't reject
+      const messagePromise = new Promise<any>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          // Remove tab from tracking if timeout occurs
+          contentScriptTabs.delete(tabId);
+          reject(new Error(`Message to tab ${tabId} timed out after ${timeout}ms`));
+        }, timeout);
+        
+        chrome.tabs.sendMessage(tabId, message, (response) => {
+          clearTimeout(timeoutId);
+          
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+            return;
+          }
+          
+          resolve(response);
+        });
+      });
+      
+      const response = await messagePromise;
+      console.log('Received response from Earth Engine tab:', response);
+      return response;
+    } catch (error) {
+      console.error('Error communicating with Earth Engine tab:', error);
+      
+      // If communication fails, remove tab from tracked tabs so we'll try to ping again next time
+      contentScriptTabs.delete(tabId);
+      
+      // If we have retries left, try again
+      if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(`Communication failed, retrying (attempt ${retryCount}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
+        return attemptSend();
+      }
+      
+      return {
+        success: false,
+        error: `Error communicating with Earth Engine tab: ${error instanceof Error ? error.message : String(error)}.
+        Please make sure the Earth Engine tab is open and active at https://code.earthengine.google.com/`
       };
     }
   }
   
-  // Send message to the content script in the Earth Engine tab
-  try {
-    console.log(`Sending message to tab ${tabId}`);
-    const response = await chrome.tabs.sendMessage(tabId, message);
-    console.log('Received response from Earth Engine tab:', response);
-    return response;
-  } catch (error) {
-    console.error('Error communicating with Earth Engine tab:', error);
-    
-    // If communication fails, remove tab from tracked tabs so we'll try to ping again next time
-    contentScriptTabs.delete(tabId);
-    
-    return {
-      success: false,
-      error: `Error communicating with Earth Engine tab: ${error instanceof Error ? error.message : String(error)}`
-    };
-  }
+  return attemptSend();
 }
 
-// Helper function to ping content script
-function pingContentScript(tabId: number): Promise<boolean> {
+// Helper function to ping content script with timeout
+function pingContentScript(tabId: number, timeout = CONTENT_SCRIPT_PING_TIMEOUT): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       reject(new Error('Content script ping timed out'));
-    }, 2000);
+    }, timeout);
     
     chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
       clearTimeout(timeoutId);
@@ -358,7 +424,11 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
           console.log('Editing Earth Engine script:', message.scriptId);
           console.log('Script content length:', message.content?.length || 0);
           
-          const response = await sendMessageToEarthEngineTab(message);
+          // Use longer timeout for editing scripts
+          const response = await sendMessageToEarthEngineTab(message, { 
+            timeout: 10000, // 10-second timeout for script editing
+            retries: 2      // More retries for this operation
+          });
           console.log('Script edit response:', response);
           sendResponse(response);
         } catch (error) {
@@ -379,6 +449,17 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
         console.log('Content script loaded but sender tab info is missing');
       }
       sendResponse({ success: true, message: 'Background script acknowledged content script loading' });
+      break;
+    
+    case 'CONTENT_SCRIPT_HEARTBEAT':
+      if (sender.tab && sender.tab.id) {
+        console.log(`Content script heartbeat received from tab ${sender.tab.id}:`, message.url);
+        // Update the map to ensure we know this content script is active
+        contentScriptTabs.set(sender.tab.id, true);
+      } else {
+        console.log('Content script heartbeat received but sender tab info is missing');
+      }
+      sendResponse({ success: true, message: 'Background script acknowledged heartbeat' });
       break;
     
     default:
