@@ -47728,6 +47728,9 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [appendText, setAppendText] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [elementLimit, setElementLimit] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(5);
     const [screenshotImage, setScreenshotImage] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
+    const [clickMethod, setClickMethod] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('selector');
+    const [clickX, setClickX] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
+    const [clickY, setClickY] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_4__.detectEnvironment)());
     }, []);
@@ -47736,83 +47739,92 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const runTest = async () => {
         setLoading(true);
         setError(null);
+        setResult(null);
         try {
-            let testResult;
+            let result;
             // Context7 tools
             if (activeSection === 'context7') {
                 if (activeTab === 'resolveLibraryId') {
-                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
+                    result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
                 }
                 else if (activeTab === 'getDocumentation') {
-                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
+                    result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
                 }
                 else if (activeTab === 'searchEarthEngineDatasets') {
-                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
+                    result = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
                 }
                 else if (activeTab === 'getEarthEngineDocumentation') {
-                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
+                    result = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
                 }
                 else if (activeTab === 'getEarthEngineDatasetInfo') {
-                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
+                    result = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
                 }
             }
             // Earth Engine tools
             else if (activeSection === 'earthEngine') {
                 if (activeTab === 'runCode') {
-                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.runEarthEngineCode)(eeCode);
+                    result = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.runEarthEngineCode)(eeCode);
                 }
                 else if (activeTab === 'runButton') {
                     // Use the browser click function to click the Earth Engine run button
-                    testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({
+                    result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({
                         selector: 'button.goog-button.run-button[title="Run script (Ctrl+Enter)"]'
                     });
                 }
                 else if (activeTab === 'inspectMap') {
-                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.inspectEarthEngineMap)(eeLatitude, eeLongitude);
+                    result = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.inspectEarthEngineMap)(eeLatitude, eeLongitude);
                 }
                 else if (activeTab === 'checkConsole') {
-                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.checkEarthEngineConsole)();
+                    result = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.checkEarthEngineConsole)();
                 }
                 else if (activeTab === 'getTasks') {
-                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.getEarthEngineTasks)();
+                    result = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.getEarthEngineTasks)();
                 }
                 else if (activeTab === 'editScript') {
-                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.editEarthEngineScript)(eeScriptId, eeScriptContent);
+                    result = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.editEarthEngineScript)(eeScriptId, eeScriptContent);
                 }
                 else if (activeTab === 'getMapLayers') {
-                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.getEarthEngineMapLayers)();
+                    result = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.getEarthEngineMapLayers)();
                 }
             }
             // Browser automation tools
             else if (activeSection === 'browser') {
                 switch (activeTab) {
                     case 'screenshot':
-                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.screenshot)();
+                        result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.screenshot)();
                         // If screenshot was successful, set the image data
-                        if (testResult.success && testResult.screenshotData) {
-                            setScreenshotImage(testResult.screenshotData);
+                        if (result.success && result.screenshotData) {
+                            setScreenshotImage(result.screenshotData);
                         }
                         break;
                     case 'click':
-                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({ selector: elementSelector });
+                        if (clickMethod === 'coordinates') {
+                            result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({ position: { x: clickX, y: clickY } });
+                        }
+                        else {
+                            if (!elementSelector) {
+                                throw new Error('Please enter a CSS selector');
+                            }
+                            result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({ selector: elementSelector });
+                        }
                         break;
                     case 'type':
-                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.typeText)({
+                        result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.typeText)({
                             selector: elementSelector,
                             text: inputText
                         });
                         break;
                     case 'getElement':
-                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.getElement)({
+                        result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.getElement)({
                             selector: elementSelector,
                             limit: elementLimit
                         });
                         break;
                     default:
-                        testResult = { error: 'Unknown browser tool test type' };
+                        result = { error: 'Unknown browser tool test type' };
                 }
             }
-            setResult(testResult);
+            setResult(result);
         }
         catch (err) {
             console.error('Test error:', err);
@@ -47947,12 +47959,25 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm font-medium mb-2" }, "Screenshot Preview:"),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: screenshotImage, alt: "Screenshot preview", className: "max-w-full h-auto border", style: { maxHeight: '200px' } }))))),
                     activeTab === 'click' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., button.run-button, #submit-button" })),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
-                            "Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: ",
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "button.goog-button.run-button[title=\"Run script (Ctrl+Enter)\"]")))),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block mb-2" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Click Method"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickMethod, onChange: (e) => setClickMethod(e.target.value) },
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { value: "selector" }, "By Selector"),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { value: "coordinates" }, "By Coordinates")))),
+                        clickMethod === 'selector' ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., button.run-button, #submit-button" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
+                                "Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: ",
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "button.goog-button.run-button[title=\"Run script (Ctrl+Enter)\"]")))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid grid-cols-2 gap-4" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "X Coordinate"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickX, onChange: (e) => setClickX(parseFloat(e.target.value)), step: "0.01", placeholder: "e.g., 442.015625" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Y Coordinate"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickY, onChange: (e) => setClickY(parseFloat(e.target.value)), step: "0.01", placeholder: "e.g., 74.5" })))))),
                     activeTab === 'type' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
@@ -48217,18 +48242,19 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 /**
- * Click an element on the page using a CSS selector
+ * Click an element on the page using a CSS selector or coordinates
  *
  * @param params.selector CSS selector for the element to click
+ * @param params.position Coordinates {x, y} where to click
  * @returns Promise with success status and result message/error
  */
 async function click(params) {
     try {
-        const { selector } = params;
-        if (!selector) {
+        const { selector, position } = params;
+        if (!selector && !position) {
             return {
                 success: false,
-                error: 'Selector is required'
+                error: 'Either selector or position must be provided'
             };
         }
         // Detect environment and handle accordingly
@@ -48247,7 +48273,7 @@ async function click(params) {
                 try {
                     chrome.runtime.sendMessage({
                         type: 'CLICK',
-                        payload: { selector }
+                        payload: { selector, position }
                     }, (response) => {
                         // Clear the timeout since we got a response
                         clearTimeout(timeoutId);
@@ -48295,47 +48321,64 @@ async function click(params) {
                         return;
                     }
                     // Execute script in the tab to click element
-                    chrome.tabs.executeScript(tabId, {
-                        code: `
-                (function() {
-                  try {
-                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-                    if (!element) {
-                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
-                    }
-
-                    // Scroll element into view
-                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
-
-                    // Click the element
-                    element.click();
-
-                    return { success: true, message: 'Element clicked successfully' };
-                  } catch (error) {
-                    return { 
-                      success: false, 
-                      error: 'Error clicking element: ' + (error.message || String(error))
-                    };
-                  }
-                })();
-              `
-                    }, (results) => {
-                        if (chrome.runtime.lastError) {
-                            resolve({
-                                success: false,
-                                error: chrome.runtime.lastError.message || 'Error executing script in tab'
-                            });
-                            return;
-                        }
+                    chrome.scripting.executeScript({
+                        target: { tabId },
+                        func: (selector, position) => {
+                            try {
+                                let element = null;
+                                if (selector) {
+                                    // Try to find element by selector
+                                    element = document.querySelector(selector);
+                                    if (!element) {
+                                        return { success: false, error: `Element not found with selector: ${selector}` };
+                                    }
+                                    // Scroll element into view
+                                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                                }
+                                else if (position) {
+                                    // Find element at position
+                                    element = document.elementFromPoint(position.x, position.y);
+                                    if (!element) {
+                                        return { success: false, error: `No element found at position (${position.x}, ${position.y})` };
+                                    }
+                                }
+                                if (!element) {
+                                    return { success: false, error: 'No element to click' };
+                                }
+                                // Create and dispatch click events
+                                const clickEvent = new MouseEvent('click', {
+                                    view: window,
+                                    bubbles: true,
+                                    cancelable: true,
+                                    clientX: position?.x || 0,
+                                    clientY: position?.y || 0
+                                });
+                                element.dispatchEvent(clickEvent);
+                                return { success: true, message: 'Click executed successfully' };
+                            }
+                            catch (error) {
+                                return {
+                                    success: false,
+                                    error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+                                };
+                            }
+                        },
+                        args: [selector || null, position || null]
+                    }).then(results => {
                         if (!results || results.length === 0) {
                             resolve({
                                 success: false,
-                                error: 'No result from tab script execution'
+                                error: 'No result from script execution'
                             });
                             return;
                         }
-                        // Return the result from the executed script
-                        resolve(results[0]);
+                        // Return the result
+                        resolve(results[0].result);
+                    }).catch(error => {
+                        resolve({
+                            success: false,
+                            error: `Error executing script: ${error instanceof Error ? error.message : String(error)}`
+                        });
                     });
                 });
             });
@@ -48343,28 +48386,45 @@ async function click(params) {
         // If running directly in page context (content script)
         if (env.isContentScript && typeof document !== 'undefined') {
             try {
-                const element = document.querySelector(selector);
+                let element = null;
+                if (selector) {
+                    element = document.querySelector(selector);
+                    if (!element) {
+                        return {
+                            success: false,
+                            error: `Element not found with selector: ${selector}`
+                        };
+                    }
+                    // Scroll element into view
+                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                }
+                else if (position) {
+                    element = document.elementFromPoint(position.x, position.y);
+                    if (!element) {
+                        return {
+                            success: false,
+                            error: `No element found at position (${position.x}, ${position.y})`
+                        };
+                    }
+                }
                 if (!element) {
                     return {
                         success: false,
-                        error: `Element not found with selector: ${selector}`
+                        error: 'No element to click'
                     };
                 }
-                // Scroll element into view
-                element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                // Cast element to HTMLElement to access click()
-                if (element instanceof HTMLElement) {
-                    element.click();
-                }
-                else {
-                    return {
-                        success: false,
-                        error: 'Element is not clickable'
-                    };
-                }
+                // Create and dispatch click events
+                const clickEvent = new MouseEvent('click', {
+                    view: window,
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: position?.x || 0,
+                    clientY: position?.y || 0
+                });
+                element.dispatchEvent(clickEvent);
                 return {
                     success: true,
-                    message: 'Element clicked successfully'
+                    message: 'Click executed successfully'
                 };
             }
             catch (error) {
@@ -48377,7 +48437,7 @@ async function click(params) {
         // If running in Node.js or unsupported environment
         return {
             success: false,
-            error: 'Click can only be executed in a browser extension environment'
+            error: 'Click operation is not supported in this environment'
         };
     }
     catch (error) {

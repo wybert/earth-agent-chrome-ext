@@ -13,24 +13,31 @@ export interface ClickResponse {
   error?: string;
 }
 
+export interface Position {
+  x: number;
+  y: number;
+}
+
 export interface ClickParams {
-  selector: string;
+  selector?: string;
+  position?: Position;
 }
 
 /**
- * Click an element on the page using a CSS selector
+ * Click an element on the page using a CSS selector or coordinates
  * 
  * @param params.selector CSS selector for the element to click
+ * @param params.position Coordinates {x, y} where to click
  * @returns Promise with success status and result message/error
  */
 export async function click(params: ClickParams): Promise<ClickResponse> {
   try {
-    const { selector } = params;
+    const { selector, position } = params;
 
-    if (!selector) {
+    if (!selector && !position) {
       return {
         success: false,
-        error: 'Selector is required'
+        error: 'Either selector or position must be provided'
       };
     }
 
@@ -53,7 +60,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
           chrome.runtime.sendMessage(
             {
               type: 'CLICK',
-              payload: { selector }
+              payload: { selector, position }
             },
             (response) => {
               // Clear the timeout since we got a response
@@ -107,54 +114,70 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
           }
 
           // Execute script in the tab to click element
-          chrome.tabs.executeScript(
-            tabId,
-            {
-              code: `
-                (function() {
-                  try {
-                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-                    if (!element) {
-                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
-                    }
-
-                    // Scroll element into view
-                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
-
-                    // Click the element
-                    element.click();
-
-                    return { success: true, message: 'Element clicked successfully' };
-                  } catch (error) {
-                    return { 
-                      success: false, 
-                      error: 'Error clicking element: ' + (error.message || String(error))
-                    };
+          chrome.scripting.executeScript({
+            target: { tabId },
+            func: (selector: string | null, position: Position | null) => {
+              try {
+                let element: Element | null = null;
+                
+                if (selector) {
+                  // Try to find element by selector
+                  element = document.querySelector(selector);
+                  if (!element) {
+                    return { success: false, error: `Element not found with selector: ${selector}` };
                   }
-                })();
-              `
+                  
+                  // Scroll element into view
+                  element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                } else if (position) {
+                  // Find element at position
+                  element = document.elementFromPoint(position.x, position.y);
+                  if (!element) {
+                    return { success: false, error: `No element found at position (${position.x}, ${position.y})` };
+                  }
+                }
+                
+                if (!element) {
+                  return { success: false, error: 'No element to click' };
+                }
+                
+                // Create and dispatch click events
+                const clickEvent = new MouseEvent('click', {
+                  view: window,
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: position?.x || 0,
+                  clientY: position?.y || 0
+                });
+                
+                element.dispatchEvent(clickEvent);
+                
+                return { success: true, message: 'Click executed successfully' };
+              } catch (error) {
+                return { 
+                  success: false, 
+                  error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
             },
-            (results) => {
-              if (chrome.runtime.lastError) {
-                resolve({
-                  success: false,
-                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
-                });
-                return;
-              }
-
-              if (!results || results.length === 0) {
-                resolve({
-                  success: false,
-                  error: 'No result from tab script execution'
-                });
-                return;
-              }
-
-              // Return the result from the executed script
-              resolve(results[0]);
+            args: [selector || null, position || null]
+          }).then(results => {
+            if (!results || results.length === 0) {
+              resolve({
+                success: false,
+                error: 'No result from script execution'
+              });
+              return;
             }
-          );
+            
+            // Return the result
+            resolve(results[0].result as ClickResponse);
+          }).catch(error => {
+            resolve({
+              success: false,
+              error: `Error executing script: ${error instanceof Error ? error.message : String(error)}`
+            });
+          });
         });
       });
     }
@@ -162,30 +185,50 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
     // If running directly in page context (content script)
     if (env.isContentScript && typeof document !== 'undefined') {
       try {
-        const element = document.querySelector(selector);
+        let element: Element | null = null;
+        
+        if (selector) {
+          element = document.querySelector(selector);
+          if (!element) {
+            return {
+              success: false,
+              error: `Element not found with selector: ${selector}`
+            };
+          }
+          
+          // Scroll element into view
+          element.scrollIntoView({ behavior: 'auto', block: 'center' });
+        } else if (position) {
+          element = document.elementFromPoint(position.x, position.y);
+          if (!element) {
+            return {
+              success: false,
+              error: `No element found at position (${position.x}, ${position.y})`
+            };
+          }
+        }
+        
         if (!element) {
           return {
             success: false,
-            error: `Element not found with selector: ${selector}`
+            error: 'No element to click'
           };
         }
-
-        // Scroll element into view
-        element.scrollIntoView({ behavior: 'auto', block: 'center' });
-
-        // Cast element to HTMLElement to access click()
-        if (element instanceof HTMLElement) {
-          element.click();
-        } else {
-          return {
-            success: false,
-            error: 'Element is not clickable'
-          };
-        }
-
+        
+        // Create and dispatch click events
+        const clickEvent = new MouseEvent('click', {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          clientX: position?.x || 0,
+          clientY: position?.y || 0
+        });
+        
+        element.dispatchEvent(clickEvent);
+        
         return {
           success: true,
-          message: 'Element clicked successfully'
+          message: 'Click executed successfully'
         };
       } catch (error) {
         return {
@@ -198,7 +241,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
     // If running in Node.js or unsupported environment
     return {
       success: false,
-      error: 'Click can only be executed in a browser extension environment'
+      error: 'Click operation is not supported in this environment'
     };
   } catch (error) {
     return {
