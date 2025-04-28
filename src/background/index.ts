@@ -522,63 +522,65 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             return;
           }
           
-          // Execute script in the tab to click the element
           const tabId = tabs[0].id;
           const selector = message.payload?.selector;
+          const position = message.payload?.position;
           
-          if (!selector) {
+          if (!selector && !position) {
             sendResponse({
               success: false,
-              error: 'No selector provided'
+              error: 'No selector or position provided'
             });
             return;
           }
           
-          // Use chrome.scripting.executeScript instead of chrome.tabs.executeScript
           const results = await chrome.scripting.executeScript({
             target: { tabId },
-            func: (selector) => {
+            func: (selector: string | null, position: { x: number; y: number } | null) => {
               try {
-                const element = document.querySelector(selector);
-                if (!element) {
-                  return { 
-                    success: false, 
-                    error: `Element not found with selector: ${selector}` 
-                  };
+                let element: Element | null = null;
+                
+                if (selector) {
+                  // Try to find element by selector
+                  element = document.querySelector(selector);
+                  if (!element) {
+                    return { success: false, error: `Element not found with selector: ${selector}` };
+                  }
+                  
+                  // Scroll element into view
+                  element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                } else if (position) {
+                  // Find element at position
+                  element = document.elementFromPoint(position.x, position.y);
+                  if (!element) {
+                    return { success: false, error: `No element found at position (${position.x}, ${position.y})` };
+                  }
                 }
                 
-                // Get element position
-                const rect = element.getBoundingClientRect();
-                const x = rect.left + (rect.width / 2);
-                const y = rect.top + (rect.height / 2);
+                if (!element) {
+                  return { success: false, error: 'No element to click' };
+                }
                 
-                // Scroll element into view
-                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                // Create and dispatch click events
+                const clickEvent = new MouseEvent('click', {
+                  view: window,
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: position?.x || 0,
+                  clientY: position?.y || 0
+                });
                 
-                // Create and dispatch mouse events
-                const events = [
-                  new MouseEvent('mouseover', { bubbles: true, clientX: x, clientY: y }),
-                  new MouseEvent('mouseenter', { bubbles: true, clientX: x, clientY: y }),
-                  new MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }),
-                  new MouseEvent('mouseup', { bubbles: true, clientX: x, clientY: y }),
-                  new MouseEvent('click', { bubbles: true, clientX: x, clientY: y })
-                ];
+                element.dispatchEvent(clickEvent);
                 
-                events.forEach(event => element.dispatchEvent(event));
-                
-                return { 
-                  success: true, 
-                  message: 'Element clicked successfully',
-                  position: { x, y }
-                };
+                return { success: true, message: 'Click executed successfully' };
               } catch (error) {
                 return { 
                   success: false, 
-                  error: 'Error clicking element: ' + (error instanceof Error ? error.message : String(error))
+                  error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
                 };
               }
             },
-            args: [selector]
+            args: [selector || null, position || null]
           });
           
           if (!results || results.length === 0) {
@@ -621,7 +623,6 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
           const tabId = tabs[0].id;
           const selector = message.payload?.selector;
           const text = message.payload?.text;
-          const append = message.payload?.append === true;
           
           if (!selector) {
             sendResponse({
@@ -639,83 +640,63 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             return;
           }
           
-          chrome.tabs.executeScript(
-            tabId,
-            {
-              code: `
-                (function() {
-                  try {
-                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-                    if (!element) {
-                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
-                    }
-                    
-                    // Scroll element into view
-                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                    
-                    // Focus the element
-                    element.focus();
-                    
-                    // Handle different types of elements
-                    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-                      // For standard form elements
-                      if (${append}) {
-                        element.value = element.value + \`${text.replace(/`/g, '\\`')}\`;
-                      } else {
-                        element.value = \`${text.replace(/`/g, '\\`')}\`;
-                      }
-                      
-                      // Trigger input and change events
-                      element.dispatchEvent(new Event('input', { bubbles: true }));
-                      element.dispatchEvent(new Event('change', { bubbles: true }));
-                    } else if (element.isContentEditable) {
-                      // For contentEditable elements
-                      if (${append}) {
-                        element.textContent = (element.textContent || '') + \`${text.replace(/`/g, '\\`')}\`;
-                      } else {
-                        element.textContent = \`${text.replace(/`/g, '\\`')}\`;
-                      }
-                      
-                      // Trigger input event for React and other frameworks
-                      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
-                    } else {
-                      return { 
-                        success: false, 
-                        error: 'Element is not an input, textarea, or contentEditable element' 
-                      };
-                    }
-                    
-                    return { success: true, message: 'Text typed successfully' };
-                  } catch (error) {
-                    return { 
-                      success: false, 
-                      error: 'Error typing text: ' + (error.message || String(error))
-                    };
-                  }
-                })();
-              `
+          const results = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (selector: string, text: string) => {
+              try {
+                const element = document.querySelector(selector);
+                if (!element) {
+                  return { success: false, error: `Element not found with selector: ${selector}` };
+                }
+                
+                // Scroll element into view
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                
+                // Focus the element
+                (element as HTMLElement).focus();
+                
+                // Handle different types of elements
+                if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                  // For standard form elements
+                  element.value = text;
+                  
+                  // Trigger input and change events
+                  element.dispatchEvent(new Event('input', { bubbles: true }));
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                } else if ((element as HTMLElement).isContentEditable) {
+                  // For contentEditable elements
+                  element.textContent = text;
+                  
+                  // Trigger input event for React and other frameworks
+                  element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                } else {
+                  return { 
+                    success: false, 
+                    error: 'Element is not an input, textarea, or contentEditable element' 
+                  };
+                }
+                
+                return { success: true, message: 'Text typed successfully' };
+              } catch (error) {
+                return { 
+                  success: false, 
+                  error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
             },
-            (results) => {
-              if (chrome.runtime.lastError) {
-                sendResponse({
-                  success: false,
-                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
-                });
-                return;
-              }
-              
-              if (!results || results.length === 0) {
-                sendResponse({
-                  success: false,
-                  error: 'No result from tab script execution'
-                });
-                return;
-              }
-              
-              // Return the result
-              sendResponse(results[0]);
-            }
-          );
+            args: [selector, text]
+          });
+
+          if (!results || results.length === 0) {
+            sendResponse({
+              success: false,
+              error: 'No result from script execution'
+            });
+            return;
+          }
+          
+          // Return the result
+          sendResponse(results[0].result);
         } catch (error) {
           console.error('Error processing type request:', error);
           sendResponse({
