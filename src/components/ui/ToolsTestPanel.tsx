@@ -53,6 +53,9 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const [appendText, setAppendText] = useState<boolean>(false);
   const [elementLimit, setElementLimit] = useState<number>(5);
   const [screenshotImage, setScreenshotImage] = useState<string | null>(null);
+  const [clickMethod, setClickMethod] = useState<'selector' | 'coordinates'>('selector');
+  const [clickX, setClickX] = useState<number>(0);
+  const [clickY, setClickY] = useState<number>(0);
 
   useEffect(() => {
     setEnvironment(detectEnvironment());
@@ -63,76 +66,84 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const runTest = async () => {
     setLoading(true);
     setError(null);
+    setResult(null);
     
     try {
-      let testResult;
+      let result;
       
       // Context7 tools
       if (activeSection === 'context7') {
         if (activeTab === 'resolveLibraryId') {
-          testResult = await resolveLibraryId(query);
+          result = await resolveLibraryId(query);
         } else if (activeTab === 'getDocumentation') {
-          testResult = await getDocumentation(libraryId, topic);
+          result = await getDocumentation(libraryId, topic);
         } else if (activeTab === 'searchEarthEngineDatasets') {
-          testResult = await searchEarthEngineDatasets(query);
+          result = await searchEarthEngineDatasets(query);
         } else if (activeTab === 'getEarthEngineDocumentation') {
-          testResult = await getEarthEngineDocumentation(libraryId, topic);
+          result = await getEarthEngineDocumentation(libraryId, topic);
         } else if (activeTab === 'getEarthEngineDatasetInfo') {
-          testResult = await getEarthEngineDatasetInfo(topic);
+          result = await getEarthEngineDatasetInfo(topic);
         }
       } 
       // Earth Engine tools
       else if (activeSection === 'earthEngine') {
         if (activeTab === 'runCode') {
-          testResult = await runEarthEngineCode(eeCode);
+          result = await runEarthEngineCode(eeCode);
         } else if (activeTab === 'runButton') {
           // Use the browser click function to click the Earth Engine run button
-          testResult = await click({ 
+          result = await click({ 
             selector: 'button.goog-button.run-button[title="Run script (Ctrl+Enter)"]'
           });
         } else if (activeTab === 'inspectMap') {
-          testResult = await inspectEarthEngineMap(eeLatitude, eeLongitude);
+          result = await inspectEarthEngineMap(eeLatitude, eeLongitude);
         } else if (activeTab === 'checkConsole') {
-          testResult = await checkEarthEngineConsole();
+          result = await checkEarthEngineConsole();
         } else if (activeTab === 'getTasks') {
-          testResult = await getEarthEngineTasks();
+          result = await getEarthEngineTasks();
         } else if (activeTab === 'editScript') {
-          testResult = await editEarthEngineScript(eeScriptId, eeScriptContent);
+          result = await editEarthEngineScript(eeScriptId, eeScriptContent);
         } else if (activeTab === 'getMapLayers') {
-          testResult = await getEarthEngineMapLayers();
+          result = await getEarthEngineMapLayers();
         }
       }
       // Browser automation tools
       else if (activeSection === 'browser') {
         switch (activeTab) {
           case 'screenshot':
-            testResult = await screenshot();
+            result = await screenshot();
             // If screenshot was successful, set the image data
-            if (testResult.success && testResult.screenshotData) {
-              setScreenshotImage(testResult.screenshotData);
+            if (result.success && result.screenshotData) {
+              setScreenshotImage(result.screenshotData);
             }
             break;
           case 'click':
-            testResult = await click({ selector: elementSelector });
+            if (clickMethod === 'coordinates') {
+              result = await click({ position: { x: clickX, y: clickY } });
+            } else {
+              if (!elementSelector) {
+                throw new Error('Please enter a CSS selector');
+              }
+              result = await click({ selector: elementSelector });
+            }
             break;
           case 'type':
-            testResult = await typeText({ 
+            result = await typeText({ 
               selector: elementSelector, 
               text: inputText
             });
             break;
           case 'getElement':
-            testResult = await getElement({ 
+            result = await getElement({ 
               selector: elementSelector, 
               limit: elementLimit 
             });
             break;
           default:
-            testResult = { error: 'Unknown browser tool test type' };
+            result = { error: 'Unknown browser tool test type' };
         }
       }
       
-      setResult(testResult);
+      setResult(result);
     } catch (err) {
       console.error('Test error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -566,19 +577,62 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
               {/* Click Inputs */}
               {activeTab === 'click' && (
                 <div className="space-y-3">
-                  <label className="block">
-                    <span className="text-gray-700">Element Selector</span>
-                    <input 
-                      type="text" 
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                      value={elementSelector}
-                      onChange={(e) => setElementSelector(e.target.value)}
-                      placeholder="e.g., button.run-button, #submit-button"
-                    />
-                  </label>
-                  <p className="text-sm text-gray-600">
-                    Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: <code>button.goog-button.run-button[title="Run script (Ctrl+Enter)"]</code>
-                  </p>
+                  <div className="mb-4">
+                    <label className="block mb-2">
+                      <span className="text-gray-700">Click Method</span>
+                      <select 
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        value={clickMethod}
+                        onChange={(e) => setClickMethod(e.target.value as 'selector' | 'coordinates')}
+                      >
+                        <option value="selector">By Selector</option>
+                        <option value="coordinates">By Coordinates</option>
+                      </select>
+                    </label>
+                  </div>
+                  
+                  {clickMethod === 'selector' ? (
+                    <>
+                      <label className="block">
+                        <span className="text-gray-700">Element Selector</span>
+                        <input 
+                          type="text" 
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          value={elementSelector}
+                          onChange={(e) => setElementSelector(e.target.value)}
+                          placeholder="e.g., button.run-button, #submit-button"
+                        />
+                      </label>
+                      <p className="text-sm text-gray-600">
+                        Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: <code>button.goog-button.run-button[title="Run script (Ctrl+Enter)"]</code>
+                      </p>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="block">
+                        <span className="text-gray-700">X Coordinate</span>
+                        <input 
+                          type="number" 
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          value={clickX}
+                          onChange={(e) => setClickX(parseFloat(e.target.value))}
+                          step="0.01"
+                          placeholder="e.g., 442.015625"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-gray-700">Y Coordinate</span>
+                        <input 
+                          type="number" 
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          value={clickY}
+                          onChange={(e) => setClickY(parseFloat(e.target.value))}
+                          step="0.01"
+                          placeholder="e.g., 74.5"
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
               )}
               
