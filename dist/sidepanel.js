@@ -47699,6 +47699,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/tools/earth-engine/agentTools */ "./src/lib/tools/earth-engine/agentTools.ts");
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
 /* harmony import */ var _lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/lib/tools/browser */ "./src/lib/tools/browser/index.ts");
+/* harmony import */ var _lib_tools_browser_hover__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! @/lib/tools/browser/hover */ "./src/lib/tools/browser/hover.ts");
+/* harmony import */ var _lib_tools_browser_snapshot__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/lib/tools/browser/snapshot */ "./src/lib/tools/browser/snapshot.ts");
+
+
 
 
 
@@ -47792,10 +47796,12 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                 switch (activeTab) {
                     case 'screenshot':
                         result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.screenshot)();
-                        // If screenshot was successful, set the image data
                         if (result.success && result.screenshotData) {
                             setScreenshotImage(result.screenshotData);
                         }
+                        break;
+                    case 'snapshot':
+                        result = await (0,_lib_tools_browser_snapshot__WEBPACK_IMPORTED_MODULE_7__.snapshot)();
                         break;
                     case 'click':
                         if (clickMethod === 'coordinates') {
@@ -47807,6 +47813,12 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                             }
                             result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({ selector: elementSelector });
                         }
+                        break;
+                    case 'hover':
+                        if (!elementSelector) {
+                            throw new Error('Please enter a CSS selector');
+                        }
+                        result = await (0,_lib_tools_browser_hover__WEBPACK_IMPORTED_MODULE_6__.hover)({ selector: elementSelector });
                         break;
                     case 'type':
                         result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.typeText)({
@@ -47885,7 +47897,9 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getMapLayers', onClick: () => setActiveTab('getMapLayers') }, "Map Layers"))),
                 activeSection === 'browser' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'screenshot', onClick: () => setActiveTab('screenshot') }, "Screenshot"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'snapshot', onClick: () => setActiveTab('snapshot') }, "Snapshot"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'click', onClick: () => setActiveTab('click') }, "Click"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'hover', onClick: () => setActiveTab('hover') }, "Hover"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'type', onClick: () => setActiveTab('type') }, "Type"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getElement', onClick: () => setActiveTab('getElement') }, "Get Element"))),
                 activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
@@ -47953,6 +47967,13 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "Retrieves information about the current layers in the Earth Engine map panel. This includes layer names, visibility status, and opacity settings."),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-500" }, "Note: This tool works best when the layers panel is visible in the Earth Engine interface."))))),
                 activeSection === 'browser' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
+                    activeTab === 'snapshot' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "Takes a snapshot of the current page state including URL, title, and accessibility tree. No additional parameters needed."))),
+                    activeTab === 'hover' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., button.run-button, #submit-button" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "Enter a CSS selector for the element you want to hover over. This will trigger mouseover and mouseenter events on the element."))),
                     activeTab === 'screenshot' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "Takes a screenshot of the currently active tab. No additional parameters needed."),
                         screenshotImage && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 border rounded p-2" },
@@ -48752,6 +48773,147 @@ async function getElement(params) {
 
 /***/ }),
 
+/***/ "./src/lib/tools/browser/hover.ts":
+/*!****************************************!*\
+  !*** ./src/lib/tools/browser/hover.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   hover: () => (/* binding */ hover)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Tool for simulating hover/mouseover events on webpage elements
+ * Returns a promise with success status and error message if applicable
+ */
+
+/**
+ * Simulates hovering over an element on the webpage
+ * @param params.selector - CSS selector for the target element
+ * @returns Promise<HoverResponse> with success status and error message if applicable
+ */
+async function hover(params) {
+    const { selector } = params;
+    if (!selector) {
+        return {
+            success: false,
+            error: 'No selector provided'
+        };
+    }
+    const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+    if (env.isContentScript) {
+        // In content script, directly interact with the page
+        const element = document.querySelector(selector);
+        if (!element) {
+            return {
+                success: false,
+                error: `No element found for selector: ${selector}`
+            };
+        }
+        try {
+            // Create and dispatch mouseover event
+            const event = new MouseEvent('mouseover', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            element.dispatchEvent(event);
+            // Create and dispatch mouseenter event
+            const enterEvent = new MouseEvent('mouseenter', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            element.dispatchEvent(enterEvent);
+            return {
+                success: true,
+                message: `Successfully hovered over element: ${selector}`
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: `Error hovering over element: ${error}`
+            };
+        }
+    }
+    else if (env.isBackground) {
+        // In background script, send message to content script
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tab?.id) {
+                return {
+                    success: false,
+                    error: 'No active tab found'
+                };
+            }
+            const results = await chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: (selector) => {
+                    const element = document.querySelector(selector);
+                    if (!element) {
+                        return { error: `No element found for selector: ${selector}` };
+                    }
+                    try {
+                        // Create and dispatch mouseover event
+                        const event = new MouseEvent('mouseover', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        element.dispatchEvent(event);
+                        // Create and dispatch mouseenter event
+                        const enterEvent = new MouseEvent('mouseenter', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        element.dispatchEvent(enterEvent);
+                        return { success: true };
+                    }
+                    catch (error) {
+                        return { error: `Error hovering over element: ${error}` };
+                    }
+                },
+                args: [selector]
+            });
+            if (!results || results.length === 0) {
+                return {
+                    success: false,
+                    error: 'No result from script execution'
+                };
+            }
+            const result = results[0].result;
+            if ('error' in result) {
+                return {
+                    success: false,
+                    error: result.error
+                };
+            }
+            return {
+                success: true,
+                message: `Successfully hovered over element: ${selector}`
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: `Error executing hover script: ${error}`
+            };
+        }
+    }
+    return {
+        success: false,
+        error: 'Hover tool can only be used in a browser extension context'
+    };
+}
+
+
+/***/ }),
+
 /***/ "./src/lib/tools/browser/index.ts":
 /*!****************************************!*\
   !*** ./src/lib/tools/browser/index.ts ***!
@@ -48918,6 +49080,222 @@ async function screenshot() {
     }
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (screenshot);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/snapshot.ts":
+/*!*******************************************!*\
+  !*** ./src/lib/tools/browser/snapshot.ts ***!
+  \*******************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   snapshot: () => (/* binding */ snapshot)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Snapshot tool for browser automation
+ * This tool captures the current state of the page including URL, title, and accessibility tree
+ *
+ * @returns Promise with success status and snapshot data
+ */
+
+/**
+ * Capture a snapshot of the current page state
+ * @returns Promise with success status and snapshot data
+ */
+async function snapshot() {
+    try {
+        // Detect environment and handle accordingly
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        // If running in a content script or sidepanel context, use the background script
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 5000); // 5 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'SNAPSHOT'
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No active tab found'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid tab'
+                        });
+                        return;
+                    }
+                    // Get tab info
+                    const url = tabs[0].url;
+                    const title = tabs[0].title;
+                    // Execute script in the tab to capture accessibility tree
+                    chrome.scripting.executeScript({
+                        target: { tabId },
+                        func: () => {
+                            try {
+                                // Helper function to process a node
+                                function processNode(node) {
+                                    const result = {
+                                        tag: node.tagName.toLowerCase(),
+                                        role: node.getAttribute('role'),
+                                        text: node.textContent?.trim()
+                                    };
+                                    // Add relevant ARIA attributes
+                                    for (const attr of node.attributes) {
+                                        if (attr.name.startsWith('aria-')) {
+                                            result[attr.name] = attr.value;
+                                        }
+                                    }
+                                    // Process children
+                                    const children = Array.from(node.children).map(processNode);
+                                    if (children.length > 0) {
+                                        result.children = children;
+                                    }
+                                    return result;
+                                }
+                                // Start from body and process the tree
+                                const tree = processNode(document.body);
+                                return { tree };
+                            }
+                            catch (error) {
+                                return {
+                                    error: `Error capturing snapshot: ${error instanceof Error ? error.message : String(error)}`
+                                };
+                            }
+                        }
+                    }).then(results => {
+                        if (!results || results.length === 0) {
+                            resolve({
+                                success: false,
+                                error: 'No result from script execution'
+                            });
+                            return;
+                        }
+                        const result = results[0].result;
+                        if ('error' in result) {
+                            resolve({
+                                success: false,
+                                error: result.error
+                            });
+                            return;
+                        }
+                        resolve({
+                            success: true,
+                            url,
+                            title,
+                            snapshot: JSON.stringify(result.tree, null, 2),
+                            message: 'Snapshot captured successfully'
+                        });
+                    }).catch(error => {
+                        resolve({
+                            success: false,
+                            error: `Error executing script: ${error instanceof Error ? error.message : String(error)}`
+                        });
+                    });
+                });
+            });
+        }
+        // If running directly in page context (content script)
+        if (env.isContentScript && typeof document !== 'undefined') {
+            try {
+                // Helper function to process a node
+                function processNode(node) {
+                    const result = {
+                        tag: node.tagName.toLowerCase(),
+                        role: node.getAttribute('role'),
+                        text: node.textContent?.trim()
+                    };
+                    // Add relevant ARIA attributes
+                    for (const attr of node.attributes) {
+                        if (attr.name.startsWith('aria-')) {
+                            result[attr.name] = attr.value;
+                        }
+                    }
+                    // Process children
+                    const children = Array.from(node.children).map(processNode);
+                    if (children.length > 0) {
+                        result.children = children;
+                    }
+                    return result;
+                }
+                // Start from body and process the tree
+                const tree = processNode(document.body);
+                return {
+                    success: true,
+                    url: window.location.href,
+                    title: document.title,
+                    snapshot: JSON.stringify(tree, null, 2),
+                    message: 'Snapshot captured successfully'
+                };
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Error capturing snapshot: ${error instanceof Error ? error.message : String(error)}`
+                };
+            }
+        }
+        // If running in Node.js or unsupported environment
+        return {
+            success: false,
+            error: 'Snapshot operation is not supported in this environment'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (snapshot);
 
 
 /***/ }),

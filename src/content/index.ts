@@ -78,7 +78,7 @@ function setupPingResponse() {
 }
 
 // Update the message listener to handle the new message type
-chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
   if (!message || !message.type) {
     console.warn('Received invalid message:', message);
     sendResponse({ success: false, error: 'Invalid message format' });
@@ -120,7 +120,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       case 'GET_MAP_LAYERS':
         handleGetMapLayers(sendResponse);
         return true; // Will respond asynchronously
-        
+
       default:
         console.warn(`Unknown message type: ${message.type}`);
         sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
