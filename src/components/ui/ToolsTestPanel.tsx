@@ -22,6 +22,8 @@ import {
 } from '@/lib/tools/earth-engine/agentTools';
 import { detectEnvironment } from '@/lib/utils';
 import { click, typeText, getElement, screenshot } from '@/lib/tools/browser';
+import { hover } from '@/lib/tools/browser/hover';
+import { snapshot } from '@/lib/tools/browser/snapshot';
 
 interface ToolsTestPanelProps {
   isOpen: boolean;
@@ -108,13 +110,15 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
       }
       // Browser automation tools
       else if (activeSection === 'browser') {
-        switch (activeTab) {
+      switch (activeTab) {
           case 'screenshot':
             result = await screenshot();
-            // If screenshot was successful, set the image data
             if (result.success && result.screenshotData) {
               setScreenshotImage(result.screenshotData);
-            }
+          }
+          break;
+          case 'snapshot':
+            result = await snapshot();
             break;
           case 'click':
             if (clickMethod === 'coordinates') {
@@ -124,21 +128,27 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 throw new Error('Please enter a CSS selector');
               }
               result = await click({ selector: elementSelector });
+          }
+          break;
+          case 'hover':
+            if (!elementSelector) {
+              throw new Error('Please enter a CSS selector');
             }
+            result = await hover({ selector: elementSelector });
             break;
           case 'type':
             result = await typeText({ 
               selector: elementSelector, 
               text: inputText
             });
-            break;
+          break;
           case 'getElement':
             result = await getElement({ 
               selector: elementSelector, 
               limit: elementLimit 
             });
-            break;
-          default:
+          break;
+        default:
             result = { error: 'Unknown browser tool test type' };
         }
       }
@@ -215,38 +225,38 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
           
           {/* Context7 Tool Tabs */}
           {activeSection === 'context7' && (
-            <div className="flex overflow-x-auto mb-4 space-x-2">
-              <TabButton 
-                active={activeTab === 'resolveLibraryId'} 
-                onClick={() => setActiveTab('resolveLibraryId')}
-              >
-                Resolve Library ID
-              </TabButton>
-              <TabButton 
-                active={activeTab === 'getDocumentation'} 
-                onClick={() => setActiveTab('getDocumentation')}
-              >
-                Get Documentation
-              </TabButton>
-              <TabButton 
-                active={activeTab === 'searchEarthEngineDatasets'} 
-                onClick={() => setActiveTab('searchEarthEngineDatasets')}
-              >
-                Search Datasets
-              </TabButton>
-              <TabButton 
-                active={activeTab === 'getEarthEngineDocumentation'} 
-                onClick={() => setActiveTab('getEarthEngineDocumentation')}
-              >
-                Get EE Documentation
-              </TabButton>
-              <TabButton 
-                active={activeTab === 'getEarthEngineDatasetInfo'} 
-                onClick={() => setActiveTab('getEarthEngineDatasetInfo')}
-              >
-                Get Dataset Info
-              </TabButton>
-            </div>
+          <div className="flex overflow-x-auto mb-4 space-x-2">
+            <TabButton 
+              active={activeTab === 'resolveLibraryId'} 
+              onClick={() => setActiveTab('resolveLibraryId')}
+            >
+              Resolve Library ID
+            </TabButton>
+            <TabButton 
+              active={activeTab === 'getDocumentation'} 
+              onClick={() => setActiveTab('getDocumentation')}
+            >
+              Get Documentation
+            </TabButton>
+            <TabButton 
+              active={activeTab === 'searchEarthEngineDatasets'} 
+              onClick={() => setActiveTab('searchEarthEngineDatasets')}
+            >
+              Search Datasets
+            </TabButton>
+            <TabButton 
+              active={activeTab === 'getEarthEngineDocumentation'} 
+              onClick={() => setActiveTab('getEarthEngineDocumentation')}
+            >
+              Get EE Documentation
+            </TabButton>
+            <TabButton 
+              active={activeTab === 'getEarthEngineDatasetInfo'} 
+              onClick={() => setActiveTab('getEarthEngineDatasetInfo')}
+            >
+              Get Dataset Info
+            </TabButton>
+          </div>
           )}
           
           {/* Earth Engine Tool Tabs */}
@@ -297,7 +307,7 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
             </div>
           )}
           
-          {/* Browser Tool Tabs */}
+          {/* Browser Tools Tabs */}
           {activeSection === 'browser' && (
             <div className="flex overflow-x-auto mb-4 space-x-2">
               <TabButton 
@@ -307,10 +317,22 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 Screenshot
               </TabButton>
               <TabButton 
+                active={activeTab === 'snapshot'} 
+                onClick={() => setActiveTab('snapshot')}
+              >
+                Snapshot
+              </TabButton>
+              <TabButton 
                 active={activeTab === 'click'} 
                 onClick={() => setActiveTab('click')}
               >
                 Click
+              </TabButton>
+              <TabButton 
+                active={activeTab === 'hover'} 
+                onClick={() => setActiveTab('hover')}
+              >
+                Hover
               </TabButton>
               <TabButton 
                 active={activeTab === 'type'} 
@@ -335,17 +357,17 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-gray-700">Library Name</span>
-                    <input 
-                      type="text" 
+                <input
+                  type="text"
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
                       placeholder="e.g., Earth Engine, React"
-                    />
+                />
                   </label>
-                </div>
-              )}
-              
+              </div>
+            )}
+            
               {/* Get Documentation Inputs */}
               {activeTab === 'getDocumentation' && (
                 <div className="space-y-3">
@@ -389,8 +411,8 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-gray-700">Search Query</span>
-                    <input 
-                      type="text" 
+                  <input
+                    type="text"
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
@@ -415,27 +437,27 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                   </label>
                   <label className="block">
                     <span className="text-gray-700">Topic (optional)</span>
-                    <input 
-                      type="text" 
+                  <input
+                    type="text"
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
                       placeholder="e.g., Image, FeatureCollection"
-                    />
+                  />
                   </label>
                 </div>
-              )}
-              
+            )}
+            
               {/* Get Dataset Info Inputs */}
-              {activeTab === 'getEarthEngineDatasetInfo' && (
+            {activeTab === 'getEarthEngineDatasetInfo' && (
                 <div className="space-y-3">
                   <label className="block">
                     <span className="text-gray-700">Dataset Name</span>
-                    <input 
-                      type="text" 
+                <input
+                  type="text"
                       className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
                       placeholder="e.g., LANDSAT/LC08/C02/T1_L2"
                     />
                   </label>
@@ -553,6 +575,34 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
           {/* Browser Tools Input Fields */}
           {activeSection === 'browser' && (
             <div className="mb-4">
+              {/* Snapshot Inputs */}
+              {activeTab === 'snapshot' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Takes a snapshot of the current page state including URL, title, and accessibility tree. No additional parameters needed.
+                  </p>
+                </div>
+              )}
+
+              {/* Hover Inputs */}
+              {activeTab === 'hover' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Element Selector</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={elementSelector}
+                      onChange={(e) => setElementSelector(e.target.value)}
+                      placeholder="e.g., button.run-button, #submit-button"
+                    />
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    Enter a CSS selector for the element you want to hover over. This will trigger mouseover and mouseenter events on the element.
+                  </p>
+                </div>
+              )}
+
               {/* Screenshot Inputs */}
               {activeTab === 'screenshot' && (
                 <div className="space-y-3">
@@ -705,26 +755,26 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               )}
-            </div>
-          )}
-          
-          <button
-            onClick={runTest}
-            disabled={loading}
+              </div>
+            )}
+            
+              <button
+                onClick={runTest}
+                disabled={loading}
             className={`mt-4 px-4 py-2 rounded-md text-white font-medium ${
               loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
             }`}
-          >
-            {loading ? 'Running...' : 'Run Test'}
-          </button>
-          
-          {error && (
+              >
+                {loading ? 'Running...' : 'Run Test'}
+              </button>
+            
+            {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-red-500">{error}</p>
-            </div>
-          )}
-          
-          {result && (
+              </div>
+            )}
+            
+            {result && (
             <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
               <h3 className="font-medium mb-2">Result:</h3>
               <pre className="bg-gray-800 text-white p-3 rounded text-sm overflow-auto" style={{ maxHeight: '200px' }}>
@@ -737,7 +787,7 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                       return value;
                     }, 2)
                   : String(result)}
-              </pre>
+                  </pre>
               {activeTab === 'browser' && activeSection === 'screenshot' && 
                typeof result === 'object' && result.success && result.screenshotData && (
                 <div className="mt-3">
@@ -750,8 +800,8 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                   />
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            )}
         </div>
       </div>
     </div>

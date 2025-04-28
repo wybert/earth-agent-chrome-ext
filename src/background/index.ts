@@ -506,6 +506,86 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       })();
       return true; // Will respond asynchronously
       
+    case 'SNAPSHOT':
+      (async () => {
+        try {
+          const maxDepth = message.payload?.maxDepth;
+          console.log('Taking page snapshot', maxDepth !== undefined ? `with max depth: ${maxDepth}` : 'with full tree');
+          
+          // Get the active tab
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            sendResponse({
+              success: false,
+              error: 'No active tab found'
+            });
+            return;
+          }
+          
+          const tabId = tabs[0].id;
+          
+          // Execute script to get page information
+          const results = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (maxDepthParam: number | null) => {
+              // Get accessibility tree
+              const getAccessibilityTree = (element: Element, depth = 0): any => {
+                const role = element.getAttribute('role');
+                const ariaLabel = element.getAttribute('aria-label');
+                const ariaDescription = element.getAttribute('aria-description');
+                
+                const node: any = {
+                  tag: element.tagName.toLowerCase(),
+                  role: role || undefined,
+                  ariaLabel: ariaLabel || undefined,
+                  ariaDescription: ariaDescription || undefined,
+                  children: []
+                };
+                
+                // Continue traversing if maxDepth is null (full tree) or we haven't reached it yet
+                if (maxDepthParam === null || depth < maxDepthParam) {
+                  Array.from(element.children).forEach(child => {
+                    node.children.push(getAccessibilityTree(child, depth + 1));
+                  });
+                }
+                
+                return node;
+              };
+              
+              return {
+                success: true,
+                url: window.location.href,
+                title: document.title,
+                accessibilityTree: getAccessibilityTree(document.body),
+                timestamp: Date.now(),
+                maxDepth: maxDepthParam
+              };
+            },
+            args: [maxDepth ?? null] // Convert undefined to null for serialization
+          });
+          
+          if (!results || results.length === 0) {
+            sendResponse({
+              success: false,
+              error: 'Failed to execute snapshot script'
+            });
+            return;
+          }
+          
+          const result = results[0].result;
+          console.log('Snapshot captured successfully');
+          sendResponse(result);
+        } catch (error) {
+          console.error('Error taking page snapshot:', error);
+          sendResponse({
+            success: false,
+            error: `Error taking page snapshot: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+      
     case 'CLICK':
       (async () => {
         try {
