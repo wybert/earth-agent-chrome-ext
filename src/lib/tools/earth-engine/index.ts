@@ -7,6 +7,7 @@
  * 3. Check the console for errors
  * 4. Get tasks from Earth Engine
  * 5. Edit scripts in Earth Engine
+ * 6. Get information about map layers
  * 
  * Usage example:
  * ```typescript
@@ -33,6 +34,7 @@ export { default as inspectMap } from './inspectMap';
 export { default as checkConsole } from './checkConsole';
 export { default as getTasks } from './getTasks';
 export { default as editScript } from './editScript';
+export { default as getMapLayers } from './getMapLayers';
 
 // Also export the types for better type checking
 export type { 
@@ -55,4 +57,9 @@ export type {
 
 export type { 
   EditScriptResponse 
-} from './editScript'; 
+} from './editScript';
+
+export type {
+  GetMapLayersResponse,
+  MapLayer
+} from './getMapLayers'; 

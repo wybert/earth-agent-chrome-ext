@@ -406,7 +406,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
           console.log('Getting Earth Engine tasks');
           
           const response = await sendMessageToEarthEngineTab(message);
-          console.log('Tasks response:', response);
+          console.log('Get tasks response:', response);
           sendResponse(response);
         } catch (error) {
           console.error('Error getting Earth Engine tasks:', error);
@@ -421,14 +421,11 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     case 'EDIT_SCRIPT':
       (async () => {
         try {
-          console.log('Editing Earth Engine script:', message.scriptId);
-          console.log('Script content length:', message.content?.length || 0);
+          console.log('Editing Earth Engine script:', 
+                      message.scriptId, 
+                      'content length:', message.content?.length || 0);
           
-          // Use longer timeout for editing scripts
-          const response = await sendMessageToEarthEngineTab(message, { 
-            timeout: 10000, // 10-second timeout for script editing
-            retries: 2      // More retries for this operation
-          });
+          const response = await sendMessageToEarthEngineTab(message);
           console.log('Script edit response:', response);
           sendResponse(response);
         } catch (error) {
@@ -462,13 +459,415 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       sendResponse({ success: true, message: 'Background script acknowledged heartbeat' });
       break;
     
+    // Browser Automation Tools
+    case 'SCREENSHOT':
+      (async () => {
+        try {
+          console.log('Taking screenshot of active tab');
+          
+          // Get the active tab
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          
+          if (!tabs || tabs.length === 0) {
+            sendResponse({
+              success: false,
+              error: 'No active tab found'
+            });
+            return;
+          }
+          
+          // Take the screenshot
+          try {
+            const dataUrl = await chrome.tabs.captureVisibleTab(tabs[0].windowId, {
+              format: 'png',
+              quality: 100
+            });
+            
+            console.log('Screenshot captured successfully');
+            sendResponse({
+              success: true,
+              screenshotData: dataUrl,
+              message: 'Screenshot captured successfully'
+            });
+          } catch (captureError) {
+            console.error('Error capturing screenshot:', captureError);
+            sendResponse({
+              success: false,
+              error: `Error capturing screenshot: ${captureError instanceof Error ? captureError.message : String(captureError)}`
+            });
+          }
+        } catch (error) {
+          console.error('Error processing screenshot request:', error);
+          sendResponse({
+            success: false,
+            error: `Error processing screenshot request: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+      
+    case 'CLICK':
+      (async () => {
+        try {
+          console.log('Click request for selector:', message.payload?.selector);
+          
+          // Get the active tab
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            sendResponse({
+              success: false,
+              error: 'No active tab found'
+            });
+            return;
+          }
+          
+          // Execute script in the tab to click the element
+          const tabId = tabs[0].id;
+          const selector = message.payload?.selector;
+          
+          if (!selector) {
+            sendResponse({
+              success: false,
+              error: 'No selector provided'
+            });
+            return;
+          }
+          
+          chrome.tabs.executeScript(
+            tabId,
+            {
+              code: `
+                (function() {
+                  try {
+                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+                    if (!element) {
+                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
+                    }
+                    
+                    // Scroll element into view
+                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                    
+                    // Simulate a click event
+                    element.click();
+                    
+                    return { success: true, message: 'Element clicked successfully' };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error clicking element: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+            },
+            (results) => {
+              if (chrome.runtime.lastError) {
+                sendResponse({
+                  success: false,
+                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                });
+                return;
+              }
+              
+              if (!results || results.length === 0) {
+                sendResponse({
+                  success: false,
+                  error: 'No result from tab script execution'
+                });
+                return;
+              }
+              
+              // Return the result
+              sendResponse(results[0]);
+            }
+          );
+        } catch (error) {
+          console.error('Error processing click request:', error);
+          sendResponse({
+            success: false,
+            error: `Error processing click request: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+      
+    case 'TYPE':
+      (async () => {
+        try {
+          console.log('Type request for selector:', message.payload?.selector);
+          
+          // Get the active tab
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            sendResponse({
+              success: false,
+              error: 'No active tab found'
+            });
+            return;
+          }
+          
+          // Execute script in the tab to type text
+          const tabId = tabs[0].id;
+          const selector = message.payload?.selector;
+          const text = message.payload?.text;
+          const append = message.payload?.append === true;
+          
+          if (!selector) {
+            sendResponse({
+              success: false,
+              error: 'No selector provided'
+            });
+            return;
+          }
+          
+          if (text === undefined || text === null) {
+            sendResponse({
+              success: false,
+              error: 'No text provided'
+            });
+            return;
+          }
+          
+          chrome.tabs.executeScript(
+            tabId,
+            {
+              code: `
+                (function() {
+                  try {
+                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+                    if (!element) {
+                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
+                    }
+                    
+                    // Scroll element into view
+                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                    
+                    // Focus the element
+                    element.focus();
+                    
+                    // Handle different types of elements
+                    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                      // For standard form elements
+                      if (${append}) {
+                        element.value = element.value + \`${text.replace(/`/g, '\\`')}\`;
+                      } else {
+                        element.value = \`${text.replace(/`/g, '\\`')}\`;
+                      }
+                      
+                      // Trigger input and change events
+                      element.dispatchEvent(new Event('input', { bubbles: true }));
+                      element.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else if (element.isContentEditable) {
+                      // For contentEditable elements
+                      if (${append}) {
+                        element.textContent = (element.textContent || '') + \`${text.replace(/`/g, '\\`')}\`;
+                      } else {
+                        element.textContent = \`${text.replace(/`/g, '\\`')}\`;
+                      }
+                      
+                      // Trigger input event for React and other frameworks
+                      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                    } else {
+                      return { 
+                        success: false, 
+                        error: 'Element is not an input, textarea, or contentEditable element' 
+                      };
+                    }
+                    
+                    return { success: true, message: 'Text typed successfully' };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error typing text: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+            },
+            (results) => {
+              if (chrome.runtime.lastError) {
+                sendResponse({
+                  success: false,
+                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                });
+                return;
+              }
+              
+              if (!results || results.length === 0) {
+                sendResponse({
+                  success: false,
+                  error: 'No result from tab script execution'
+                });
+                return;
+              }
+              
+              // Return the result
+              sendResponse(results[0]);
+            }
+          );
+        } catch (error) {
+          console.error('Error processing type request:', error);
+          sendResponse({
+            success: false,
+            error: `Error processing type request: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+      
+    case 'GET_ELEMENT':
+      (async () => {
+        try {
+          console.log('GetElement request for selector:', message.payload?.selector);
+          
+          // Get the active tab
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            sendResponse({
+              success: false,
+              error: 'No active tab found'
+            });
+            return;
+          }
+          
+          // Execute script in the tab to get element information
+          const tabId = tabs[0].id;
+          const selector = message.payload?.selector;
+          const limit = message.payload?.limit || 10;
+          
+          if (!selector) {
+            sendResponse({
+              success: false,
+              error: 'No selector provided'
+            });
+            return;
+          }
+          
+          chrome.tabs.executeScript(
+            tabId,
+            {
+              code: `
+                (function() {
+                  try {
+                    const elements = Array.from(document.querySelectorAll('${selector.replace(/'/g, "\\'")}'));
+                    if (!elements || elements.length === 0) {
+                      return { 
+                        success: false, 
+                        error: 'No elements found with selector: ${selector.replace(/'/g, "\\'")}' 
+                      };
+                    }
+                    
+                    const limit = ${limit};
+                    const limitedElements = elements.slice(0, limit);
+                    
+                    const elementInfos = limitedElements.map(element => {
+                      // Get all attributes as key-value pairs
+                      const attributesObj = {};
+                      for (const attr of element.attributes) {
+                        attributesObj[attr.name] = attr.value;
+                      }
+                      
+                      // Check if element is visible
+                      const style = window.getComputedStyle(element);
+                      const isVisible = style.display !== 'none' && 
+                                       style.visibility !== 'hidden' && 
+                                       style.opacity !== '0';
+                      
+                      // Check if element is enabled (for form controls)
+                      let isEnabled = true;
+                      if (element instanceof HTMLButtonElement || 
+                          element instanceof HTMLInputElement || 
+                          element instanceof HTMLSelectElement || 
+                          element instanceof HTMLTextAreaElement || 
+                          element instanceof HTMLOptionElement) {
+                        isEnabled = !element.disabled;
+                      }
+                      
+                      // Get bounding client rect
+                      const rect = element.getBoundingClientRect();
+                      const boundingRect = {
+                        top: rect.top,
+                        right: rect.right,
+                        bottom: rect.bottom,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height
+                      };
+                      
+                      // Get element value if applicable
+                      let value = undefined;
+                      if (element instanceof HTMLInputElement || 
+                          element instanceof HTMLTextAreaElement || 
+                          element instanceof HTMLSelectElement) {
+                        value = element.value;
+                      }
+                      
+                      return {
+                        tagName: element.tagName.toLowerCase(),
+                        id: element.id || undefined,
+                        className: element.className || undefined,
+                        textContent: element.textContent ? element.textContent.trim() : undefined,
+                        value,
+                        attributes: attributesObj,
+                        isVisible,
+                        isEnabled,
+                        boundingRect
+                      };
+                    });
+                    
+                    return { 
+                      success: true, 
+                      elements: elementInfos,
+                      count: elements.length
+                    };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error getting element information: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+            },
+            (results) => {
+              if (chrome.runtime.lastError) {
+                sendResponse({
+                  success: false,
+                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                });
+                return;
+              }
+              
+              if (!results || results.length === 0) {
+                sendResponse({
+                  success: false,
+                  error: 'No result from tab script execution'
+                });
+                return;
+              }
+              
+              // Return the result
+              sendResponse(results[0]);
+            }
+          );
+        } catch (error) {
+          console.error('Error processing getElement request:', error);
+          sendResponse({
+            success: false,
+            error: `Error processing getElement request: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+      
     default:
-      console.warn('Unknown message type:', message.type);
-      sendResponse({ error: 'Unknown message type' });
+      console.log('Unhandled message type:', message.type);
+      sendResponse({ success: false, error: `Unhandled message type: ${message.type}` });
+      break;
   }
-
-  // Return true to indicate we will send a response asynchronously
-  return true;
 });
 
 // Listen for side panel connections
@@ -488,6 +887,12 @@ chrome.runtime.onConnect.addListener((port) => {
         case 'CHAT_MESSAGE':
           // Handle chat messages from side panel
           handleChatMessage(message, port);
+          break;
+          
+        case 'PING':
+          // Handle ping messages from side panel
+          console.log('Received PING from side panel, responding with PONG');
+          port.postMessage({ type: 'PONG', timestamp: Date.now() });
           break;
           
         default:

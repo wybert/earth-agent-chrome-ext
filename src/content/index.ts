@@ -8,6 +8,9 @@ interface Message {
   content?: string;
 }
 
+// Add import for interfaces if needed
+import { GetMapLayersResponse, MapLayer } from '@/lib/tools/earth-engine/getMapLayers';
+
 // Initialize content script immediately to catch messages early
 console.log('Earth Engine AI Assistant content script loading at:', new Date().toISOString());
 
@@ -74,54 +77,63 @@ function setupPingResponse() {
   });
 }
 
-// Setup message listener immediately (don't wait for DOMContentLoaded)
+// Update the message listener to handle the new message type
 chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
-  console.log('Content script received message:', message, 'at:', new Date().toISOString());
-
-  switch (message.type) {
-    case 'GET_EDITOR_CONTENT':
-      // TODO: Implement editor content retrieval
-      sendResponse({ content: 'Not implemented yet' });
-      break;
-
-    case 'RUN_CODE':
-      handleRunCode(message.code || '', sendResponse);
-      return true; // Will respond asynchronously
-
-    case 'CHECK_CONSOLE':
-      handleCheckConsole(sendResponse);
-      return true; // Will respond asynchronously
-
-    case 'INSPECT_MAP':
-      handleInspectMap(message.coordinates, sendResponse);
-      return true; // Will respond asynchronously
-
-    case 'GET_TASKS':
-      handleGetTasks(sendResponse);
-      return true; // Will respond asynchronously
-
-    case 'EDIT_SCRIPT':
-      handleEditScript(message, sendResponse);
-      return true; // Will respond asynchronously
-
-    case 'PING':
-      // Simple ping to check if content script is loaded
-      console.log('Received PING, responding...');
-      sendResponse({ 
-        success: true, 
-        message: 'Content script is active', 
-        timestamp: Date.now(),
-        url: window.location.href 
-      });
-      backgroundConnectionVerified = true;
-      break;
-
-    default:
-      console.warn('Unknown message type:', message.type);
-      sendResponse({ success: false, error: 'Unknown message type' });
+  if (!message || !message.type) {
+    console.warn('Received invalid message:', message);
+    sendResponse({ success: false, error: 'Invalid message format' });
+    return false;
   }
-
-  return true; // Will respond asynchronously
+  
+  console.log(`Content script received message: ${message.type}`);
+  
+  try {
+    switch (message.type) {
+      case 'PING':
+        sendResponse({ success: true, message: 'Earth Engine content script is active' });
+        return false;
+        
+      case 'INIT':
+        sendResponse({ success: true, message: 'Earth Engine content script is active' });
+        return false;
+        
+      case 'RUN_CODE':
+        handleRunCode(message.code || '', sendResponse);
+        return true; // Will respond asynchronously
+        
+      case 'CHECK_CONSOLE':
+        handleCheckConsole(sendResponse);
+        return true; // Will respond asynchronously
+        
+      case 'INSPECT_MAP':
+        handleInspectMap(message.coordinates, sendResponse);
+        return true; // Will respond asynchronously
+        
+      case 'GET_TASKS':
+        handleGetTasks(sendResponse);
+        return true; // Will respond asynchronously
+        
+      case 'EDIT_SCRIPT':
+        handleEditScript(message, sendResponse);
+        return true; // Will respond asynchronously
+        
+      case 'GET_MAP_LAYERS':
+        handleGetMapLayers(sendResponse);
+        return true; // Will respond asynchronously
+        
+      default:
+        console.warn(`Unknown message type: ${message.type}`);
+        sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
+        return false;
+    }
+  } catch (error) {
+    console.error(`Error handling message (${message.type}):`, error);
+    sendResponse({ 
+      success: false, 
+      error: `Error in content script: ${error instanceof Error ? error.message : String(error)}` 
+    });
+    return false;
+  }
 });
 
 // Also initialize when DOM content is loaded to make sure we have access to the page elements
@@ -599,6 +611,92 @@ async function handleEditScript(message: any, sendResponse: (response: any) => v
     sendResponse({ 
       success: false, 
       error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Handles getting information about Earth Engine map layers
+ */
+async function handleGetMapLayers(sendResponse: (response: GetMapLayersResponse) => void) {
+  try {
+    console.log('Handling GET_MAP_LAYERS message');
+    
+    // Look for the layers panel which typically contains layer information
+    const layersPanel = document.querySelector('.layers-card');
+    if (!layersPanel) {
+      console.log('Layers panel not found');
+      sendResponse({
+        success: true,
+        layers: []
+      });
+      return;
+    }
+    
+    // Find all layer items in the panel
+    const layerItems = layersPanel.querySelectorAll('.layer-card');
+    const layers: MapLayer[] = [];
+    
+    layerItems.forEach((item, index) => {
+      try {
+        // Extract layer ID - usually in the item ID or data attributes
+        const id = item.id || `layer-${index}`;
+        
+        // Try to find the layer name
+        const nameElement = item.querySelector('.layer-title, .layer-name');
+        const name = nameElement ? nameElement.textContent?.trim() || `Layer ${index+1}` : `Layer ${index+1}`;
+        
+        // Check visibility - usually there's an eye icon or visibility checkbox
+        const visibilityEl = item.querySelector('.visibility-toggle, input[type="checkbox"]');
+        const visibleAttr = visibilityEl?.getAttribute('aria-checked') || visibilityEl?.getAttribute('checked');
+        const hiddenClass = item.classList.contains('hidden') || item.classList.contains('layer-hidden');
+        const visible = visibleAttr === 'true' || visibleAttr === 'checked' || !hiddenClass;
+        
+        // Try to find opacity information - often a slider or numeric value
+        const opacityEl = item.querySelector('.opacity-slider, input[type="range"], .opacity-value');
+        let opacity = 1.0; // Default to full opacity
+        
+        if (opacityEl) {
+          const opacityValue = opacityEl.getAttribute('value') || 
+                              opacityEl.getAttribute('aria-valuenow') || 
+                              (opacityEl as HTMLInputElement).value;
+          
+          if (opacityValue) {
+            // Normalize to 0-1 range (Earth Engine sometimes uses 0-100)
+            opacity = parseFloat(opacityValue);
+            if (opacity > 1) opacity /= 100;
+          }
+        }
+        
+        // Look for layer type information if available
+        const typeEl = item.querySelector('.layer-type');
+        const type = typeEl ? typeEl.textContent?.trim() : undefined;
+        
+        // Add to layers collection
+        layers.push({
+          id,
+          name,
+          visible,
+          opacity,
+          type,
+          zIndex: index
+        });
+      } catch (itemError) {
+        console.warn(`Error parsing layer item:`, itemError);
+        // Continue with other layers even if one fails
+      }
+    });
+    
+    console.log(`Found ${layers.length} map layers`);
+    sendResponse({
+      success: true,
+      layers
+    });
+  } catch (error) {
+    console.error('Error getting map layers:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting map layers: ${error instanceof Error ? error.message : String(error)}`
     });
   }
 } 

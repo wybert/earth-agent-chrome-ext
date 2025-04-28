@@ -5,7 +5,10 @@
   "description": "AI-powered assistant for Google Earth Engine",
   "permissions": [
     "sidePanel",
-    "storage"
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "https://code.earthengine.google.com/*",
