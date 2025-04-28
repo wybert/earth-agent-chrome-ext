@@ -735,114 +735,101 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
             });
             return;
           }
-          
-          chrome.tabs.executeScript(
-            tabId,
-            {
-              code: `
-                (function() {
-                  try {
-                    const elements = Array.from(document.querySelectorAll('${selector.replace(/'/g, "\\'")}'));
-                    if (!elements || elements.length === 0) {
-                      return { 
-                        success: false, 
-                        error: 'No elements found with selector: ${selector.replace(/'/g, "\\'")}' 
-                      };
-                    }
-                    
-                    const limit = ${limit};
-                    const limitedElements = elements.slice(0, limit);
-                    
-                    const elementInfos = limitedElements.map(element => {
-                      // Get all attributes as key-value pairs
-                      const attributesObj = {};
-                      for (const attr of element.attributes) {
-                        attributesObj[attr.name] = attr.value;
-                      }
-                      
-                      // Check if element is visible
-                      const style = window.getComputedStyle(element);
-                      const isVisible = style.display !== 'none' && 
-                                       style.visibility !== 'hidden' && 
-                                       style.opacity !== '0';
-                      
-                      // Check if element is enabled (for form controls)
-                      let isEnabled = true;
-                      if (element instanceof HTMLButtonElement || 
-                          element instanceof HTMLInputElement || 
-                          element instanceof HTMLSelectElement || 
-                          element instanceof HTMLTextAreaElement || 
-                          element instanceof HTMLOptionElement) {
-                        isEnabled = !element.disabled;
-                      }
-                      
-                      // Get bounding client rect
-                      const rect = element.getBoundingClientRect();
-                      const boundingRect = {
-                        top: rect.top,
-                        right: rect.right,
-                        bottom: rect.bottom,
-                        left: rect.left,
-                        width: rect.width,
-                        height: rect.height
-                      };
-                      
-                      // Get element value if applicable
-                      let value = undefined;
-                      if (element instanceof HTMLInputElement || 
-                          element instanceof HTMLTextAreaElement || 
-                          element instanceof HTMLSelectElement) {
-                        value = element.value;
-                      }
-                      
-                      return {
-                        tagName: element.tagName.toLowerCase(),
-                        id: element.id || undefined,
-                        className: element.className || undefined,
-                        textContent: element.textContent ? element.textContent.trim() : undefined,
-                        value,
-                        attributes: attributesObj,
-                        isVisible,
-                        isEnabled,
-                        boundingRect
-                      };
-                    });
-                    
-                    return { 
-                      success: true, 
-                      elements: elementInfos,
-                      count: elements.length
-                    };
-                  } catch (error) {
-                    return { 
-                      success: false, 
-                      error: 'Error getting element information: ' + (error.message || String(error))
-                    };
+
+          const results = await chrome.scripting.executeScript({
+            target: { tabId },
+            func: (selector: string, limit: number) => {
+              try {
+                const elements = Array.from(document.querySelectorAll(selector));
+                if (!elements || elements.length === 0) {
+                  return { 
+                    success: false, 
+                    error: `No elements found with selector: ${selector}` 
+                  };
+                }
+                
+                const limitedElements = elements.slice(0, limit);
+                
+                const elementInfos = limitedElements.map(element => {
+                  // Get all attributes as key-value pairs
+                  const attributesObj: Record<string, string> = {};
+                  for (const attr of element.attributes) {
+                    attributesObj[attr.name] = attr.value;
                   }
-                })();
-              `
+                  
+                  // Check if element is visible
+                  const style = window.getComputedStyle(element);
+                  const isVisible = style.display !== 'none' && 
+                                   style.visibility !== 'hidden' && 
+                                   style.opacity !== '0';
+                  
+                  // Check if element is enabled (for form controls)
+                  let isEnabled = true;
+                  if (element instanceof HTMLButtonElement || 
+                      element instanceof HTMLInputElement || 
+                      element instanceof HTMLSelectElement || 
+                      element instanceof HTMLTextAreaElement || 
+                      element instanceof HTMLOptionElement) {
+                    isEnabled = !element.disabled;
+                  }
+                  
+                  // Get bounding client rect
+                  const rect = element.getBoundingClientRect();
+                  const boundingRect = {
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                  };
+                  
+                  // Get element value if applicable
+                  let value = undefined;
+                  if (element instanceof HTMLInputElement || 
+                      element instanceof HTMLTextAreaElement || 
+                      element instanceof HTMLSelectElement) {
+                    value = element.value;
+                  }
+                  
+                  return {
+                    tagName: element.tagName.toLowerCase(),
+                    id: element.id || undefined,
+                    className: element.className || undefined,
+                    textContent: element.textContent ? element.textContent.trim() : undefined,
+                    value,
+                    attributes: attributesObj,
+                    isVisible,
+                    isEnabled,
+                    boundingRect
+                  };
+                });
+                
+                return { 
+                  success: true, 
+                  elements: elementInfos,
+                  count: elements.length
+                };
+              } catch (error) {
+                return { 
+                  success: false, 
+                  error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
+                };
+              }
             },
-            (results) => {
-              if (chrome.runtime.lastError) {
-                sendResponse({
-                  success: false,
-                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
-                });
-                return;
-              }
-              
-              if (!results || results.length === 0) {
-                sendResponse({
-                  success: false,
-                  error: 'No result from tab script execution'
-                });
-                return;
-              }
-              
-              // Return the result
-              sendResponse(results[0]);
-            }
-          );
+            args: [selector, limit]
+          });
+
+          if (!results || results.length === 0) {
+            sendResponse({
+              success: false,
+              error: 'No result from script execution'
+            });
+            return;
+          }
+          
+          // Return the result
+          sendResponse(results[0].result);
         } catch (error) {
           console.error('Error processing getElement request:', error);
           sendResponse({
