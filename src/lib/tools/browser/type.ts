@@ -16,18 +16,18 @@ export interface TypeResponse {
 export interface TypeParams {
   selector: string;
   text: string;
-  append?: boolean;
 }
 
 /**
  * Type text into an input, textarea, or contentEditable element
  * 
- * @param params Object containing the selector and text to type
+ * @param params.selector CSS selector for the element to type into
+ * @param params.text Text to type
  * @returns Promise with success status and result message/error
  */
 export async function type(params: TypeParams): Promise<TypeResponse> {
   try {
-    const { selector, text, append = false } = params;
+    const { selector, text } = params;
     
     if (!selector) {
       return {
@@ -61,7 +61,7 @@ export async function type(params: TypeParams): Promise<TypeResponse> {
           chrome.runtime.sendMessage(
             {
               type: 'TYPE',
-              payload: { selector, text, append }
+              payload: { selector, text }
             },
             (response) => {
               // Clear the timeout since we got a response
@@ -135,22 +135,14 @@ export async function type(params: TypeParams): Promise<TypeResponse> {
                     // Handle different types of elements
                     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
                       // For standard form elements
-                      if (${append}) {
-                        element.value = element.value + \`${text.replace(/`/g, '\\`')}\`;
-                      } else {
-                        element.value = \`${text.replace(/`/g, '\\`')}\`;
-                      }
+                      element.value = \`${text.replace(/`/g, '\\`')}\`;
                       
                       // Trigger input and change events
                       element.dispatchEvent(new Event('input', { bubbles: true }));
                       element.dispatchEvent(new Event('change', { bubbles: true }));
                     } else if (element.isContentEditable) {
                       // For contentEditable elements
-                      if (${append}) {
-                        element.textContent = (element.textContent || '') + \`${text.replace(/`/g, '\\`')}\`;
-                      } else {
-                        element.textContent = \`${text.replace(/`/g, '\\`')}\`;
-                      }
+                      element.textContent = \`${text.replace(/`/g, '\\`')}\`;
                       
                       // Trigger input event for React and other frameworks
                       element.dispatchEvent(new InputEvent('input', { bubbles: true }));
@@ -216,22 +208,14 @@ export async function type(params: TypeParams): Promise<TypeResponse> {
         // Handle different types of elements
         if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
           // For standard form elements
-          if (append) {
-            element.value = element.value + text;
-          } else {
-            element.value = text;
-          }
+          element.value = text;
           
           // Trigger input and change events
           element.dispatchEvent(new Event('input', { bubbles: true }));
           element.dispatchEvent(new Event('change', { bubbles: true }));
         } else if ((element as HTMLElement).isContentEditable) {
           // For contentEditable elements
-          if (append) {
-            element.textContent = (element.textContent || '') + text;
-          } else {
-            element.textContent = text;
-          }
+          element.textContent = text;
           
           // Trigger input event for React and other frameworks
           element.dispatchEvent(new InputEvent('input', { bubbles: true }));

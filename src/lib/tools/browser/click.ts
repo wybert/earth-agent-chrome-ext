@@ -20,23 +20,24 @@ export interface ClickParams {
 /**
  * Click an element on the page using a CSS selector
  * 
- * @param params Object containing the selector to locate the element
+ * @param params.selector CSS selector for the element to click
  * @returns Promise with success status and result message/error
  */
 export async function click(params: ClickParams): Promise<ClickResponse> {
   try {
     const { selector } = params;
-    
+
     if (!selector) {
       return {
         success: false,
         error: 'Selector is required'
       };
     }
-    
-    // If running in a content script or sidepanel context, use the background script
+
+    // Detect environment and handle accordingly
     const env = detectEnvironment();
-    
+
+    // If running in a content script or sidepanel context, use the background script
     if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
       return new Promise<ClickResponse>((resolve) => {
         // Add a timeout to handle cases where background script doesn't respond
@@ -47,7 +48,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             error: 'Background script connection timed out'
           });
         }, 5000); // 5 second timeout
-        
+
         try {
           chrome.runtime.sendMessage(
             {
@@ -57,7 +58,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             (response) => {
               // Clear the timeout since we got a response
               clearTimeout(timeoutId);
-              
+
               if (chrome.runtime.lastError) {
                 console.warn('Chrome runtime error:', chrome.runtime.lastError);
                 resolve({
@@ -66,7 +67,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
                 });
                 return;
               }
-              
+
               // We got a valid response from the background
               resolve(response);
             }
@@ -82,7 +83,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
         }
       });
     }
-    
+
     // If running in the background script
     if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
       return new Promise<ClickResponse>((resolve) => {
@@ -95,7 +96,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             });
             return;
           }
-          
+
           const tabId = tabs[0].id;
           if (!tabId) {
             resolve({
@@ -104,8 +105,8 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             });
             return;
           }
-          
-          // Execute script in the tab to click the element
+
+          // Execute script in the tab to click element
           chrome.tabs.executeScript(
             tabId,
             {
@@ -116,13 +117,13 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
                     if (!element) {
                       return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
                     }
-                    
+
                     // Scroll element into view
                     element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                    
-                    // Simulate a click event
+
+                    // Click the element
                     element.click();
-                    
+
                     return { success: true, message: 'Element clicked successfully' };
                   } catch (error) {
                     return { 
@@ -141,7 +142,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
                 });
                 return;
               }
-              
+
               if (!results || results.length === 0) {
                 resolve({
                   success: false,
@@ -149,7 +150,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
                 });
                 return;
               }
-              
+
               // Return the result from the executed script
               resolve(results[0]);
             }
@@ -157,7 +158,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
         });
       });
     }
-    
+
     // If running directly in page context (content script)
     if (env.isContentScript && typeof document !== 'undefined') {
       try {
@@ -168,13 +169,20 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             error: `Element not found with selector: ${selector}`
           };
         }
-        
+
         // Scroll element into view
         element.scrollIntoView({ behavior: 'auto', block: 'center' });
-        
-        // Simulate a click event
-        (element as HTMLElement).click();
-        
+
+        // Cast element to HTMLElement to access click()
+        if (element instanceof HTMLElement) {
+          element.click();
+        } else {
+          return {
+            success: false,
+            error: 'Element is not clickable'
+          };
+        }
+
         return {
           success: true,
           message: 'Element clicked successfully'
@@ -186,24 +194,16 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
         };
       }
     }
-    
-    // If not in a browser environment, we can't click elements
-    if (env.isNodeJs) {
-      return {
-        success: false,
-        error: 'Cannot click elements in Node.js environment'
-      };
-    }
-    
-    // Default error if environment detection doesn't work as expected
+
+    // If running in Node.js or unsupported environment
     return {
       success: false,
-      error: 'Unsupported environment for clicking elements'
+      error: 'Click can only be executed in a browser extension environment'
     };
   } catch (error) {
     return {
       success: false,
-      error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+      error: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }

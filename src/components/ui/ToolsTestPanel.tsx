@@ -118,8 +118,7 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
           case 'type':
             testResult = await typeText({ 
               selector: elementSelector, 
-              text: inputText, 
-              append: appendText 
+              text: inputText
             });
             break;
           case 'getElement':
