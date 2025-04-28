@@ -47799,8 +47799,7 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                     case 'type':
                         testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.typeText)({
                             selector: elementSelector,
-                            text: inputText,
-                            append: appendText
+                            text: inputText
                         });
                         break;
                     case 'getElement':
@@ -48220,7 +48219,7 @@ __webpack_require__.r(__webpack_exports__);
 /**
  * Click an element on the page using a CSS selector
  *
- * @param params Object containing the selector to locate the element
+ * @param params.selector CSS selector for the element to click
  * @returns Promise with success status and result message/error
  */
 async function click(params) {
@@ -48232,8 +48231,9 @@ async function click(params) {
                 error: 'Selector is required'
             };
         }
-        // If running in a content script or sidepanel context, use the background script
+        // Detect environment and handle accordingly
         const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        // If running in a content script or sidepanel context, use the background script
         if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
             return new Promise((resolve) => {
                 // Add a timeout to handle cases where background script doesn't respond
@@ -48294,7 +48294,7 @@ async function click(params) {
                         });
                         return;
                     }
-                    // Execute script in the tab to click the element
+                    // Execute script in the tab to click element
                     chrome.tabs.executeScript(tabId, {
                         code: `
                 (function() {
@@ -48303,13 +48303,13 @@ async function click(params) {
                     if (!element) {
                       return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
                     }
-                    
+
                     // Scroll element into view
                     element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                    
-                    // Simulate a click event
+
+                    // Click the element
                     element.click();
-                    
+
                     return { success: true, message: 'Element clicked successfully' };
                   } catch (error) {
                     return { 
@@ -48352,8 +48352,16 @@ async function click(params) {
                 }
                 // Scroll element into view
                 element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                // Simulate a click event
-                element.click();
+                // Cast element to HTMLElement to access click()
+                if (element instanceof HTMLElement) {
+                    element.click();
+                }
+                else {
+                    return {
+                        success: false,
+                        error: 'Element is not clickable'
+                    };
+                }
                 return {
                     success: true,
                     message: 'Element clicked successfully'
@@ -48366,23 +48374,16 @@ async function click(params) {
                 };
             }
         }
-        // If not in a browser environment, we can't click elements
-        if (env.isNodeJs) {
-            return {
-                success: false,
-                error: 'Cannot click elements in Node.js environment'
-            };
-        }
-        // Default error if environment detection doesn't work as expected
+        // If running in Node.js or unsupported environment
         return {
             success: false,
-            error: 'Unsupported environment for clicking elements'
+            error: 'Click can only be executed in a browser extension environment'
         };
     }
     catch (error) {
         return {
             success: false,
-            error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+            error: `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
         };
     }
 }
@@ -48884,12 +48885,13 @@ __webpack_require__.r(__webpack_exports__);
 /**
  * Type text into an input, textarea, or contentEditable element
  *
- * @param params Object containing the selector and text to type
+ * @param params.selector CSS selector for the element to type into
+ * @param params.text Text to type
  * @returns Promise with success status and result message/error
  */
 async function type(params) {
     try {
-        const { selector, text, append = false } = params;
+        const { selector, text } = params;
         if (!selector) {
             return {
                 success: false,
@@ -48917,7 +48919,7 @@ async function type(params) {
                 try {
                     chrome.runtime.sendMessage({
                         type: 'TYPE',
-                        payload: { selector, text, append }
+                        payload: { selector, text }
                     }, (response) => {
                         // Clear the timeout since we got a response
                         clearTimeout(timeoutId);
@@ -48983,22 +48985,14 @@ async function type(params) {
                     // Handle different types of elements
                     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
                       // For standard form elements
-                      if (${append}) {
-                        element.value = element.value + \`${text.replace(/`/g, '\\`')}\`;
-                      } else {
-                        element.value = \`${text.replace(/`/g, '\\`')}\`;
-                      }
+                      element.value = \`${text.replace(/`/g, '\\`')}\`;
                       
                       // Trigger input and change events
                       element.dispatchEvent(new Event('input', { bubbles: true }));
                       element.dispatchEvent(new Event('change', { bubbles: true }));
                     } else if (element.isContentEditable) {
                       // For contentEditable elements
-                      if (${append}) {
-                        element.textContent = (element.textContent || '') + \`${text.replace(/`/g, '\\`')}\`;
-                      } else {
-                        element.textContent = \`${text.replace(/`/g, '\\`')}\`;
-                      }
+                      element.textContent = \`${text.replace(/`/g, '\\`')}\`;
                       
                       // Trigger input event for React and other frameworks
                       element.dispatchEvent(new InputEvent('input', { bubbles: true }));
@@ -49056,24 +49050,14 @@ async function type(params) {
                 // Handle different types of elements
                 if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
                     // For standard form elements
-                    if (append) {
-                        element.value = element.value + text;
-                    }
-                    else {
-                        element.value = text;
-                    }
+                    element.value = text;
                     // Trigger input and change events
                     element.dispatchEvent(new Event('input', { bubbles: true }));
                     element.dispatchEvent(new Event('change', { bubbles: true }));
                 }
                 else if (element.isContentEditable) {
                     // For contentEditable elements
-                    if (append) {
-                        element.textContent = (element.textContent || '') + text;
-                    }
-                    else {
-                        element.textContent = text;
-                    }
+                    element.textContent = text;
                     // Trigger input event for React and other frameworks
                     element.dispatchEvent(new InputEvent('input', { bubbles: true }));
                 }

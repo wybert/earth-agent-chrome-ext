@@ -1026,48 +1026,57 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         });
                         return;
                     }
-                    chrome.tabs.executeScript(tabId, {
-                        code: `
-                (function() {
-                  try {
-                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-                    if (!element) {
-                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
-                    }
-                    
-                    // Scroll element into view
-                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                    
-                    // Simulate a click event
-                    element.click();
-                    
-                    return { success: true, message: 'Element clicked successfully' };
-                  } catch (error) {
-                    return { 
-                      success: false, 
-                      error: 'Error clicking element: ' + (error.message || String(error))
-                    };
-                  }
-                })();
-              `
-                    }, (results) => {
-                        if (chrome.runtime.lastError) {
-                            sendResponse({
-                                success: false,
-                                error: chrome.runtime.lastError.message || 'Error executing script in tab'
-                            });
-                            return;
-                        }
-                        if (!results || results.length === 0) {
-                            sendResponse({
-                                success: false,
-                                error: 'No result from tab script execution'
-                            });
-                            return;
-                        }
-                        // Return the result
-                        sendResponse(results[0]);
+                    // Use chrome.scripting.executeScript instead of chrome.tabs.executeScript
+                    const results = await chrome.scripting.executeScript({
+                        target: { tabId },
+                        func: (selector) => {
+                            try {
+                                const element = document.querySelector(selector);
+                                if (!element) {
+                                    return {
+                                        success: false,
+                                        error: `Element not found with selector: ${selector}`
+                                    };
+                                }
+                                // Get element position
+                                const rect = element.getBoundingClientRect();
+                                const x = rect.left + (rect.width / 2);
+                                const y = rect.top + (rect.height / 2);
+                                // Scroll element into view
+                                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                                // Create and dispatch mouse events
+                                const events = [
+                                    new MouseEvent('mouseover', { bubbles: true, clientX: x, clientY: y }),
+                                    new MouseEvent('mouseenter', { bubbles: true, clientX: x, clientY: y }),
+                                    new MouseEvent('mousedown', { bubbles: true, clientX: x, clientY: y }),
+                                    new MouseEvent('mouseup', { bubbles: true, clientX: x, clientY: y }),
+                                    new MouseEvent('click', { bubbles: true, clientX: x, clientY: y })
+                                ];
+                                events.forEach(event => element.dispatchEvent(event));
+                                return {
+                                    success: true,
+                                    message: 'Element clicked successfully',
+                                    position: { x, y }
+                                };
+                            }
+                            catch (error) {
+                                return {
+                                    success: false,
+                                    error: 'Error clicking element: ' + (error instanceof Error ? error.message : String(error))
+                                };
+                            }
+                        },
+                        args: [selector]
                     });
+                    if (!results || results.length === 0) {
+                        sendResponse({
+                            success: false,
+                            error: 'No result from script execution'
+                        });
+                        return;
+                    }
+                    // Return the result
+                    sendResponse(results[0].result);
                 }
                 catch (error) {
                     console.error('Error processing click request:', error);

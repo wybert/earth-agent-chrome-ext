@@ -60,8 +60,7 @@ async function enterText(selector: string, text: string): Promise<void> {
   
   const result = await typeText({ 
     selector, 
-    text,
-    append: false // Replace existing content
+    text
   });
   
   if (result.success) {
