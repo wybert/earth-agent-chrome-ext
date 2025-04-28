@@ -11,14 +11,66 @@ interface Message {
 // Initialize content script immediately to catch messages early
 console.log('Earth Engine AI Assistant content script loading at:', new Date().toISOString());
 
+// Track connection status with background script
+let backgroundConnectionVerified = false;
+let notificationRetries = 0;
+const MAX_NOTIFICATION_RETRIES = 5;
+
+// Track the state of the content script
+let backgroundConnected = false;
+let connectionRetries = 0;
+const MAX_CONNECTION_RETRIES = 5;
+const CONNECTION_RETRY_DELAYS = [500, 1000, 2000, 4000, 8000]; // Exponential backoff
+
 // Notify background script that content script is loaded
 function notifyBackgroundScript() {
+  console.log('Notifying background script that content script is loaded...');
+  
   chrome.runtime.sendMessage({ 
     type: 'CONTENT_SCRIPT_LOADED', 
     url: window.location.href,
     timestamp: Date.now() 
   }, (response) => {
+    if (chrome.runtime.lastError) {
+      console.warn('Error notifying background script:', chrome.runtime.lastError);
+      
+      // Retry with exponential backoff if we haven't reached max retries
+      if (notificationRetries < MAX_NOTIFICATION_RETRIES) {
+        notificationRetries++;
+        const delay = Math.pow(2, notificationRetries) * 500; // Exponential backoff
+        console.log(`Retrying notification in ${delay}ms (attempt ${notificationRetries}/${MAX_NOTIFICATION_RETRIES})...`);
+        setTimeout(notifyBackgroundScript, delay);
+      }
+      return;
+    }
+    
+    backgroundConnectionVerified = true;
+    notificationRetries = 0;
     console.log('Content script loaded notification response:', response);
+  });
+}
+
+// Track ping attempts to avoid infinite loops
+let pingAttempts = 0;
+const MAX_PING_ATTEMPTS = 3;
+
+// Respond to ping checks from background script
+function setupPingResponse() {
+  // Create a specific handler for PING messages to increase reliability
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message && message.type === 'PING') {
+      console.log('Received PING from background script, responding...');
+      sendResponse({ 
+        success: true, 
+        message: 'Content script is active', 
+        timestamp: Date.now(),
+        url: window.location.href
+      });
+      // Reset ping attempts when a successful ping occurs
+      pingAttempts = 0;
+      backgroundConnectionVerified = true;
+      return true;
+    }
   });
 }
 
@@ -49,16 +101,19 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       return true; // Will respond asynchronously
 
     case 'EDIT_SCRIPT':
-      handleEditScript(message.scriptId, message.content, sendResponse);
+      handleEditScript(message, sendResponse);
       return true; // Will respond asynchronously
 
     case 'PING':
       // Simple ping to check if content script is loaded
+      console.log('Received PING, responding...');
       sendResponse({ 
         success: true, 
         message: 'Content script is active', 
-        timestamp: Date.now() 
+        timestamp: Date.now(),
+        url: window.location.href 
       });
+      backgroundConnectionVerified = true;
       break;
 
     default:
@@ -68,6 +123,46 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
 
   return true; // Will respond asynchronously
 });
+
+// Also initialize when DOM content is loaded to make sure we have access to the page elements
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setupPingResponse();
+    notifyBackgroundScript();
+  });
+} else {
+  setupPingResponse();
+  notifyBackgroundScript();
+}
+
+// Also set up a periodic self-check to ensure registration
+function periodicSelfCheck() {
+  if (pingAttempts < MAX_PING_ATTEMPTS || !backgroundConnectionVerified) {
+    pingAttempts++;
+    
+    // Send a self-ping to the background script
+    chrome.runtime.sendMessage({ 
+      type: 'CONTENT_SCRIPT_HEARTBEAT', 
+      url: window.location.href,
+      timestamp: Date.now()
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn('Background connection error during self-check:', chrome.runtime.lastError);
+        backgroundConnectionVerified = false;
+      } else if (response && response.success) {
+        console.log('Self-check successful, background script acknowledged content script');
+        pingAttempts = 0;
+        backgroundConnectionVerified = true;
+      } else {
+        console.warn('Self-check received unexpected response:', response);
+        backgroundConnectionVerified = false;
+      }
+    });
+  }
+}
+
+// Run self-checks periodically
+setInterval(periodicSelfCheck, 10000);
 
 /**
  * Handles the RUN_CODE message by clicking the run button in the Earth Engine editor
@@ -204,37 +299,306 @@ function handleGetTasks(sendResponse: (response: any) => void) {
   }
 }
 
+// Notify the background script that the content script is loaded
+function notifyBackgroundScriptLoaded() {
+  try {
+    console.log('Earth Engine Agent content script loaded, notifying background script...');
+    chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_LOADED' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error notifying background script:', chrome.runtime.lastError);
+        
+        // Retry with exponential backoff if we haven't exceeded max retries
+        if (connectionRetries < MAX_CONNECTION_RETRIES) {
+          const delay = CONNECTION_RETRY_DELAYS[connectionRetries] || 10000; // Default to 10s for any retry beyond our array
+          connectionRetries++;
+          console.log(`Retrying connection to background script in ${delay}ms (attempt ${connectionRetries}/${MAX_CONNECTION_RETRIES})...`);
+          
+          setTimeout(notifyBackgroundScriptLoaded, delay);
+        } else {
+          console.error(`Failed to connect to background script after ${MAX_CONNECTION_RETRIES} attempts`);
+        }
+        return;
+      }
+      
+      backgroundConnected = true;
+      console.log('Background script notified of content script load.');
+    });
+  } catch (error) {
+    console.error('Failed to notify background script:', error);
+  }
+}
+
+// Initialize content script
+function initialize() {
+  notifyBackgroundScriptLoaded();
+}
+
 /**
  * Handles editing an Earth Engine script
  */
-function handleEditScript(scriptId: string | undefined, content: string | undefined, sendResponse: (response: any) => void) {
+async function handleEditScript(message: any, sendResponse: (response: any) => void) {
+  console.log('Handling edit script message:', message);
+  
+  const scriptId = message.scriptId;
+  const content = message.content || '';
+  
+  if (!scriptId || !content) {
+    sendResponse({
+      success: false,
+      error: 'Script ID and content are required'
+    });
+    return;
+  }
+  
   try {
-    if (!scriptId || !content) {
-      sendResponse({
-        success: false,
-        error: 'Script ID and content are required'
+    // Create a log to track which method succeeded
+    let successMethod = '';
+    let editorUpdated = false;
+    
+    console.log('Attempting to update Earth Engine editor content...');
+    
+    // METHOD 1: Direct Ace editor access - try multiple paths
+    try {
+      console.log('METHOD 1: Attempting direct Ace editor access...');
+      
+      // Try different potential paths to find the Ace editor instance
+      const editorPaths = [
+        // Try standard AceEditor global
+        () => (window as any).ace,
+        
+        // Try to find the editor in the page scope
+        () => Array.from(document.querySelectorAll('.ace_editor')).map(
+          el => (el as any).__ace_editor__ || (el as any).env?.editor
+        ).find(editor => editor),
+        
+        // Try from CodeMirror if it's used instead
+        () => {
+          const cmElements = document.querySelectorAll('.CodeMirror');
+          if (cmElements.length > 0) {
+            return Array.from(cmElements).map(el => (el as any).CodeMirror).find(cm => cm);
+          }
+          return null;
+        },
+        
+        // Try to find editor in Google Earth Engine specific objects
+        () => (window as any).ee?.Editor?.ace,
+        () => (window as any).ee?.data?.aceEditor,
+        () => (window as any).code?.editor?.aceEditor,
+        
+        // Last resort - try to scan the entire window object for anything that looks like an editor
+        () => {
+          const foundEditors = [];
+          for (const key in window) {
+            try {
+              const obj = (window as any)[key];
+              if (obj && typeof obj === 'object' && 
+                  (obj.setContent || obj.setValue || obj.getSession || obj.edit)) {
+                foundEditors.push(obj);
+              }
+            } catch (e) {
+              // Ignore errors from security restrictions
+            }
+          }
+          return foundEditors[0]; // Return the first one we find
+        }
+      ];
+      
+      // Try each path until we find an editor
+      let editor = null;
+      for (const getEditor of editorPaths) {
+        try {
+          const potentialEditor = getEditor();
+          if (potentialEditor) {
+            editor = potentialEditor;
+            console.log('Found potential editor:', editor);
+            break;
+          }
+        } catch (e) {
+          // Continue to the next method
+          console.log('Editor path attempt failed:', e);
+        }
+      }
+      
+      if (editor) {
+        // Try different methods to update content based on what API the editor exposes
+        const updateMethods = [
+          // Standard Ace editor API
+          () => {
+            if (editor.getSession && editor.setValue) {
+              editor.setValue(content, -1); // -1 to place cursor at start
+              return true;
+            }
+            return false;
+          },
+          
+          // Some editors have a setContent method
+          () => {
+            if (editor.setContent) {
+              editor.setContent(content);
+              return true;
+            }
+            return false;
+          },
+          
+          // CodeMirror API
+          () => {
+            if (editor.setValue) {
+              editor.setValue(content);
+              return true;
+            }
+            return false;
+          },
+          
+          // Nested session access
+          () => {
+            if (editor.getSession && editor.getSession().setValue) {
+              editor.getSession().setValue(content);
+              return true;
+            }
+            return false;
+          }
+        ];
+        
+        for (const update of updateMethods) {
+          try {
+            if (update()) {
+              editorUpdated = true;
+              successMethod = 'Direct editor API';
+              console.log('Successfully updated editor content via direct API');
+              break;
+            }
+          } catch (e) {
+            // Try the next method
+            console.log('Editor update method failed:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing Ace editor directly:', error);
+    }
+    
+    // METHOD 2: DOM Manipulation - Bypass CSP restrictions
+    if (!editorUpdated) {
+      try {
+        console.log('METHOD 2: Attempting DOM manipulation...');
+        
+        // Find the pre elements in the editor
+        const editorPres = document.querySelectorAll('.ace_editor pre');
+        if (editorPres.length > 0) {
+          console.log(`Found ${editorPres.length} pre elements in the editor`);
+          
+          // Create a text node with our content
+          const textNode = document.createTextNode(content);
+          
+          // Clear and update the first pre element (main content area)
+          const mainPre = editorPres[0];
+          mainPre.textContent = '';
+          mainPre.appendChild(textNode);
+          
+          // Dispatch input and change events to trigger editor update
+          mainPre.dispatchEvent(new Event('input', { bubbles: true }));
+          mainPre.dispatchEvent(new Event('change', { bubbles: true }));
+          
+          // Find the textarea that may be connected to the editor
+          const textareas = document.querySelectorAll('textarea');
+          for (const textarea of Array.from(textareas)) {
+            try {
+              textarea.value = content;
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
+              textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e) {
+              console.log('Error updating textarea:', e);
+            }
+          }
+          
+          editorUpdated = true;
+          successMethod = 'DOM manipulation';
+          console.log('Successfully updated editor content via DOM manipulation');
+        } else {
+          console.log('No pre elements found in the editor');
+        }
+      } catch (error) {
+        console.error('Error using DOM manipulation to update editor:', error);
+      }
+    }
+    
+    // METHOD 3: Find and update the hidden textarea that Ace uses
+    if (!editorUpdated) {
+      try {
+        console.log('METHOD 3: Searching for hidden textarea...');
+        
+        // Look for textareas that might be connected to the editor
+        const textareas = document.querySelectorAll('textarea');
+        console.log(`Found ${textareas.length} textareas in the document`);
+        
+        let textareaUpdated = false;
+        
+        for (const textarea of Array.from(textareas)) {
+          try {
+            // Check if this might be an editor textarea (hidden ones are often used by Ace)
+            if (textarea.classList.contains('ace_text-input') || 
+                textarea.style.position === 'absolute' || 
+                textarea.style.opacity === '0' ||
+                textarea.style.height === '1px' ||
+                textarea.parentElement?.classList.contains('ace_editor')) {
+              
+              console.log('Found potential editor textarea:', textarea);
+              
+              // Set the value
+              textarea.value = content;
+              
+              // Trigger input events
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
+              textarea.dispatchEvent(new Event('change', { bubbles: true }));
+              
+              // Try to trigger a keypress event with Ctrl+A and then paste content
+              textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+              textarea.dispatchEvent(new ClipboardEvent('paste', { 
+                bubbles: true,
+                clipboardData: new DataTransfer()
+              }));
+              
+              textareaUpdated = true;
+              console.log('Updated textarea:', textarea);
+            }
+          } catch (e) {
+            console.log('Error updating a textarea:', e);
+          }
+        }
+        
+        if (textareaUpdated) {
+          editorUpdated = true;
+          successMethod = 'Hidden textarea';
+          console.log('Successfully updated editor content via hidden textarea');
+        }
+      } catch (error) {
+        console.error('Error updating hidden textarea:', error);
+      }
+    }
+    
+    // If all methods failed, return error
+    if (!editorUpdated) {
+      console.error('All methods for updating editor content failed');
+      sendResponse({ 
+        success: false, 
+        error: 'Failed to update editor content. Could not access the Earth Engine Code Editor. Try manually updating the code.'
       });
       return;
     }
     
-    // This is a placeholder - actual implementation would need to interact with 
-    // Earth Engine script management APIs or UI elements
+    // Return success if any method worked
+    console.log(`Editor content updated successfully using method: ${successMethod}`);
     sendResponse({
       success: true,
-      message: `Script editing not fully implemented yet. This would edit script ${scriptId}.`
+      method: successMethod,
+      message: `Editor content updated successfully using ${successMethod}`
+    });
+    
+  } catch (error) {
+    console.error('Error editing Earth Engine script:', error);
+    sendResponse({ 
+      success: false, 
+      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
     });
   }
-  catch (error) {
-    sendResponse({
-      success: false,
-      error: `Error editing script: ${error instanceof Error ? error.message : String(error)}`
-    });
-  }
-}
-
-// Also initialize when DOM content is loaded to make sure we have access to the page elements
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', notifyBackgroundScript);
-} else {
-  notifyBackgroundScript();
 } 
