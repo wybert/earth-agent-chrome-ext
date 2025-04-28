@@ -17,9 +17,11 @@ import {
   inspectEarthEngineMap,
   checkEarthEngineConsole,
   getEarthEngineTasks,
-  editEarthEngineScript
+  editEarthEngineScript,
+  getEarthEngineMapLayers
 } from '@/lib/tools/earth-engine/agentTools';
 import { detectEnvironment } from '@/lib/utils';
+import { click, typeText, getElement, screenshot } from '@/lib/tools/browser';
 
 interface ToolsTestPanelProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState<string>('Earth Engine');
   const [libraryId, setLibraryId] = useState<string>('');
   const [topic, setTopic] = useState<string>('Landsat');
+  const [tokens, setTokens] = useState<string>('5000');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,13 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const [eeLongitude, setEeLongitude] = useState<number>(-122.4194);
   const [eeScriptId, setEeScriptId] = useState<string>('users/example/myScript');
   const [eeScriptContent, setEeScriptContent] = useState<string>('// Earth Engine script\nvar image = ee.Image(1);\nprint(image);');
+  
+  // Browser tools state
+  const [elementSelector, setElementSelector] = useState<string>('button.goog-button.run-button[title="Run script (Ctrl+Enter)"]');
+  const [inputText, setInputText] = useState<string>('Test text');
+  const [appendText, setAppendText] = useState<boolean>(false);
+  const [elementLimit, setElementLimit] = useState<number>(5);
+  const [screenshotImage, setScreenshotImage] = useState<string | null>(null);
 
   useEffect(() => {
     setEnvironment(detectEnvironment());
@@ -53,65 +63,73 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const runTest = async () => {
     setLoading(true);
     setError(null);
+    
     try {
       let testResult;
       
       // Context7 tools
       if (activeSection === 'context7') {
-        switch (activeTab) {
-          case 'resolveLibraryId':
-            testResult = await resolveLibraryId(query);
-            // If library ID was found, update the libraryId state
-            if (testResult.success && testResult.libraryId) {
-              setLibraryId(testResult.libraryId);
-            }
-            break;
-          case 'getDocumentation':
-            if (!libraryId) {
-              throw new Error('Library ID is required for getDocumentation');
-            }
-            testResult = await getDocumentation(libraryId, topic);
-            break;
-          case 'searchEarthEngineDatasets':
-            testResult = await searchEarthEngineDatasets(query);
-            // If library ID was found, update the libraryId state
-            if (testResult.success && testResult.libraryId) {
-              setLibraryId(testResult.libraryId);
-            }
-            break;
-          case 'getEarthEngineDocumentation':
-            if (!libraryId) {
-              throw new Error('Library ID is required for getEarthEngineDocumentation');
-            }
-            testResult = await getEarthEngineDocumentation(libraryId, topic);
-            break;
-          case 'getEarthEngineDatasetInfo':
-            testResult = await getEarthEngineDatasetInfo(topic);
-            break;
-          default:
-            testResult = { error: 'Unknown test type' };
+        if (activeTab === 'resolveLibraryId') {
+          testResult = await resolveLibraryId(query);
+        } else if (activeTab === 'getDocumentation') {
+          testResult = await getDocumentation(libraryId, topic);
+        } else if (activeTab === 'searchEarthEngineDatasets') {
+          testResult = await searchEarthEngineDatasets(query);
+        } else if (activeTab === 'getEarthEngineDocumentation') {
+          testResult = await getEarthEngineDocumentation(libraryId, topic);
+        } else if (activeTab === 'getEarthEngineDatasetInfo') {
+          testResult = await getEarthEngineDatasetInfo(topic);
         }
       } 
       // Earth Engine tools
       else if (activeSection === 'earthEngine') {
+        if (activeTab === 'runCode') {
+          testResult = await runEarthEngineCode(eeCode);
+        } else if (activeTab === 'runButton') {
+          // Use the browser click function to click the Earth Engine run button
+          testResult = await click({ 
+            selector: 'button.goog-button.run-button[title="Run script (Ctrl+Enter)"]'
+          });
+        } else if (activeTab === 'inspectMap') {
+          testResult = await inspectEarthEngineMap(eeLatitude, eeLongitude);
+        } else if (activeTab === 'checkConsole') {
+          testResult = await checkEarthEngineConsole();
+        } else if (activeTab === 'getTasks') {
+          testResult = await getEarthEngineTasks();
+        } else if (activeTab === 'editScript') {
+          testResult = await editEarthEngineScript(eeScriptId, eeScriptContent);
+        } else if (activeTab === 'getMapLayers') {
+          testResult = await getEarthEngineMapLayers();
+        }
+      }
+      // Browser automation tools
+      else if (activeSection === 'browser') {
         switch (activeTab) {
-          case 'runCode':
-            testResult = await runCode(eeCode);
+          case 'screenshot':
+            testResult = await screenshot();
+            // If screenshot was successful, set the image data
+            if (testResult.success && testResult.screenshotData) {
+              setScreenshotImage(testResult.screenshotData);
+            }
             break;
-          case 'inspectMap':
-            testResult = await inspectMap({ lat: eeLatitude, lng: eeLongitude });
+          case 'click':
+            testResult = await click({ selector: elementSelector });
             break;
-          case 'checkConsole':
-            testResult = await checkConsole();
+          case 'type':
+            testResult = await typeText({ 
+              selector: elementSelector, 
+              text: inputText, 
+              append: appendText 
+            });
             break;
-          case 'getTasks':
-            testResult = await getTasks();
-            break;
-          case 'editScript':
-            testResult = await editScript(eeScriptId, eeScriptContent);
+          case 'getElement':
+            testResult = await getElement({ 
+              selector: elementSelector, 
+              limit: elementLimit 
+            });
             break;
           default:
-            testResult = { error: 'Unknown Earth Engine test type' };
+            testResult = { error: 'Unknown browser tool test type' };
         }
       }
       
@@ -174,6 +192,15 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
             >
               Earth Engine Tools
             </SectionTabButton>
+            <SectionTabButton 
+              active={activeSection === 'browser'} 
+              onClick={() => {
+                setActiveSection('browser');
+                setActiveTab('screenshot');
+              }}
+            >
+              Browser Tools
+            </SectionTabButton>
           </div>
           
           {/* Context7 Tool Tabs */}
@@ -222,6 +249,12 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 Run Code
               </TabButton>
               <TabButton 
+                active={activeTab === 'runButton'} 
+                onClick={() => setActiveTab('runButton')}
+              >
+                Run Button Test
+              </TabButton>
+              <TabButton 
                 active={activeTab === 'inspectMap'} 
                 onClick={() => setActiveTab('inspectMap')}
               >
@@ -245,299 +278,427 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
               >
                 Edit Script
               </TabButton>
+              <TabButton 
+                active={activeTab === 'getMapLayers'} 
+                onClick={() => setActiveTab('getMapLayers')}
+              >
+                Map Layers
+              </TabButton>
             </div>
           )}
           
-          <div className="space-y-4">
-            {/* Context7 Input fields based on active tab */}
-            {activeSection === 'context7' && (
-              <>
-                {(activeTab === 'resolveLibraryId' || activeTab === 'searchEarthEngineDatasets') && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Query
-                    </label>
-                    <input
-                      type="text"
+          {/* Browser Tool Tabs */}
+          {activeSection === 'browser' && (
+            <div className="flex overflow-x-auto mb-4 space-x-2">
+              <TabButton 
+                active={activeTab === 'screenshot'} 
+                onClick={() => setActiveTab('screenshot')}
+              >
+                Screenshot
+              </TabButton>
+              <TabButton 
+                active={activeTab === 'click'} 
+                onClick={() => setActiveTab('click')}
+              >
+                Click
+              </TabButton>
+              <TabButton 
+                active={activeTab === 'type'} 
+                onClick={() => setActiveTab('type')}
+              >
+                Type
+              </TabButton>
+              <TabButton 
+                active={activeTab === 'getElement'} 
+                onClick={() => setActiveTab('getElement')}
+              >
+                Get Element
+              </TabButton>
+            </div>
+          )}
+          
+          {/* Context7 Tools Input Fields */}
+          {activeSection === 'context7' && (
+            <div className="mb-4">
+              {/* Resolve Library ID Inputs */}
+              {activeTab === 'resolveLibraryId' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Library Name</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      className="w-full p-2 border rounded-md"
-                      placeholder="Enter search query"
+                      placeholder="e.g., Earth Engine, React"
                     />
-                  </div>
-                )}
-                
-                {(activeTab === 'getDocumentation' || activeTab === 'getEarthEngineDocumentation') && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Library ID
-                      </label>
-                      <input
-                        type="text"
-                        value={libraryId}
-                        onChange={(e) => setLibraryId(e.target.value)}
-                        className="w-full p-2 border rounded-md"
-                        placeholder="Enter library ID"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Topic
-                      </label>
-                      <input
-                        type="text"
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                        className="w-full p-2 border rounded-md"
-                        placeholder="Enter topic"
-                      />
-                    </div>
-                  </>
-                )}
-                
-                {activeTab === 'getEarthEngineDatasetInfo' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Topic
-                    </label>
-                    <input
-                      type="text"
+                  </label>
+                </div>
+              )}
+              
+              {/* Get Documentation Inputs */}
+              {activeTab === 'getDocumentation' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Library ID</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={libraryId}
+                      onChange={(e) => setLibraryId(e.target.value)}
+                      placeholder="e.g., earthengine/catalog"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-gray-700">Topic (optional)</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                       value={topic}
                       onChange={(e) => setTopic(e.target.value)}
-                      className="w-full p-2 border rounded-md"
-                      placeholder="Enter topic"
+                      placeholder="e.g., Image, FeatureCollection"
                     />
+                  </label>
+                  <label className="block">
+                    <span className="text-gray-700">Max Tokens (optional)</span>
+                    <input 
+                      type="number" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={tokens}
+                      onChange={(e) => setTokens(e.target.value)}
+                      placeholder="e.g., 5000"
+                      min="1000"
+                      max="20000"
+                    />
+                  </label>
+                </div>
+              )}
+              
+              {/* Search Datasets Inputs */}
+              {activeTab === 'searchEarthEngineDatasets' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Search Query</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="e.g., Landsat, MODIS"
+                    />
+                  </label>
+                </div>
+              )}
+              
+              {/* Get EE Documentation Inputs */}
+              {activeTab === 'getEarthEngineDocumentation' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Library ID</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={libraryId}
+                      onChange={(e) => setLibraryId(e.target.value)}
+                      placeholder="e.g., earthengine/catalog"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-gray-700">Topic (optional)</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      placeholder="e.g., Image, FeatureCollection"
+                    />
+                  </label>
+                </div>
+              )}
+              
+              {/* Get Dataset Info Inputs */}
+              {activeTab === 'getEarthEngineDatasetInfo' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Dataset Name</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      placeholder="e.g., LANDSAT/LC08/C02/T1_L2"
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Earth Engine Tools Input Fields */}
+          {activeSection === 'earthEngine' && (
+            <div className="mb-4">
+              {/* Run Code Inputs */}
+              {activeTab === 'runCode' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Earth Engine Code</span>
+                    <textarea 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={eeCode}
+                      onChange={(e) => setEeCode(e.target.value)}
+                      rows={6}
+                      placeholder="// Enter Earth Engine code here"
+                    />
+                  </label>
+                </div>
+              )}
+              
+              {/* Run Button Test Inputs */}
+              {activeTab === 'runButton' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    This will click the "Run" button in the Earth Engine Code Editor to execute the current code.
+                    <br />
+                    <br />
+                    <strong>Note:</strong> You must have the Earth Engine Code Editor open in your browser.
+                    The extension will click the run button in that tab without modifying the code.
+                  </p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                    <p className="text-yellow-800 text-sm">
+                      The button uses the following CSS selector: <code>button.goog-button.run-button[title="Run script (Ctrl+Enter)"]</code>
+                    </p>
                   </div>
-                )}
-              </>
-            )}
-            
-            {/* Earth Engine Input fields based on active tab */}
-            {activeSection === 'earthEngine' && (
-              <>
-                {activeTab === 'runCode' && (
-                  <div>
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-                      <h3 className="text-sm font-medium text-blue-800 mb-1">Run Button Test Options</h3>
-                      <p className="text-xs text-gray-600 mb-3">
-                        This tool clicks the "Run" button in the Google Earth Engine Code Editor.
-                        Make sure you have the Earth Engine Code Editor open in a browser tab.
-                      </p>
-                      <div className="flex gap-2 mb-2">
-                        <button
-                          onClick={async () => {
-                            setLoading(true);
-                            setError(null);
-                            try {
-                              // Run the test with empty code - this will just click the run button
-                              const testResult = await runCode("");
-                              setResult(testResult);
-                            } catch (err) {
-                              console.error('Test error:', err);
-                              setError(err instanceof Error ? err.message : 'An unknown error occurred');
-                              setResult(null);
-                            } finally {
-                              setLoading(false);
-                            }
-                          }}
-                          disabled={loading}
-                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-300"
-                        >
-                          {loading ? 'Running...' : 'Just Click Run Button'}
-                        </button>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          ← Click this to execute current code in the editor without changing it
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="border-t pt-4 mt-4">
-                      <h3 className="text-sm font-medium mb-2">Or Run Custom Code:</h3>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Earth Engine Code
-                      </label>
-                      <textarea
-                        value={eeCode}
-                        onChange={(e) => setEeCode(e.target.value)}
-                        className="w-full p-2 border rounded-md font-mono text-sm"
-                        rows={8}
-                        placeholder="Enter Earth Engine code"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Note: This option is not currently working correctly. Use "Just Click Run Button" option above instead.
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {activeTab === 'inspectMap' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Latitude
-                      </label>
-                      <input
-                        type="number"
+                </div>
+              )}
+              
+              {/* Inspect Map Inputs */}
+              {activeTab === 'inspectMap' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="block">
+                      <span className="text-gray-700">Latitude</span>
+                      <input 
+                        type="number" 
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                         value={eeLatitude}
                         onChange={(e) => setEeLatitude(parseFloat(e.target.value))}
-                        className="w-full p-2 border rounded-md"
-                        placeholder="Enter latitude (-90 to 90)"
-                        min="-90"
-                        max="90"
-                        step="0.0001"
+                        step="0.00001"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Longitude
-                      </label>
-                      <input
-                        type="number"
+                    </label>
+                    <label className="block">
+                      <span className="text-gray-700">Longitude</span>
+                      <input 
+                        type="number" 
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                         value={eeLongitude}
                         onChange={(e) => setEeLongitude(parseFloat(e.target.value))}
-                        className="w-full p-2 border rounded-md"
-                        placeholder="Enter longitude (-180 to 180)"
-                        min="-180"
-                        max="180"
-                        step="0.0001"
+                        step="0.00001"
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+              
+              {/* Edit Script Inputs */}
+              {activeTab === 'editScript' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Script ID</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={eeScriptId}
+                      onChange={(e) => setEeScriptId(e.target.value)}
+                      placeholder="e.g., users/username/scriptname"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-gray-700">Script Content</span>
+                    <textarea 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={eeScriptContent}
+                      onChange={(e) => setEeScriptContent(e.target.value)}
+                      rows={6}
+                      placeholder="// Enter Earth Engine code here"
+                    />
+                  </label>
+                </div>
+              )}
+              
+              {/* Get Map Layers - No inputs needed */}
+              {activeTab === 'getMapLayers' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Retrieves information about the current layers in the Earth Engine map panel.
+                    This includes layer names, visibility status, and opacity settings.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Note: This tool works best when the layers panel is visible in the Earth Engine interface.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Browser Tools Input Fields */}
+          {activeSection === 'browser' && (
+            <div className="mb-4">
+              {/* Screenshot Inputs */}
+              {activeTab === 'screenshot' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Takes a screenshot of the currently active tab. No additional parameters needed.
+                  </p>
+                  
+                  {screenshotImage && (
+                    <div className="mt-4 border rounded p-2">
+                      <p className="text-sm font-medium mb-2">Screenshot Preview:</p>
+                      <img 
+                        src={screenshotImage} 
+                        alt="Screenshot preview" 
+                        className="max-w-full h-auto border"
+                        style={{ maxHeight: '200px' }}
                       />
                     </div>
-                  </>
-                )}
-                
-                {activeTab === 'checkConsole' && (
-                  <div className="p-3 bg-gray-100 rounded-md">
-                    <p className="text-sm">This tool will check the Earth Engine console for errors and warnings.</p>
-                    <p className="text-xs text-gray-500 mt-1">Make sure to have the Earth Engine page open in a tab.</p>
-                  </div>
-                )}
-                
-                {activeTab === 'getTasks' && (
-                  <div className="p-3 bg-gray-100 rounded-md">
-                    <p className="text-sm">This tool will retrieve all current tasks from Earth Engine.</p>
-                    <p className="text-xs text-gray-500 mt-1">Make sure to have the Earth Engine page open in a tab.</p>
-                  </div>
-                )}
-                
-                {activeTab === 'editScript' && (
-                  <>
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
-                      <h3 className="text-sm font-medium text-blue-800 mb-1">Edit Script Instructions</h3>
-                      <p className="text-xs text-gray-600 mb-2">
-                        This tool replaces the content of the current script in the Google Earth Engine Code Editor.
-                        Make sure you have the Earth Engine Code Editor open in a browser tab.
-                      </p>
-                      <p className="text-xs text-gray-600 mb-2">
-                        <strong>Note:</strong> The Script ID is mostly for future functionality. Currently, this tool
-                        just replaces the content in the active editor regardless of the Script ID.
-                      </p>
-                      <div className="flex gap-2 mb-2">
-                        <button
-                          onClick={async () => {
-                            setLoading(true);
-                            setError(null);
-                            try {
-                              // Use a simple test script
-                              const testCode = `// Earth Engine test script - ${new Date().toISOString()}
-var image = ee.Image(1);
-Map.centerObject(image);
-Map.addLayer(image, {min: 0, max: 1}, 'Constant Image');
-print('Script updated by Earth Agent SDK');`;
-                              
-                              setEeScriptContent(testCode);
-                              const testResult = await editScript(eeScriptId, testCode);
-                              setResult(testResult);
-                            } catch (err) {
-                              console.error('Test error:', err);
-                              setError(err instanceof Error ? err.message : 'An unknown error occurred');
-                              setResult(null);
-                            } finally {
-                              setLoading(false);
-                            }
-                          }}
-                          disabled={loading}
-                          className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-300"
-                        >
-                          {loading ? 'Running...' : 'Insert Test Script'}
-                        </button>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          ← Click to insert a simple test script in the Earth Engine editor
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="border-t pt-4 mt-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Script ID (currently just for reference)
-                        </label>
-                        <input
-                          type="text"
-                          value={eeScriptId}
-                          onChange={(e) => setEeScriptId(e.target.value)}
-                          className="w-full p-2 border rounded-md"
-                          placeholder="Enter script ID (e.g., users/username/scriptname)"
-                        />
-                      </div>
-                      <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Script Content
-                        </label>
-                        <textarea
-                          value={eeScriptContent}
-                          onChange={(e) => setEeScriptContent(e.target.value)}
-                          className="w-full p-2 border rounded-md font-mono text-sm"
-                          rows={8}
-                          placeholder="Enter Earth Engine code for the script"
-                        />
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-xs text-gray-500">
-                          Enter the Earth Engine code you want to insert into the current editor.
-                          This will replace any existing code in the editor.
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-            
-            <div>
-              <button
-                onClick={runTest}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
-              >
-                {loading ? 'Running...' : 'Run Test'}
-              </button>
-            </div>
-            
-            {error && (
-              <div className="mt-4 p-4 bg-red-100 text-red-800 rounded-md">
-                <p className="font-bold">Error:</p>
-                <p>{error}</p>
-                {environment?.useBackgroundProxy && (
-                  <p className="mt-2 text-sm">
-                    <strong>Note:</strong> Requests are being proxied through the background script.
-                    Check the background script console for more detailed error information.
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {result && (
-              <div className="mt-4">
-                <h3 className="font-bold mb-2">Result:</h3>
-                <div className="max-h-60 overflow-auto p-3 bg-gray-100 rounded-md">
-                  <pre className="text-xs whitespace-pre-wrap">
-                    {typeof result === 'object' ? JSON.stringify(result, null, 2) : result}
-                  </pre>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+              
+              {/* Click Inputs */}
+              {activeTab === 'click' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Element Selector</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={elementSelector}
+                      onChange={(e) => setElementSelector(e.target.value)}
+                      placeholder="e.g., button.run-button, #submit-button"
+                    />
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: <code>button.goog-button.run-button[title="Run script (Ctrl+Enter)"]</code>
+                  </p>
+                </div>
+              )}
+              
+              {/* Type Inputs */}
+              {activeTab === 'type' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Element Selector</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={elementSelector}
+                      onChange={(e) => setElementSelector(e.target.value)}
+                      placeholder="e.g., input#search, textarea.code-editor"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-gray-700">Text to Type</span>
+                    <textarea 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      rows={3}
+                      placeholder="Enter text to type into the element"
+                    />
+                  </label>
+                  <div className="block">
+                    <label className="inline-flex items-center">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                        checked={appendText}
+                        onChange={(e) => setAppendText(e.target.checked)}
+                      />
+                      <span className="ml-2 text-gray-700">Append to existing text (instead of replacing)</span>
+                    </label>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    For the Earth Engine code editor, use: <code>.ace_text-input</code> or the ace editor instance
+                  </p>
+                </div>
+              )}
+              
+              {/* Get Element Inputs */}
+              {activeTab === 'getElement' && (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-gray-700">Element Selector</span>
+                    <input 
+                      type="text" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={elementSelector}
+                      onChange={(e) => setElementSelector(e.target.value)}
+                      placeholder="e.g., button, .class-name, #element-id"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-gray-700">Result Limit</span>
+                    <input 
+                      type="number"
+                      min="1"
+                      max="20" 
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                      value={elementLimit}
+                      onChange={(e) => setElementLimit(parseInt(e.target.value))}
+                    />
+                  </label>
+                  <p className="text-sm text-gray-600">
+                    This tool will return information about the elements matching the selector, including attributes, visibility status, and position.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <button
+            onClick={runTest}
+            disabled={loading}
+            className={`mt-4 px-4 py-2 rounded-md text-white font-medium ${
+              loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
+            }`}
+          >
+            {loading ? 'Running...' : 'Run Test'}
+          </button>
+          
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-500">{error}</p>
+            </div>
+          )}
+          
+          {result && (
+            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <h3 className="font-medium mb-2">Result:</h3>
+              <pre className="bg-gray-800 text-white p-3 rounded text-sm overflow-auto" style={{ maxHeight: '200px' }}>
+                {typeof result === 'object' 
+                  ? JSON.stringify(result, (key, value) => {
+                      // For screenshot responses, truncate the potentially long base64 data
+                      if (key === 'screenshotData' && typeof value === 'string' && value.length > 100) {
+                        return value.substring(0, 100) + '... [truncated, full length: ' + value.length + ' chars]';
+                      }
+                      return value;
+                    }, 2)
+                  : String(result)}
+              </pre>
+              {activeTab === 'browser' && activeSection === 'screenshot' && 
+               typeof result === 'object' && result.success && result.screenshotData && (
+                <div className="mt-3">
+                  <h4 className="font-medium mb-2">Screenshot Preview:</h4>
+                  <img 
+                    src={result.screenshotData} 
+                    alt="Captured screenshot" 
+                    className="max-w-full border border-gray-300"
+                    style={{ maxHeight: '300px' }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

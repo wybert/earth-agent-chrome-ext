@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
-import { runCode, editScript } from '../lib/tools/earth-engine';
+import { runCode, editScript, getMapLayers } from '../lib/tools/earth-engine';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 
 const EarthEngineAgent = () => {
@@ -14,7 +14,8 @@ const EarthEngineAgent = () => {
   const [code, setCode] = useState('');
   const [result, setResult] = useState('');
   const [scriptId, setScriptId] = useState('');
-  const [activeTab, setActiveTab] = useState<'resolve' | 'docs' | 'generate' | 'run' | 'edit'>('resolve');
+  const [activeTab, setActiveTab] = useState<'resolve' | 'docs' | 'generate' | 'run' | 'edit' | 'layers'>('resolve');
+  const [layers, setLayers] = useState<any[]>([]);
 
   // ... existing code ...
 
@@ -29,6 +30,38 @@ const EarthEngineAgent = () => {
       setActiveTab('run');
     } catch (err) {
       setError(`Error editing script: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleRunCurrentScript = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // Run the current script in the Earth Engine editor
+      const response = await runCode('');
+      setResult(JSON.stringify(response, null, 2));
+    } catch (err) {
+      setError(`Error running script: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGetMapLayers = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // Get information about the current map layers
+      const response = await getMapLayers();
+      setResult(JSON.stringify(response, null, 2));
+      
+      if (response.success && response.layers) {
+        setLayers(response.layers);
+      }
+    } catch (err) {
+      setError(`Error getting map layers: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -70,6 +103,12 @@ const EarthEngineAgent = () => {
           onClick={() => setActiveTab('edit')}
         >
           5. Edit Script
+        </Button>
+        <Button
+          variant={activeTab === 'layers' ? 'default' : 'outline'}
+          onClick={() => setActiveTab('layers')}
+        >
+          6. Map Layers
         </Button>
       </div>
 
@@ -122,7 +161,7 @@ const EarthEngineAgent = () => {
             )}
             {result && (
               <pre className="p-2 bg-gray-100 rounded overflow-auto max-h-96">
-                {result}
+                {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
               </pre>
             )}
           </CardContent>
@@ -136,6 +175,61 @@ const EarthEngineAgent = () => {
               </Button>
             )}
           </CardFooter>
+        </Card>
+      )}
+
+      {activeTab === 'layers' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Map Layers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <Button onClick={handleGetMapLayers} disabled={loading}>
+                {loading ? 'Loading...' : 'Get Map Layers'}
+              </Button>
+            </div>
+            
+            {error && (
+              <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">
+                {error}
+              </div>
+            )}
+            
+            {layers.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-lg font-medium mb-2">Layer Information:</h3>
+                <div className="overflow-auto max-h-96 border rounded">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visible</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opacity</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {layers.map((layer, index) => (
+                        <tr key={layer.id || index}>
+                          <td className="px-6 py-4 whitespace-nowrap">{layer.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{layer.visible ? 'Yes' : 'No'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{Math.round(layer.opacity * 100)}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap">{layer.type || 'N/A'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {result && (
+              <pre className="p-2 bg-gray-100 rounded overflow-auto max-h-96">
+                {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
+              </pre>
+            )}
+          </CardContent>
         </Card>
       )}
     </div>

@@ -4,7 +4,7 @@
  * to be easily called by an AI assistant agent
  */
 
-import { runCode, inspectMap, checkConsole, getTasks, editScript } from './index';
+import { runCode, inspectMap, checkConsole, getTasks, editScript, getMapLayers } from './index';
 import { detectEnvironment } from '@/lib/utils';
 
 /**
@@ -185,6 +185,34 @@ export async function editEarthEngineScript(scriptId: string, code: string) {
     return {
       success: false,
       message: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+    };
+  }
+}
+
+/**
+ * Gets information about map layers in Earth Engine
+ * Simplified wrapper for AI agents
+ * 
+ * @returns Object with layer information
+ */
+export async function getEarthEngineMapLayers() {
+  try {
+    // Get map layers from Earth Engine
+    const result = await getMapLayers();
+    
+    return {
+      success: result.success,
+      layers: result.layers || [],
+      message: result.success 
+        ? result.layers && result.layers.length > 0
+          ? `Found ${result.layers.length} map layers in Earth Engine`
+          : 'No map layers found in Earth Engine'
+        : `Map layer retrieval failed: ${result.error || 'Unknown error'}`
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Error getting Earth Engine map layers: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 } 

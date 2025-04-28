@@ -5919,6 +5919,9 @@ video {
     padding-right: 2rem;
   }
 }
+.visible {
+  visibility: visible;
+}
 .static {
   position: static;
 }
@@ -5963,6 +5966,9 @@ video {
 }
 .mb-4 {
   margin-bottom: 1rem;
+}
+.ml-2 {
+  margin-left: 0.5rem;
 }
 .ml-auto {
   margin-left: auto;
@@ -6021,6 +6027,9 @@ video {
 .h-3 {
   height: 0.75rem;
 }
+.h-32 {
+  height: 8rem;
+}
 .h-4 {
   height: 1rem;
 }
@@ -6033,11 +6042,14 @@ video {
 .h-9 {
   height: 2.25rem;
 }
+.h-auto {
+  height: auto;
+}
 .h-full {
   height: 100%;
 }
-.max-h-60 {
-  max-height: 15rem;
+.max-h-96 {
+  max-height: 24rem;
 }
 .max-h-\\[90vh\\] {
   max-height: 90vh;
@@ -6079,11 +6091,17 @@ video {
   width: -moz-max-content;
   width: max-content;
 }
+.min-w-full {
+  min-width: 100%;
+}
 .max-w-3xl {
   max-width: 48rem;
 }
 .max-w-\\[98\\%\\] {
   max-width: 98%;
+}
+.max-w-full {
+  max-width: 100%;
 }
 .flex-1 {
   flex: 1 1 0%;
@@ -6100,6 +6118,9 @@ video {
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
 .touch-none {
   touch-action: none;
 }
@@ -6111,11 +6132,17 @@ video {
 .resize-none {
   resize: none;
 }
+.grid-cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .grid-rows-\\[auto\\2c 1fr\\2c auto\\] {
   grid-template-rows: auto 1fr auto;
 }
 .flex-col {
   flex-direction: column;
+}
+.flex-wrap {
+  flex-wrap: wrap;
 }
 .items-center {
   align-items: center;
@@ -6132,6 +6159,9 @@ video {
 .gap-2 {
   gap: 0.5rem;
 }
+.gap-4 {
+  gap: 1rem;
+}
 .space-x-2 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 0;
   margin-right: calc(0.5rem * var(--tw-space-x-reverse));
@@ -6142,10 +6172,24 @@ video {
   margin-top: calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(0.375rem * var(--tw-space-y-reverse));
 }
+.space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.75rem * var(--tw-space-y-reverse));
+}
 .space-y-4 > :not([hidden]) ~ :not([hidden]) {
   --tw-space-y-reverse: 0;
   margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+}
+.divide-y > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-y-reverse: 0;
+  border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
+  border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
+}
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-divide-opacity, 1));
 }
 .overflow-auto {
   overflow: auto;
@@ -6155,6 +6199,11 @@ video {
 }
 .overflow-x-auto {
   overflow-x: auto;
+}
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .whitespace-nowrap {
   white-space: nowrap;
@@ -6198,16 +6247,24 @@ video {
 .border-t {
   border-top-width: 1px;
 }
-.border-blue-100 {
-  --tw-border-opacity: 1;
-  border-color: rgb(219 234 254 / var(--tw-border-opacity, 1));
-}
 .border-gray-200 {
   --tw-border-opacity: 1;
   border-color: rgb(229 231 235 / var(--tw-border-opacity, 1));
 }
+.border-gray-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+}
 .border-input {
   border-color: hsl(var(--input));
+}
+.border-red-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(254 202 202 / var(--tw-border-opacity, 1));
+}
+.border-yellow-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(254 240 138 / var(--tw-border-opacity, 1));
 }
 .border-l-transparent {
   border-left-color: transparent;
@@ -6222,9 +6279,9 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity, 1));
 }
-.bg-blue-50 {
+.bg-blue-500 {
   --tw-bg-opacity: 1;
-  background-color: rgb(239 246 255 / var(--tw-bg-opacity, 1));
+  background-color: rgb(59 130 246 / var(--tw-bg-opacity, 1));
 }
 .bg-blue-600 {
   --tw-bg-opacity: 1;
@@ -6250,6 +6307,14 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
 }
+.bg-gray-400 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(156 163 175 / var(--tw-bg-opacity, 1));
+}
+.bg-gray-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(249 250 251 / var(--tw-bg-opacity, 1));
+}
 .bg-gray-800 {
   --tw-bg-opacity: 1;
   background-color: rgb(31 41 55 / var(--tw-bg-opacity, 1));
@@ -6257,10 +6322,6 @@ video {
 .bg-gray-900 {
   --tw-bg-opacity: 1;
   background-color: rgb(17 24 39 / var(--tw-bg-opacity, 1));
-}
-.bg-green-600 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(22 163 74 / var(--tw-bg-opacity, 1));
 }
 .bg-muted {
   background-color: hsl(var(--muted));
@@ -6278,12 +6339,20 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(254 226 226 / var(--tw-bg-opacity, 1));
 }
+.bg-red-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 242 242 / var(--tw-bg-opacity, 1));
+}
 .bg-secondary {
   background-color: hsl(var(--secondary));
 }
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+.bg-yellow-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(254 252 232 / var(--tw-bg-opacity, 1));
 }
 .bg-opacity-50 {
   --tw-bg-opacity: 0.5;
@@ -6325,6 +6394,10 @@ video {
   padding-left: 1rem;
   padding-right: 1rem;
 }
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
 .px-8 {
   padding-left: 2rem;
   padding-right: 2rem;
@@ -6336,6 +6409,10 @@ video {
 .py-2 {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
+}
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .py-4 {
   padding-top: 1rem;
@@ -6350,8 +6427,8 @@ video {
 .pt-0 {
   padding-top: 0px;
 }
-.pt-4 {
-  padding-top: 1rem;
+.text-left {
+  text-align: left;
 }
 .font-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -6389,15 +6466,17 @@ video {
 .font-semibold {
   font-weight: 600;
 }
+.uppercase {
+  text-transform: uppercase;
+}
 .leading-none {
   line-height: 1;
 }
 .tracking-tight {
   letter-spacing: -0.025em;
 }
-.text-blue-800 {
-  --tw-text-opacity: 1;
-  color: rgb(30 64 175 / var(--tw-text-opacity, 1));
+.tracking-wider {
+  letter-spacing: 0.05em;
 }
 .text-card-foreground {
   color: hsl(var(--card-foreground));
@@ -6431,6 +6510,10 @@ video {
   --tw-text-opacity: 1;
   color: rgb(22 163 74 / var(--tw-text-opacity, 1));
 }
+.text-indigo-600 {
+  --tw-text-opacity: 1;
+  color: rgb(79 70 229 / var(--tw-text-opacity, 1));
+}
 .text-muted-foreground {
   color: hsl(var(--muted-foreground));
 }
@@ -6439,6 +6522,10 @@ video {
 }
 .text-primary-foreground {
   color: hsl(var(--primary-foreground));
+}
+.text-red-500 {
+  --tw-text-opacity: 1;
+  color: rgb(239 68 68 / var(--tw-text-opacity, 1));
 }
 .text-red-600 {
   --tw-text-opacity: 1;
@@ -6454,6 +6541,10 @@ video {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+}
+.text-yellow-800 {
+  --tw-text-opacity: 1;
+  color: rgb(133 77 14 / var(--tw-text-opacity, 1));
 }
 .underline-offset-4 {
   text-underline-offset: 4px;
@@ -6564,9 +6655,9 @@ video {
   background-color: hsl(var(--accent));
 }
 
-.hover\\:bg-blue-700:hover {
+.hover\\:bg-blue-600:hover {
   --tw-bg-opacity: 1;
-  background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
+  background-color: rgb(37 99 235 / var(--tw-bg-opacity, 1));
 }
 
 .hover\\:bg-destructive\\/90:hover {
@@ -6586,11 +6677,6 @@ video {
 .hover\\:bg-gray-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
-}
-
-.hover\\:bg-green-700:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(21 128 61 / var(--tw-bg-opacity, 1));
 }
 
 .hover\\:bg-muted:hover {
@@ -6616,6 +6702,26 @@ video {
 
 .hover\\:underline:hover {
   text-decoration-line: underline;
+}
+
+.focus\\:border-indigo-300:focus {
+  --tw-border-opacity: 1;
+  border-color: rgb(165 180 252 / var(--tw-border-opacity, 1));
+}
+
+.focus\\:ring:focus {
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+}
+
+.focus\\:ring-indigo-200:focus {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(199 210 254 / var(--tw-ring-opacity, 1));
+}
+
+.focus\\:ring-opacity-50:focus {
+  --tw-ring-opacity: 0.5;
 }
 
 .focus-visible\\:outline-none:focus-visible {
@@ -6650,16 +6756,6 @@ video {
   cursor: not-allowed;
 }
 
-.disabled\\:bg-blue-300:disabled {
-  --tw-bg-opacity: 1;
-  background-color: rgb(147 197 253 / var(--tw-bg-opacity, 1));
-}
-
-.disabled\\:bg-green-300:disabled {
-  --tw-bg-opacity: 1;
-  background-color: rgb(134 239 172 / var(--tw-bg-opacity, 1));
-}
-
 .disabled\\:opacity-50:disabled {
   opacity: 0.5;
 }
@@ -6688,7 +6784,7 @@ video {
 
 .\\[\\&_svg\\]\\:shrink-0 svg {
   flex-shrink: 0;
-} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
+} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,qBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -47600,8 +47696,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/lib/tools/context7/agentTools */ "./src/lib/tools/context7/agentTools.ts");
 /* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
-/* harmony import */ var _lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/tools/earth-engine */ "./src/lib/tools/earth-engine/index.ts");
+/* harmony import */ var _lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @/lib/tools/earth-engine/agentTools */ "./src/lib/tools/earth-engine/agentTools.ts");
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/* harmony import */ var _lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @/lib/tools/browser */ "./src/lib/tools/browser/index.ts");
+
 
 
 
@@ -47613,6 +47711,7 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [query, setQuery] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Earth Engine');
     const [libraryId, setLibraryId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
     const [topic, setTopic] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Landsat');
+    const [tokens, setTokens] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('5000');
     const [result, setResult] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
     const [loading, setLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [error, setError] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
@@ -47623,6 +47722,12 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [eeLongitude, setEeLongitude] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(-122.4194);
     const [eeScriptId, setEeScriptId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('users/example/myScript');
     const [eeScriptContent, setEeScriptContent] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('// Earth Engine script\nvar image = ee.Image(1);\nprint(image);');
+    // Browser tools state
+    const [elementSelector, setElementSelector] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('button.goog-button.run-button[title="Run script (Ctrl+Enter)"]');
+    const [inputText, setInputText] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('Test text');
+    const [appendText, setAppendText] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
+    const [elementLimit, setElementLimit] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(5);
+    const [screenshotImage, setScreenshotImage] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_4__.detectEnvironment)());
     }, []);
@@ -47635,60 +47740,77 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
             let testResult;
             // Context7 tools
             if (activeSection === 'context7') {
-                switch (activeTab) {
-                    case 'resolveLibraryId':
-                        testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
-                        // If library ID was found, update the libraryId state
-                        if (testResult.success && testResult.libraryId) {
-                            setLibraryId(testResult.libraryId);
-                        }
-                        break;
-                    case 'getDocumentation':
-                        if (!libraryId) {
-                            throw new Error('Library ID is required for getDocumentation');
-                        }
-                        testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
-                        break;
-                    case 'searchEarthEngineDatasets':
-                        testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
-                        // If library ID was found, update the libraryId state
-                        if (testResult.success && testResult.libraryId) {
-                            setLibraryId(testResult.libraryId);
-                        }
-                        break;
-                    case 'getEarthEngineDocumentation':
-                        if (!libraryId) {
-                            throw new Error('Library ID is required for getEarthEngineDocumentation');
-                        }
-                        testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
-                        break;
-                    case 'getEarthEngineDatasetInfo':
-                        testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
-                        break;
-                    default:
-                        testResult = { error: 'Unknown test type' };
+                if (activeTab === 'resolveLibraryId') {
+                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.resolveLibraryId)(query);
+                }
+                else if (activeTab === 'getDocumentation') {
+                    testResult = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)(libraryId, topic);
+                }
+                else if (activeTab === 'searchEarthEngineDatasets') {
+                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.searchEarthEngineDatasets)(query);
+                }
+                else if (activeTab === 'getEarthEngineDocumentation') {
+                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDocumentation)(libraryId, topic);
+                }
+                else if (activeTab === 'getEarthEngineDatasetInfo') {
+                    testResult = await (0,_lib_tools_context7_agentTools__WEBPACK_IMPORTED_MODULE_1__.getEarthEngineDatasetInfo)(topic);
                 }
             }
             // Earth Engine tools
             else if (activeSection === 'earthEngine') {
+                if (activeTab === 'runCode') {
+                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.runEarthEngineCode)(eeCode);
+                }
+                else if (activeTab === 'runButton') {
+                    // Use the browser click function to click the Earth Engine run button
+                    testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({
+                        selector: 'button.goog-button.run-button[title="Run script (Ctrl+Enter)"]'
+                    });
+                }
+                else if (activeTab === 'inspectMap') {
+                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.inspectEarthEngineMap)(eeLatitude, eeLongitude);
+                }
+                else if (activeTab === 'checkConsole') {
+                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.checkEarthEngineConsole)();
+                }
+                else if (activeTab === 'getTasks') {
+                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.getEarthEngineTasks)();
+                }
+                else if (activeTab === 'editScript') {
+                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.editEarthEngineScript)(eeScriptId, eeScriptContent);
+                }
+                else if (activeTab === 'getMapLayers') {
+                    testResult = await (0,_lib_tools_earth_engine_agentTools__WEBPACK_IMPORTED_MODULE_3__.getEarthEngineMapLayers)();
+                }
+            }
+            // Browser automation tools
+            else if (activeSection === 'browser') {
                 switch (activeTab) {
-                    case 'runCode':
-                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.runCode)(eeCode);
+                    case 'screenshot':
+                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.screenshot)();
+                        // If screenshot was successful, set the image data
+                        if (testResult.success && testResult.screenshotData) {
+                            setScreenshotImage(testResult.screenshotData);
+                        }
                         break;
-                    case 'inspectMap':
-                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.inspectMap)({ lat: eeLatitude, lng: eeLongitude });
+                    case 'click':
+                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({ selector: elementSelector });
                         break;
-                    case 'checkConsole':
-                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.checkConsole)();
+                    case 'type':
+                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.typeText)({
+                            selector: elementSelector,
+                            text: inputText,
+                            append: appendText
+                        });
                         break;
-                    case 'getTasks':
-                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.getTasks)();
-                        break;
-                    case 'editScript':
-                        testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.editScript)(eeScriptId, eeScriptContent);
+                    case 'getElement':
+                        testResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.getElement)({
+                            selector: elementSelector,
+                            limit: elementLimit
+                        });
                         break;
                     default:
-                        testResult = { error: 'Unknown Earth Engine test type' };
+                        testResult = { error: 'Unknown browser tool test type' };
                 }
             }
             setResult(testResult);
@@ -47731,7 +47853,11 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(SectionTabButton, { active: activeSection === 'earthEngine', onClick: () => {
                             setActiveSection('earthEngine');
                             setActiveTab('runCode');
-                        } }, "Earth Engine Tools")),
+                        } }, "Earth Engine Tools"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(SectionTabButton, { active: activeSection === 'browser', onClick: () => {
+                            setActiveSection('browser');
+                            setActiveTab('screenshot');
+                        } }, "Browser Tools")),
                 activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'resolveLibraryId', onClick: () => setActiveTab('resolveLibraryId') }, "Resolve Library ID"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getDocumentation', onClick: () => setActiveTab('getDocumentation') }, "Get Documentation"),
@@ -47740,120 +47866,135 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getEarthEngineDatasetInfo', onClick: () => setActiveTab('getEarthEngineDatasetInfo') }, "Get Dataset Info"))),
                 activeSection === 'earthEngine' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'runCode', onClick: () => setActiveTab('runCode') }, "Run Code"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'runButton', onClick: () => setActiveTab('runButton') }, "Run Button Test"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'inspectMap', onClick: () => setActiveTab('inspectMap') }, "Inspect Map"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'checkConsole', onClick: () => setActiveTab('checkConsole') }, "Check Console"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getTasks', onClick: () => setActiveTab('getTasks') }, "Get Tasks"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'editScript', onClick: () => setActiveTab('editScript') }, "Edit Script"))),
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4" },
-                    activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
-                        (activeTab === 'resolveLibraryId' || activeTab === 'searchEarthEngineDatasets') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Query"),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: query, onChange: (e) => setQuery(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter search query" }))),
-                        (activeTab === 'getDocumentation' || activeTab === 'getEarthEngineDocumentation') && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Library ID"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: libraryId, onChange: (e) => setLibraryId(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter library ID" })),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" })))),
-                        activeTab === 'getEarthEngineDatasetInfo' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Topic"),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: topic, onChange: (e) => setTopic(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter topic" }))))),
-                    activeSection === 'earthEngine' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
-                        activeTab === 'runCode' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md" },
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "text-sm font-medium text-blue-800 mb-1" }, "Run Button Test Options"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-600 mb-3" }, "This tool clicks the \"Run\" button in the Google Earth Engine Code Editor. Make sure you have the Earth Engine Code Editor open in a browser tab."),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2 mb-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: async () => {
-                                            setLoading(true);
-                                            setError(null);
-                                            try {
-                                                // Run the test with empty code - this will just click the run button
-                                                const testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.runCode)("");
-                                                setResult(testResult);
-                                            }
-                                            catch (err) {
-                                                console.error('Test error:', err);
-                                                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-                                                setResult(null);
-                                            }
-                                            finally {
-                                                setLoading(false);
-                                            }
-                                        }, disabled: loading, className: "px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-300" }, loading ? 'Running...' : 'Just Click Run Button'),
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "text-xs text-gray-500 flex items-center" }, "\u2190 Click this to execute current code in the editor without changing it"))),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "border-t pt-4 mt-4" },
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "text-sm font-medium mb-2" }, "Or Run Custom Code:"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Earth Engine Code"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { value: eeCode, onChange: (e) => setEeCode(e.target.value), className: "w-full p-2 border rounded-md font-mono text-sm", rows: 8, placeholder: "Enter Earth Engine code" }),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, "Note: This option is not currently working correctly. Use \"Just Click Run Button\" option above instead.")))),
-                        activeTab === 'inspectMap' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Latitude"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", value: eeLatitude, onChange: (e) => setEeLatitude(parseFloat(e.target.value)), className: "w-full p-2 border rounded-md", placeholder: "Enter latitude (-90 to 90)", min: "-90", max: "90", step: "0.0001" })),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Longitude"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", value: eeLongitude, onChange: (e) => setEeLongitude(parseFloat(e.target.value)), className: "w-full p-2 border rounded-md", placeholder: "Enter longitude (-180 to 180)", min: "-180", max: "180", step: "0.0001" })))),
-                        activeTab === 'checkConsole' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-3 bg-gray-100 rounded-md" },
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm" }, "This tool will check the Earth Engine console for errors and warnings."),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, "Make sure to have the Earth Engine page open in a tab."))),
-                        activeTab === 'getTasks' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "p-3 bg-gray-100 rounded-md" },
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm" }, "This tool will retrieve all current tasks from Earth Engine."),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, "Make sure to have the Earth Engine page open in a tab."))),
-                        activeTab === 'editScript' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md" },
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "text-sm font-medium text-blue-800 mb-1" }, "Edit Script Instructions"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-600 mb-2" }, "This tool replaces the content of the current script in the Google Earth Engine Code Editor. Make sure you have the Earth Engine Code Editor open in a browser tab."),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-600 mb-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Note:"),
-                                    " The Script ID is mostly for future functionality. Currently, this tool just replaces the content in the active editor regardless of the Script ID."),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2 mb-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: async () => {
-                                            setLoading(true);
-                                            setError(null);
-                                            try {
-                                                // Use a simple test script
-                                                const testCode = `// Earth Engine test script - ${new Date().toISOString()}
-var image = ee.Image(1);
-Map.centerObject(image);
-Map.addLayer(image, {min: 0, max: 1}, 'Constant Image');
-print('Script updated by Earth Agent SDK');`;
-                                                setEeScriptContent(testCode);
-                                                const testResult = await (0,_lib_tools_earth_engine__WEBPACK_IMPORTED_MODULE_3__.editScript)(eeScriptId, testCode);
-                                                setResult(testResult);
-                                            }
-                                            catch (err) {
-                                                console.error('Test error:', err);
-                                                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-                                                setResult(null);
-                                            }
-                                            finally {
-                                                setLoading(false);
-                                            }
-                                        }, disabled: loading, className: "px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:bg-green-300" }, loading ? 'Running...' : 'Insert Test Script'),
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "text-xs text-gray-500 flex items-center" }, "\u2190 Click to insert a simple test script in the Earth Engine editor"))),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "border-t pt-4 mt-4" },
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Script ID (currently just for reference)"),
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: eeScriptId, onChange: (e) => setEeScriptId(e.target.value), className: "w-full p-2 border rounded-md", placeholder: "Enter script ID (e.g., users/username/scriptname)" })),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-3" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Script Content"),
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { value: eeScriptContent, onChange: (e) => setEeScriptContent(e.target.value), className: "w-full p-2 border rounded-md font-mono text-sm", rows: 8, placeholder: "Enter Earth Engine code for the script" })),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500" }, "Enter the Earth Engine code you want to insert into the current editor. This will replace any existing code in the editor."))))))),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: runTest, disabled: loading, className: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300" }, loading ? 'Running...' : 'Run Test')),
-                    error && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 p-4 bg-red-100 text-red-800 rounded-md" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "font-bold" }, "Error:"),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null, error),
-                        environment?.useBackgroundProxy && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-2 text-sm" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'editScript', onClick: () => setActiveTab('editScript') }, "Edit Script"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getMapLayers', onClick: () => setActiveTab('getMapLayers') }, "Map Layers"))),
+                activeSection === 'browser' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex overflow-x-auto mb-4 space-x-2" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'screenshot', onClick: () => setActiveTab('screenshot') }, "Screenshot"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'click', onClick: () => setActiveTab('click') }, "Click"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'type', onClick: () => setActiveTab('type') }, "Type"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getElement', onClick: () => setActiveTab('getElement') }, "Get Element"))),
+                activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
+                    activeTab === 'resolveLibraryId' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Library Name"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: query, onChange: (e) => setQuery(e.target.value), placeholder: "e.g., Earth Engine, React" })))),
+                    activeTab === 'getDocumentation' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Library ID"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: libraryId, onChange: (e) => setLibraryId(e.target.value), placeholder: "e.g., earthengine/catalog" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Topic (optional)"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: topic, onChange: (e) => setTopic(e.target.value), placeholder: "e.g., Image, FeatureCollection" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Max Tokens (optional)"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: tokens, onChange: (e) => setTokens(e.target.value), placeholder: "e.g., 5000", min: "1000", max: "20000" })))),
+                    activeTab === 'searchEarthEngineDatasets' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Search Query"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: query, onChange: (e) => setQuery(e.target.value), placeholder: "e.g., Landsat, MODIS" })))),
+                    activeTab === 'getEarthEngineDocumentation' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Library ID"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: libraryId, onChange: (e) => setLibraryId(e.target.value), placeholder: "e.g., earthengine/catalog" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Topic (optional)"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: topic, onChange: (e) => setTopic(e.target.value), placeholder: "e.g., Image, FeatureCollection" })))),
+                    activeTab === 'getEarthEngineDatasetInfo' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Dataset Name"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: topic, onChange: (e) => setTopic(e.target.value), placeholder: "e.g., LANDSAT/LC08/C02/T1_L2" })))))),
+                activeSection === 'earthEngine' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
+                    activeTab === 'runCode' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Earth Engine Code"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: eeCode, onChange: (e) => setEeCode(e.target.value), rows: 6, placeholder: "// Enter Earth Engine code here" })))),
+                    activeTab === 'runButton' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
+                            "This will click the \"Run\" button in the Earth Engine Code Editor to execute the current code.",
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("br", null),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("br", null),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Note:"),
-                            " Requests are being proxied through the background script. Check the background script console for more detailed error information.")))),
-                    result && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "font-bold mb-2" }, "Result:"),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "max-h-60 overflow-auto p-3 bg-gray-100 rounded-md" },
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "text-xs whitespace-pre-wrap" }, typeof result === 'object' ? JSON.stringify(result, null, 2) : result)))))))));
+                            " You must have the Earth Engine Code Editor open in your browser. The extension will click the run button in that tab without modifying the code."),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "bg-yellow-50 border border-yellow-200 rounded-md p-3" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-yellow-800 text-sm" },
+                                "The button uses the following CSS selector: ",
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "button.goog-button.run-button[title=\"Run script (Ctrl+Enter)\"]"))))),
+                    activeTab === 'inspectMap' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid grid-cols-2 gap-4" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Latitude"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: eeLatitude, onChange: (e) => setEeLatitude(parseFloat(e.target.value)), step: "0.00001" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Longitude"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: eeLongitude, onChange: (e) => setEeLongitude(parseFloat(e.target.value)), step: "0.00001" }))))),
+                    activeTab === 'editScript' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Script ID"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: eeScriptId, onChange: (e) => setEeScriptId(e.target.value), placeholder: "e.g., users/username/scriptname" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Script Content"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: eeScriptContent, onChange: (e) => setEeScriptContent(e.target.value), rows: 6, placeholder: "// Enter Earth Engine code here" })))),
+                    activeTab === 'getMapLayers' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "Retrieves information about the current layers in the Earth Engine map panel. This includes layer names, visibility status, and opacity settings."),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-500" }, "Note: This tool works best when the layers panel is visible in the Earth Engine interface."))))),
+                activeSection === 'browser' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
+                    activeTab === 'screenshot' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "Takes a screenshot of the currently active tab. No additional parameters needed."),
+                        screenshotImage && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 border rounded p-2" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm font-medium mb-2" }, "Screenshot Preview:"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: screenshotImage, alt: "Screenshot preview", className: "max-w-full h-auto border", style: { maxHeight: '200px' } }))))),
+                    activeTab === 'click' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., button.run-button, #submit-button" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
+                            "Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: ",
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "button.goog-button.run-button[title=\"Run script (Ctrl+Enter)\"]")))),
+                    activeTab === 'type' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., input#search, textarea.code-editor" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Text to Type"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: inputText, onChange: (e) => setInputText(e.target.value), rows: 3, placeholder: "Enter text to type into the element" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "inline-flex items-center" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "checkbox", className: "rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", checked: appendText, onChange: (e) => setAppendText(e.target.checked) }),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "ml-2 text-gray-700" }, "Append to existing text (instead of replacing)"))),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
+                            "For the Earth Engine code editor, use: ",
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, ".ace_text-input"),
+                            " or the ace editor instance"))),
+                    activeTab === 'getElement' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., button, .class-name, #element-id" })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Result Limit"),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", min: "1", max: "20", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementLimit, onChange: (e) => setElementLimit(parseInt(e.target.value)) })),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "This tool will return information about the elements matching the selector, including attributes, visibility status, and position."))))),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: runTest, disabled: loading, className: `mt-4 px-4 py-2 rounded-md text-white font-medium ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}` }, loading ? 'Running...' : 'Run Test'),
+                error && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 p-3 bg-red-50 border border-red-200 rounded-md" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-red-500" }, error))),
+                result && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md" },
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "font-medium mb-2" }, "Result:"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "bg-gray-800 text-white p-3 rounded text-sm overflow-auto", style: { maxHeight: '200px' } }, typeof result === 'object'
+                        ? JSON.stringify(result, (key, value) => {
+                            // For screenshot responses, truncate the potentially long base64 data
+                            if (key === 'screenshotData' && typeof value === 'string' && value.length > 100) {
+                                return value.substring(0, 100) + '... [truncated, full length: ' + value.length + ' chars]';
+                            }
+                            return value;
+                        }, 2)
+                        : String(result)),
+                    activeTab === 'browser' && activeSection === 'screenshot' &&
+                        typeof result === 'object' && result.success && result.screenshotData && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h4", { className: "font-medium mb-2" }, "Screenshot Preview:"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: result.screenshotData, alt: "Captured screenshot", className: "max-w-full border border-gray-300", style: { maxHeight: '300px' } })))))))));
 };
 const TabButton = ({ children, active, onClick }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClick, className: `px-3 py-1 rounded-md whitespace-nowrap ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}` }, children));
 const SectionTabButton = ({ children, active, onClick }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: onClick, className: `px-4 py-2 rounded-md whitespace-nowrap font-medium ${active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}` }, children));
@@ -48052,6 +48193,929 @@ const Textarea = react__WEBPACK_IMPORTED_MODULE_0__.forwardRef(({ className, ...
 });
 Textarea.displayName = "Textarea";
 
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/click.ts":
+/*!****************************************!*\
+  !*** ./src/lib/tools/browser/click.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   click: () => (/* binding */ click),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Click tool for browser automation
+ * This tool clicks an element on the page using a CSS selector
+ *
+ * @returns Promise with success status and result message
+ */
+
+/**
+ * Click an element on the page using a CSS selector
+ *
+ * @param params Object containing the selector to locate the element
+ * @returns Promise with success status and result message/error
+ */
+async function click(params) {
+    try {
+        const { selector } = params;
+        if (!selector) {
+            return {
+                success: false,
+                error: 'Selector is required'
+            };
+        }
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 5000); // 5 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'CLICK',
+                        payload: { selector }
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No active tab found'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid tab'
+                        });
+                        return;
+                    }
+                    // Execute script in the tab to click the element
+                    chrome.tabs.executeScript(tabId, {
+                        code: `
+                (function() {
+                  try {
+                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+                    if (!element) {
+                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
+                    }
+                    
+                    // Scroll element into view
+                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                    
+                    // Simulate a click event
+                    element.click();
+                    
+                    return { success: true, message: 'Element clicked successfully' };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error clicking element: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+                    }, (results) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                            });
+                            return;
+                        }
+                        if (!results || results.length === 0) {
+                            resolve({
+                                success: false,
+                                error: 'No result from tab script execution'
+                            });
+                            return;
+                        }
+                        // Return the result from the executed script
+                        resolve(results[0]);
+                    });
+                });
+            });
+        }
+        // If running directly in page context (content script)
+        if (env.isContentScript && typeof document !== 'undefined') {
+            try {
+                const element = document.querySelector(selector);
+                if (!element) {
+                    return {
+                        success: false,
+                        error: `Element not found with selector: ${selector}`
+                    };
+                }
+                // Scroll element into view
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                // Simulate a click event
+                element.click();
+                return {
+                    success: true,
+                    message: 'Element clicked successfully'
+                };
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+                };
+            }
+        }
+        // If not in a browser environment, we can't click elements
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot click elements in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for clicking elements'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (click);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/getElement.ts":
+/*!*********************************************!*\
+  !*** ./src/lib/tools/browser/getElement.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getElement: () => (/* binding */ getElement)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * GetElement tool for browser automation
+ * This tool retrieves information about elements on the page using a CSS selector
+ *
+ * @returns Promise with success status and element information
+ */
+
+/**
+ * Get information about elements on the page using a CSS selector
+ *
+ * @param params Object containing the selector and optional limit
+ * @returns Promise with success status and element information
+ */
+async function getElement(params) {
+    try {
+        const { selector, limit = 10 } = params;
+        if (!selector) {
+            return {
+                success: false,
+                error: 'Selector is required'
+            };
+        }
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 5000); // 5 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'GET_ELEMENT',
+                        payload: { selector, limit }
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No active tab found'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid tab'
+                        });
+                        return;
+                    }
+                    // Execute script in the tab to get element information
+                    chrome.tabs.executeScript(tabId, {
+                        code: `
+                (function() {
+                  try {
+                    const elements = Array.from(document.querySelectorAll('${selector.replace(/'/g, "\\'")}'));
+                    if (!elements || elements.length === 0) {
+                      return { 
+                        success: false, 
+                        error: 'No elements found with selector: ${selector.replace(/'/g, "\\'")}' 
+                      };
+                    }
+                    
+                    const limit = ${limit};
+                    const limitedElements = elements.slice(0, limit);
+                    
+                    const elementInfos = limitedElements.map(element => {
+                      // Get all attributes as key-value pairs
+                      const attributesObj = {};
+                      for (const attr of element.attributes) {
+                        attributesObj[attr.name] = attr.value;
+                      }
+                      
+                      // Check if element is visible
+                      const style = window.getComputedStyle(element);
+                      const isVisible = style.display !== 'none' && 
+                                       style.visibility !== 'hidden' && 
+                                       style.opacity !== '0';
+                      
+                      // Check if element is enabled (for form controls)
+                      let isEnabled = true;
+                      if (element instanceof HTMLButtonElement || 
+                          element instanceof HTMLInputElement || 
+                          element instanceof HTMLSelectElement || 
+                          element instanceof HTMLTextAreaElement || 
+                          element instanceof HTMLOptionElement) {
+                        isEnabled = !element.disabled;
+                      }
+                      
+                      // Get bounding client rect
+                      const rect = element.getBoundingClientRect();
+                      const boundingRect = {
+                        top: rect.top,
+                        right: rect.right,
+                        bottom: rect.bottom,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height
+                      };
+                      
+                      // Get element value if applicable
+                      let value = undefined;
+                      if (element instanceof HTMLInputElement || 
+                          element instanceof HTMLTextAreaElement || 
+                          element instanceof HTMLSelectElement) {
+                        value = element.value;
+                      }
+                      
+                      return {
+                        tagName: element.tagName.toLowerCase(),
+                        id: element.id || undefined,
+                        className: element.className || undefined,
+                        textContent: element.textContent ? element.textContent.trim() : undefined,
+                        value,
+                        attributes: attributesObj,
+                        isVisible,
+                        isEnabled,
+                        boundingRect
+                      };
+                    });
+                    
+                    return { 
+                      success: true, 
+                      elements: elementInfos,
+                      count: elements.length
+                    };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error getting element information: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+                    }, (results) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                            });
+                            return;
+                        }
+                        if (!results || results.length === 0) {
+                            resolve({
+                                success: false,
+                                error: 'No result from tab script execution'
+                            });
+                            return;
+                        }
+                        // Return the result from the executed script
+                        resolve(results[0]);
+                    });
+                });
+            });
+        }
+        // If running directly in page context (content script)
+        if (env.isContentScript && typeof document !== 'undefined') {
+            try {
+                const elements = Array.from(document.querySelectorAll(selector));
+                if (!elements || elements.length === 0) {
+                    return {
+                        success: false,
+                        error: `No elements found with selector: ${selector}`
+                    };
+                }
+                const limitedElements = elements.slice(0, limit);
+                const elementInfos = limitedElements.map(element => {
+                    // Get all attributes as key-value pairs
+                    const attributesObj = {};
+                    for (const attr of Array.from(element.attributes)) {
+                        attributesObj[attr.name] = attr.value;
+                    }
+                    // Check if element is visible
+                    const style = window.getComputedStyle(element);
+                    const isVisible = style.display !== 'none' &&
+                        style.visibility !== 'hidden' &&
+                        style.opacity !== '0';
+                    // Check if element is enabled (for form controls)
+                    let isEnabled = true;
+                    if (element instanceof HTMLButtonElement ||
+                        element instanceof HTMLInputElement ||
+                        element instanceof HTMLSelectElement ||
+                        element instanceof HTMLTextAreaElement ||
+                        element instanceof HTMLOptionElement) {
+                        isEnabled = !element.disabled;
+                    }
+                    // Get bounding client rect
+                    const rect = element.getBoundingClientRect();
+                    const boundingRect = {
+                        top: rect.top,
+                        right: rect.right,
+                        bottom: rect.bottom,
+                        left: rect.left,
+                        width: rect.width,
+                        height: rect.height
+                    };
+                    // Get element value if applicable
+                    let value = undefined;
+                    if (element instanceof HTMLInputElement ||
+                        element instanceof HTMLTextAreaElement ||
+                        element instanceof HTMLSelectElement) {
+                        value = element.value;
+                    }
+                    return {
+                        tagName: element.tagName.toLowerCase(),
+                        id: element.id || undefined,
+                        className: element.className || undefined,
+                        textContent: element.textContent ? element.textContent.trim() : undefined,
+                        value,
+                        attributes: attributesObj,
+                        isVisible,
+                        isEnabled,
+                        boundingRect
+                    };
+                });
+                return {
+                    success: true,
+                    elements: elementInfos,
+                    count: elements.length
+                };
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
+                };
+            }
+        }
+        // If not in a browser environment, we can't get elements
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot get element information in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for getting element information'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (getElement);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/index.ts":
+/*!****************************************!*\
+  !*** ./src/lib/tools/browser/index.ts ***!
+  \****************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   click: () => (/* reexport safe */ _click__WEBPACK_IMPORTED_MODULE_0__["default"]),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getElement: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   screenshot: () => (/* reexport safe */ _screenshot__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   typeText: () => (/* reexport safe */ _type__WEBPACK_IMPORTED_MODULE_3__["default"])
+/* harmony export */ });
+/* harmony import */ var _click__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./click */ "./src/lib/tools/browser/click.ts");
+/* harmony import */ var _getElement__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./getElement */ "./src/lib/tools/browser/getElement.ts");
+/* harmony import */ var _screenshot__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./screenshot */ "./src/lib/tools/browser/screenshot.ts");
+/* harmony import */ var _type__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./type */ "./src/lib/tools/browser/type.ts");
+/**
+ * Browser Tools Index
+ * Exports all browser automation tools
+ */
+
+
+
+
+// Export all tools
+
+// Main export of all browser tools
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
+    click: _click__WEBPACK_IMPORTED_MODULE_0__["default"],
+    getElement: _getElement__WEBPACK_IMPORTED_MODULE_1__["default"],
+    screenshot: _screenshot__WEBPACK_IMPORTED_MODULE_2__["default"],
+    typeText: _type__WEBPACK_IMPORTED_MODULE_3__["default"]
+});
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/screenshot.ts":
+/*!*********************************************!*\
+  !*** ./src/lib/tools/browser/screenshot.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   screenshot: () => (/* binding */ screenshot)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Screenshot tool for capturing the current state of a webpage
+ * This tool takes a screenshot of the current browser window
+ *
+ * @returns Promise with success status and screenshot data in base64 format
+ */
+
+/**
+ * Take a screenshot of the current browser window
+ *
+ * @returns Promise with success status and screenshot data/error message
+ */
+async function screenshot() {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'SCREENSHOT'
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No active tab found'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid tab'
+                        });
+                        return;
+                    }
+                    // Capture screenshot of the tab
+                    chrome.tabs.captureVisibleTab(tabs[0].windowId, { format: 'png' }, (dataUrl) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error capturing screenshot'
+                            });
+                            return;
+                        }
+                        resolve({
+                            success: true,
+                            screenshotData: dataUrl
+                        });
+                    });
+                });
+            });
+        }
+        // If not in a browser environment, we can't take screenshots
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot take screenshots in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for taking screenshots'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error capturing screenshot: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (screenshot);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/type.ts":
+/*!***************************************!*\
+  !*** ./src/lib/tools/browser/type.ts ***!
+  \***************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   type: () => (/* binding */ type)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Type tool for browser automation
+ * This tool types text into an input, textarea, or contentEditable element
+ *
+ * @returns Promise with success status and result message
+ */
+
+/**
+ * Type text into an input, textarea, or contentEditable element
+ *
+ * @param params Object containing the selector and text to type
+ * @returns Promise with success status and result message/error
+ */
+async function type(params) {
+    try {
+        const { selector, text, append = false } = params;
+        if (!selector) {
+            return {
+                success: false,
+                error: 'Selector is required'
+            };
+        }
+        if (text === undefined || text === null) {
+            return {
+                success: false,
+                error: 'Text is required'
+            };
+        }
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 5000); // 5 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'TYPE',
+                        payload: { selector, text, append }
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No active tab found'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid tab'
+                        });
+                        return;
+                    }
+                    // Execute script in the tab to type text
+                    chrome.tabs.executeScript(tabId, {
+                        code: `
+                (function() {
+                  try {
+                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+                    if (!element) {
+                      return { success: false, error: 'Element not found with selector: ${selector.replace(/'/g, "\\'")}' };
+                    }
+                    
+                    // Scroll element into view
+                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                    
+                    // Focus the element
+                    element.focus();
+                    
+                    // Handle different types of elements
+                    if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                      // For standard form elements
+                      if (${append}) {
+                        element.value = element.value + \`${text.replace(/`/g, '\\`')}\`;
+                      } else {
+                        element.value = \`${text.replace(/`/g, '\\`')}\`;
+                      }
+                      
+                      // Trigger input and change events
+                      element.dispatchEvent(new Event('input', { bubbles: true }));
+                      element.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else if (element.isContentEditable) {
+                      // For contentEditable elements
+                      if (${append}) {
+                        element.textContent = (element.textContent || '') + \`${text.replace(/`/g, '\\`')}\`;
+                      } else {
+                        element.textContent = \`${text.replace(/`/g, '\\`')}\`;
+                      }
+                      
+                      // Trigger input event for React and other frameworks
+                      element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                    } else {
+                      return { 
+                        success: false, 
+                        error: 'Element is not an input, textarea, or contentEditable element' 
+                      };
+                    }
+                    
+                    return { success: true, message: 'Text typed successfully' };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error typing text: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+                    }, (results) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                            });
+                            return;
+                        }
+                        if (!results || results.length === 0) {
+                            resolve({
+                                success: false,
+                                error: 'No result from tab script execution'
+                            });
+                            return;
+                        }
+                        // Return the result from the executed script
+                        resolve(results[0]);
+                    });
+                });
+            });
+        }
+        // If running directly in page context (content script)
+        if (env.isContentScript && typeof document !== 'undefined') {
+            try {
+                const element = document.querySelector(selector);
+                if (!element) {
+                    return {
+                        success: false,
+                        error: `Element not found with selector: ${selector}`
+                    };
+                }
+                // Scroll element into view
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                // Focus the element
+                element.focus();
+                // Handle different types of elements
+                if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
+                    // For standard form elements
+                    if (append) {
+                        element.value = element.value + text;
+                    }
+                    else {
+                        element.value = text;
+                    }
+                    // Trigger input and change events
+                    element.dispatchEvent(new Event('input', { bubbles: true }));
+                    element.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                else if (element.isContentEditable) {
+                    // For contentEditable elements
+                    if (append) {
+                        element.textContent = (element.textContent || '') + text;
+                    }
+                    else {
+                        element.textContent = text;
+                    }
+                    // Trigger input event for React and other frameworks
+                    element.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                }
+                else {
+                    return {
+                        success: false,
+                        error: 'Element is not an input, textarea, or contentEditable element'
+                    };
+                }
+                return {
+                    success: true,
+                    message: 'Text typed successfully'
+                };
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`
+                };
+            }
+        }
+        // If not in a browser environment, we can't type text
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot type text in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for typing text'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (type);
 
 
 /***/ }),
@@ -48590,6 +49654,231 @@ async function makeDirectApiCall(libraryName) {
 
 /***/ }),
 
+/***/ "./src/lib/tools/earth-engine/agentTools.ts":
+/*!**************************************************!*\
+  !*** ./src/lib/tools/earth-engine/agentTools.ts ***!
+  \**************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   checkEarthEngineConsole: () => (/* binding */ checkEarthEngineConsole),
+/* harmony export */   editEarthEngineScript: () => (/* binding */ editEarthEngineScript),
+/* harmony export */   getEarthEngineMapLayers: () => (/* binding */ getEarthEngineMapLayers),
+/* harmony export */   getEarthEngineTasks: () => (/* binding */ getEarthEngineTasks),
+/* harmony export */   inspectEarthEngineMap: () => (/* binding */ inspectEarthEngineMap),
+/* harmony export */   runEarthEngineCode: () => (/* binding */ runEarthEngineCode)
+/* harmony export */ });
+/* harmony import */ var _index__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./index */ "./src/lib/tools/earth-engine/index.ts");
+/**
+ * Wrapper functions for Earth Engine tools specifically designed for AI agent usage
+ * These functions are simplified versions of the base tools that are formatted
+ * to be easily called by an AI assistant agent
+ */
+
+/**
+ * Runs Earth Engine code in the Code Editor
+ * Simplified wrapper for AI agents
+ *
+ * @param code - JavaScript code to run in Earth Engine
+ * @returns Object with success status and results
+ */
+async function runEarthEngineCode(code) {
+    try {
+        if (!code || typeof code !== 'string') {
+            return {
+                success: false,
+                message: 'Code is required and must be a string'
+            };
+        }
+        // Run the code in Earth Engine
+        const result = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.runCode)(code);
+        return {
+            success: result.success,
+            message: result.success
+                ? `Code executed successfully: ${result.result || 'No output'}`
+                : `Code execution failed: ${result.error || 'Unknown error'}`
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error running Earth Engine code: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/**
+ * Inspects the Earth Engine map at a specific location
+ * Simplified wrapper for AI agents
+ *
+ * @param latitude - Latitude coordinate to inspect
+ * @param longitude - Longitude coordinate to inspect
+ * @returns Object with inspection data
+ */
+async function inspectEarthEngineMap(latitude, longitude) {
+    try {
+        // Validate coordinates
+        if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+            return {
+                success: false,
+                message: 'Valid latitude and longitude coordinates are required'
+            };
+        }
+        if (latitude < -90 || latitude > 90) {
+            return {
+                success: false,
+                message: 'Latitude must be between -90 and 90 degrees'
+            };
+        }
+        if (longitude < -180 || longitude > 180) {
+            return {
+                success: false,
+                message: 'Longitude must be between -180 and 180 degrees'
+            };
+        }
+        // Inspect map at the specified coordinates
+        const coordinates = { lat: latitude, lng: longitude };
+        const result = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.inspectMap)(coordinates);
+        return {
+            success: result.success,
+            data: result.data,
+            message: result.success
+                ? `Map inspected at ${latitude}, ${longitude}`
+                : `Map inspection failed: ${result.error || 'Unknown error'}`
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error inspecting Earth Engine map: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/**
+ * Checks the Earth Engine console for errors
+ * Simplified wrapper for AI agents
+ *
+ * @returns Object with console errors and warnings
+ */
+async function checkEarthEngineConsole() {
+    try {
+        // Check the console for errors
+        const result = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.checkConsole)();
+        return {
+            success: result.success,
+            errors: result.errors || [],
+            message: result.success
+                ? result.errors && result.errors.length > 0
+                    ? `Found ${result.errors.length} errors/warnings in the console`
+                    : 'No errors found in the console'
+                : `Console check failed: ${result.error || 'Unknown error'}`
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error checking Earth Engine console: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/**
+ * Gets Earth Engine tasks and their status
+ * Simplified wrapper for AI agents
+ *
+ * @returns Object with task information
+ */
+async function getEarthEngineTasks() {
+    try {
+        // Get tasks from Earth Engine
+        const result = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.getTasks)();
+        return {
+            success: result.success,
+            tasks: result.tasks || [],
+            message: result.success
+                ? result.tasks && result.tasks.length > 0
+                    ? `Found ${result.tasks.length} Earth Engine tasks`
+                    : 'No tasks found in Earth Engine'
+                : `Task retrieval failed: ${result.error || 'Unknown error'}`
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error getting Earth Engine tasks: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/**
+ * Edits a script in Earth Engine
+ * Simplified wrapper for AI agents
+ *
+ * @param scriptId - ID of the script to edit
+ * @param code - New code content for the script
+ * @returns Object with success status and result message
+ */
+async function editEarthEngineScript(scriptId, code) {
+    try {
+        // Validate inputs
+        if (!scriptId || typeof scriptId !== 'string') {
+            return {
+                success: false,
+                message: 'Script ID is required and must be a string'
+            };
+        }
+        if (!code || typeof code !== 'string') {
+            return {
+                success: false,
+                message: 'Code content is required and must be a string'
+            };
+        }
+        // Edit the script
+        const result = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.editScript)(scriptId, code);
+        return {
+            success: result.success,
+            message: result.success
+                ? `Script "${scriptId}" updated successfully: ${result.message || ''}`
+                : `Script update failed: ${result.error || 'Unknown error'}`
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/**
+ * Gets information about map layers in Earth Engine
+ * Simplified wrapper for AI agents
+ *
+ * @returns Object with layer information
+ */
+async function getEarthEngineMapLayers() {
+    try {
+        // Get map layers from Earth Engine
+        const result = await (0,_index__WEBPACK_IMPORTED_MODULE_0__.getMapLayers)();
+        return {
+            success: result.success,
+            layers: result.layers || [],
+            message: result.success
+                ? result.layers && result.layers.length > 0
+                    ? `Found ${result.layers.length} map layers in Earth Engine`
+                    : 'No map layers found in Earth Engine'
+                : `Map layer retrieval failed: ${result.error || 'Unknown error'}`
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            message: `Error getting Earth Engine map layers: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+
+
+/***/ }),
+
 /***/ "./src/lib/tools/earth-engine/checkConsole.ts":
 /*!****************************************************!*\
   !*** ./src/lib/tools/earth-engine/checkConsole.ts ***!
@@ -48863,6 +50152,133 @@ async function editScript(scriptId, content) {
 
 /***/ }),
 
+/***/ "./src/lib/tools/earth-engine/getMapLayers.ts":
+/*!****************************************************!*\
+  !*** ./src/lib/tools/earth-engine/getMapLayers.ts ***!
+  \****************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
+/* harmony export */   getMapLayers: () => (/* binding */ getMapLayers)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * Gets information about the current layers displayed in the Google Earth Engine Map
+ * This tool retrieves information about visible layers, their opacity, and visibility status
+ *
+ * @returns Promise with success status and layer information
+ */
+
+/**
+ * Get information about map layers currently displayed in Earth Engine
+ *
+ * @returns Promise with success status and layer information
+ */
+async function getMapLayers() {
+    try {
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 2000); // 2 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'GET_MAP_LAYERS'
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // First we need to find the Earth Engine tab
+                chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid Earth Engine tab'
+                        });
+                        return;
+                    }
+                    // Send message to the content script in the Earth Engine tab
+                    chrome.tabs.sendMessage(tabId, { type: 'GET_MAP_LAYERS' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                            });
+                            return;
+                        }
+                        resolve(response);
+                    });
+                });
+            });
+        }
+        // If not in a browser environment (like Node.js), we can't access Earth Engine map
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot get Earth Engine map layers in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for accessing Earth Engine map layers'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error getting map layers: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (getMapLayers);
+
+
+/***/ }),
+
 /***/ "./src/lib/tools/earth-engine/getTasks.ts":
 /*!************************************************!*\
   !*** ./src/lib/tools/earth-engine/getTasks.ts ***!
@@ -49001,6 +50417,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   checkConsole: () => (/* reexport safe */ _checkConsole__WEBPACK_IMPORTED_MODULE_2__["default"]),
 /* harmony export */   editScript: () => (/* reexport safe */ _editScript__WEBPACK_IMPORTED_MODULE_4__["default"]),
+/* harmony export */   getMapLayers: () => (/* reexport safe */ _getMapLayers__WEBPACK_IMPORTED_MODULE_5__["default"]),
 /* harmony export */   getTasks: () => (/* reexport safe */ _getTasks__WEBPACK_IMPORTED_MODULE_3__["default"]),
 /* harmony export */   inspectMap: () => (/* reexport safe */ _inspectMap__WEBPACK_IMPORTED_MODULE_1__["default"]),
 /* harmony export */   runCode: () => (/* reexport safe */ _runCode__WEBPACK_IMPORTED_MODULE_0__["default"])
@@ -49010,6 +50427,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _checkConsole__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./checkConsole */ "./src/lib/tools/earth-engine/checkConsole.ts");
 /* harmony import */ var _getTasks__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./getTasks */ "./src/lib/tools/earth-engine/getTasks.ts");
 /* harmony import */ var _editScript__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./editScript */ "./src/lib/tools/earth-engine/editScript.ts");
+/* harmony import */ var _getMapLayers__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./getMapLayers */ "./src/lib/tools/earth-engine/getMapLayers.ts");
 /**
  * Earth Engine tools for interacting with the Google Earth Engine Code Editor
  *
@@ -49019,6 +50437,7 @@ __webpack_require__.r(__webpack_exports__);
  * 3. Check the console for errors
  * 4. Get tasks from Earth Engine
  * 5. Edit scripts in Earth Engine
+ * 6. Get information about map layers
  *
  * Usage example:
  * ```typescript
@@ -49039,6 +50458,7 @@ __webpack_require__.r(__webpack_exports__);
  * }
  * ```
  */
+
 
 
 
