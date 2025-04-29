@@ -47189,7 +47189,6 @@ function Chat() {
     };
     // Set up port connection to background script
     const [port, setPort] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
-    const [currentStreamingMessage, setCurrentStreamingMessage] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
     const [connectionAttempts, setConnectionAttempts] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     // Initialize port connection
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
@@ -47351,10 +47350,52 @@ function Chat() {
                 }
                 setIsTyping(false);
                 break;
+            case 'CHAT_STREAM_CHUNK':
+                // Process streaming chunks
+                if (response.chunk) {
+                    console.log('Received streaming chunk:', response.chunk.substring(0, 20) + '...');
+                    // Update the *last* message in the array (which should be the assistant placeholder)
+                    setMessages(prevMessages => {
+                        if (prevMessages.length === 0 || prevMessages[prevMessages.length - 1].role !== 'assistant') {
+                            // This shouldn't happen if placeholder was added correctly, but handle defensively
+                            console.warn('Attempted to stream chunk but no assistant placeholder found');
+                            // Optionally create a new message here if needed
+                            return prevMessages;
+                        }
+                        const lastMessageIndex = prevMessages.length - 1;
+                        const updatedLastMessage = {
+                            ...prevMessages[lastMessageIndex],
+                            content: prevMessages[lastMessageIndex].content + response.chunk
+                        };
+                        return [
+                            ...prevMessages.slice(0, lastMessageIndex),
+                            updatedLastMessage
+                        ];
+                    });
+                    setIsTyping(true); // Keep typing indicator on
+                }
+                break;
             case 'CHAT_STREAM_END':
-                // Just mark the loading as complete, don't add a new message
-                console.log('Stream ended, loading complete');
-                setIsTyping(false);
+                console.log('Stream ended, finalizing message');
+                // Finalize the last message ID if needed (optional, but good practice)
+                setMessages(prevMessages => {
+                    if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].role === 'assistant') {
+                        const lastMessageIndex = prevMessages.length - 1;
+                        // Assign a permanent ID, removing the placeholder prefix
+                        const finalId = prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
+                        const finalizedMessage = {
+                            ...prevMessages[lastMessageIndex],
+                            id: finalId
+                        };
+                        return [
+                            ...prevMessages.slice(0, lastMessageIndex),
+                            finalizedMessage
+                        ];
+                    }
+                    return prevMessages;
+                });
+                setIsTyping(false); // Turn off typing indicator
+                handleInputChange({ target: { value: '' } }); // Clear input
                 break;
             case 'ERROR':
                 console.error('Chat API error:', response.error);
@@ -47371,10 +47412,6 @@ function Chat() {
                 setFallbackMode(true);
                 setIsTyping(false);
                 break;
-            // Ignore streaming chunks since we're not using streaming
-            case 'CHAT_STREAM_CHUNK':
-                // Do nothing - we're ignoring intermediate chunks
-                break;
             default:
                 console.log('Unknown message type:', response.type);
                 break;
@@ -47387,7 +47424,6 @@ function Chat() {
         if (!input.trim() || isLoading)
             return;
         setIsTyping(true);
-        setCurrentStreamingMessage(null);
         try {
             // Immediately add user message to UI regardless of connection method
             const userMessage = {
@@ -47397,6 +47433,13 @@ function Chat() {
             };
             // Add user message to local state immediately
             setMessages(prev => [...prev, userMessage]);
+            // Add an empty assistant message placeholder to be updated by the stream
+            const assistantPlaceholder = {
+                id: 'assistant-placeholder-' + Date.now(),
+                role: 'assistant',
+                content: '' // Start with empty content
+            };
+            setMessages(prev => [...prev, assistantPlaceholder]);
             if (port) {
                 // Prepare all previous messages plus the new user message
                 const allMessages = [
@@ -47482,10 +47525,7 @@ function Chat() {
             } });
     }
     // Display messages including current streaming message
-    const displayMessages = [
-        ...fallbackMode ? localMessages : messages,
-        ...(currentStreamingMessage ? [currentStreamingMessage] : [])
-    ];
+    const displayMessages = fallbackMode ? localMessages : messages;
     const currentInput = fallbackMode ? localInput : input;
     const currentInputHandler = fallbackMode ? handleLocalInputChange : handleInputChange;
     const currentSubmitHandler = fallbackMode ? handleLocalSubmit : handleChatSubmit;
