@@ -1020,20 +1020,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               const { done, value } = await reader.read();
               
               if (done) {
-                // Send final message with complete text
-                port.postMessage({ 
-                  type: 'CHAT_RESPONSE',
-                  requestId,
-                  data: {
-                    choices: [{
-                      message: {
-                        content: accumulatedText
-                      }
-                    }]
-                  }
-                });
-                
-                // Also send end of stream message
+                // When the stream is done, ONLY send the end signal.
+                // The frontend will finalize the message based on received chunks.
                 port.postMessage({
                   type: 'CHAT_STREAM_END',
                   requestId
@@ -1051,46 +1039,46 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               
               for (const line of lines) {
                 if (line.startsWith('data: ')) {
-                  const data = line.slice(5); // Remove 'data: ' prefix
+                  const data = line.slice(6); // Remove 'data: ' prefix (Note: was slice(5) - fixed potential bug)
                   
-                  // Handle [DONE] message
-                  if (data === '[DONE]') {
-                    continue;
+                  // Handle [DONE] message from providers like OpenAI
+                  if (data.trim() === '[DONE]') {
+                    continue; // Don't process the [DONE] marker itself
                   }
                   
                   try {
                     const parsedData = JSON.parse(data);
+                    let contentChunk: string | null = null;
                     
                     // Extract content from OpenAI response format
-                    if (parsedData.choices && parsedData.choices.length > 0) {
-                      const delta = parsedData.choices[0].delta;
-                      
-                      if (delta && delta.content) {
-                        const content = delta.content;
-                        accumulatedText += content;
-                        
-                        // Send only the actual content as a chunk
-                        port.postMessage({ 
-                          type: 'CHAT_STREAM_CHUNK',
-                          requestId,
-                          chunk: content 
-                        });
-                      }
+                    if (parsedData.choices && parsedData.choices.length > 0 && parsedData.choices[0].delta?.content) {
+                      contentChunk = parsedData.choices[0].delta.content;
                     } 
-                    // Handle Anthropic format (if needed)
-                    else if (parsedData.type === 'content_block_delta' && parsedData.delta && parsedData.delta.text) {
-                      const content = parsedData.delta.text;
-                      accumulatedText += content;
-                      
+                    // Handle Anthropic format
+                    else if (parsedData.type === 'content_block_delta' && parsedData.delta?.text) {
+                      contentChunk = parsedData.delta.text;
+                    }
+                    
+                    if (contentChunk !== null) {
+                      accumulatedText += contentChunk;
                       port.postMessage({ 
                         type: 'CHAT_STREAM_CHUNK',
                         requestId,
-                        chunk: content 
+                        chunk: contentChunk
                       });
                     }
                   } catch (error) {
-                    console.warn('Error parsing SSE data:', error);
-                    // If parsing fails, ignore this line
+                    // It might not be JSON, could be just text after 'data: '
+                    if (data.trim()) { // Check if there's actual text content
+                       accumulatedText += data + '\n'; // Append raw data if not JSON
+                       port.postMessage({ 
+                         type: 'CHAT_STREAM_CHUNK',
+                         requestId,
+                         chunk: data + '\n' 
+                       });
+                    } else {
+                      console.warn('Empty or non-JSON SSE data line ignored:', line);
+                    }
                   }
                 }
               }
