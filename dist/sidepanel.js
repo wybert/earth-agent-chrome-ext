@@ -47398,14 +47398,21 @@ function Chat() {
             // Add user message to local state immediately
             setMessages(prev => [...prev, userMessage]);
             if (port) {
+                // Prepare all previous messages plus the new user message
+                const allMessages = [
+                    ...messages.filter(m => m.id !== 'welcome'), // Filter out the welcome message
+                    userMessage
+                ];
                 // Send message through port
                 const message = {
                     type: 'CHAT_MESSAGE',
                     message: input.trim(),
                     apiKey,
-                    provider: apiProvider
+                    provider: apiProvider,
+                    // Send the full conversation history
+                    messages: allMessages
                 };
-                console.log('Sending message:', message);
+                console.log('Sending message with conversation history:', message);
                 port.postMessage(message);
             }
             else {

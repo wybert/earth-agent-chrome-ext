@@ -12,4 +12,5 @@ export interface ExtensionMessage {
   message?: string;
   apiKey?: string;
   provider?: string;
+  messages?: Array<{ id: string; role: string; content: string }>;
 }

@@ -25321,13 +25321,22 @@ chrome.runtime.onConnect.addListener((port) => {
 async function handleChatMessage(message, port) {
     try {
         const requestId = Date.now().toString();
+        // Check if we have a history of messages from the sidepanel
+        const conversationMessages = message.messages || [{
+                role: 'user',
+                content: message.message
+            }];
+        // Log message history
+        console.log(`Processing chat with ${conversationMessages.length} messages in history`);
+        // Format messages for the API (strip id property)
+        const formattedMessages = conversationMessages.map((msg) => ({
+            role: msg.role,
+            content: msg.content
+        }));
         // Instead of trying to use fetch to an API endpoint within the extension,
         // directly call the handler function with properly formatted request
         const body = {
-            messages: [{
-                    role: 'user',
-                    content: message.message
-                }],
+            messages: formattedMessages,
             apiKey: message.apiKey,
             provider: message.provider
         };
