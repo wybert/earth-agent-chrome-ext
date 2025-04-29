@@ -59,3 +59,15 @@ https://sdk.vercel.ai/docs/introduction#ai-sdk
 
 
 Give us some suggestions in terms of our design. Dont finish this in one go, lets develop this through iterations. First create a plan. If we approve, move ahead to develop the minimal viable prototype. If that works, move ahead with the remaining development.
+
+
+## chat UI
+
+Consolidate to a single implementation (likely based on chat.ts with the AI SDK)
+Extract shared code (system prompts, stream handling) to a common utilities file
+Implement proper timeout and retry logic for API calls
+Add configuration options for model selection
+Improve security with additional API key protection
+Add version checking or make API versions configurable
+Add comprehensive logging for debugging purposes
+Create a clear separation between service layers

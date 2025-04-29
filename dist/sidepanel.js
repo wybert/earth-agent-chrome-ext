@@ -47255,12 +47255,6 @@ function Chat() {
         // Process message based on type
         switch (response.type) {
             case 'CHAT_RESPONSE':
-                // Create user message
-                const userMessage = {
-                    id: Date.now().toString(),
-                    role: 'user',
-                    content: input.trim()
-                };
                 try {
                     // Validate response using Zod schema
                     const validationResult = ChatResponseSchema.safeParse(response);
@@ -47272,7 +47266,8 @@ function Chat() {
                             role: 'assistant',
                             content: responseContent
                         };
-                        setMessages(prev => [...prev, userMessage, assistantMessage]);
+                        // Only add the assistant message since user message was already added
+                        setMessages(prev => [...prev, assistantMessage]);
                         handleInputChange({ target: { value: '' } });
                     }
                     else {
@@ -47338,7 +47333,8 @@ function Chat() {
                             role: 'assistant',
                             content: responseContent
                         };
-                        setMessages(prev => [...prev, userMessage, assistantMessage]);
+                        // Only add the assistant message since user message was already added
+                        setMessages(prev => [...prev, assistantMessage]);
                         handleInputChange({ target: { value: '' } });
                     }
                 }
@@ -47350,7 +47346,8 @@ function Chat() {
                         role: 'assistant',
                         content: "Sorry, I encountered an error processing the response. Please try again."
                     };
-                    setMessages(prev => [...prev, userMessage, errorAssistantMessage]);
+                    // Only add the assistant message since user message was already added
+                    setMessages(prev => [...prev, errorAssistantMessage]);
                 }
                 setIsTyping(false);
                 break;
@@ -47361,19 +47358,15 @@ function Chat() {
                 break;
             case 'ERROR':
                 console.error('Chat API error:', response.error);
-                // Add user message even when there's an error
-                const errorUserMessage = {
-                    id: Date.now().toString(),
-                    role: 'user',
-                    content: input
-                };
                 // Add error message
                 const errorAssistantMessage = {
                     id: (Date.now() + 1).toString(),
                     role: 'assistant',
                     content: "Sorry, I encountered an error processing your request. Please try again or check your API configuration."
                 };
-                setMessages(prev => [...prev, errorUserMessage, errorAssistantMessage]);
+                // Add error message (the user message has already been added)
+                setMessages(prev => [...prev, errorAssistantMessage]);
+                // Clear input field
                 handleInputChange({ target: { value: '' } });
                 setFallbackMode(true);
                 setIsTyping(false);
@@ -47396,6 +47389,14 @@ function Chat() {
         setIsTyping(true);
         setCurrentStreamingMessage(null);
         try {
+            // Immediately add user message to UI regardless of connection method
+            const userMessage = {
+                id: Date.now().toString(),
+                role: 'user',
+                content: input.trim()
+            };
+            // Add user message to local state immediately
+            setMessages(prev => [...prev, userMessage]);
             if (port) {
                 // Send message through port
                 const message = {
@@ -47412,13 +47413,6 @@ function Chat() {
                 console.error('No port connection available');
                 // Attempt to reconnect
                 setConnectionAttempts(prev => prev + 1);
-                // Add user message
-                const userMessage = {
-                    id: Date.now().toString(),
-                    role: 'user',
-                    content: input.trim()
-                };
-                setMessages(prev => [...prev, userMessage]);
                 // Show a temporary response about connection issue
                 setTimeout(() => {
                     const assistantMessage = {
@@ -47499,9 +47493,17 @@ function Chat() {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { className: "h-5 w-5 text-gray-600" })))),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_scroll_area__WEBPACK_IMPORTED_MODULE_2__.ScrollArea, { className: "px-2 py-4 rounded-none" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-4 w-full mx-auto" },
-                displayMessages.map((message) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: message.id, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_5__.cn)('flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words', message.role === 'user'
-                        ? 'ml-auto bg-primary text-primary-foreground'
-                        : 'bg-muted'), style: { maxWidth: '98%', minWidth: 'unset', width: 'auto' } }, formatMessageContent(message.content)))),
+                displayMessages.map((message) => {
+                    // Add debug logging to see exact content being rendered
+                    console.log(`Rendering message [${message.role}]:`, {
+                        id: message.id,
+                        content: message.content,
+                        contentLength: message.content ? message.content.length : 0
+                    });
+                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: message.id, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_5__.cn)('flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words', message.role === 'user'
+                            ? 'ml-auto bg-blue-600 text-white'
+                            : 'bg-muted'), style: { maxWidth: '98%', minWidth: 'unset', width: 'auto' } }, formatMessageContent(message.content)));
+                }),
                 isTyping && !fallbackMode && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "typing-indicator flex gap-1" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "h-2 w-2 bg-muted-foreground rounded-full animate-pulse" }),
