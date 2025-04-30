@@ -1,504 +1,480 @@
 # System Patterns: Google Earth Engine Agent
 
-## System Architecture
+## Architecture Overview
 
-The Google Earth Engine Agent is built as a Chrome extension that integrates directly with the Google Earth Engine web interface. This architecture was chosen to provide seamless integration without requiring changes to the Earth Engine platform itself. The system follows a client-side integration pattern with carefully designed components that work together to provide AI-assisted functionality.
+The Google Earth Engine (GEE) Agent is built as a Chrome extension with a multi-layered architecture:
 
-### High-Level Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Chrome Browser                                                  │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │ Google Earth Engine Web Interface                           ││
-│  │  ┌─────────────────────┐      ┌───────────────────────────┐ ││
-│  │  │                     │      │ GEE Agent Extension       │ ││
-│  │  │                     │      │  ┌─────────────────────┐  │ ││
-│  │  │                     │      │  │ UI Components       │  │ ││
-│  │  │ Earth Engine        │◄────►│  │  - Sidepanel        │  │ ││
-│  │  │ Code Editor         │      │  │  - Tooltips         │  │ ││
-│  │  │ & Interface         │      │  │  - Popup            │  │ ││
-│  │  │                     │      │  ├─────────────────────┤  │ ││
-│  │  │                     │      │  │ Content Scripts     │  │ ││
-│  │  │                     │      │  ├─────────────────────┤  │ ││
-│  │  │                     │      │  │ Background Service  │  │ ││
-│  │  │                     │      │  └─────────────────────┘  │ ││
-│  │  └─────────────────────┘      └───────────────────────────┘ ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-                     ┌───────────────────────┐
-                     │  External AI Services │
-                     │  (Claude/GPT-4/etc.)  │
-                     └───────────────────────┘
+```mermaid
+graph TD
+    UI[Side Panel UI] <--> BG[Background Service Worker]
+    BG <--> CS[Content Script]
+    BG <--> AI[AI Services]
+    CS <--> GEE[Google Earth Engine]
+    AI --> MOD{AI Models}
+    MOD --> C[Claude]
+    MOD --> G[GPT]
 ```
 
-### AI & Tools Architecture
+### Key Components
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Google Earth Engine Agent                                       │
-│                                                                 │
-│  ┌─────────────────┐        ┌─────────────────────────────┐    │
-│  │                 │        │ AI SDK                      │    │
-│  │  User Interface │◄──────►│  ┌─────────────────────┐    │    │
-│  │                 │        │  │ Provider Adapters   │    │    │
-│  └─────────────────┘        │  │  - Anthropic        │    │    │
-│           ▲                 │  │  - OpenAI           │◄───┼────┤
-│           │                 │  └─────────────────────┘    │    │
-│           │                 │  ┌─────────────────────┐    │    │
-│           │                 │  │ Tool Framework      │    │    │
-│           │                 │  │  ┌───────────────┐  │    │    │
-│  ┌────────┴────────┐        │  │  │ GEE Tools     │  │    │    │
-│  │ DOM Interaction │◄──────►│  │  │ - Dataset     │◄─┼────┼────┤
-│  │ Layer           │        │  │  │ - Code Run    │  │    │    │
-│  └─────────────────┘        │  │  │ - Inspector   │  │    │    │
-│           ▲                 │  │  │ - Console     │  │    │    │
-│           │                 │  │  │ - Tasks       │  │    │    │
-│           │                 │  │  └───────────────┘  │    │    │
-│           ▼                 │  └─────────────────────┘    │
-│  ┌─────────────────┐        └─────────────────────────────┘    │
-│  │ Google Earth    │                                           │
-│  │ Engine Interface│                                           │
-│  └─────────────────┘                                           │
-└─────────────────────────────────────────────────────────────────┘
-```
+1. **Side Panel UI**: Primary user interface housed in Chrome's side panel
+2. **Background Service Worker**: Core orchestration layer handling API requests and message routing
+3. **Content Script**: DOM interaction layer injected into GEE page
+4. **AI Service Layer**: Communication with language models and tool execution
 
-## Key Technical Decisions
+## Agent Architecture
 
-### 1. Chrome Extension Framework
+The agent architecture is designed to support intelligent, multi-step interactions using tools. There are two primary approaches under consideration:
 
-**Decision**: Implement as a Chrome extension rather than a standalone web application.
+### Client-Side Agent (Current Implementation)
 
-**Rationale**:
-- Direct integration with the Earth Engine interface without platform modifications
-- Access to DOM elements for context extraction and UI enhancement
-- Ability to inject custom UI components into the existing interface
-- User data remains local to the browser, enhancing privacy
-- No need for server-side infrastructure to proxy Earth Engine interactions
-
-**Implications**:
-- Limited to Chrome/Chromium browsers
-- Must handle Earth Engine UI changes gracefully
-- Requires careful content script design to avoid conflicts
-- Extension permissions must be clearly justified to users
-
-### 2. Component Structure
-
-**Decision**: Modular architecture with separation between UI, context extraction, and AI interaction.
-
-**Rationale**:
-- Clear separation of concerns
-- Easier to maintain and extend individual components
-- Facilitates testing of isolated functionality
-- Allows updating AI backend without changing UI components
-- Enables progressive enhancement of capabilities
-
-**Implications**:
-- Requires well-defined interfaces between components
-- State management becomes more complex
-- Must handle asynchronous communication between modules
-
-### 3. Context Collection Strategy
-
-**Decision**: Use content scripts to extract contextual information from the Earth Engine interface.
-
-**Rationale**:
-- Provides real-time access to user's code and actions
-- Can observe DOM changes to track user interactions
-- Allows capture of error messages and console output
-- Can integrate with Earth Engine's JavaScript API
-- Enables understanding of the user's current workspace state
-
-**Implications**:
-- Must handle page structure changes in Earth Engine
-- Needs careful design to avoid performance impacts
-- Requires selective context extraction to avoid overwhelming the AI
-- Must manage user privacy concerns
-
-### 4. AI Interface Approach
-
-**Decision**: Use a modern LLM (Claude/GPT-4) with custom instructions to understand Earth Engine concepts.
-
-**Rationale**:
-- Leverages advanced contextual understanding capabilities
-- Can be fine-tuned with Earth Engine-specific knowledge
-- Flexible enough to handle diverse user queries
-- Can generate code and explanations in appropriate formats
-- Improves over time with feedback and additional examples
-
-**Implications**:
-- Requires API keys and authentication management
-- Service costs scale with usage
-- Must handle API rate limits and service interruptions
-- Needs prompt engineering to optimize responses
-- Context window limitations may affect complex queries
-
-### 5. Vercel AI SDK Integration
-
-**Decision**: Use Vercel AI SDK as the framework for AI integration.
-
-**Rationale**:
-- Provides consistent interfaces for multiple AI providers
-- Includes built-in streaming capabilities
-- Offers tool calling framework compatible with modern LLMs
-- Well-maintained and regularly updated
-- Good community support and documentation
-
-**Implications**:
-- Adds external dependency
-- May require custom extensions for GEE-specific functionality
-- Updates to the SDK may require adaptation
-- Need to build GEE-specific tools on top of the framework
-
-### 6. Multiple AI Provider Support
-
-**Decision**: Support multiple AI providers (Anthropic Claude, OpenAI GPT) through adapter pattern.
-
-**Rationale**:
-- Gives users choice of preferred AI provider
-- Provides fallback options if one service is unavailable
-- Different models have different strengths for specific tasks
-- Allows leveraging provider-specific features when advantageous
-- Future-proofs against changes in AI service landscape
-
-**Implications**:
-- More complex integration and testing required
-- Need to handle provider-specific API differences
-- Must optimize prompts for different model capabilities
-- User interface needs provider selection options
-- Increased maintenance overhead
-
-## Design Patterns
-
-### 1. Observer Pattern
-
-Used to monitor changes in the Earth Engine interface and code editor without directly modifying them. Content scripts act as observers that:
-- Watch for DOM changes
-- Monitor code changes in the editor
-- Track console output and errors
-- Observe map state and visualization changes
-
-This pattern enables the agent to maintain awareness of the user's current context without interfering with normal Earth Engine operation.
-
-### 2. Adapter Pattern
-
-Employed to transform Earth Engine interface elements and user code into structured context that the AI can understand. Adapters:
-- Parse JavaScript/Python code into structured representations
-- Extract relevant metadata from datasets and functions
-- Convert error messages into actionable context
-- Transform Earth Engine concepts into AI-friendly descriptions
-- Handle differences between AI provider APIs
-
-This abstraction layer allows the AI to work with consistent inputs regardless of Earth Engine updates or interface changes.
-
-### 3. Command Pattern
-
-Used for AI-generated code suggestions and actions, allowing:
-- Preview of changes before application
-- Undo/redo capability for applied suggestions
-- Consistent handling of different action types
-- Tracking of action history for context
-
-This pattern gives users confidence in applying AI suggestions by making actions explicit and reversible.
-
-### 4. Strategy Pattern
-
-Implemented for different types of assistance, enabling the agent to:
-- Switch between code generation, explanation, debugging, and dataset discovery modes
-- Apply different context extraction techniques based on the current task
-- Adapt prompt strategies based on user expertise level
-- Use different visualization approaches based on data type
-
-This flexibility allows the agent to adapt its approach to different user needs and tasks.
-
-### 5. Facade Pattern
-
-The sidepanel interface provides a simplified facade over the complex interactions between:
-- Context extraction
-- AI communication
-- Response formatting
-- Earth Engine API integration
-
-This unifies the user experience while hiding the complexity of the underlying components.
-
-### 6. Tool Pattern
-
-The agent implements a structured tool pattern for Earth Engine operations:
-- Tools are defined with clear input/output interfaces
-- Each tool handles a specific GEE operation
-- Tools can be composed for complex operations
-- AI can select and use tools based on user needs
-- Tool execution is tracked and can be reported to the user
-
-This pattern enables the AI to interact with Earth Engine in a controlled, predictable way.
-
-## Component Relationships
-
-### 1. Core Components
-
-#### Background Service
-- Manages extension lifecycle
-- Handles authentication and API keys
-- Coordinates between content scripts and UI
-- Maintains state across different contexts
-- Manages communication with AI services
-
-#### Content Scripts
-- Extract context from Earth Engine interface
-- Monitor code editor and console
-- Capture error messages and warnings
-- Track visualization state and layers
-- Inject UI components into the interface
-
-#### Sidepanel UI
-- Provides main interaction point for users
-- Displays AI responses and suggestions
-- Enables conversation with the agent
-- Shows context awareness indicators
-- Offers configuration options
-
-#### Popup Interface
-- Provides quick access to common functions
-- Shows current status and context summary
-- Offers settings and preferences
-- Displays recent interactions history
-- Provides help and documentation
-
-#### Tooltips
-- Offer contextual help on hover
-- Explain Earth Engine concepts inline
-- Provide quick dataset information
-- Show function parameter details
-- Highlight potential issues
-
-#### AI SDK Integration
-- Manages communication with AI providers
-- Handles API key storage and usage
-- Formats prompts with Earth Engine context
-- Processes and structures AI responses
-- Implements streaming for incremental responses
-
-#### Tool Framework
-- Defines consistent interfaces for GEE tools
-- Provides tool registration and discovery
-- Manages tool execution and error handling
-- Tracks tool usage for context building
-- Supports composing tools for complex operations
-
-### 2. Interaction Flow
-
-```
-User Action in Earth Engine
-        │
-        ▼
-┌─────────────────┐    ┌─────────────────┐
-│  Content Script  │───►│ Context Extractor│
-└─────────────────┘    └─────────────────┘
-        │                      │
-        ▼                      ▼
-┌─────────────────┐    ┌─────────────────┐
-│ Background Service│◄──►│  Context Store  │
-└─────────────────┘    └─────────────────┘
-        │                      ▲
-        ▼                      │
-┌─────────────────┐    ┌─────────────────┐
-│   AI Service    │───►│ Response Formatter│
-└─────────────────┘    └─────────────────┘
-        │                      │
-        ▼                      ▼
-┌─────────────────┐    ┌─────────────────┐
-│   UI Components  │◄──►│  Action Handler │
-└─────────────────┘    └─────────────────┘
-        │
-        ▼
-  User Interface
+```mermaid
+graph TD
+    User[User Query] --> SP[Side Panel]
+    SP --> BG[Background Script]
+    BG --> AI[Vercel AI SDK Agent]
+    AI -- Tool Selection --> T1[Tool 1: Generate Code]
+    AI -- Tool Selection --> T2[Tool 2: Insert Code]
+    AI -- Tool Selection --> T3[Tool 3: Run Code]
+    AI -- Tool Selection --> TN[Tool N: Other Tools]
+    T1 --> BG2[Background Script]
+    T2 --> BG2
+    T3 --> BG2
+    TN --> BG2
+    BG2 --> CS[Content Script]
+    CS --> GEE[Google Earth Engine]
+    GEE --> CS2[Content Script]
+    CS2 --> BG3[Background Script]
+    BG3 --> AI2[AI Agent]
+    AI2 --> SP2[Side Panel]
+    SP2 --> User2[User]
 ```
 
-### 3. Tool Execution Flow
+This architecture uses the **Vercel AI SDK** for agent capabilities, allowing:
+- Sequential tool execution (generate → insert → run)
+- In-context reasoning between steps
+- Streaming responses during multi-step operations
+- Client-side context management
 
+### Server-Side Agent (Future Consideration)
+
+```mermaid
+graph TD
+    User[User Query] --> SP[Side Panel]
+    SP --> BG[Background Script]
+    BG --> Server[Server: Mastra/Langchain]
+    Server -- Tool Selection --> T1[Tool 1: Generate Code]
+    Server -- Tool Selection --> T2[Tool 2: Insert Code]
+    Server -- Tool Selection --> T3[Tool 3: Run Code]
+    Server -- Tool Selection --> TN[Tool N: Other Tools]
+    T1 --> BG2[Background Script]
+    T2 --> BG2
+    T3 --> BG2
+    TN --> BG2
+    BG2 --> CS[Content Script]
+    CS --> GEE[Google Earth Engine]
+    GEE --> CS2[Content Script]
+    CS2 --> BG3[Background Script]
+    BG3 --> Server2[Server]
+    Server2 --> SP2[Side Panel]
+    SP2 --> User2[User]
 ```
-User Request
-      │
-      ▼
-┌──────────────┐     ┌────────────────┐
-│ AI Processing │────►│ Tool Selection │
-└──────────────┘     └────────────────┘
-                            │
-                            ▼
-┌───────────────┐     ┌────────────────┐
-│ Result Display │◄────│ Tool Execution │
-└───────────────┘     └────────────────┘
-      ▲                      │
-      │                      ▼
-      │              ┌────────────────┐
-      └──────────────│ GEE Interaction│
-                     └────────────────┘
+
+This approach would leverage server-side frameworks like **Mastra** or **Langchain** for:
+- Persistent memory across sessions
+- More complex multi-agent coordination
+- Reduced client-side complexity
+- Advanced tool orchestration
+
+## Message Flow Patterns
+
+### User Query Processing
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant UI as Side Panel UI
+    participant BG as Background Script
+    participant CS as Content Script
+    participant AI as AI Service
+    participant GEE as Google Earth Engine
+
+    User->>UI: Submit Query
+    UI->>BG: Send Query
+    BG->>CS: Request Context
+    CS-->>GEE: Extract State
+    CS->>BG: Return Context
+    BG->>AI: Query + Context
+    AI-->>BG: Stream Response
+    BG-->>UI: Stream Response
+    UI-->>User: Display Response
 ```
 
-## Earth Engine Tools
+### Tool Execution Flow
 
-### 1. Dataset Search Tool
-- Searches the Google Earth Engine dataset catalog
-- Filters datasets by type, date range, resolution, etc.
-- Provides metadata and usage examples
-- Suggests appropriate datasets for specific analyses
-- Links to official documentation
+```mermaid
+sequenceDiagram
+    participant AI as AI Service
+    participant BG as Background Script
+    participant CS as Content Script
+    participant GEE as Google Earth Engine
+    
+    AI->>BG: Tool Request
+    BG->>CS: Execute Tool
+    CS->>GEE: DOM Operation
+    GEE-->>CS: Operation Result
+    CS-->>BG: Tool Result
+    BG-->>AI: Result
+    AI->>AI: Process Result
+```
 
-### 2. Code Generation Tool
-- Creates Earth Engine code snippets based on user requests
-- Generates complete analysis workflows
-- Provides commented code with explanations
-- Customizes code based on selected datasets
-- Offers parameter suggestions and optimizations
+### Multi-Step Tool Execution Flow
 
-### 3. Code Execution Tool
-- Inserts generated code into the Earth Engine editor
-- Executes code with proper error handling
-- Captures and reports execution results
-- Manages execution in background or foreground
-- Provides run status feedback
+```mermaid
+sequenceDiagram
+    participant User
+    participant AI as AI Agent
+    participant T1 as Tool 1: Generate Code
+    participant T2 as Tool 2: Insert Code
+    participant T3 as Tool 3: Run Code
+    participant GEE as Google Earth Engine
+    
+    User->>AI: Query ("Show Landsat imagery for NYC")
+    AI->>AI: Initial Reasoning
+    AI->>T1: Generate Earth Engine Code
+    T1-->>AI: Return Generated Code
+    AI->>AI: Analyze Code
+    AI->>T2: Insert Code to Editor
+    T2-->>AI: Return Insertion Result
+    AI->>T3: Run Code in GEE
+    T3->>GEE: Execute Code
+    GEE-->>T3: Execution Result/Error
+    T3-->>AI: Return Run Result
+    AI->>AI: Generate Final Response
+    AI-->>User: Complete Answer with Results
+```
 
-### 4. Console Interaction Tool
-- Reads console output from Earth Engine
-- Captures error messages and warnings
-- Parses log messages for context
-- Monitors computation progress
-- Extracts relevant information for debugging
+## Component Patterns
 
-### 5. Map Inspector Tool
-- Activates the Earth Engine inspector tool
-- Retrieves pixel values and metadata at click locations
-- Formats inspector results for display
-- Suggests analyses based on inspected values
-- Provides contextual explanation of values
+### Side Panel UI
 
-### 6. Task Management Tool
-- Lists running and completed Earth Engine tasks
-- Creates new export or processing tasks
-- Monitors task status and progress
-- Cancels or modifies existing tasks
-- Provides task history and results
+The Side Panel is built as a React application with:
 
-### 7. Screenshot Tool
-- Captures the current map view or visualization
-- Processes and optimizes screenshot images
-- Generates descriptions of visualizations
-- Saves screenshots for reference in conversation
-- Compares multiple visualizations
+```mermaid
+graph TD
+    App[App] --> Chat[Chat Component]
+    App --> Setting[Settings Component]
+    Chat --> Messages[Messages Container]
+    Chat --> Input[Input Component]
+    Messages --> UserMsg[User Message]
+    Messages --> AIMsg[AI Message]
+    AIMsg --> Stream[Streaming Text]
+    AIMsg --> Tools[Tool Responses]
+```
 
-## Security & Privacy Considerations
+### Tools Implementation
 
-### 1. Data Handling
+Each tool follows a consistent pattern:
 
-- User code and context are processed locally when possible
-- Only necessary context is sent to external AI services
-- No permanent storage of user code or Earth Engine data
-- API keys are stored securely using Chrome's storage API
-- Clear data lifecycle with automatic expiration
+```mermaid
+graph TD
+    Tool[Tool Implementation] --> Schema[Tool Schema]
+    Tool --> Handler[Tool Handler]
+    Tool --> Executor[Tool Executor]
+    Handler --> BG[Background Handler]
+    Executor --> CS[Content Script Executor]
+    Schema --> Valid[Input Validation]
+    Schema --> Docs[Documentation]
+```
 
-### 2. Permission Model
+## Data Flow Patterns
 
-- Minimal required permissions in the extension manifest
-- Explicit user consent for context extraction
-- Transparency about what information is collected
-- Option to disable features that require more sensitive permissions
-- Regular security audits and updates
+### Context Gathering
 
-### 3. Integration Boundaries
+```mermaid
+flowchart TD
+    Start[Context Requested] --> CS[Content Script Activated]
+    CS --> C1{Check Editor}
+    C1 --> CE[Capture Editor Content]
+    CS --> C2{Check Console}
+    C2 --> CC[Capture Console Output]
+    CS --> C3{Check Map}
+    C3 --> CM[Capture Map State]
+    CS --> C4{Check Panels}
+    C4 --> CP[Capture Panel State]
+    CE & CC & CM & CP --> Combine[Combine Context]
+    Combine --> Format[Format for AI]
+    Format --> Return[Return to Background]
+```
 
-- Content scripts operate in isolated worlds to prevent conflicts
-- Communication with Earth Engine interface uses message passing
-- Extension components cannot modify Earth Engine functionality
-- Security sandbox ensures the extension cannot interfere with critical Earth Engine operations
-- Tool execution requires explicit user permission by default
+### User Interface State Management
 
-### 4. API Key Management
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Sending: User Submits
+    Sending --> Streaming: AI Responds
+    Streaming --> ToolExecution: Tool Use
+    ToolExecution --> Streaming: Tool Completes
+    Streaming --> Complete: Response Done
+    Complete --> Idle: New Interaction
+```
 
-- User-provided API keys stored securely
-- Optional local encryption of stored keys
-- Clear display of current API usage
-- Usage tracking and quota management
-- Options for ephemeral (session-only) key usage
+## Agent System Patterns
 
-## Performance Considerations
+The agent system follows these patterns:
 
-### 1. Context Optimization
+### Decision Making Flow
 
-- Selective capture of relevant context only
-- Incremental context updates rather than full snapshots
-- Throttling of rapid UI changes to prevent performance impact
-- Background processing of complex context extraction
-- Efficient serialization for AI service communication
+```mermaid
+flowchart TD
+    Start[User Request] --> Analyze[Analyze Request]
+    Analyze --> D1{Needs Tools?}
+    D1 -- Yes --> TS[Select Appropriate Tool]
+    D1 -- No --> DR[Generate Direct Response]
+    TS --> TE[Execute Tool]
+    TE --> D2{Need Additional Tools?}
+    D2 -- Yes --> TS
+    D2 -- No --> FR[Generate Final Response]
+    DR --> End[Return to User]
+    FR --> End
+```
 
-### 2. Response Management
+### Multi-Step Tool Execution Pattern
 
-- Progressive loading of long AI responses
-- Client-side caching of common queries and responses
-- Preemptive suggestions based on user patterns
-- Lazy loading of resource-intensive components
-- Background prefetching for likely next queries
+```mermaid
+flowchart TD
+    Start[User Request] --> Plan[Plan Execution Steps]
+    Plan --> T1[Step 1: Generate Earth Engine Code]
+    T1 --> D1{Code Generated Successfully?}
+    D1 -- Yes --> T2[Step 2: Insert Code to Editor]
+    D1 -- No --> Error1[Handle Generation Error]
+    T2 --> D2{Code Inserted Successfully?}
+    D2 -- Yes --> T3[Step 3: Run Code]
+    D2 -- No --> Error2[Handle Insertion Error]
+    T3 --> D3{Code Ran Successfully?}
+    D3 -- Yes --> Result[Present Results to User]
+    D3 -- No --> Error3[Analyze Run Error]
+    Error1 --> Recover1[Retry or Adjust Generation]
+    Error2 --> Recover2[Retry Insertion]
+    Error3 --> Recover3[Debug Code or Explain Error]
+    Recover1 --> T1
+    Recover2 --> T2
+    Recover3 --> Result
+```
 
-### 3. Resource Usage
+### Agent Implementation with Vercel AI SDK
 
-- Event delegation to reduce listener overhead
-- Worker threads for expensive operations
-- Efficient DOM operations to avoid layout thrashing
-- Careful management of memory usage
-- Suspension of inactive features when not in use
+```mermaid
+flowchart TD
+    StartAgent[Initialize Agent] --> DP[Define Tools & Prompts]
+    DP --> MH[Message Handler Setup]
+    MH --> PM[Process Message]
+    PM --> D1{Tool Selection}
+    D1 -- Direct Response --> GR[Generate Response]
+    D1 -- Use Tool --> TE[Execute Tool]
+    TE --> PR[Process Result]
+    PR --> D2{Complete Task?}
+    D2 -- No --> D1
+    D2 -- Yes --> GFR[Generate Final Response]
+    GR --> Return[Return to User]
+    GFR --> Return
+```
 
-## Extensibility Points
+The implementation uses the Vercel AI SDK's agent capabilities following this pattern:
+- Tool definitions with JSON Schema
+- Agent prompt with tool instructions
+- FunctionCallingHandler for tool execution  
+- Tool callbacks for content script operations
+- Stream handling for progressive responses
 
-### 1. AI Provider Abstraction
+## Error Handling Patterns
 
-The system includes an abstraction layer for AI services, allowing:
-- Switching between different AI providers
-- Supporting multiple models for different tasks
-- Implementing local models for sensitive operations
-- Custom model deployment for specialized functions
-- Graceful fallback options if primary service is unavailable
+```mermaid
+flowchart TD
+    Error[Error Detected] --> Classify[Classify Error]
+    Classify --> E1{Error Type}
+    E1 -- Tool Execution --> TE[Tool Error Handler]
+    E1 -- API --> AE[API Error Handler]
+    E1 -- Context --> CE[Context Error Handler]
+    E1 -- DOM --> DE[DOM Error Handler]
+    TE & AE & CE & DE --> Format[Format Error]
+    Format --> D1{Recoverable?}
+    D1 -- Yes --> Retry[Retry Operation]
+    D1 -- No --> Report[Report to User]
+```
 
-### 2. Feature Modules
+## Security Patterns
 
-The extension supports dynamic loading of feature modules:
-- Dataset-specific assistants
-- Specialized analysis tools
-- Custom visualization helpers
-- Domain-specific knowledge packs
-- User-created workflow templates
+```mermaid
+flowchart TD
+    Security[Security Measures] --> SK[API Key Security]
+    Security --> DP[Data Privacy]
+    Security --> HC[Host Communication]
+    
+    SK --> SSK[Secure Storage]
+    SK --> LAK[Limited Access]
+    SK --> EK[Encryption]
+    
+    DP --> MT[Minimize Transfer]
+    DP --> PL[Permission Limits]
+    DP --> UC[User Control]
+    
+    HC --> VH[Validated Hosts]
+    HC --> SP[Secure Protocols]
+    HC --> CM[Content Security]
+```
 
-### 3. Context Providers
+## Memory and State Management
 
-The context extraction system allows for custom providers:
-- Integration with additional Earth Engine tools
-- Support for common GIS file formats
-- Connection to external data sources
-- Custom metadata extractors
-- User-defined context augmentation
+```mermaid
+flowchart TD
+    State[State Management] --> CS[Client-Side Storage]
+    State --> SS[Session State]
+    State --> FS[Future Server State]
+    
+    CS --> CLS[Chrome Local Storage]
+    CS --> CSS[Chrome Sync Storage]
+    CS --> CES[Chrome Extension Storage]
+    
+    SS --> MH[Message History]
+    SS --> UI[UI State]
+    SS --> TC[Tool Context]
+    
+    FS --> PSM[Persistent Session Memory]
+    FS --> UM[User Model]
+    FS --> KG[Knowledge Graph]
+```
 
-## Testing Approach
+## Testing Patterns
 
-### 1. Unit Testing
+```mermaid
+flowchart TD
+    Testing[Testing Strategy] --> UT[Unit Tests]
+    Testing --> IT[Integration Tests]
+    Testing --> MT[Manual Tests]
+    
+    UT --> TC[Tool Components]
+    UT --> MC[Message Components]
+    UT --> UC[UI Components]
+    
+    IT --> TI[Tool Integration]
+    IT --> AI[AI Integration]
+    IT --> MI[Message Integration]
+    
+    MT --> TP[Tool Panel]
+    MT --> EI[Extension Installation]
+    MT --> UJ[User Journeys]
+```
 
-- Component isolation for predictable testing
-- Mocked Earth Engine environment
-- Simulated user interactions
-- Test coverage for core utilities
-- Regression testing for critical functions
+## Extension Integration Points
 
-### 2. Integration Testing
+```mermaid
+flowchart TD
+    Integration[Integration Points] --> GEE[GEE Integration]
+    Integration --> AI[AI Integration]
+    Integration --> Browser[Browser Integration]
+    
+    GEE --> Code[Code Editor]
+    GEE --> Console[Console Output]
+    GEE --> Map[Map Visualization]
+    GEE --> Tasks[Task Management]
+    
+    AI --> Claude[Claude API]
+    AI --> GPT[GPT API]
+    AI --> C7[Context7]
+    
+    Browser --> SP[Side Panel]
+    Browser --> CS[Content Script]
+    Browser --> BG[Background Worker]
+```
 
-- End-to-end workflows with simulated Earth Engine
-- Cross-component communication verification
-- Browser compatibility testing
-- Extension lifecycle testing
-- API interaction testing with mocked responses
+## Development Workflow
 
-### 3. User Testing
+```mermaid
+flowchart TD
+    Dev[Development Process] --> Local[Local Development]
+    Dev --> Test[Testing]
+    Dev --> Build[Building]
+    
+    Local --> Code[Code Changes]
+    Local --> WP[Webpack Dev]
+    Local --> LR[Load Unpacked]
+    
+    Test --> Unit[Unit Tests]
+    Test --> Manual[Manual Tests]
+    Test --> DevTools[DevTools Debug]
+    
+    Build --> Webpack[Webpack Production]
+    Build --> Pack[Package Extension]
+    Build --> Deploy[Upload to Chrome Store]
+```
 
-- Task completion metrics
-- Interface usability studies
-- Performance benchmarking
-- Error recovery scenarios
-- Satisfaction and utility assessment 
+## Performance Optimization
+
+```mermaid
+flowchart TD
+    Perf[Performance] --> MP[Message Passing]
+    Perf --> DOM[DOM Operations]
+    Perf --> AI[AI Requests]
+    
+    MP --> Batch[Batch Messages]
+    MP --> Compress[Compress Data]
+    MP --> TypedArrays[Use Typed Arrays]
+    
+    DOM --> Virtual[Virtual DOM]
+    DOM --> Throttle[Throttle Operations]
+    DOM --> Selective[Selective Updates]
+    
+    AI --> Stream[Streaming Responses]
+    AI --> ContextLimit[Context Management]
+    AI --> Cache[Response Caching]
+```
+
+## Future Architecture Considerations
+
+### Potential Server-Side Components
+
+```mermaid
+graph TD
+    Client[Chrome Extension] <--> Server[Server Components]
+    Server --> Memory[Memory Bank]
+    Server --> Agents[Agent Orchestration]
+    Server --> KG[Knowledge Graph]
+    Server --> Analytics[Usage Analytics]
+    Memory --> Session[Session Persistence]
+    Memory --> User[User Preferences]
+    Memory --> History[Conversation History]
+```
+
+### Multi-Agent System
+
+```mermaid
+graph TD
+    Coordinator[Agent Coordinator] --> CodeAgent[Code Generation Agent]
+    Coordinator --> VisAgent[Visualization Agent]
+    Coordinator --> DataAgent[Dataset Agent]
+    Coordinator --> DebugAgent[Debug Agent]
+    CodeAgent & VisAgent & DataAgent & DebugAgent --> Tools[Shared Tool Library]
+```
+
+### Progressive Enhancement
+
+```mermaid
+flowchart TD
+    Phase1[Phase 1: Client-Only] --> Phase2[Phase 2: Client+Basic Server]
+    Phase2 --> Phase3[Phase 3: Enhanced Server]
+    Phase3 --> Phase4[Phase 4: Multi-Agent System]
+    
+    Phase1 --> P1F[Client-side AI SDK Agent]
+    Phase1 --> P1T[Basic Tool Set]
+    
+    Phase2 --> P2M[Server Memory Persistence]
+    Phase2 --> P2A[Enhanced Agent Capabilities]
+    
+    Phase3 --> P3K[Knowledge Integration]
+    Phase3 --> P3C[Custom Training]
+    
+    Phase4 --> P4MA[Multiple Specialized Agents]
+    Phase4 --> P4O[Orchestration Layer]
+``` 

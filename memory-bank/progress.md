@@ -14,6 +14,7 @@
 | UI Components | In Progress | 75% |
 | Messaging System | In Progress | 65% |
 | AI Integration | In Progress | 40% |
+| Agent System Implementation | Planning | 10% |
 | GEE Tools | In Progress | 15% |
 | Advanced Features | Not Started | 0% |
 
@@ -95,6 +96,21 @@
 
 ## In Progress
 
+### Agent System Development
+1. **Vercel AI SDK Integration**
+   - 🔄 Defining tool schemas for Earth Engine tools
+   - 🔄 Implementing multi-step tool execution flow
+   - 🔄 Setting up agent initialization and configuration
+   - 🔄 Creating tool handlers for Earth Engine operations
+   - 🔄 Designing sequential execution patterns
+
+2. **Agent Architecture**
+   - 🔄 Client-side agent implementation
+   - 🔄 Evaluating server-side options (Mastra, Langchain)
+   - 🔄 Designing memory persistence model
+   - 🔄 Planning tool coordination system
+   - 🔄 Testing sequential tool execution (generate → insert → run)
+
 ### Browser Tools Enhancement
 1. **Click Tool**
    - 🔄 Additional click types (right-click, double-click)
@@ -158,6 +174,13 @@
 
 ## Not Started Yet
 
+### Server-Side Components
+- ⬜ Mastra server-side agent framework evaluation
+- ⬜ Langchain integration exploration
+- ⬜ Persistent memory implementation
+- ⬜ Server-side conversation history storage
+- ⬜ Multi-agent coordination system
+
 ### GEE Tools (Advanced)
 - ⬜ Complete dataset search functionality
 - ⬜ Advanced code generation tools
@@ -196,6 +219,10 @@
 3. **AI Key Management** 🟠
    - Secure storage of API keys needs improvement
    - Resolution: Implement proper encryption and secure storage
+
+4. **Agent Execution Flow** 🟠
+   - Sequential tool execution pattern needs formalization
+   - Resolution: Implement structured tool execution flow in Vercel AI SDK
 
 ### Minor Issues
 1. **UI Responsiveness** 🟡
@@ -248,29 +275,32 @@
 - Resolve all critical and major issues
 - Complete messaging system implementation
 - Finalize basic UI components
-- Implement settings storage
-- Add comprehensive error handling
 
-### Milestone 2: Complete AI Integration (ETA: July 15, 2025)
-- Finalize Vercel AI SDK integration
-- Complete API key management
-- Implement robust prompt handling
-- Develop full streaming response rendering
-- Complete context management
+### Milestone 2: Implement Agent System (ETA: August 1, 2025)
+- Implement Vercel AI SDK agent with multi-step tool capabilities
+- Create sequential tool execution flow (generate → insert → run)
+- Develop core Earth Engine tools with consistent interfaces
+- Establish agent architecture for future expansion
 
-### Milestone 3: Basic GEE Tools (ETA: August 1, 2025)
-- Implement robust DOM interaction
-- Add code insertion and execution
-- Create console output capture
-- Develop basic map interaction capabilities
-- Complete initial dataset search functionality
+### Milestone 3: Enhance GEE Integration (ETA: September 1, 2025)
+- Implement robust DOM interaction with GEE editor
+- Complete Earth Engine tool implementations
+- Add comprehensive error handling for GEE operations
+- Develop advanced context extraction
 
-### Milestone 4: Advanced Features (ETA: September 1, 2025)
-- Implement conversation history persistence
-- Add RAG for Google Earth Engine API
-- Begin work on MCP server integration
-- Develop advanced tool suite
-- Create fine-tuning mechanisms for GEE code generation
+### Future Milestones
+- Server-side implementation for memory persistence
+- Advanced agent capabilities with specialized tools
+- Multi-agent coordination system
+- Custom knowledge integration for Earth Engine
+
+## Resources & References
+
+- [Vercel AI SDK Agent Documentation](https://sdk.vercel.ai/docs/foundations/agents)
+- [Multi-Step Tool Usage](https://sdk.vercel.ai/docs/foundations/agents#multi-step-tool-usage)
+- Chrome Extension Documentation
+- Earth Engine JavaScript API Reference
+- Task Master Development Workflow
 
 ## Recent Wins
 - Successfully implemented side panel activation

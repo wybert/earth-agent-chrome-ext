@@ -22,6 +22,11 @@ The primary focus areas recently have been:
     - Updating message handlers (`handleChatMessage`) to process full conversation history.
     - Improving stream processing logic.
 
+4.  **Agent System Implementation**
+    - Exploring Vercel AI SDK agent capabilities for multi-step tool execution
+    - Designing a system for sequential tool execution (generate code → insert code → run code)
+    - Evaluating server-side approaches (Mastra, Langchain) vs. client-side AI SDK implementation
+
 ## Recent Changes
 
 ### Completed
@@ -61,6 +66,8 @@ The primary focus areas recently have been:
 ### In Progress
 - Testing new browser tool implementations
 - Refining error handling in background script
+- Implementing Vercel AI SDK agent system for multi-step tool execution
+- Exploring memory persistence options for agent conversations
 - Improving Tools Test Panel interface
 - Documenting new tool capabilities
 
@@ -80,11 +87,17 @@ The primary focus areas recently have been:
    - Ensuring reliable tool execution
    - Managing tool state and feedback
    - Handling tool-specific requirements
+   - Implementing sequential tool execution flow
 
 4. **UI Feedback**
    - Providing clear success/error states
    - Maintaining responsive interface
    - Handling long-running operations
+
+5. **Agent Implementation**
+   - Determining optimal architecture (client-side vs. server-side)
+   - Implementing multi-step tool execution
+   - Managing conversation memory and context
 
 ## Next Steps
 
@@ -92,19 +105,23 @@ The primary focus areas recently have been:
 1. Complete testing of updated browser tools
 2. Finalize error handling improvements
 3. Update documentation for new features
-4. Implement any necessary UI refinements
+4. Begin implementation of Vercel AI SDK agent with multi-step tool capabilities
+5. Implement any necessary UI refinements
 
 ### Short-term (Next 1-2 Weeks)
 1. Add more browser automation capabilities
-2. Enhance tool testing interface
-3. Improve error recovery mechanisms
-4. Add more user feedback features
+2. Create framework for sequential tool execution (code generation → insertion → execution)
+3. Evaluate server-side options (Mastra, Langchain) for more robust agent capabilities
+4. Enhance tool testing interface
+5. Improve error recovery mechanisms
+6. Add more user feedback features
 
 ### Medium-term (Next Month)
 1. Implement advanced browser automation features
-2. Add more sophisticated error handling
-3. Enhance tool coordination capabilities
-4. Improve overall system reliability
+2. Develop full agent system with memory persistence
+3. Add more sophisticated error handling
+4. Enhance tool coordination capabilities
+5. Improve overall system reliability
 
 ## Open Questions
 
@@ -123,6 +140,11 @@ The primary focus areas recently have been:
    - What additional UI features are needed?
    - How can we make tools more intuitive?
 
+4. **Agent Architecture**
+   - Should we pursue client-side only approach or implement server-side components?
+   - How do we balance flexibility vs. complexity in the agent design?
+   - What's the best way to implement memory persistence across sessions?
+
 ## Recent Learnings
 
 1. **Chrome Extension Development**
@@ -139,6 +161,11 @@ The primary focus areas recently have been:
    - Clear error messages improve debugging
    - Consistent response formats aid integration
    - Proper type checking enhances reliability
+
+4. **Agent Development**
+   - Vercel AI SDK offers built-in capabilities for multi-step tool execution
+   - Sequential tool execution requires careful state management
+   - Server-side components may be needed for robust memory persistence
 
 ## Decision Log
 
@@ -160,4 +187,9 @@ The primary focus areas recently have been:
 4. **Chrome API Migration** (2024-03-17)
    - **Decision:** Move to chrome.scripting.executeScript
    - **Rationale:** Better security, future compatibility
-   - **Trade-offs:** More complex implementation, needs careful error handling 
+   - **Trade-offs:** More complex implementation, needs careful error handling
+
+5. **Agent Implementation Strategy** (2024-03-21)
+   - **Decision:** Begin with client-side Vercel AI SDK agent implementation
+   - **Rationale:** Faster development path, allows evaluating capabilities before adding server components
+   - **Trade-offs:** May need to migrate to server-side (Mastra, Langchain) for robust memory persistence 
