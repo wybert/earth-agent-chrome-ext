@@ -472,18 +472,19 @@
     {
       "id": 9,
       "title": "Enhance Agent Capabilities with Memory and Context",
-      "description": "Implement advanced agent features including memory management, context awareness, and thinking visualization.",
+      "description": "Implement advanced agent features including memory management, context awareness, and thinking visualization aligned with the established agent architecture.",
       "status": "pending",
       "dependencies": [
         3,
         5,
         6,
         7,
-        8
+        8,
+        11
       ],
       "priority": "low",
-      "details": "Enhance the agent with: 1) Memory system to maintain conversation context across interactions, 2) Context management for multi-turn conversations about complex GEE workflows, 3) Thinking process visualization in the UI to show agent reasoning, 4) Mode switching between simple chat and advanced agent capabilities, 5) Enhanced reasoning for multi-step GEE workflows, 6) Improved prompt engineering for specialized GEE tasks.",
-      "testStrategy": "Test memory retention by verifying the agent remembers previous context in multi-turn conversations. Validate thinking visualization by checking that reasoning steps are displayed correctly. Test mode switching between chat and agent modes.",
+      "details": "Enhance the agent with: 1) Memory system to maintain conversation context across interactions and sessions, 2) Context management for multi-turn conversations about complex GEE workflows, 3) Thinking process visualization in the UI to show agent reasoning, 4) Mode switching between simple chat and advanced agent capabilities, 5) Enhanced reasoning for multi-step GEE workflows, 6) Improved prompt engineering for specialized GEE tasks. Implementation should leverage Vercel AI SDK for client-side components while considering potential future integration with server-side frameworks like Mastra or Langchain for robust memory persistence. Ensure proper state management across sessions and maintain tool contexts for GEE operations.",
+      "testStrategy": "Test memory retention by verifying the agent remembers previous context in multi-turn conversations and across sessions. Validate thinking visualization by checking that reasoning steps are displayed correctly. Test mode switching between chat and agent modes. Verify context awareness with complex GEE operations and workflows.",
       "subtasks": [
         {
           "id": 1,
@@ -491,7 +492,7 @@
           "description": "Create a memory storage system that can persist conversation history and relevant context across user sessions",
           "status": "pending",
           "dependencies": [],
-          "details": "Implement a memory storage class in TypeScript that can: 1) Store conversation turns with timestamps, 2) Save user queries and agent responses, 3) Maintain metadata about the conversation context, 4) Persist data between sessions using appropriate storage mechanisms (database, file system, or in-memory with serialization). Include methods for adding, retrieving, and summarizing memory contents. Design the system to be extensible for future memory types."
+          "details": "Implement a memory storage class in TypeScript that can: 1) Store conversation turns with timestamps, 2) Save user queries and agent responses, 3) Maintain metadata about the conversation context, 4) Persist data between sessions using appropriate storage mechanisms (database, file system, or in-memory with serialization). Include methods for adding, retrieving, and summarizing memory contents. Design the system to be extensible for future memory types. Leverage Vercel AI SDK for client-side implementation while planning for potential future integration with server-side components like Mastra or Langchain for more robust persistence."
         },
         {
           "id": 2,
@@ -501,7 +502,7 @@
           "dependencies": [
             1
           ],
-          "details": "Build on the memory system to implement a context manager in TypeScript that: 1) Tracks the current conversation topic and intent, 2) Maintains references to GEE objects being discussed, 3) Identifies when context switching occurs, 4) Implements relevance scoring to determine which past interactions are most important for the current query, 5) Provides methods to extract relevant context for prompt construction. Test with multi-turn conversations about complex GEE workflows."
+          "details": "Build on the memory system to implement a context manager in TypeScript that: 1) Tracks the current conversation topic and intent, 2) Maintains references to GEE objects being discussed, 3) Identifies when context switching occurs, 4) Implements relevance scoring to determine which past interactions are most important for the current query, 5) Provides methods to extract relevant context for prompt construction. Ensure the context manager maintains tool contexts specific to GEE operations and can handle state persistence across user sessions. Test with multi-turn conversations about complex GEE workflows."
         },
         {
           "id": 3,
@@ -509,7 +510,7 @@
           "description": "Create a UI component that displays the agent's reasoning process in real-time",
           "status": "pending",
           "dependencies": [],
-          "details": "Develop a UI component in TypeScript that: 1) Shows the step-by-step reasoning of the agent as it processes a query, 2) Visualizes intermediate steps like parsing the query, retrieving context, planning a response, and generating code, 3) Updates in real-time as the agent thinks, 4) Can be toggled on/off by users, 5) Uses appropriate styling to distinguish between different types of thinking steps. Implement the backend support to stream this information to the frontend."
+          "details": "Develop a UI component in TypeScript that: 1) Shows the step-by-step reasoning of the agent as it processes a query, 2) Visualizes intermediate steps like parsing the query, retrieving context, planning a response, and generating code, 3) Updates in real-time as the agent thinks, 4) Can be toggled on/off by users, 5) Uses appropriate styling to distinguish between different types of thinking steps. Implement the backend support to stream this information to the frontend using Vercel AI SDK streaming capabilities. Ensure the visualization aligns with the established agent architecture."
         },
         {
           "id": 4,
@@ -521,7 +522,7 @@
             2,
             3
           ],
-          "details": "Develop a mode switching mechanism in TypeScript that: 1) Allows users to toggle between 'simple chat' and 'advanced agent' modes, 2) In simple mode, provides direct responses without extensive reasoning or context management, 3) In advanced mode, utilizes the full memory, context, and thinking visualization capabilities, 4) Persists mode preference in user settings, 5) Updates the UI to reflect the current mode, 6) Implements appropriate prompt templates for each mode. Ensure smooth transitions between modes during ongoing conversations."
+          "details": "Develop a mode switching mechanism in TypeScript that: 1) Allows users to toggle between 'simple chat' and 'advanced agent' modes, 2) In simple mode, provides direct responses without extensive reasoning or context management, 3) In advanced mode, utilizes the full memory, context, and thinking visualization capabilities, 4) Persists mode preference in user settings, 5) Updates the UI to reflect the current mode, 6) Implements appropriate prompt templates for each mode. Ensure smooth transitions between modes during ongoing conversations and maintain state consistency across sessions."
         },
         {
           "id": 5,
@@ -531,7 +532,7 @@
           "dependencies": [
             2
           ],
-          "details": "Enhance the agent's reasoning capabilities in TypeScript by: 1) Implementing a planning module that breaks down complex GEE tasks into logical steps, 2) Creating specialized prompt templates for different types of GEE workflows (image processing, time series analysis, etc.), 3) Adding verification steps to ensure generated code is valid and efficient, 4) Incorporating GEE best practices into the reasoning process, 5) Developing the ability to explain the workflow steps to users. Test with complex real-world GEE use cases."
+          "details": "Enhance the agent's reasoning capabilities in TypeScript by: 1) Implementing a planning module that breaks down complex GEE tasks into logical steps, 2) Creating specialized prompt templates for different types of GEE workflows (image processing, time series analysis, etc.), 3) Adding verification steps to ensure generated code is valid and efficient, 4) Incorporating GEE best practices into the reasoning process, 5) Developing the ability to explain the workflow steps to users. Ensure the reasoning system properly leverages the context management system to maintain awareness of GEE operations across conversation turns. Test with complex real-world GEE use cases."
         },
         {
           "id": 6,
@@ -542,7 +543,20 @@
             4,
             5
           ],
-          "details": "Improve prompt engineering in TypeScript by: 1) Creating a library of specialized prompt templates for different GEE domains (remote sensing, climate analysis, land use classification, etc.), 2) Implementing dynamic prompt construction that incorporates relevant context and memory, 3) Adding few-shot examples for complex GEE operations, 4) Developing techniques to handle edge cases and ambiguous queries, 5) Implementing A/B testing to compare prompt effectiveness, 6) Creating a system to continuously improve prompts based on user feedback and success metrics. Document the prompt engineering approach for future reference."
+          "details": "Improve prompt engineering in TypeScript by: 1) Creating a library of specialized prompt templates for different GEE domains (remote sensing, climate analysis, land use classification, etc.), 2) Implementing dynamic prompt construction that incorporates relevant context and memory, 3) Adding few-shot examples for complex GEE operations, 4) Developing techniques to handle edge cases and ambiguous queries, 5) Implementing A/B testing to compare prompt effectiveness, 6) Creating a system to continuously improve prompts based on user feedback and success metrics. Ensure prompts are designed to work effectively with the Vercel AI SDK implementation while maintaining compatibility with potential future server-side components. Document the prompt engineering approach for future reference."
+        },
+        {
+          "id": 7,
+          "title": "Integrate with core agent framework",
+          "description": "Ensure enhanced capabilities properly integrate with the core agent system implementation",
+          "status": "pending",
+          "dependencies": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "details": "Integrate the enhanced agent capabilities with the core agent framework (Task #11) by: 1) Ensuring memory and context systems properly hook into the agent's processing pipeline, 2) Aligning thinking visualization with the agent's internal reasoning steps, 3) Making sure mode switching respects the agent's core architecture, 4) Testing the integrated system with complex GEE workflows to verify all components work together seamlessly. Document integration points and dependencies for future maintenance."
         }
       ]
     },
@@ -607,6 +621,104 @@
             4
           ],
           "details": "Implement an optimization system in TypeScript that: 1) Identifies opportunities to apply common GEE patterns (e.g., mapping functions, scale management, proper filtering), 2) Suggests performance improvements specific to Earth Engine (e.g., reducing client-server transfers, optimizing computations), 3) Provides interactive examples of before/after optimization, 4) Integrates with the LLM to explain the rationale behind suggestions, 5) Allows one-click application of suggested optimizations. Include a library of common GEE optimization patterns that can be matched against user code. Create a UI component that displays optimization suggestions alongside the code editor."
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Implement Agent System with Vercel AI SDK for Multi-Step Tool Execution",
+      "description": "Develop an agent system using Vercel AI SDK that can execute Earth Engine operations through a sequence of tools (generate code → insert code → run code), enabling complex multi-step workflows.",
+      "details": "Implement a comprehensive agent framework using Vercel AI SDK that orchestrates multi-step tool execution for Earth Engine operations. The implementation should include:\n\n1. **Agent Framework Setup**:\n   - Configure the Vercel AI SDK for agent-based execution\n   - Implement the sequential execution pattern for the three primary operations: code generation, code insertion, and code execution\n   - Create a state management system to track progress across steps\n\n2. **Tool Schema Definition**:\n   - Define JSON schemas for each Earth Engine operation tool\n   - Create type definitions for tool inputs and outputs\n   - Implement validation logic for tool parameters\n\n3. **Agent Configuration**:\n   - Set up agent initialization with appropriate model settings\n   - Configure tool routing and selection logic\n   - Implement context management to maintain conversation history\n\n4. **Tool Handlers**:\n   - Create handlers for each tool that interface with the Earth Engine API\n   - Implement error handling and recovery mechanisms\n   - Build logging functionality to track tool execution\n\n5. **Execution Patterns**:\n   - Implement chaining of tools for complex workflows\n   - Create mechanisms for conditional tool execution based on previous results\n   - Build parallel execution capabilities where appropriate\n\n6. **Server-side Options Evaluation**:\n   - Research and document the feasibility of using Mastra vs. Langchain for future implementation\n   - Create a comparison matrix of features, performance, and integration complexity\n\nThe implementation should be modular to allow for future expansion of tool capabilities and should integrate seamlessly with the existing LLM API, GEE Code Editor, code generation, and console monitoring functionality.",
+      "testStrategy": "Testing should verify the agent system's ability to correctly execute multi-step Earth Engine operations:\n\n1. **Unit Tests**:\n   - Test each tool handler in isolation with mock inputs and outputs\n   - Verify schema validation correctly identifies valid and invalid inputs\n   - Test state management across multiple steps\n\n2. **Integration Tests**:\n   - Create test scenarios that execute the full generate → insert → run sequence\n   - Verify that the agent correctly maintains context between steps\n   - Test error handling by introducing failures at different stages\n\n3. **End-to-End Tests**:\n   - Implement test cases for common Earth Engine operations (e.g., image loading, filtering, visualization)\n   - Verify that complex multi-step workflows complete successfully\n   - Test performance under various load conditions\n\n4. **Specific Test Cases**:\n   - Simple image loading and display\n   - Time-series analysis requiring multiple code generation and execution steps\n   - Complex spatial analysis with conditional logic\n   - Recovery from invalid code generation\n   - Handling of Earth Engine API errors\n\n5. **User Experience Testing**:\n   - Verify that the agent provides clear feedback during execution\n   - Test that error messages are helpful and actionable\n   - Measure and optimize response times for each step\n\nAll tests should be automated where possible and integrated into the CI/CD pipeline.",
+      "status": "pending",
+      "dependencies": [
+        3,
+        4,
+        6,
+        7
+      ],
+      "priority": "high",
+      "subtasks": [
+        {
+          "id": 1,
+          "title": "Define Tool Schemas with JSON Schema for Earth Engine Operations",
+          "description": "Create standardized JSON schemas for each Earth Engine operation tool that will be used in the agent system, including code generation, code insertion, and code execution tools.",
+          "dependencies": [],
+          "details": "Implementation details:\n1. Research and document all Earth Engine operations that need to be supported\n2. Create JSON Schema definitions for each tool with proper input/output specifications\n3. Define type definitions in TypeScript for tool parameters, inputs, and outputs\n4. Implement validation functions to ensure tool inputs match schema requirements\n5. Create a central registry of all available tools with their schemas\n6. Document each schema with examples of valid inputs and outputs\n7. Test schema validation with sample inputs\n\nTesting approach:\n- Create unit tests for schema validation\n- Test with both valid and invalid inputs to ensure proper validation\n- Verify that schemas accurately represent the required Earth Engine operations",
+          "status": "pending",
+          "parentTaskId": 11
+        },
+        {
+          "id": 2,
+          "title": "Implement Agent Initialization with Vercel AI SDK",
+          "description": "Set up the core agent framework using Vercel AI SDK, configuring it for Earth Engine operations and establishing the foundation for multi-step tool execution.",
+          "dependencies": [
+            1
+          ],
+          "details": "Implementation details:\n1. Install and configure Vercel AI SDK in the project\n2. Create an agent initialization function that sets up the LLM with appropriate parameters\n3. Configure the agent with the tool schemas defined in subtask 1\n4. Implement context management to maintain conversation history\n5. Set up proper model settings (temperature, top_p, etc.) for Earth Engine operations\n6. Create a configuration interface for customizing agent behavior\n7. Implement agent state initialization and reset functionality\n\nTesting approach:\n- Test agent initialization with various configuration options\n- Verify that tool schemas are properly registered with the agent\n- Test context management with sample conversations\n- Ensure agent can be properly initialized and reset",
+          "status": "pending",
+          "parentTaskId": 11
+        },
+        {
+          "id": 3,
+          "title": "Create Multi-Step Tool Execution Flow",
+          "description": "Implement the core execution flow that allows the agent to chain multiple tools together in sequence (generate code → insert code → run code) following the pattern in systemPatterns.md.",
+          "dependencies": [
+            1,
+            2
+          ],
+          "details": "Implementation details:\n1. Review the execution pattern in systemPatterns.md for multi-step operations\n2. Implement a tool execution manager that can handle sequential tool operations\n3. Create a state management system to track progress across steps\n4. Implement the logic for transitioning between steps based on previous results\n5. Build a mechanism for passing outputs from one tool as inputs to the next\n6. Create a workflow definition interface to specify tool sequences\n7. Implement conditional branching based on tool execution results\n\nTesting approach:\n- Create test workflows with mock tools to verify execution flow\n- Test state management across multiple tool executions\n- Verify that outputs are correctly passed between tools\n- Test error cases to ensure proper flow interruption and recovery",
+          "status": "pending",
+          "parentTaskId": 11
+        },
+        {
+          "id": 4,
+          "title": "Implement Tool Handlers for Background/Content Script Communication",
+          "description": "Create handlers for each Earth Engine tool that facilitate communication between background scripts and content scripts in the browser extension architecture.",
+          "dependencies": [
+            1,
+            3
+          ],
+          "details": "Implementation details:\n1. Create a base tool handler class with common functionality\n2. Implement specific handlers for code generation, code insertion, and code execution tools\n3. Set up message passing between background and content scripts\n4. Implement interfaces with the Earth Engine API for each tool\n5. Create serialization/deserialization logic for passing complex objects\n6. Implement timeout and retry mechanisms for tool operations\n7. Add logging functionality to track tool execution\n\nTesting approach:\n- Test each tool handler individually with mock inputs\n- Verify message passing between background and content scripts\n- Test integration with Earth Engine API using sample operations\n- Verify logging functionality captures appropriate information",
+          "status": "pending",
+          "parentTaskId": 11
+        },
+        {
+          "id": 5,
+          "title": "Add Error Handling and Recovery Strategies",
+          "description": "Implement comprehensive error handling for the agent system, including detection, reporting, and recovery mechanisms for failures during tool execution.",
+          "dependencies": [
+            3,
+            4
+          ],
+          "details": "Implementation details:\n1. Define error types and categories for different failure scenarios\n2. Implement error detection for each tool execution step\n3. Create error reporting mechanisms with detailed context information\n4. Implement recovery strategies for common error scenarios\n5. Add retry logic with exponential backoff for transient failures\n6. Create fallback mechanisms when primary operations fail\n7. Implement user feedback for error situations requiring manual intervention\n\nTesting approach:\n- Simulate various error conditions to test detection and handling\n- Verify recovery strategies work as expected for different error types\n- Test retry logic with simulated transient failures\n- Ensure error reporting provides sufficient information for debugging",
+          "status": "pending",
+          "parentTaskId": 11
+        },
+        {
+          "id": 6,
+          "title": "Implement Streaming for Multi-Step Operations",
+          "description": "Add streaming capabilities to the agent system to provide real-time feedback during long-running multi-step operations, improving user experience.",
+          "dependencies": [
+            3,
+            4,
+            5
+          ],
+          "details": "Implementation details:\n1. Configure Vercel AI SDK for streaming responses\n2. Implement streaming handlers for each step in the tool execution flow\n3. Create UI components to display streaming updates\n4. Add progress indicators for long-running operations\n5. Implement partial result handling for incremental updates\n6. Create a mechanism to pause/resume streaming when needed\n7. Add throttling to prevent UI overload during rapid updates\n\nTesting approach:\n- Test streaming with various operation durations\n- Verify UI updates correctly with streamed information\n- Test pause/resume functionality\n- Ensure streaming works correctly across the full multi-step workflow",
+          "status": "pending",
+          "parentTaskId": 11
+        },
+        {
+          "id": 7,
+          "title": "Evaluate Server-Side Options for Future Memory Persistence",
+          "description": "Research and document the feasibility of using Mastra vs. Langchain for future implementation of memory persistence in the agent system.",
+          "dependencies": [
+            2,
+            3
+          ],
+          "details": "Implementation details:\n1. Research capabilities of Mastra and Langchain for agent memory persistence\n2. Create a comparison matrix of features, performance, and integration complexity\n3. Implement small proof-of-concept integrations with both frameworks\n4. Evaluate memory persistence mechanisms in each framework\n5. Assess compatibility with the existing Vercel AI SDK implementation\n6. Document integration approaches for both options\n7. Provide recommendations with justification for future implementation\n\nTesting approach:\n- Test proof-of-concept integrations with sample memory operations\n- Benchmark performance of basic operations in both frameworks\n- Evaluate developer experience and documentation quality\n- Create a final report with clear recommendations and implementation path",
+          "status": "pending",
+          "parentTaskId": 11
         }
       ]
     }

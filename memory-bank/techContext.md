@@ -1,552 +1,302 @@
 # Technical Context: Google Earth Engine Agent
 
-## Core Technologies
-
-### Chrome Extension Framework
-- **Manifest V3** compliant extension architecture
-- Chrome Side Panel API for persistent interface
-- Content scripts for page interaction
-- Background service worker for coordination
-- Modern Chrome APIs (chrome.scripting) for execution
-
-### Browser Automation Tools
-- Click functionality with coordinate support
-- Type functionality for input elements
-- Snapshot tool with configurable depth
-- Element inspection and interaction
-- Robust error handling and reporting
-
-### TypeScript Implementation
-- Strong type safety throughout
-- Interface definitions for messages
-- Type checking for API responses
-- Error type handling
-- Chrome API type definitions
-
-### Message Passing System
-- Type-safe message definitions
-- Robust error handling
-- Response formatting standards
-- Support for async operations
-- State management
-
-## Technical Requirements
-
-### Browser Tool Requirements
-1. **Click Tool**
-   - Support for CSS selector targeting
-   - Coordinate-based clicking
-   - Element verification
-   - Click event simulation
-   - Error handling for missing elements
-
-2. **Type Tool**
-   - Support for various input types
-   - Content replacement functionality
-   - Event simulation
-   - Error handling for invalid elements
-   - Response formatting
-
-3. **Snapshot Tool**
-   - Configurable depth traversal
-   - Accessibility tree construction
-   - DOM structure capture
-   - Serialization handling
-   - Error management
-
-4. **Element Tool**
-   - Element property extraction
-   - Position information
-   - State detection
-   - Attribute collection
-   - Error reporting
-
-### Chrome API Requirements
-1. **Scripting API**
-   - Proper function serialization
-   - Argument handling
-   - Response processing
-   - Error catching
-   - Context management
-
-2. **Message Passing**
-   - Type safety
-   - Error propagation
-   - Response formatting
-   - State tracking
-   - Timeout handling
-
-## Implementation Details
-
-### Browser Tool Implementation
-```typescript
-// Click Tool Interface
-interface ClickParams {
-  selector?: string;
-  position?: {
-    x: number;
-    y: number;
-  };
-}
-
-// Type Tool Interface
-interface TypeParams {
-  selector: string;
-  text: string;
-}
-
-// Snapshot Tool Interface
-interface SnapshotParams {
-  maxDepth?: number;
-}
-
-// Element Tool Interface
-interface GetElementParams {
-  selector: string;
-  limit?: number;
-}
-```
-
-### Message Handling
-```typescript
-// Message Type Definitions
-type MessageType = 
-  | 'CLICK'
-  | 'TYPE'
-  | 'SNAPSHOT'
-  | 'GET_ELEMENT';
-
-interface Message {
-  type: MessageType;
-  payload?: any;
-}
-
-interface Response {
-  success: boolean;
-  error?: string;
-  data?: any;
-}
-```
-
-### Error Handling
-```typescript
-// Error Types
-type ErrorType =
-  | 'ELEMENT_NOT_FOUND'
-  | 'INVALID_SELECTOR'
-  | 'EXECUTION_ERROR'
-  | 'TIMEOUT'
-  | 'SERIALIZATION_ERROR';
-
-interface ToolError {
-  type: ErrorType;
-  message: string;
-  details?: any;
-}
-```
-
-## Technical Challenges
-
-### Current Challenges
-1. **Chrome API Migration**
-   - Serialization of function arguments
-   - Handling of undefined/null values
-   - Context preservation
-   - Error propagation
-
-2. **Tool Implementation**
-   - Cross-browser compatibility
-   - Event simulation accuracy
-   - DOM traversal efficiency
-   - Error recovery strategies
-
-3. **Performance Optimization**
-   - Message passing overhead
-   - DOM operation efficiency
-   - Memory usage in snapshots
-   - Response time optimization
-
-### Resolved Challenges
-1. **Click Implementation**
-   - Added coordinate support
-   - Improved element finding
-   - Enhanced error handling
-   - Standardized responses
-
-2. **Type Implementation**
-   - Removed append complexity
-   - Improved input handling
-   - Enhanced error messages
-   - Added event simulation
-
-3. **Snapshot Implementation**
-   - Added depth configuration
-   - Improved serialization
-   - Enhanced tree building
-   - Optimized memory usage
-
-## Technical Roadmap
-
-### Short-term Goals
-1. **Tool Enhancement**
-   - Add more browser automation features
-   - Improve error handling
-   - Enhance performance
-   - Add new capabilities
-
-2. **API Migration**
-   - Complete Manifest V3 updates
-   - Improve security
-   - Enhance reliability
-   - Standardize patterns
-
-### Long-term Goals
-1. **Advanced Features**
-   - Complex automation sequences
-   - State management
-   - Performance optimization
-   - Enhanced error recovery
-
-2. **Integration**
-   - Tool coordination
-   - State persistence
-   - Cross-tool operations
-   - Enhanced reliability
-
-## Technical Dependencies
-
-### Chrome APIs
-- chrome.scripting
-- chrome.runtime
-- chrome.tabs
-- chrome.sidePanel
-
-### Development Tools
-- TypeScript
-- Webpack
-- ESLint
-- Jest
-
-### Testing Framework
-- Jest for unit tests
-- Playwright for E2E tests
-- Chrome Extension testing tools
-
-## Technical Documentation
-
-### API Documentation
-- Tool interfaces
-- Message formats
-- Error types
-- Response structures
-
-### Implementation Guides
-- Tool usage examples
-- Error handling patterns
-- Testing approaches
-- Development workflows
-
-### Best Practices
-- Error handling
-- Message passing
-- Tool implementation
-- Performance optimization
-
-## Technologies Used
+## Development Environment
 
 ### Core Technologies
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| TypeScript | Type-safe language for development | 5.3.3 |
-| Chrome Extension API | Browser extension platform | Manifest V3 |
-| Google Earth Engine API | Earth data processing platform | Latest |
-| Vercel AI SDK | Agent framework for AI functionality | Latest |
-| Anthropic Claude API | Large language model provider | Latest |
-| OpenAI API | Large language model provider | Latest |
-
-### Frontend Technologies
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| HTML/CSS | UI structure and styling | HTML5/CSS3 |
-| Tailwind CSS | Utility-first CSS framework | 3.4.1 |
-| React | UI component library | 19.1.0 |
-| React DOM | DOM manipulation for React | 19.1.0 |
-| Radix UI | Accessible UI component primitives | Various |
-| PostCSS | CSS processing tool | 8.4.35 |
-| Lucide React | Icon library | 0.503.0 |
-
-### AI & LLM Libraries
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| @ai-sdk/anthropic | Anthropic Claude integration via AI SDK | 1.2.10 |
-| @ai-sdk/openai | OpenAI integration via AI SDK | 1.3.17 |
-| @anthropic-ai/sdk | Direct Anthropic SDK | 0.39.0 |
-| ai | Base Vercel AI SDK | 4.3.9 |
-| @langchain/core | LangChain core functionality | 0.3.46 |
-| @langchain/openai | LangChain OpenAI integration | 0.0.14 |
-| @langchain/community | LangChain community models | 0.3.41 |
-
-### UI Component Libraries
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| @radix-ui/react-dialog | Dialog component | 1.1.11 |
-| @radix-ui/react-scroll-area | Scrollable areas | 1.2.6 |
-| @radix-ui/react-slot | Slot component | 1.2.0 |
-| class-variance-authority | Component variant management | 0.7.1 |
-| clsx | CSS class string utility | 2.1.1 |
-| tailwind-merge | Tailwind class merging utility | 3.2.0 |
-| tailwindcss-animate | Animation utilities for Tailwind | 1.0.7 |
-
-### Build Tools
-
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| Webpack | Module bundler for assets | 5.90.3 |
-| npm | Package manager | Latest |
-| ts-loader | TypeScript loader for webpack | 9.5.1 |
-| copy-webpack-plugin | Asset copying for builds | 12.0.2 |
-| css-loader | CSS processing for webpack | 6.10.0 |
-| postcss-loader | PostCSS integration for webpack | 8.1.1 |
-| html-webpack-plugin | HTML file generation | 5.6.0 |
-| rimraf | Directory cleanup utility | 5.0.5 |
-| sharp | Image processing | 0.34.1 |
+- **TypeScript**: Primary programming language
+- **React**: UI component framework
+- **Tailwind CSS**: Utility-first CSS framework
+- **Chrome Extension Manifest V3**: Extension architecture
+- **Vercel AI SDK**: Framework for AI interactions, streaming responses, and agent capabilities
+- **AI Models**: Anthropic Claude, OpenAI models
 
 ### Development Tools
+- **Vite**: Build tool
+- **Node.js**: JavaScript runtime
+- **npm**: Package manager
+- **Git**: Version control
+- **ESLint/Prettier**: Code linting and formatting
+- **Jest**: Testing framework
 
-| Technology | Purpose | Version |
-|------------|---------|---------|
-| ESLint | Code linting | Latest |
-| Prettier | Code formatting | Latest |
-| Chrome DevTools | Extension debugging | Latest |
-| Task Master AI | Task management | Latest |
-| ts-node | TypeScript execution | 10.9.2 |
+### Browser APIs
+- **Chrome Extension APIs**
+  - `chrome.runtime`: Message passing, background script management
+  - `chrome.scripting`: Content script execution
+  - `chrome.storage`: Data persistence
+  - `chrome.sidePanel`: Side panel integration
+  - `chrome.tabs`: Tab management
 
-## Development Setup
+## Architecture
 
-### Prerequisites
+### Chrome Extension Structure
+- **manifest.json**: Extension configuration
+- **Background Script**: Service worker for persistence and API communication
+- **Content Script**: Page interaction and DOM manipulation
+- **Side Panel**: Primary UI surface
+- **Extension Storage**: Configuration and state persistence
 
-1. **Node.js and npm**: Required for development, package management, and building the extension
-2. **Chrome Browser**: Required for testing the extension
-3. **Google Earth Engine Account**: Required for testing with the Earth Engine platform
-4. **AI API Keys**:
-   - **Anthropic API Key**: Required for Claude functionality
-   - **OpenAI API Key**: Required for GPT functionality
+### Component Architecture
+- **React Component Hierarchy**
+  - `App`: Main container
+  - `Chat`: Conversation interface
+  - `EarthEngineAgent`: Earth Engine specific components
+  - `Settings`: Configuration interface
+  - UI components (buttons, inputs, etc.)
 
-### Environment Setup
+### State Management
+- **React State**: Local component state
+- **Chrome Storage**: Persistent application state
+- **Context API**: Shared application state
 
-1. **Clone Repository**:
-   ```bash
-   git clone https://github.com/kang/earth-agent-ai-sdk.git
-   cd earth-agent-ai-sdk
-   ```
+### Messaging System
+- **Background-Content Communication**: Chrome runtime messaging
+- **Content-Side Panel Communication**: Chrome runtime messaging
+- **Message Types**: Typed message definitions for type safety
 
-2. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
+### AI Integration
+- **Vercel AI SDK**
+  - Primary method for AI interactions
+  - Streaming response handling
+  - Tool invocation framework
+  - Agent capabilities for multi-step reasoning
 
-3. **Configure Environment Variables**:
-   Create a `.env` file with the following variables:
-   ```
-   ANTHROPIC_API_KEY=your_anthropic_api_key_here
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
+- **Direct API Integration (Fallback)**
+  - Anthropic API
+  - OpenAI API
 
-4. **Development Build**:
-   ```bash
-   npm run dev
-   ```
+- **Agent System Options**
+  - **Client-side approach**: Using Vercel AI SDK agents
+  - **Server-side options**: Mastra or Langchain (potential future implementation)
 
-5. **Production Build**:
-   ```bash
-   npm run build
-   ```
+## Tools & Implementations
 
-### Extension Installation (Development Mode)
+### Browser Tools
+1. **Click Tool**
+   - Function: `click(selector, options)`
+   - Implementation: Uses `chrome.scripting.executeScript` to find elements and simulate clicks
+   - Options: Coordinates, verification, timeout
 
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable "Developer mode" (toggle in top-right)
-3. Click "Load unpacked" and select the `dist` directory from the project
-4. The extension should now be installed and visible in Chrome
+2. **Type Tool**
+   - Function: `type(selector, text, options)`
+   - Implementation: Uses `chrome.scripting.executeScript` to find input elements and set values
+   - Options: Focus simulation, event triggering
 
-### Development Workflow
+3. **Snapshot Tool**
+   - Function: `snapshot(options)`
+   - Implementation: Uses `chrome.scripting.executeScript` to capture DOM structure
+   - Options: Depth, property selection, filtering
 
-1. Make code changes in the `src` directory
-2. Webpack will automatically rebuild on file changes when using `npm run dev`
-3. Refresh the extension in Chrome's extension management page to apply changes
-4. Use Chrome DevTools to debug:
-   - Right-click the extension icon and select "Inspect pop-up" (for popup debugging)
-   - Navigate to a GEE page and use the DevTools console (for content script debugging)
-   - Use the background page DevTools via the extension management page (for background script debugging)
+4. **Element Tool**
+   - Function: `getElement(selector, options)`
+   - Implementation: Uses `chrome.scripting.executeScript` to find and return element properties
+   - Options: Property selection, multiple elements
 
-## Project Structure
+### Earth Engine Tools
+1. **Run Code Tool**
+   - Function: `runCode()`
+   - Implementation: Simulates clicking the run button in the GEE editor
+   - Status: Basic implementation complete
 
-### Key Directories
+2. **Edit Script Tool**
+   - Function: `editScript(code)`
+   - Implementation: Finds the code editor element and sets its content
+   - Status: Basic implementation in progress
 
-| Directory | Purpose |
-|-----------|---------|
-| `/src` | Main source code |
-| `/src/background` | Background service worker |
-| `/src/content` | Content scripts for GEE interface |
-| `/src/sidepanel` | Side panel UI components |
-| `/src/components` | Reusable UI components |
-| `/src/lib/tools` | Tool implementations |
-| `/src/hooks` | React hooks |
-| `/src/api` | API client functions |
-| `/src/types` | TypeScript type definitions |
-| `/dist` | Built extension files |
-| `/docs` | Documentation |
-| `/memory-bank` | Project memory and context |
+3. **Get Map Layers Tool**
+   - Function: `getMapLayers()`
+   - Implementation: Extracts layer information from the map interface
+   - Status: Basic implementation in progress
 
-### Important Files
+4. **Inspect Map Tool**
+   - Function: `inspectMap()`
+   - Implementation: Captures current map state and visualization parameters
+   - Status: Basic implementation in progress
 
-| File | Purpose |
-|------|---------|
-| `manifest.json` | Chrome extension manifest |
-| `webpack.config.js` | Webpack configuration |
-| `tsconfig.json` | TypeScript configuration |
-| `package.json` | Dependencies and scripts |
-| `tailwind.config.js` | Tailwind CSS configuration |
-| `.env` | Environment variables (local) |
+5. **Check Console Tool**
+   - Function: `checkConsole()`
+   - Implementation: Captures output from the GEE console
+   - Status: Basic implementation in progress
 
-## Technical Constraints
+6. **Get Tasks Tool**
+   - Function: `getTasks()`
+   - Implementation: Retrieves current GEE task status information
+   - Status: Basic implementation in progress
 
-### Chrome Extension Constraints
+### Context Tools
+1. **Context7 Integration**
+   - Function: Various knowledge retrieval functions
+   - Implementation: API calls to Context7 service for Earth Engine documentation
+   - Status: Planning phase
 
-1. **Manifest V3 Limitations**:
-   - Background scripts limited to service workers (no persistent background pages)
-   - Content script execution context limitations
-   - Cross-origin request restrictions
-   - Limited access to certain Chrome APIs
+## Multi-Step Tool Execution
+1. **Agent Framework**
+   - Implementation: Using Vercel AI SDK's agent capabilities
+   - Status: Planning phase
+   - Core Flow: Generate code → Insert code → Run code
 
-2. **Side Panel Constraints**:
-   - Limited width (cannot be resized beyond Chrome's constraints)
-   - Only available in supporting browser versions
-   - Cannot be automatically opened (must be user-initiated)
+2. **Future Server-Side Options**
+   - **Mastra**: Server-side agent framework with memory persistence
+   - **Langchain**: Tool integration and agent orchestration framework
+   - Status: Under evaluation for later phases
 
-3. **Permissions Model**:
-   - Host permissions required for GEE domain
-   - API permissions must be declared in manifest
-   - Users must explicitly grant permissions
+## API Integration
 
-### Google Earth Engine Constraints
+### Anthropic API
+- **Endpoints**: `/v1/messages`
+- **Models**: `claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku`
+- **Features**: Streaming responses, tool use, system prompts
+- **Implementation**: Direct API calls and Vercel AI SDK
 
-1. **DOM Structure**:
-   - No official API for DOM interaction
-   - Page structure may change without notice
-   - Need to maintain selectors for key elements
+### OpenAI API
+- **Endpoints**: `/v1/chat/completions`
+- **Models**: `gpt-4`, `gpt-3.5-turbo`
+- **Features**: Streaming responses, function calling, system prompts
+- **Implementation**: Direct API calls and Vercel AI SDK
 
-2. **Code Execution**:
-   - No direct API for code execution
-   - Must simulate user input for code insertion
-   - Console output capture requires DOM monitoring
+### Context7 API
+- **Endpoints**: Documentation retrieval
+- **Features**: Earth Engine documentation access
+- **Implementation**: Planned for future integration
 
-3. **Rate Limitations**:
-   - GEE has API rate limits
-   - Computation quotas per user
-   - May restrict frequency of automated operations
+## Security
 
-### AI and LLM Constraints
+### API Key Management
+- **Storage**: Chrome extension secure storage with encryption
+- **Access Control**: Background-script-only access to API keys
+- **User Control**: User-provided API keys with option to store
 
-1. **Token Limitations**:
-   - Context window size limits
-   - Need for efficient prompt engineering
-   - Balance between context and cost
+### Permissions
+- **Required Permissions**: 
+  - `"sidePanel"`: For side panel integration
+  - `"storage"`: For persistent storage
+  - `"activeTab"`: For current tab interaction
+  - `"tabs"`: For tab management
+  - `"scripting"`: For content script execution
+- **Host Permissions**:
+  - `"https://code.earthengine.google.com/*"`: Earth Engine code editor
+  - `"https://context7.com/*"`: Documentation service
 
-2. **API Key Management**:
-   - Secure storage of API keys
-   - User-provided vs. built-in keys
-   - Usage tracking and limits
+## Data Flow
 
-3. **Response Time**:
-   - LLM response latency
-   - Need for streaming responses
-   - User experience considerations for longer operations
+### User Request Processing
+1. User submits query via side panel UI
+2. Query is sent to background script
+3. Background script gathers context from content script
+4. Combined query + context sent to AI provider
+5. Response streamed back through background script
+6. Side panel UI renders streaming response
+7. Tool invocations processed by background script and passed to content script
 
-4. **Provider Differences**:
-   - Different capabilities between Claude and GPT models
-   - Varying context window sizes
-   - Different tool calling implementations
-   - Output format variations
-   - Pricing differences
+### Tool Execution Flow
+1. AI decides to use a tool
+2. Tool request sent to background script
+3. Background script delegates to content script if needed
+4. Content script executes DOM operations
+5. Results returned to background script
+6. Results sent back to AI for continued processing
+7. Final response streamed to UI
 
-### Client-Side Only Architecture
+### Multi-Step Tool Execution
+1. AI makes initial reasoning step
+2. First tool (e.g., code generation) is executed
+3. Results are passed back to AI for evaluation
+4. Second tool (e.g., code insertion) is executed based on first tool's output
+5. Results passed back to AI for evaluation
+6. Third tool (e.g., code execution) is executed based on previous steps
+7. Final results displayed to user with explanation
 
-1. **Storage Limitations**:
-   - Chrome storage API size limits
-   - No server-side database for persistence
-   - Local storage constraints
+## Performance Considerations
 
-2. **Computation Limits**:
-   - Browser-based JavaScript performance constraints
-   - Memory limitations
-   - Background service worker lifecycle management
+### Message Passing
+- **Chunking**: Large payloads split into manageable chunks
+- **Serialization**: Careful handling of non-serializable objects
+- **Error Handling**: Robust timeout and retry mechanisms
 
-3. **Offline Functionality**:
-   - Need to handle offline/online transitions
-   - Graceful degradation when API services unavailable
-   - Cache management for critical resources
+### DOM Operations
+- **Throttling**: Rate limiting for DOM operations
+- **Batching**: Combining operations where possible
+- **Async Processing**: Non-blocking implementations
 
-## Dependencies
+### Storage
+- **Limits**: Working within Chrome storage limits
+- **Caching**: Strategic caching of frequently accessed data
+- **Cleanup**: Regular pruning of unnecessary data
 
-### Core Dependencies
+## Earth Engine Integration
 
-- **react**, **react-dom**: For UI components and rendering
-- **@vercel/ai**, **ai**: For AI agent capabilities
-- **@anthropic-ai/sdk**, **@ai-sdk/anthropic**: For Anthropic Claude integration
-- **openai**, **@ai-sdk/openai**: For OpenAI integration
-- **@langchain/core**, **@langchain/openai**, **@langchain/community**: For advanced LLM capabilities
-- **tailwindcss**, **class-variance-authority**, **tailwind-merge**: For styling
-- **@radix-ui/***: For accessible UI components
-- **lucide-react**: For icons
-- **clsx**: For conditional classnames
+### Earth Engine Code Editor
+- **Structure**: Monaco-based editor with custom extensions
+- **Integration Points**: Edit area, console output, map display, task panel
+- **Challenges**: Dynamic DOM structure, iframe isolation
 
-### Development Dependencies
+### Earth Engine API
+- **JavaScript API**: Main interaction method
+- **Documentation**: Available via Context7 and official docs
+- **Common Patterns**: Dataset access, image processing, visualization
 
-- **typescript**: TypeScript compiler
-- **webpack** and related plugins: For bundling
-- **@types/chrome**, **chrome-types**: Type definitions for Chrome API
-- **ts-node**: For TypeScript execution in scripts
-- **rimraf**: For clean build directory removal
+### Testing Environment
+- **Sandbox**: Dev-mode extension for testing without publishing
+- **Mock Data**: Simulated Earth Engine responses for unit testing
+- **Isolated Testing**: Component-level tests without Earth Engine dependencies
 
-## Development Environment Recommendations
+## Deployment
 
-1. **IDE**: Visual Studio Code with the following extensions:
-   - ESLint
-   - Prettier
-   - Chrome Debugger
-   - TypeScript Hero
-   - Tailwind CSS IntelliSense
+### Distribution
+- **Chrome Web Store**: Primary distribution channel
+- **Enterprise Deployment**: Self-hosted option for organizations
+- **Updates**: Automatic through Chrome Web Store
 
-2. **Browser**: Chrome with the following extensions:
-   - React DevTools
-   - Redux DevTools (if using Redux)
-   - Extension Reloader
+### Versioning
+- **Semantic Versioning**: Major.Minor.Patch format
+- **Release Cycle**: Regular updates with feature grouping
+- **Changelog**: Maintained in GitHub and release notes
 
-3. **Terminal**: Integrated terminal or separate terminal for running npm scripts
+### Monitoring
+- **Error Tracking**: Integration with error tracking service
+- **Usage Analytics**: Basic anonymous usage statistics
+- **Feedback Loop**: In-extension feedback mechanism
 
-4. **Version Control**: Git with conventional commit messages
+## Development Workflow
 
-## Browser Compatibility
+### Code Organization
+- **Feature-based Structure**: Code organized by feature area
+- **Component Isolation**: Each component has its own directory
+- **Shared Utilities**: Common functions in shared libraries
 
-| Browser | Support Status | Notes |
-|---------|---------------|-------|
-| Chrome | Fully Supported | Primary target platform |
-| Edge | Probably Compatible | Uses Chromium engine |
-| Firefox | Not Compatible | Manifest V3 differences |
-| Safari | Not Compatible | No extensions support |
+### Documentation
+- **JSDoc Comments**: Function and type documentation
+- **README files**: Component and module documentation
+- **Architecture Diagrams**: Visual representation of system structure
 
-## GEE API Integration
+### Quality Assurance
+- **Unit Tests**: Component and utility tests
+- **Integration Tests**: Cross-component functionality tests
+- **Manual Testing**: Interactive testing protocol
+- **Code Reviews**: Required for all feature branches
 
-The extension integrates with Google Earth Engine through:
+## Open Technical Questions
 
-1. **DOM Interaction**: For code editor and UI elements
-2. **JavaScript API**: For dataset access and computation
-3. **Console Monitoring**: For execution results and errors
-4. **Map Interaction**: For visualization and inspection
+1. **DOM Interaction Reliability**
+   - How to best handle Earth Engine's dynamic DOM structure?
+   - What selectors are most reliable for long-term compatibility?
 
-No official extension points are provided by Earth Engine, so the integration relies on carefully crafted DOM selectors and interaction patterns that must be maintained as the GEE interface evolves. 
+2. **Performance Optimization**
+   - What are the bottlenecks in the messaging system?
+   - How to optimize DOM operations for better performance?
+
+3. **Security Enhancements**
+   - What additional measures are needed for API key protection?
+   - How to implement proper content security policies?
+
+4. **Advanced Tool Integration**
+   - How to best implement multi-step tool executions?
+   - What's the optimal agent architecture for Earth Engine interactions?
+
+5. **Memory Management**
+   - What's the best strategy for conversation history persistence?
+   - How to implement efficient context window management?
+
+6. **Server-side vs. Client-side Agents**
+   - What are the trade-offs between client-only and server-assisted approaches?
+   - How to implement memory persistence with reasonable complexity?
+   - When is it appropriate to transition to a server-side solution? 
