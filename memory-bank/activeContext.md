@@ -2,38 +2,41 @@
 
 ## Current Work Focus
 
-We are currently in **Phase 1: MVP Foundation** of the Google Earth Engine Agent development, with a focus on browser automation tools.
+We are currently in **Phase 1: MVP Foundation** of the Google Earth Engine Agent development.
 
-The primary focus areas at this stage are:
+The primary focus areas recently have been:
 
-1. **Browser Automation Tools**
-   - Implementing robust click functionality with coordinate support
-   - Enhancing type functionality for various input elements
-   - Developing snapshot capabilities with configurable depth
-   - Improving error handling and response formats
-   - Ensuring compatibility with Manifest V3
+1.  **API Layer Refactoring & Consolidation**
+    - Unifying the chat API backend logic (`src/api/chat.ts`, `src/background/routes.ts`, `src/background/index.ts`).
+    - Establishing the Vercel AI SDK as the primary interaction method, with direct API calls as a fallback.
+    - Centralizing configuration (API keys, providers, models).
+    - Removing redundant code and improving type safety.
 
-2. **Background Script Enhancement**
-   - Migrating to modern Chrome APIs (chrome.scripting)
-   - Implementing robust error handling
-   - Adding support for new tool features
-   - Improving message passing reliability
+2.  **Chat UI Functionality & Bug Fixing**
+    - Ensuring correct display of user messages (`src/components/Chat.tsx`).
+    - Implementing conversation history persistence within a session.
+    - Fixing streaming UI issues (blinking text, duplicate messages).
+    - Refining streaming chunk handling for smooth text rendering.
 
-3. **Core Messaging System**
-   - Enhancing type safety in message passing
-   - Implementing better error handling
-   - Improving response formatting
-   - Adding support for new message types
-
-4. **UI Components**
-   - Refining Tools Test Panel interface
-   - Adding support for new tool features
-   - Improving error state handling
-   - Enhancing user feedback mechanisms
+3.  **Background Script Enhancement**
+    - Updating message handlers (`handleChatMessage`) to process full conversation history.
+    - Improving stream processing logic.
 
 ## Recent Changes
 
 ### Completed
+- **API Consolidation:**
+  - Refactored chat API logic into `src/api/chat.ts` and relevant background handlers.
+  - Removed `src/api/chat-route.ts`.
+  - Standardized API interaction using Vercel AI SDK first, then direct calls.
+  - Added support for configurable models via storage/env vars.
+- **Chat UI Fixes:**
+  - Corrected CSS for user message display.
+  - Implemented session-based conversation history.
+  - Fixed streaming UI bugs (blinking text, duplicate messages) by refining state management and background stream handling.
+- **Background Script Updates:**
+  - `handleChatMessage` now processes the full message history.
+  - Improved stream processing logic in background script.
 - Enhanced click functionality
   - Added support for clicking at specific coordinates
   - Improved element finding logic

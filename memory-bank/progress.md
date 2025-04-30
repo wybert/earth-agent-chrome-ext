@@ -3,8 +3,8 @@
 ## Project Status
 
 **Current Phase:** MVP Foundation  
-**Overall Completion:** ~35%  
-**Last Updated:** June 10, 2025  
+**Overall Completion:** ~40%  
+**Last Updated:** [Insert Current Date]  
 
 ## Milestone Progress
 
@@ -59,6 +59,8 @@
    - ✅ Error display
    - ✅ Loading states
    - ✅ Response formatting
+   - ✅ Basic chat UI displays messages correctly (User & Assistant)
+   - ✅ Streaming response rendering (Progressive text display)
 
 ### Basic Extension Setup
 - ✅ Chrome extension with manifest.json configured correctly
@@ -72,18 +74,24 @@
 - ✅ Message display with user/assistant differentiation
 - ✅ Basic styling and responsive design with TailwindCSS
 - ✅ Basic UI component structure with shadcn/ui
+- ✅ Chat history persistence within a session
+- ✅ Streaming text display
 
 ### Messaging System
 - ✅ Basic message passing between background and content scripts
 - ✅ Basic message passing between background and side panel
-- ✅ Type definitions for message structures
+- ✅ Type definitions for message structures (including chat history)
 - ✅ Initial error handling for message failures
+- ✅ Background script handles message history context
 
 ### AI Integration
-- ✅ Initial Vercel AI SDK integration
+- ✅ Vercel AI SDK integration (Primary method)
+- ✅ Direct API calls (Fallback method)
 - ✅ API key configuration mechanism
 - ✅ Basic prompt handling setup
 - ✅ Support for multiple AI providers (Anthropic, OpenAI)
+- ✅ Streaming response implementation (Backend & Frontend)
+- ✅ Centralized API logic in `src/api/chat.ts`
 
 ## In Progress
 
@@ -110,9 +118,9 @@
 
 ### Framework Improvements
 1. **Error Handling**
-   - 🔄 Detailed error messages
-   - 🔄 Recovery strategies
-   - 🔄 User feedback
+   - 🔄 Detailed error messages across API layer
+   - 🔄 Recovery strategies (e.g., fallback API)
+   - 🔄 User feedback for API/connection issues
 
 2. **Performance**
    - 🔄 Message passing optimization
@@ -123,11 +131,11 @@
 - 🔄 Comprehensive type-safe messaging between all components
 - 🔄 Complete error handling for all failure cases
 - 🔄 Reliable content script reinitialization after extension update
-- 🔄 Extension state persistence
+- 🔄 Extension state persistence (beyond session)
 
 ### UI Components
-- 🔄 Loading states and animations
-- 🔄 Error message display
+- 🔄 Loading states and animations refinement
+- 🔄 Error message display improvements
 - 🔄 Settings panel design and implementation
 - 🔄 Responsive design improvements
 
@@ -138,10 +146,10 @@
 - 🔄 Map element interaction
 
 ### AI Integration
-- 🔄 Streaming response implementation
 - 🔄 Context window management
-- 🔄 Tool calling framework
+- 🔄 Tool calling framework setup
 - 🔄 Structured formatting for GEE-specific prompts
+- 🔄 Testing API fallback mechanism
 
 ### GEE Tools
 - 🔄 Initial tool interfaces definition
@@ -158,7 +166,7 @@
 - ⬜ Asset management tools
 
 ### Advanced Features
-- ⬜ Conversation history persistence
+- ⬜ Conversation history persistence (across sessions/reloads)
 - ⬜ Advanced prompt engineering for GEE
 - ⬜ Context retention and memory
 - ⬜ User customization options
