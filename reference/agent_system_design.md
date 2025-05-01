@@ -11,3 +11,22 @@ I want implement the a agent that using ai sdk, which can call tools, it can cal
 how to create agent: https://sdk.vercel.ai/docs/foundations/agents
 
 multistep tool use: https://sdk.vercel.ai/docs/foundations/agents#multi-step-tool-usage
+
+reference:
+https://www.anthropic.com/engineering/building-effective-agents
+https://www.callstack.com/blog/building-ai-agent-workflows-with-vercels-ai-sdk-a-practical-guide
+https://sdk.vercel.ai/docs/foundations/agents
+
+After read this, the should read vercel ai sdk api document
+
+Baicly, the ai call should be (in our current implement, we use streamText, we also gonna use streamObject I guess!):
+
+generateText: Generates text and tool calls. This function is ideal for non-interactive use cases such as automation tasks where you need to write text (e.g. drafting email or summarizing web pages) and for agents that use tools.
+streamText: Stream text and tool calls. You can use the streamText function for interactive use cases such as chat bots and content streaming.
+generateObject: Generates a typed, structured object that matches a Zod schema. You can use this function to force the language model to return structured data, e.g. for information extraction, synthetic data generation, or classification tasks.
+streamObject: Stream a structured object that matches a Zod schema. You can use this function to stream generated UIs.
+
+Learn, where should this call loacated?
+It's located in chat.ts and routes.ts;
+looks like there are many duclicates functions?
+
