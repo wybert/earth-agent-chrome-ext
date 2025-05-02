@@ -1,7 +1,7 @@
-import { Message } from 'ai';
+import { Message, tool,streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
-import { streamText } from 'ai';
+import { z } from 'zod';
 
 // Chrome storage keys
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
@@ -45,6 +45,7 @@ Your capabilities:
 - Explain Earth Engine concepts, APIs, and best practices
 - Help troubleshoot Earth Engine code issues
 - Recommend appropriate datasets and methods for geospatial analysis
+- You can use tools to get the weather in a location
 
 Instructions:
 - Always provide code within backticks: \`code\`
@@ -53,6 +54,7 @@ Instructions:
 - Cite specific Earth Engine functions and methods when relevant
 - For complex topics, break down explanations step-by-step
 - If you're unsure about something, acknowledge limitations rather than providing incorrect information
+- When asked about weather, use the weather tool to get real-time information and format it nicely
 
 Common Earth Engine patterns:
 - Image and collection loading: ee.Image(), ee.ImageCollection()
@@ -198,12 +200,34 @@ async function processWithAiSdk(
     content: msg.content
   }));
 
+  // Define the weather tool
+  const weatherTool = tool({
+    description: 'Get the weather in a location',
+    parameters: z.object({
+      location: z.string().describe('The location to get the weather for'),
+    }),
+    execute: async ({ location }) => {
+      // Simulate weather data
+      const temperature = 72 + Math.floor(Math.random() * 21) - 10;
+      return {
+        location,
+        temperature,
+        description: temperature > 75 ? 'Sunny and warm' : 'Partly cloudy',
+        humidity: Math.floor(Math.random() * 30) + 50, // Random humidity between 50-80%
+      };
+    },
+  });
+
   // Common configuration for both providers
   const config = {
     temperature: 0.2,
     maxTokens: 4000,
     system: GEE_SYSTEM_PROMPT,
     messages,
+    tools: {
+      weather: weatherTool,
+    },
+    maxSteps: 5, // allow up to 5 steps
   };
 
   let result;
