@@ -70,7 +70,7 @@ async function validateServerIdentity(host: string, port: number): Promise<boole
 }
 
 // Forward message to Earth Engine tab with improved error handling and retries
-async function sendMessageToEarthEngineTab(message: any, options?: { timeout?: number, retries?: number }): Promise<any> {
+export async function sendMessageToEarthEngineTab(message: any, options?: { timeout?: number, retries?: number }): Promise<any> {
   const timeout = options?.timeout || CONTENT_SCRIPT_PING_TIMEOUT;
   const maxRetries = options?.retries || MAX_TAB_ACTION_RETRIES;
   let retryCount = 0;
@@ -966,133 +966,116 @@ chrome.runtime.onConnect.addListener((port) => {
 
 // Helper function to handle chat messages
 async function handleChatMessage(message: any, port: chrome.runtime.Port) {
-  try {
-    const requestId = Date.now().toString();
+  const requestId = `req_${Date.now()}`;
+  console.log(`[${requestId}] Handling chat message...`);
     
-    // Check if we have a history of messages from the sidepanel
+  try {
     const conversationMessages = message.messages || [{
       role: 'user',
       content: message.message
     }];
     
-    // Log message history
-    console.log(`Processing chat with ${conversationMessages.length} messages in history`);
+    console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
     
-    // Format messages for the API (strip id property)
-    const formattedMessages = conversationMessages.map((msg: {role: string, content: string, id?: string}) => ({
-      role: msg.role,
-      content: msg.content
-    }));
-    
-    // Instead of trying to use fetch to an API endpoint within the extension,
-    // directly call the handler function with properly formatted request
+    // Prepare body for handleChatRoute
     const body = {
-      messages: formattedMessages,
+      messages: conversationMessages, // Send the original messages structure
       apiKey: message.apiKey,
-      provider: message.provider
+      provider: message.provider,
+      model: message.model // Pass model if provided by frontend
     };
     
     // Create a request object for the handler
+    // Use a placeholder URL as it's handled internally
     const request = new Request('chrome-extension://internal/api/chat', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${message.apiKey}`,
+        // No Authorization needed here as apiKey is in body for handleChatRoute
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body)
     });
 
-    try {
-      // Call the handler directly instead of using fetch
+    // Call the handler which now uses streamText and returns a Response
       const response = await handleChatRoute(request);
       
-      if (response.headers.get('Content-Type')?.includes('text/plain')) {
-        // Handle streaming response
-        const reader = response.body?.getReader();
+    console.log(`[${requestId}] Response status from handleChatRoute: ${response.status}`);
+
+    if (!response.ok) {
+      // Handle potential errors from handleChatRoute itself
+      let errorPayload;
+      try {
+          errorPayload = await response.json();
+      } catch (e) {
+          errorPayload = { error: `API Error: ${response.statusText}` };
+      }
+      console.error(`[${requestId}] Error from handleChatRoute:`, errorPayload);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
+        error: errorPayload.error || errorPayload.message || 'Unknown API error'
+      });
+      return; // Stop processing on error
+    }
+
+    // Check if the response body exists
+    if (!response.body) {
+        console.error(`[${requestId}] Response body is null.`);
+        port.postMessage({ 
+          type: 'ERROR',
+          requestId,
+          error: 'Received empty response from API handler'
+        });
+        return; // Stop processing if no body
+    }
+      
+    // Process the simple text stream from toTextStreamResponse()
+    const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        
-        if (reader) {
-          try {
-            let accumulatedText = '';
-            let buffer = '';
-            
+    console.log(`[${requestId}] Reading text stream...`);
+
+    try {
             while (true) {
               const { done, value } = await reader.read();
               
               if (done) {
-                // When the stream is done, ONLY send the end signal.
-                // The frontend will finalize the message based on received chunks.
+          console.log(`[${requestId}] Text stream finished.`);
                 port.postMessage({
                   type: 'CHAT_STREAM_END',
                   requestId
                 });
-                
-                break;
+          break; // Exit loop when stream is done
               }
               
-              // Decode the chunk with proper streaming setup
-              buffer += decoder.decode(value, { stream: true });
-              
-              // Process SSE format
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || ''; // Keep the last (potentially incomplete) line in the buffer
-              
-              for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                  const data = line.slice(6); // Remove 'data: ' prefix (Note: was slice(5) - fixed potential bug)
-                  
-                  // Handle [DONE] message from providers like OpenAI
-                  if (data.trim() === '[DONE]') {
-                    continue; // Don't process the [DONE] marker itself
-                  }
-                  
-                  try {
-                    const parsedData = JSON.parse(data);
-                    let contentChunk: string | null = null;
-                    
-                    // Extract content from OpenAI response format
-                    if (parsedData.choices && parsedData.choices.length > 0 && parsedData.choices[0].delta?.content) {
-                      contentChunk = parsedData.choices[0].delta.content;
-                    } 
-                    // Handle Anthropic format
-                    else if (parsedData.type === 'content_block_delta' && parsedData.delta?.text) {
-                      contentChunk = parsedData.delta.text;
-                    }
-                    
-                    if (contentChunk !== null) {
-                      accumulatedText += contentChunk;
+        // Decode the chunk and send it directly
+        const chunk = decoder.decode(value, { stream: true });
+        // console.log(`[${requestId}] Sending chunk:`, chunk.substring(0, 50) + '...'); // Optional: Log chunk prefix
+        
+        if (chunk) { // Avoid sending empty chunks if decoder yields them
                       port.postMessage({ 
                         type: 'CHAT_STREAM_CHUNK',
                         requestId,
-                        chunk: contentChunk
+             chunk: chunk
                       });
+        }
                     }
-                  } catch (error) {
-                    // It might not be JSON, could be just text after 'data: '
-                    if (data.trim()) { // Check if there's actual text content
-                       accumulatedText += data + '\n'; // Append raw data if not JSON
-                       port.postMessage({ 
-                         type: 'CHAT_STREAM_CHUNK',
-                         requestId,
-                         chunk: data + '\n' 
-                       });
-                    } else {
-                      console.warn('Empty or non-JSON SSE data line ignored:', line);
-                    }
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('Error reading stream:', errorMessage);
+    } catch (streamError) {
+      const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+      console.error(`[${requestId}] Error reading text stream:`, errorMessage);
             port.postMessage({ 
               type: 'ERROR',
               requestId,
-              error: errorMessage 
+        error: `Stream reading error: ${errorMessage}` 
             });
-          }
-        }
+    } finally {
+       // Ensure reader is cancelled if loop exits unexpectedly
+       // reader.cancel(); // Optional: depends on desired behavior
+    }
+
+    /* Old SSE/JSON Processing Logic Removed 
+    if (response.headers.get('Content-Type')?.includes('text/plain')) {
+      // Handle streaming response (SSE format assumed previously)
+      // ... removed SSE parsing logic ...
       } else {
         // Handle JSON response
         const data = await response.json();
@@ -1102,32 +1085,15 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           data 
         });
       }
-    } catch (error) {
-      console.error('Error processing chat:', error);
-      
-      // Use fallback mode
-      const fallbackResponse = {
-        type: 'CHAT_RESPONSE',
-        requestId,
-        data: {
-          choices: [{
-            message: {
-              content: "I'm having trouble connecting to the API. Let me use my fallback mode to help you with Earth Engine.\n\n" + 
-                       generateFallbackResponse(message.message)
-            }
-          }]
-        }
-      };
-      
-      port.postMessage(fallbackResponse);
-    }
+    */
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Chat processing error:', errorMessage);
+    console.error(`[${requestId}] Chat processing error:`, errorMessage);
     port.postMessage({ 
       type: 'ERROR',
-      requestId: Date.now().toString(),
-      error: errorMessage 
+      requestId,
+      error: `Chat handler error: ${errorMessage}` 
     });
   }
 }

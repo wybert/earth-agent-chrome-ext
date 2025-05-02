@@ -1,10 +1,21 @@
-import { Message } from 'ai';
+import { Message, CoreMessage } from 'ai';
 import { DEFAULT_MODELS, API_VERSIONS, GEE_SYSTEM_PROMPT } from '../api/chat';
+import { streamText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
 
-// Route handler for /api/chat
+// Import the function to send messages to the content script
+import { sendMessageToEarthEngineTab } from './index';
+
+// --- Route Handler --- 
 export async function handleChatRoute(request: Request): Promise<Response> {
   try {
-    const { messages, apiKey, provider, model } = await request.json();
+    const { messages: inputMessages, apiKey, provider, model } = await request.json() as { 
+      messages: Message[],
+      apiKey: string,
+      provider: 'openai' | 'anthropic',
+      model?: string
+    };
     
     if (!apiKey) {
       return new Response(JSON.stringify({ 
@@ -16,35 +27,52 @@ export async function handleChatRoute(request: Request): Promise<Response> {
       });
     }
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    if (!inputMessages || !Array.isArray(inputMessages) || inputMessages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages provided' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Stream response based on the provider
-    let responseStream: ReadableStream;
     
-    if (provider === 'openai') {
-      responseStream = await streamOpenAIResponse(apiKey, model || DEFAULT_MODELS.openai, messages);
-    } else if (provider === 'anthropic') {
-      responseStream = await streamAnthropicResponse(apiKey, model || DEFAULT_MODELS.anthropic, messages);
-    } else {
-      return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // --- Vercel AI SDK Integration ---
+    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic>;
+    let effectiveModel: string;
 
-    // Create a streamText-compatible response
-    return new Response(responseStream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'no-store',
-      }
+    if (provider === 'openai') {
+      llmProvider = createOpenAI({ apiKey: apiKey });
+      effectiveModel = model || DEFAULT_MODELS.openai;
+    } else if (provider === 'anthropic') {
+      llmProvider = createAnthropic({ apiKey: apiKey });
+       effectiveModel = model || DEFAULT_MODELS.anthropic;
+    } else {
+       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
+         status: 400,
+         headers: { 'Content-Type': 'application/json' }
+       });
+    }
+    
+    // Simplified message mapping for basic CoreMessage structure
+    const formattedMessages: CoreMessage[] = inputMessages
+      .map((msg): CoreMessage | null => {
+          // Only include user, assistant, and system roles with simple string content
+          if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') && typeof msg.content === 'string') {
+            return { role: msg.role, content: msg.content };
+          }
+          console.warn('Filtering out message with incompatible role/content:', msg);
+          return null; 
+      })
+      .filter((msg): msg is CoreMessage => msg !== null);
+
+    // Use streamText for basic LLM text generation
+    const result = await streamText({
+      model: llmProvider(effectiveModel), 
+      system: GEE_SYSTEM_PROMPT,
+      messages: formattedMessages,
     });
+    
+    // --- Convert AIStream to plain text stream Response --- 
+    return result.toTextStreamResponse();
+
   } catch (error: any) {
     console.error('Chat API error:', error);
     return new Response(JSON.stringify({ 
@@ -57,71 +85,4 @@ export async function handleChatRoute(request: Request): Promise<Response> {
   }
 }
 
-// Stream API for OpenAI
-async function streamOpenAIResponse(
-  apiKey: string, 
-  model: string,
-  messages: Message[]
-): Promise<ReadableStream> {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        { role: 'system', content: GEE_SYSTEM_PROMPT },
-        ...messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }))
-      ],
-      temperature: 0.2,
-      stream: true,
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `OpenAI API error: ${response.status} ${response.statusText}`);
-  }
-
-  return response.body as ReadableStream;
-}
-
-// Stream API for Anthropic
-async function streamAnthropicResponse(
-  apiKey: string, 
-  model: string,
-  messages: Message[]
-): Promise<ReadableStream> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': API_VERSIONS.anthropic,
-      'Accept': 'text/event-stream' 
-    },
-    body: JSON.stringify({
-      model: model,
-      max_tokens: 4000,
-      system: GEE_SYSTEM_PROMPT,
-      messages: messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      })),
-      temperature: 0.2,
-      stream: true,
-    })
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Anthropic API error: ${response.status} ${response.statusText}`);
-  }
-
-  return response.body as ReadableStream;
-}
+// --- Removed old direct streaming functions --- 

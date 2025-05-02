@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Chat } from '../components/Chat';
+import { ChatUI } from '../components/Chat';
 import '../assets/styles/globals.css';
 
 // Simple error boundary component
@@ -65,7 +65,7 @@ const App = () => {
       </div>
       <div className="content flex-1 w-full">
         <ChatErrorBoundary>
-          <Chat />
+          <ChatUI />
         </ChatErrorBoundary>
       </div>
     </div>

@@ -1,16 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useChat } from 'ai/react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Send, Settings as SettingsIcon, RefreshCw, Wrench } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Settings as SettingsIcon, RefreshCw, Wrench, Plus } from 'lucide-react';
 import type { Message } from 'ai';
 import { Settings } from './Settings';
 import { ExtensionMessage } from '../types/extension';
 import ToolsTestPanel from './ui/ToolsTestPanel';
 import { z } from 'zod';
+import { Chat } from "@/components/ui/chat";
 
 // Define Zod schema for message responses
 const MessageContentSchema = z.string().min(1);
@@ -53,96 +50,43 @@ const ChatResponseSchema = z.object({
 );
 
 // Chrome storage keys
-const STORAGE_KEY = 'earth_engine_chat_history';
+const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
+const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 
 // Default welcome message from the assistant
-const WELCOME_MESSAGE: Message = {
-  id: 'welcome',
+const createWelcomeMessage = (): Message => ({
+  id: `welcome-${Date.now()}`,
   role: 'assistant',
   content: 'Hello! I\'m your Earth Engine Assistant. How can I help you with Earth Engine today?'
-};
+});
 
-export function Chat() {
+// Type for session data storage
+interface ChatSessions {
+  [sessionId: string]: Message[];
+}
+
+// Rename the exported component to avoid naming conflict
+export function ChatUI() {
   const [showSettings, setShowSettings] = useState(false);
   const [showToolsTest, setShowToolsTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic'>('openai');
   const [fallbackMode, setFallbackMode] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  // Vercel AI SDK's useChat hook with edge runtime streaming support
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    isLoading,
-    error,
-    setMessages,
-    reload,
-    stop
-  } = useChat({
-    api: `chrome-extension://${chrome.runtime.id}/api/chat`,
-    initialMessages: [WELCOME_MESSAGE],
-    body: {
-      apiKey,
-      provider: apiProvider
-    },
-    onResponse(response) {
-      // Handle streaming response
-      if (response.body) {
-        const reader = response.body.getReader();
-        // Process the stream
-        (async () => {
-          try {
-            const decoder = new TextDecoder();
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) {
-                setIsTyping(false);
-                break;
-              }
-              // Only try to decode if value is an ArrayBuffer
-              if (value instanceof Uint8Array) {
-                const text = decoder.decode(value, { stream: true });
-                console.log('Received chunk:', text);
-                // Update the last message with the new chunk
-                setMessages(prev => {
-                  const lastMessage = prev[prev.length - 1];
-                  if (lastMessage?.role === 'assistant') {
-                    return [
-                      ...prev.slice(0, -1),
-                      { ...lastMessage, content: lastMessage.content + text }
-                    ];
-                  }
-                  return [...prev, { id: Date.now().toString(), role: 'assistant', content: text }];
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Error reading stream:', error);
-            setFallbackMode(true);
-          }
-        })();
-      }
-    },
-    onFinish: () => {
-      setIsTyping(false);
-    },
-    onError: (error) => {
-      console.error("Chat API error:", error);
-      setFallbackMode(true);
-    }
-  });
-  
-  // Local state for fallback mode
-  const [localMessages, setLocalMessages] = useState<Message[]>([WELCOME_MESSAGE]);
-  const [localInput, setLocalInput] = useState('');
   const [isLocalLoading, setIsLocalLoading] = useState(false);
+
+  // === Local State Management ===
+  const [sessions, setSessions] = useState<ChatSessions>({});
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [error, setError] = useState<Error | null>(null); // Local error state
+
+  // Local state for fallback mode
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [localInput, setLocalInput] = useState('');
 
   // Check if API key is configured on component mount
   useEffect(() => {
@@ -154,40 +98,150 @@ export function Chat() {
       
       if (!hasApiKey) {
         setShowSettings(true); // Show settings if API key is not configured
-        setFallbackMode(true); // Use fallback mode if no API key
+        // Don't immediately set fallbackMode, let port connection handle it
+        // setFallbackMode(true); // Use fallback mode if no API key 
       }
     });
   }, []);
 
-  // Load chat history from Chrome storage when component mounts
+  // Load sessions and active session ID on mount
   useEffect(() => {
-    chrome.storage.local.get([STORAGE_KEY], (result) => {
-      const savedMessages = result[STORAGE_KEY];
-      if (savedMessages && savedMessages.length > 0) {
-        setLocalMessages(savedMessages);
-        setMessages(savedMessages);
+    chrome.storage.local.get([CHAT_SESSIONS_KEY, ACTIVE_SESSION_ID_KEY], (result) => {
+      const loadedSessions: ChatSessions = result[CHAT_SESSIONS_KEY] || {};
+      let currentActiveId: string | null = result[ACTIVE_SESSION_ID_KEY] || null;
+
+      // If no active session ID or no sessions exist, create the first one
+      if (!currentActiveId || Object.keys(loadedSessions).length === 0) {
+        const newSessionId = `session_${Date.now()}`;
+        loadedSessions[newSessionId] = [createWelcomeMessage()];
+        currentActiveId = newSessionId;
+        chrome.storage.local.set({
+          [CHAT_SESSIONS_KEY]: loadedSessions,
+          [ACTIVE_SESSION_ID_KEY]: currentActiveId
+        });
+        console.log("Initialized first chat session:", newSessionId);
       }
+
+      setSessions(loadedSessions);
+      setActiveSessionId(currentActiveId);
+      // Load messages for the active session
+      setMessages(loadedSessions[currentActiveId] || [createWelcomeMessage()]);
+      console.log("Loaded sessions, active ID:", currentActiveId);
     });
-  }, [setMessages]);
+  }, []); // Load only once on mount
 
-  // Save messages to Chrome storage whenever they change
+  // Save messages to Chrome storage whenever they change for the ACTIVE session
   useEffect(() => {
-    // Save whichever messages are currently active
-    const messagesToSave = fallbackMode ? localMessages : messages;
+    if (activeSessionId && messages.length > 0) {
+      // Create a snapshot of sessions to update
+      const updatedSessions: ChatSessions = { ...sessions };
+      updatedSessions[activeSessionId] = messages;
+      
+      // Update state and storage
+      setSessions(updatedSessions); // Keep local state in sync
+      chrome.storage.local.set({ [CHAT_SESSIONS_KEY]: updatedSessions });
+    }
+    // Depend on messages and activeSessionId
+  }, [messages, activeSessionId]); 
+
+  // Set up port connection to background script
+  const [port, setPort] = useState<chrome.runtime.Port | null>(null);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
+  const MAX_CONNECTION_ATTEMPTS = 3;
+
+  // Initialize port connection
+  useEffect(() => {
+    let currentPort: chrome.runtime.Port | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let isActive = true; // Flag to prevent updates after unmount
+
+    const connectToBackground = () => {
+      if (!isActive) return; // Don't connect if component unmounted
+
+      try {
+        console.log('Connecting to background script...');
+        currentPort = chrome.runtime.connect({ name: 'sidepanel' });
+        setPort(currentPort); // Store the port in state
+        setConnectionAttempts(0); // Reset attempts on successful connection
+        setFallbackMode(false); // Assume connection is good initially
+        setError(null); // Clear previous errors
+
+        currentPort.onMessage.addListener(handleResponseWrapper);
+        
+        currentPort.onDisconnect.addListener(() => {
+          console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
+          
+          // Clear the port state only if it's the same port that disconnected
+          setPort(prevPort => (prevPort === currentPort ? null : prevPort));
+
+          if (isActive) { // Check if component is still mounted
+             // Use chrome.runtime.lastError to check if it was an error or normal disconnect
+             if (chrome.runtime.lastError) {
+                console.error('Disconnect error:', chrome.runtime.lastError.message);
+                setError(new Error(`Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`));
+                
+                // Try to reconnect if we haven't tried too many times
+                setConnectionAttempts(prev => {
+                   const nextAttempts = prev + 1;
+                   if (nextAttempts <= MAX_CONNECTION_ATTEMPTS) {
+                     console.log(`Attempting to reconnect (${nextAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
+                     reconnectTimer = setTimeout(connectToBackground, 1000 * nextAttempts); // Exponential backoff
+                     return nextAttempts;
+                   } else {
+                     setFallbackMode(true);
+                     setError(new Error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switched to Fallback Mode.`));
+                     console.error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switching to fallback mode.`);
+                     return nextAttempts; // Stop incrementing
+                   }
+                });
+             } else {
+               console.log('Port disconnected normally (e.g., background script update).');
+               // Optionally try to reconnect immediately or after a short delay
+               reconnectTimer = setTimeout(connectToBackground, 500); 
+             }
+          }
+        });
+        
+        console.log('Connected to background script');
+        // Send a ping to verify connection
+        currentPort.postMessage({ type: 'PING' });
+        
+      } catch (error: any) {
+        if (isActive) {
+           console.error('Failed to connect to background script:', error);
+           setError(new Error(`Failed to connect: ${error.message}. Using Fallback Mode.`));
+           setFallbackMode(true);
+        }
+      }
+    };
     
-    if (messagesToSave.length > 0) {
-      chrome.storage.local.set({ [STORAGE_KEY]: messagesToSave });
-    }
-  }, [messages, localMessages, fallbackMode]);
+    // Wrapper to ensure handleResponse only runs when component is mounted
+    const handleResponseWrapper = (response: any) => {
+      if (isActive) {
+        handleResponse(response);
+      }
+    };
 
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, localMessages, isTyping]);
+    connectToBackground(); // Initial connection attempt
+    
+    // Clean up function
+    return () => {
+      isActive = false; // Mark component as unmounted
+      console.log('ChatUI unmounting, disconnecting port...');
+      if (reconnectTimer) clearTimeout(reconnectTimer); // Clear any pending reconnect timers
+      if (currentPort) {
+        // Remove listeners before disconnecting
+        // Note: Removing listeners might be tricky with wrapper functions, ensure correct reference or handle in port logic
+        // currentPort.onMessage.removeListener(handleResponseWrapper); // This might not work if the function reference changes
+        currentPort.disconnect();
+      }
+      setPort(null); // Clear port state on unmount
+    };
+  // Rerun effect if connectionAttempts changes (for retries)
+  // Do NOT depend on 'port' or 'handleResponse' to avoid infinite loops
+  }, [connectionAttempts]); 
 
-  // Extract response content from validated schema
+  // Extract response content from validated schema (keep this helper)
   const extractResponseContent = (validatedResponse: z.infer<typeof ChatResponseSchema>): string => {
     if ('response' in validatedResponse) {
       console.log('Using validated direct response field');
@@ -208,189 +262,17 @@ export function Chat() {
         return data.content;
       }
     }
-    
     // This should never happen if validation passed
     throw new Error('Could not extract content from validated response');
   };
 
-  // Format message content to properly render code blocks
-  const formatMessageContent = (content: string) => {
-    // Check if content contains code blocks
-    if (!content.includes('```')) {
-      return <div className="whitespace-pre-wrap break-words">{content}</div>;
-    }
-    
-    // Split by code blocks (```code```)
-    const segments = content.split(/(```(?:javascript|js)?\n[\s\S]*?\n```)/g);
-    
-    return (
-      <div className="w-full">
-        {segments.map((segment, idx) => {
-          // Check if this is a code block
-          if (segment.startsWith('```') && segment.endsWith('```')) {
-            // Extract code without the backticks and language identifier
-            let code = segment.replace(/```(?:javascript|js)?\n/, '').replace(/\n```$/, '');
-            
-            return (
-              <div key={idx} className="my-4 w-full overflow-hidden rounded-md border border-gray-200">
-                <div className="bg-gray-900 text-white px-4 py-2 text-sm flex justify-between items-center">
-                  <span>JavaScript</span>
-                  <button 
-                    onClick={() => navigator.clipboard.writeText(code)}
-                    className="hover:bg-gray-700 p-1 rounded"
-                    title="Copy code"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                  </button>
-                </div>
-                <pre className="bg-gray-800 text-gray-100 p-4 overflow-x-auto">
-                  <code className="text-sm font-mono">{code}</code>
-                </pre>
-              </div>
-            );
-          } else if (segment.trim()) {
-            // Regular text content
-            return (
-              <div key={idx} className="whitespace-pre-wrap break-words mb-3">
-                {segment}
-              </div>
-            );
-          }
-          return null;
-        })}
-      </div>
-    );
-  };
-
-  // Fallback mode: Generate a simple response when API fails
-  const getGeeResponse = (query: string) => {
-    // Simple keyword-based response system for Earth Engine
-    const keywords = {
-      'ndvi': 'NDVI (Normalized Difference Vegetation Index) can be calculated using: ```\nvar ndvi = image.normalizedDifference(["NIR", "RED"]);\n```',
-      'landsat': 'Landsat imagery can be accessed via: ```\nvar landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")\n```',
-      'sentinel': 'Sentinel imagery is available through: ```\nvar sentinel = ee.ImageCollection("COPERNICUS/S2_SR")\n```',
-      'export': 'You can export images using Export.image.toDrive() or visualize them with Map.addLayer()',
-      'classify': 'For classification, use ee.Classifier methods like randomForest() or smileCart()',
-      'reducer': 'Reducers like mean(), sum(), or min() can aggregate data spatially or temporally'
-    };
-    
-    // Check if any keywords are in the query
-    for (const [key, response] of Object.entries(keywords)) {
-      if (query.toLowerCase().includes(key)) {
-        return response;
-      }
-    }
-    
-    // Default response
-    return "I can help with Earth Engine tasks like image processing, classification, and data export. Could you provide more details about what you're trying to do?";
-  };
-
-  // Handle fallback form submission
-  const handleLocalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!localInput.trim() || isLocalLoading) return;
-    
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: localInput.trim(),
-    };
-    
-    setLocalMessages(prev => [...prev, userMessage]);
-    setLocalInput('');
-    setIsLocalLoading(true);
-    
-    // Generate a response with a slight delay to simulate processing
-    setTimeout(() => {
-      const response = getGeeResponse(userMessage.content);
-      
-      // Add assistant message
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response,
-      };
-      
-      setLocalMessages(prev => [...prev, assistantMessage]);
-      setIsLocalLoading(false);
-    }, 1000);
-  };
-
-  const handleLocalInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setLocalInput(e.target.value);
-  };
-
-  // Set up port connection to background script
-  const [port, setPort] = useState<chrome.runtime.Port | null>(null);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
-
-  // Initialize port connection
-  useEffect(() => {
-    let newPort: chrome.runtime.Port | null = null;
-    
-    const connectToBackground = () => {
-      try {
-        console.log('Connecting to background script...');
-        newPort = chrome.runtime.connect({ name: 'sidepanel' });
-        
-        newPort.onMessage.addListener(handleResponse);
-        
-        newPort.onDisconnect.addListener(() => {
-          console.log('Disconnected from background script, error:', chrome.runtime.lastError);
-          if (newPort === port) {
-            setPort(null);
-            
-            // Try to reconnect if we haven't tried too many times
-            if (connectionAttempts < 3) {
-              console.log(`Attempting to reconnect (${connectionAttempts + 1}/3)...`);
-              setConnectionAttempts(prev => prev + 1);
-              setTimeout(connectToBackground, 1000);
-            } else {
-              setFallbackMode(true);
-              console.error('Failed to connect after multiple attempts. Switching to fallback mode.');
-            }
-          }
-        });
-
-        setPort(newPort);
-        setConnectionAttempts(0);
-        console.log('Connected to background script');
-        
-        // Send a ping to verify connection
-        newPort.postMessage({ type: 'PING' });
-        
-        return newPort;
-      } catch (error) {
-        console.error('Failed to connect to background script:', error);
-        setFallbackMode(true);
-        return null;
-      }
-    };
-    
-    // Connect when component mounts or connection attempts change
-    const currentPort = connectToBackground();
-    
-    // Clean up function
-    return () => {
-      if (currentPort) {
-        try {
-          currentPort.disconnect();
-        } catch (e) {
-          console.error('Error disconnecting port:', e);
-        }
-      }
-    };
-  }, [connectionAttempts]); // Dependency on connectionAttempts to allow reconnection attempts
-
   // Handle responses from background script
   const handleResponse = (response: any) => {
+    setIsLocalLoading(false); // Stop loading indicator when response starts/ends/errors
+    setError(null); // Clear error on receiving a valid message
+    setFallbackMode(false); // If we get a response, connection is likely working
+
     console.log('Received message from background:', response);
-    
     // Dump the full response object as JSON for debugging
     try {
       console.log('Full response object:', JSON.stringify(response, null, 2));
@@ -410,14 +292,26 @@ export function Chat() {
             const responseContent = extractResponseContent(validationResult.data);
             
             const assistantMessage: Message = {
-              id: (Date.now() + 1).toString(),
+              id: response.requestId || (Date.now() + 1).toString(), // Use requestId if available
               role: 'assistant',
               content: responseContent
             };
             
-            // Only add the assistant message since user message was already added
-            setMessages(prev => [...prev, assistantMessage]);
-            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+            // Update the placeholder message or add a new one
+            setMessages(prev => {
+                const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
+                if (placeholderIndex !== -1) {
+                    // Replace placeholder
+                    const newMessages = [...prev];
+                    newMessages[placeholderIndex] = assistantMessage;
+                    return newMessages;
+                } else {
+                    // Append if no placeholder (shouldn't happen with current logic)
+                    return [...prev, assistantMessage];
+                }
+            });
+            // Clear input using local handler
+            // handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
           } else {
             // Handle validation error - try fallback content extraction
             console.warn('Response validation failed:', validationResult.error);
@@ -478,30 +372,48 @@ export function Chat() {
             }
             
             const assistantMessage: Message = {
-              id: (Date.now() + 1).toString(),
+              id: response.requestId || (Date.now() + 1).toString(),
               role: 'assistant',
               content: responseContent
             };
             
-            // Only add the assistant message since user message was already added
-            setMessages(prev => [...prev, assistantMessage]);
-            handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+            // Update the placeholder message or add a new one
+             setMessages(prev => {
+                const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
+                if (placeholderIndex !== -1) {
+                    const newMessages = [...prev];
+                    newMessages[placeholderIndex] = assistantMessage;
+                    return newMessages;
+                } else {
+                    return [...prev, assistantMessage];
+                }
+            });
+            // handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error processing response:', error);
+          setError(new Error(`Error processing response: ${error.message}`));
           
           // Add error message
           const errorAssistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
+            id: response.requestId || (Date.now() + 1).toString(),
             role: 'assistant',
             content: "Sorry, I encountered an error processing the response. Please try again."
           };
           
-          // Only add the assistant message since user message was already added
-          setMessages(prev => [...prev, errorAssistantMessage]);
+          // Update placeholder or add error message
+            setMessages(prev => {
+                const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
+                if (placeholderIndex !== -1) {
+                    const newMessages = [...prev];
+                    newMessages[placeholderIndex] = errorAssistantMessage;
+                    return newMessages;
+                } else {
+                    return [...prev, errorAssistantMessage];
+                }
+            });
         }
         
-        setIsTyping(false);
         break;
         
       case 'CHAT_STREAM_CHUNK':
@@ -511,14 +423,13 @@ export function Chat() {
           
           // Update the *last* message in the array (which should be the assistant placeholder)
           setMessages(prevMessages => {
-            if (prevMessages.length === 0 || prevMessages[prevMessages.length - 1].role !== 'assistant') {
-              // This shouldn't happen if placeholder was added correctly, but handle defensively
-              console.warn('Attempted to stream chunk but no assistant placeholder found');
-              // Optionally create a new message here if needed
-              return prevMessages;
-            }
+             const lastMessageIndex = prevMessages.length - 1;
+             if (lastMessageIndex < 0 || !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
+               console.warn('Attempted to stream chunk but no assistant placeholder found at the end');
+               // Add a new placeholder if none exists? Or ignore? For now, ignore.
+               return prevMessages;
+             }
             
-            const lastMessageIndex = prevMessages.length - 1;
             const updatedLastMessage = {
               ...prevMessages[lastMessageIndex],
               content: prevMessages[lastMessageIndex].content + response.chunk
@@ -529,20 +440,19 @@ export function Chat() {
               updatedLastMessage
             ];
           });
-          
-          setIsTyping(true); // Keep typing indicator on
         }
         break;
         
       case 'CHAT_STREAM_END':
         console.log('Stream ended, finalizing message');
-        
+        setIsLocalLoading(false); // Ensure loading stops at stream end
+
         // Finalize the last message ID if needed (optional, but good practice)
         setMessages(prevMessages => {
-          if (prevMessages.length > 0 && prevMessages[prevMessages.length - 1].role === 'assistant') {
-            const lastMessageIndex = prevMessages.length - 1;
-            // Assign a permanent ID, removing the placeholder prefix
-            const finalId = prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
+          const lastMessageIndex = prevMessages.length - 1;
+          if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
+            // Assign a permanent ID using the request ID from the stream end message if available
+            const finalId = response.requestId || prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
             const finalizedMessage = {
               ...prevMessages[lastMessageIndex],
               id: finalId
@@ -552,31 +462,38 @@ export function Chat() {
               finalizedMessage
             ];
           }
+          // If the last message is not a placeholder, just return current state
           return prevMessages;
         });
-        
-        setIsTyping(false); // Turn off typing indicator
-        handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>); // Clear input
         break;
         
       case 'ERROR':
-        console.error('Chat API error:', response.error);
-        
+        console.error('Background script error:', response.error);
+        setError(new Error(`API Error: ${response.error || 'Unknown error from background script.'}`));
+        setIsLocalLoading(false);
+
         // Add error message
         const errorAssistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: response.requestId || (Date.now() + 1).toString(),
           role: 'assistant',
-          content: "Sorry, I encountered an error processing your request. Please try again or check your API configuration."
+          content: `Sorry, I encountered an error: ${response.error}. Please try again or check your API configuration.`
         };
         
-        // Add error message (the user message has already been added)
-        setMessages(prev => [...prev, errorAssistantMessage]);
+        // Update placeholder or add error message
+        setMessages(prev => {
+            const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
+            if (placeholderIndex !== -1) {
+                const newMessages = [...prev];
+                newMessages[placeholderIndex] = errorAssistantMessage;
+                return newMessages;
+            } else {
+                // Add error message if no placeholder (e.g., error before placeholder added)
+                return [...prev, errorAssistantMessage];
+            }
+        });
         
-        // Clear input field
-        handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
-        
-        setFallbackMode(true);
-        setIsTyping(false);
+        // Optionally switch to fallback mode on error
+        // setFallbackMode(true); 
         break;
         
       default:
@@ -585,281 +502,309 @@ export function Chat() {
     }
   };
 
-  // Custom submit handler that uses port messaging
-  const handleChatSubmit = async (e: React.FormEvent) => {
+  // Handle input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
+
+  // Custom submit handler - sends message for the *active* session
+  const handleChatSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate input
-    if (!input.trim() || isLoading) return;
-    
-    setIsTyping(true);
-    
-    try {
-      // Immediately add user message to UI regardless of connection method
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: input.trim()
-      };
-      
-      // Add user message to local state immediately
-      setMessages(prev => [...prev, userMessage]);
-      
-      // Add an empty assistant message placeholder to be updated by the stream
-      const assistantPlaceholder: Message = {
-        id: 'assistant-placeholder-' + Date.now(),
-        role: 'assistant',
-        content: '' // Start with empty content
-      };
-      setMessages(prev => [...prev, assistantPlaceholder]);
-      
-      if (port) {
-        // Prepare all previous messages plus the new user message
-        const allMessages = [
-          ...messages.filter(m => m.id !== 'welcome'), // Filter out the welcome message
-          userMessage
-        ];
-        
-        // Send message through port
-        const message: ExtensionMessage = {
-          type: 'CHAT_MESSAGE',
-          message: input.trim(),
-          apiKey,
-          provider: apiProvider,
-          // Send the full conversation history
-          messages: allMessages
-        };
-
-        console.log('Sending message with conversation history:', message);
-        port.postMessage(message);
-      } else {
-        // Try to reconnect or fall back
-        console.error('No port connection available');
-        
-        // Attempt to reconnect
-        setConnectionAttempts(prev => prev + 1);
-        
-        // Show a temporary response about connection issue
-        setTimeout(() => {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: 'I\'m having trouble connecting to the backend service. Trying to reconnect...'
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-          setIsTyping(false);
-          setFallbackMode(true);
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('Error sending chat message:', error);
-      setFallbackMode(true);
-      setIsTyping(false);
+    if (!input.trim() || isLocalLoading || !port || !activeSessionId) {
+       if(!port) {
+           console.error("Cannot submit: Port not connected.");
+           setError(new Error("Connection error: Cannot reach background service."));
+           setFallbackMode(true);
+       }
+       if(!activeSessionId) console.error("Cannot submit: No active session ID.");
+       if(isLocalLoading) console.log("Cannot submit: Already loading");
+       if(!input.trim()) console.log("Cannot submit: Input is empty");
+       return;
     }
-  };
+    
+    const userMessageContent = input.trim();
+    const newUserMessage: Message = { id: 'user-' + Date.now(), role: 'user', content: userMessageContent };
+    const assistantPlaceholder: Message = { id: 'assistant-placeholder-' + Date.now(), role: 'assistant', content: '' };
+    
+    // Add user message & placeholder to current session's messages
+    setMessages(prev => [...prev, newUserMessage, assistantPlaceholder]);
+    setInput('');
+    setIsLocalLoading(true);
+    setError(null);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (fallbackMode) {
-        handleLocalSubmit(e);
-      } else {
-        handleChatSubmit(e);
+    // Get message history FOR THE CURRENT SESSION to send to background
+    const messagesForApi = sessions[activeSessionId]
+      ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-')) // Exclude placeholders/welcome
+      .concat(newUserMessage) || [newUserMessage]; // Include the new user message
+
+    const messagePayload: ExtensionMessage = {
+      type: 'CHAT_MESSAGE',
+      message: userMessageContent,
+      apiKey,
+      provider: apiProvider,
+      messages: messagesForApi // Send history of the active session
+    };
+    console.log('Sending message via port:', messagePayload);
+    port.postMessage(messagePayload);
+    
+  }, [input, isLocalLoading, port, activeSessionId, apiKey, apiProvider, sessions, setMessages, setInput, setIsLocalLoading, setError, setFallbackMode]); // Dependencies
+
+  // Regenerate response for the active session
+  const handleRegenerate = useCallback(() => {
+    if (isLocalLoading || !port || !activeSessionId) return;
+
+    let lastUserMessage: Message | null = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user') {
+        lastUserMessage = messages[i];
+        break;
       }
     }
-  };
 
-  const handleRegenerate = () => {
-    if (messages.length >= 2) {
-      setIsTyping(true);
-      reload();
+    if (lastUserMessage) {
+      console.log("Regenerating response for:", lastUserMessage.content);
+      setIsLocalLoading(true);
+      setError(null);
+
+      const historyUpToUser = messages.slice(0, messages.findIndex(m => m.id === lastUserMessage!.id) + 1);
+      const assistantPlaceholder: Message = { id: 'assistant-placeholder-' + Date.now(), role: 'assistant', content: '' };
+      setMessages([...historyUpToUser, assistantPlaceholder]);
+
+      const messagesForApi = historyUpToUser
+          .filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'));
+
+      const messagePayload: ExtensionMessage = {
+        type: 'CHAT_MESSAGE',
+        message: lastUserMessage.content,
+        apiKey,
+        provider: apiProvider,
+        messages: messagesForApi
+      };
+      port.postMessage(messagePayload);
+    } else {
+      console.log("No user message found to regenerate.");
     }
-  };
+  }, [messages, isLocalLoading, port, activeSessionId, apiKey, apiProvider, setMessages, setIsLocalLoading, setError]); // Dependencies
+  
+  // Stop generation
+  const stop = useCallback(() => {
+      if (!port) return;
+      console.log("Attempting to stop generation...");
+      port.postMessage({ type: 'CANCEL_STREAM' });
+      setIsLocalLoading(false);
+      setMessages(prev => prev.filter(m => !m.id.startsWith('assistant-placeholder-')));
+  }, [port, setMessages, setIsLocalLoading]); // Dependencies
 
-  const handleStopGenerating = () => {
-    stop();
-    setIsTyping(false);
-  };
+  // Append message (might need adjustment based on session logic)
+  const append = useCallback((message: Message) => {
+     console.log("Appending message locally:", message);
+     setMessages(prev => [...prev, message]);
+  }, [setMessages]); // Dependency
 
-  const handleRetryAPI = () => {
+  // Attempt to reconnect or switch out of fallback mode
+  const handleRetryAPI = useCallback(() => {
+    setError(null);
     setFallbackMode(false);
+    if (!port) {
+        console.log("Retrying connection...");
+        setConnectionAttempts(prev => prev + 1);
+    } else {
+        console.log("Port exists, attempting ping...");
+        port.postMessage({ type: 'PING' });
+    }
+  }, [port, setFallbackMode, setError, setConnectionAttempts]); // Dependencies
+  
+  // Function to create a new chat session
+  const handleNewChat = useCallback(() => {
+    const newSessionId = `session_${Date.now()}`;
+    const welcomeMsg = createWelcomeMessage();
+    const newSessions = { ...sessions, [newSessionId]: [welcomeMsg] };
+
+    console.log("Creating new chat session:", newSessionId);
+    
+    setSessions(newSessions); // Update local sessions state
+    setActiveSessionId(newSessionId); // Set new session as active
+    setMessages([welcomeMsg]); // Set messages for the new session
+    setInput(''); // Clear input field
+    setError(null); // Clear any errors
+    setIsLocalLoading(false); // Reset loading state
+    
+    // Save updated sessions and active ID to storage
+    chrome.storage.local.set({
+      [CHAT_SESSIONS_KEY]: newSessions,
+      [ACTIVE_SESSION_ID_KEY]: newSessionId
+    });
+  }, [sessions, setSessions, setActiveSessionId, setMessages, setInput, setError, setIsLocalLoading]); // Dependencies
+
+  // --- Fallback Mode Logic (Simplified for demonstration) --- 
+  const handleLocalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLocalLoading) return; 
+    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLocalLoading(true);
+    setTimeout(() => {
+      const response = "Fallback mode currently provides static responses."; // Simple fallback
+      const assistantMessage: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: response };
+      setMessages(prev => [...prev, assistantMessage]);
+      setIsLocalLoading(false);
+    }, 500);
   };
+
+  // --- Render Logic --- 
   
   if (showSettings) {
     return <Settings onClose={() => {
       setShowSettings(false);
-      // Check if API key was configured after settings are closed
       chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
         const hasApiKey = !!result[API_KEY_STORAGE_KEY];
         setApiConfigured(hasApiKey);
         setApiKey(result[API_KEY_STORAGE_KEY] || '');
         setApiProvider(result[API_PROVIDER_STORAGE_KEY] || 'openai');
-        
-        if (hasApiKey) {
-          setFallbackMode(false);
-        } else {
+        if (hasApiKey && fallbackMode) {
+          handleRetryAPI();
+        } else if (!hasApiKey) {
+          setError(new Error("API Key not configured. Using Fallback Mode."));
           setFallbackMode(true);
         }
       });
     }} />;
   }
 
-  // Display messages including current streaming message
-  const displayMessages = fallbackMode ? localMessages : messages;
-  const currentInput = fallbackMode ? localInput : input;
-  const currentInputHandler = fallbackMode ? handleLocalInputChange : handleInputChange;
-  const currentSubmitHandler = fallbackMode ? handleLocalSubmit : handleChatSubmit;
-  const currentLoading = fallbackMode ? isLocalLoading : isLoading;
+  // Use locally managed state for display
+  const displayMessages = messages; // Always use the main messages state
+  const currentLoading = isLocalLoading; // Use the local loading state
+
+  // Determine if regenerate button should be shown
+  const canRegenerate = messages.some(m => m.role === 'user') && !currentLoading && !fallbackMode && !!port;
 
   return (
-    <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none">
+    <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none overflow-hidden">
       <div className="flex justify-between items-center p-2 px-3 border-b">
-        <h2 className="text-base font-medium">Mapping through prompting</h2>
+        <div className="flex items-center gap-2">
+           <Button
+              variant="outline"
+              size="icon"
+              onClick={handleNewChat}
+              aria-label="New Chat"
+              className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
+              title="New Chat"
+            >
+              <Plus className="h-5 w-5 text-gray-600" />
+            </Button>
+            <h2 className="text-base font-medium truncate" title={activeSessionId || 'Chat'}>
+              {activeSessionId ? `Session: ${activeSessionId.substring(0,8)}...` : 'Chat'}
+            </h2>
+         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline"
             size="icon"
-            rounded="full"
             onClick={() => setShowToolsTest(true)}
             aria-label="Test Tools"
             className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
+            disabled={fallbackMode || !port} 
+            title="Test Tools"
           >
             <Wrench className="h-5 w-5 text-gray-600" />
           </Button>
           <Button 
             variant="outline"
             size="icon"
-            rounded="full"
             onClick={() => setShowSettings(true)}
             aria-label="Settings"
             className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
+            title="Settings"
           >
             <SettingsIcon className="h-5 w-5 text-gray-600" />
           </Button>
+          {canRegenerate && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleRegenerate}
+              aria-label="Regenerate response"
+              className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
+              title="Regenerate"
+            >
+              <RefreshCw className="h-5 w-5 text-gray-600" />
+            </Button>
+          )}
         </div>
       </div>
       
-      <ScrollArea className="px-2 py-4 rounded-none">
-        <div className="space-y-4 w-full mx-auto">
-          {displayMessages.map((message) => {
-            // Add debug logging to see exact content being rendered
-            console.log(`Rendering message [${message.role}]:`, {
-              id: message.id,
-              content: message.content,
-              contentLength: message.content ? message.content.length : 0
-            });
-            
-            return (
-              <div
-                key={message.id}
-                className={cn(
-                  'flex flex-col gap-2 rounded-lg px-3 py-2 text-base break-words',
-                  message.role === 'user'
-                    ? 'ml-auto bg-blue-600 text-white'
-                    : 'bg-muted'
-                )}
-                style={{ maxWidth: '98%', minWidth: 'unset', width: 'auto' }}
-              >
-                {formatMessageContent(message.content)}
-              </div>
-            );
-          })}
-
-          {isTyping && !fallbackMode && (
-            <div className="flex items-center gap-2 p-3 text-base bg-muted rounded-lg w-max">
-              <div className="typing-indicator flex gap-1">
-                <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse"></span>
-                <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-150"></span>
-                <span className="h-2 w-2 bg-muted-foreground rounded-full animate-pulse delay-300"></span>
-              </div>
-            </div>
-          )}
-
-          {error && !fallbackMode && (
-            <div className="flex items-center gap-2 p-2 text-base text-destructive bg-destructive/10 rounded-md">
-              <span>{error.message || "Error connecting to AI service"}</span>
-              <div className="flex gap-2 ml-auto">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  rounded="lg"
-                  onClick={handleRegenerate}
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" /> Regenerate
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  rounded="lg"
-                  onClick={() => setShowSettings(true)}
-                >
-                  Settings
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {fallbackMode && apiConfigured && (
-            <div className="flex items-center gap-2 p-2 text-base text-warning-foreground bg-warning/10 rounded-md">
-              <span>Using local responses. API connection failed.</span>
-              <Button 
-                variant="warning" 
-                size="sm"
-                rounded="lg"
-                className="ml-auto"
-                onClick={handleRetryAPI}
-              >
-                Retry API
-              </Button>
-            </div>
-          )}
-
-          <div ref={scrollRef} />
-        </div>
-      </ScrollArea>
-      
-      <form
-        onSubmit={currentSubmitHandler}
-        className="p-2 px-3 flex items-center gap-2 border-t"
-      >
-        <Textarea
-          className="min-h-[60px] resize-none text-base"
-          placeholder={apiConfigured 
-            ? "Ask about Earth Engine..." 
-            : "Configure API key in Settings to use AI features..."
-          }
-          value={currentInput}
-          onChange={currentInputHandler}
-          onKeyDown={handleKeyDown}
-          disabled={currentLoading || (!apiConfigured && !fallbackMode)}
+      <div className="flex-1 overflow-hidden">
+        <Chat
+          messages={displayMessages as any} 
+          input={input} 
+          handleInputChange={handleInputChange}
+          handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
+          isGenerating={currentLoading} 
+          stop={stop}
+          setMessages={setMessages as any} 
+          append={append as any} 
+          className="h-full"
         />
-        {currentLoading && !fallbackMode ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            rounded="full"
-            onClick={handleStopGenerating}
-            aria-label="Stop generating"
-            className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-600"><rect width="6" height="16" x="9" y="4"/></svg>
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            size="icon"
-            variant="outline"
-            rounded="full"
-            disabled={currentLoading || (!apiConfigured && !fallbackMode) || !currentInput.trim()}
-            aria-label="Send message"
-            className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0"
-          >
-            <Send className="h-5 w-5 text-gray-600" />
-          </Button>
-        )}
-      </form>
+      </div>
+
+      {error && (
+         <Card className="p-4 m-2 bg-destructive/10 text-destructive border-destructive/50">
+           <p className="text-sm font-medium">Error</p>
+           <p className="text-sm mt-1">{error.message}</p>
+           {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={handleRetryAPI}
+               className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20"
+             >
+               <RefreshCw size={14} className="mr-2" /> Retry Connection
+             </Button>
+           )}
+            {!fallbackMode && (
+               <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setError(new Error("Switched to Fallback Mode manually."));
+                    setFallbackMode(true);
+                  }}
+                  className="mt-2 ml-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20"
+               >
+                 Switch to Fallback Mode
+               </Button>
+             )}
+         </Card>
+       )}
+
+      {fallbackMode && (
+         <Card className="p-4 m-2 bg-yellow-100 border-yellow-300 text-yellow-800">
+           <p className="text-sm font-medium">You are in Fallback Mode.</p>
+           <p className="text-sm mt-1">Could not connect to the background service or API. Limited local responses may be available.</p>
+           {apiConfigured && (
+             <Button
+               variant="default"
+               size="sm"
+               onClick={handleRetryAPI}
+               className="mt-2 bg-yellow-500 hover:bg-yellow-600 text-white"
+               disabled={currentLoading || (port !== null && connectionAttempts === 0)} 
+             >
+               <RefreshCw size={14} className="mr-2"/> Attempt to Reconnect
+             </Button>
+           )}
+           {!apiConfigured && (
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setShowSettings(true)}
+                className="mt-2 text-yellow-900 px-0"
+              >
+                Configure API Key in Settings
+              </Button>
+           )}
+         </Card>
+       )}
 
       <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
     </Card>
