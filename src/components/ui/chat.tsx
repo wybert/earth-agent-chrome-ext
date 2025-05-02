@@ -159,28 +159,28 @@ export function Chat({
       return {
         message: message,
         actions: (
-          <>
+        <>
             <CopyButton content={message.content ?? ""} />
             {onRateResponse ? (
               <>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => onRateResponse(message.id, "thumbs-up")}
-                >
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => onRateResponse(message.id, "thumbs-up")}
+          >
                   <ThumbsUp size={16} />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => onRateResponse(message.id, "thumbs-down")}
-                >
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => onRateResponse(message.id, "thumbs-down")}
+          >
                   <ThumbsDown size={16} />
-                </Button>
-              </>
+          </Button>
+        </>
             ) : null}
           </>
-        ),
+      ),
       };
     },
     [onRateResponse]

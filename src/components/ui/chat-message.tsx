@@ -21,9 +21,9 @@ const chatBubbleVariants = cva(
       },
     },
     defaultVariants: {
-      isUser: false,
+        isUser: false,
       animation: "fadeIn",
-    },
+      },
   }
 )
 
@@ -38,7 +38,7 @@ function BubbleMessage({
   animation,
   actions,
 }: BubbleMessageProps) {
-  return (
+    return (
     <div className={cn("group/message relative")}>
       <motion.div
         layout
@@ -54,7 +54,7 @@ function BubbleMessage({
           },
         }}
         style={{ originX: isUser ? 1 : 0 }}
-        className={cn(
+            className={cn(
           chatBubbleVariants({ isUser, animation }),
           "break-words"
         )}
@@ -119,7 +119,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
         )}
       >
         <Icon className="h-5 w-5" />
-      </div>
+    </div>
       <div
         className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}
       >

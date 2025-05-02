@@ -160,7 +160,7 @@ export function MessageInput({
   }
 
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
-  
+
   useEffect(() => {
     if (textAreaRef.current) {
       const currentRef = textAreaRef.current;
@@ -223,7 +223,7 @@ export function MessageInput({
               : omit(props, ["allowAttachments"]))}
           />
 
-          {props.allowAttachments && (
+          {props.allowAttachments && showFileList && (
             <div className="absolute inset-x-3 bottom-0 z-20 overflow-x-scroll py-3">
               <div className="flex space-x-3">
                 <AnimatePresence mode="popLayout">
@@ -287,16 +287,16 @@ export function MessageInput({
                 </Button>
               </motion.div>
             ) : (
-              <Button
-                type="button"
-                variant="outline"
-                className={cn("h-8 w-8", isListening && "text-primary")}
-                aria-label="Voice input"
-                size="icon"
-                onClick={toggleListening}
-              >
+          <Button
+            type="button"
+            variant="outline"
+            className={cn("h-8 w-8", isListening && "text-primary")}
+            aria-label="Voice input"
+            size="icon"
+            onClick={toggleListening}
+          >
                 <Mic size={16} />
-              </Button>
+          </Button>
             )}
           </AnimatePresence>
         )}
