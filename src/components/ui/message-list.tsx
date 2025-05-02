@@ -32,28 +32,28 @@ export function MessageList({
   return (
     <ScrollArea className="flex-1 overflow-y-auto">
       <div className="container flex flex-col gap-4 px-4 py-4">
-        {messages.map((message, index) => {
-          const additionalOptions =
-            typeof messageOptions === "function"
-              ? messageOptions(message)
-              : messageOptions
+      {messages.map((message, index) => {
+        const additionalOptions =
+          typeof messageOptions === "function"
+            ? messageOptions(message)
+            : messageOptions
 
-          return (
-            <ChatMessage
+        return (
+          <ChatMessage
               key={message.id || index}
               message={message}
               isLoading={isGenerating && index === messages.length - 1}
-              {...additionalOptions}
-            />
-          )
-        })}
+            {...additionalOptions}
+          />
+        )
+      })}
         {isGenerating && messages[messages.length - 1]?.role !== 'assistant' && (
           <ChatMessage 
             message={{ id: 'typing', role: 'assistant'}} 
             isLoading={true} 
           />
         )}
-      </div>
+    </div>
     </ScrollArea>
   )
 }

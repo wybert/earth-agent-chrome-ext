@@ -33,11 +33,11 @@ export async function handleChatRoute(request: Request): Promise<Response> {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // --- Vercel AI SDK Integration ---
     let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic>;
     let effectiveModel: string;
-
+    
     if (provider === 'openai') {
       llmProvider = createOpenAI({ apiKey: apiKey });
       effectiveModel = model || DEFAULT_MODELS.openai;
@@ -45,12 +45,12 @@ export async function handleChatRoute(request: Request): Promise<Response> {
       llmProvider = createAnthropic({ apiKey: apiKey });
        effectiveModel = model || DEFAULT_MODELS.anthropic;
     } else {
-       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
-         status: 400,
-         headers: { 'Content-Type': 'application/json' }
-       });
+      return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
-    
+
     // Simplified message mapping for basic CoreMessage structure
     const formattedMessages: CoreMessage[] = inputMessages
       .map((msg): CoreMessage | null => {

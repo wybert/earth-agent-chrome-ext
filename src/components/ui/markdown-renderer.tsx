@@ -35,12 +35,12 @@ const components: Components = {
     // Basic code formatting, handle potential language class from remarkGfm
     const match = /language-(\w+)/.exec(className || '')
     return (
-      <code 
+      <code
         className={cn(
           'relative rounded border bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm',
           inline ? '' : 'whitespace-pre',
           className // Keep original className which might contain language-xxx
-        )} 
+        )}
         {...props}
       >
         {children}
