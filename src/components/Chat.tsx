@@ -209,10 +209,15 @@ export function ChatUI() {
     setIsLocalLoading(false);
     setError(null);
     setFallbackMode(false);
-    console.log('Received message from background:', response);
-    try {
-      console.log('Full response object:', JSON.stringify(response, null, 2));
-    } catch (e) { /* ignore */ }
+    
+    // Remove verbose logging of every chunk message
+    // Only log non-stream chunks for debugging
+    if (response.type !== 'CHAT_STREAM_CHUNK') {
+      console.log('Received message from background:', response);
+      try {
+        console.log('Full response object:', JSON.stringify(response, null, 2));
+      } catch (e) { /* ignore */ }
+    }
 
     switch (response.type) {
       case 'CHAT_RESPONSE':
