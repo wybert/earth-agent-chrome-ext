@@ -228,8 +228,26 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     case 'INIT':
       // Handle initialization
       sendResponse({ status: 'initialized' });
-      break;
+      return false; // Synchronous response
     
+    case 'CONTENT_SCRIPT_LOADED':
+      // Mark content script as loaded for the specific tab
+      if (sender.tab && sender.tab.id) {
+        console.log(`Content script loaded and registered for tab ${sender.tab.id}`);
+        contentScriptTabs.set(sender.tab.id, true);
+        sendResponse({ success: true, message: 'Content script registered' });
+      } else {
+        console.warn('Received CONTENT_SCRIPT_LOADED without tab info');
+        sendResponse({ success: false, error: 'Missing tab information' });
+      }
+      return false; // Synchronous response
+
+    case 'CONTENT_SCRIPT_HEARTBEAT':
+      // Acknowledge heartbeat from content script
+      console.log('Received heartbeat from content script', sender.tab?.id);
+      sendResponse({ success: true, message: 'Heartbeat acknowledged' });
+      return false; // Synchronous response
+
     case 'VALIDATE_SERVER':
       if (message.payload && message.payload.host && message.payload.port) {
         validateServerIdentity(message.payload.host, message.payload.port)
@@ -241,36 +259,73 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
           });
         return true; // Will respond asynchronously
       }
-      break;
+      sendResponse({ isValid: false, error: 'Invalid payload for VALIDATE_SERVER' });
+      return false; // Synchronous response
       
     case 'API_REQUEST':
-      // Handle API requests directly
+      // Handle API requests directly (e.g., proxied chat requests if needed)
       if (message.payload && message.payload.endpoint === '/api/chat') {
         (async () => {
           try {
-            const body = await (new Request(message.payload.url, {
-              method: 'POST',
-              headers: message.payload.headers || {},
-              body: message.payload.body ? JSON.stringify(message.payload.body) : undefined
-            })).json();
+            // Get API key/provider from storage
+            const config = await chrome.storage.local.get([
+              API_KEY_STORAGE_KEY,
+              API_PROVIDER_STORAGE_KEY,
+              DEFAULT_MODEL_STORAGE_KEY
+            ]);
+            const apiKey = config[API_KEY_STORAGE_KEY];
+            const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
+            const model = config[DEFAULT_MODEL_STORAGE_KEY];
 
+            if (!apiKey) {
+              throw new Error('API key not found in storage');
+            }
+
+            const body = message.payload.body || {}; 
             const response = await handleChatRequest(
               body.messages,
-              body.apiKey,
-              body.provider,
-              body.model
+              apiKey,
+              provider,
+              model
             );
             
-            const responseData = await response.json();
+            // Stream the response back? Requires careful handling
+            // For simplicity, let's assume non-streaming for direct API calls for now
+            const responseData = await response.json(); // Or handle stream appropriately
             sendResponse({ success: true, data: responseData });
-          } catch (error) {
-            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error handling proxied API request:', error);
+            sendResponse({ success: false, error: `API request failed: ${errorMessage}` });
           }
         })();
         return true; // Will respond asynchronously
       }
-      break;
-    
+      sendResponse({ success: false, error: 'Invalid API_REQUEST payload' });
+      return false; // Synchronous response
+
+    // --- Handlers for Direct Earth Engine Tool Calls --- 
+    case 'EDIT_SCRIPT':
+    case 'RUN_CODE':
+    case 'GET_MAP_LAYERS':
+    case 'INSPECT_MAP':
+    case 'CHECK_CONSOLE':
+    case 'GET_TASKS':
+      console.log(`Routing ${message.type} message to Earth Engine tab...`);
+      sendMessageToEarthEngineTab(message)
+        .then(response => {
+          sendResponse(response); // Forward the response from content script
+        })
+        .catch(error => {
+          console.error(`Error routing ${message.type} to EE tab:`, error);
+          sendResponse({ 
+            success: false, 
+            error: `Failed to execute ${message.type}: ${error instanceof Error ? error.message : String(error)}` 
+          });
+        });
+      return true; // Indicate asynchronous response
+
     // Handle Context7 API requests
     case 'CONTEXT7_RESOLVE_LIBRARY_ID':
       (async () => {
@@ -356,121 +411,6 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
         }
       })();
       return true; // Will respond asynchronously
-    
-    // Earth Engine Tool Handlers
-    case 'RUN_CODE':
-      (async () => {
-        try {
-          console.log('Running Earth Engine code, length:', message.code?.length || 0);
-          console.log('Code snippet:', message.code?.substring(0, 50) + '...');
-          
-          const response = await sendMessageToEarthEngineTab(message);
-          console.log('Code execution response:', response);
-          sendResponse(response);
-        } catch (error) {
-          console.error('Error running Earth Engine code:', error);
-          sendResponse({
-            success: false,
-            error: `Error running Earth Engine code: ${error instanceof Error ? error.message : String(error)}`
-          });
-        }
-      })();
-      return true; // Will respond asynchronously
-      
-    case 'INSPECT_MAP':
-      (async () => {
-        try {
-          console.log('Inspecting Earth Engine map at coordinates:', message.coordinates);
-          
-          const response = await sendMessageToEarthEngineTab(message);
-          console.log('Map inspection response:', response);
-          sendResponse(response);
-        } catch (error) {
-          console.error('Error inspecting Earth Engine map:', error);
-          sendResponse({
-            success: false,
-            error: `Error inspecting Earth Engine map: ${error instanceof Error ? error.message : String(error)}`
-          });
-        }
-      })();
-      return true; // Will respond asynchronously
-      
-    case 'CHECK_CONSOLE':
-      (async () => {
-        try {
-          console.log('Checking Earth Engine console for errors');
-          
-          const response = await sendMessageToEarthEngineTab(message);
-          console.log('Console check response:', response);
-          sendResponse(response);
-        } catch (error) {
-          console.error('Error checking Earth Engine console:', error);
-          sendResponse({
-            success: false,
-            error: `Error checking Earth Engine console: ${error instanceof Error ? error.message : String(error)}`
-          });
-        }
-      })();
-      return true; // Will respond asynchronously
-      
-    case 'GET_TASKS':
-      (async () => {
-        try {
-          console.log('Getting Earth Engine tasks');
-          
-          const response = await sendMessageToEarthEngineTab(message);
-          console.log('Get tasks response:', response);
-          sendResponse(response);
-        } catch (error) {
-          console.error('Error getting Earth Engine tasks:', error);
-          sendResponse({
-            success: false,
-            error: `Error getting Earth Engine tasks: ${error instanceof Error ? error.message : String(error)}`
-          });
-        }
-      })();
-      return true; // Will respond asynchronously
-      
-    case 'EDIT_SCRIPT':
-      (async () => {
-        try {
-          console.log('Editing Earth Engine script:', 
-                      message.scriptId, 
-                      'content length:', message.content?.length || 0);
-          
-          const response = await sendMessageToEarthEngineTab(message);
-          console.log('Script edit response:', response);
-          sendResponse(response);
-        } catch (error) {
-          console.error('Error editing Earth Engine script:', error);
-          sendResponse({
-            success: false,
-            error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
-          });
-        }
-      })();
-      return true; // Will respond asynchronously
-    
-    case 'CONTENT_SCRIPT_LOADED':
-      if (sender.tab && sender.tab.id) {
-        console.log(`Content script loaded in tab ${sender.tab.id}:`, message.url);
-        contentScriptTabs.set(sender.tab.id, true);
-      } else {
-        console.log('Content script loaded but sender tab info is missing');
-      }
-      sendResponse({ success: true, message: 'Background script acknowledged content script loading' });
-      break;
-    
-    case 'CONTENT_SCRIPT_HEARTBEAT':
-      if (sender.tab && sender.tab.id) {
-        console.log(`Content script heartbeat received from tab ${sender.tab.id}:`, message.url);
-        // Update the map to ensure we know this content script is active
-        contentScriptTabs.set(sender.tab.id, true);
-      } else {
-        console.log('Content script heartbeat received but sender tab info is missing');
-      }
-      sendResponse({ success: true, message: 'Background script acknowledged heartbeat' });
-      break;
     
     // Browser Automation Tools
     case 'SCREENSHOT':
@@ -934,9 +874,9 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       return true; // Will respond asynchronously
       
     default:
-      console.log('Unhandled message type:', message.type);
-      sendResponse({ success: false, error: `Unhandled message type: ${message.type}` });
-      break;
+      console.warn(`Unknown message type received in background: ${message.type}`);
+      sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
+      return false; // Synchronous response
   }
 });
 
