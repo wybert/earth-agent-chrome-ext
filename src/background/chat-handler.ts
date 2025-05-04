@@ -2,6 +2,7 @@ import { Message, CoreMessage, streamText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
+import { getDocumentation } from '../lib/tools/context7';
 
 // Available providers
 export type Provider = 'openai' | 'anthropic';
@@ -27,6 +28,7 @@ Your capabilities:
 - Help troubleshoot Earth Engine code issues
 - Recommend appropriate datasets and methods for geospatial analysis
 - You can use tools to get the weather in a location
+- You can search for Earth Engine datasets and get documentation
 
 Instructions:
 - Always provide code within backticks: \`code\`
@@ -36,6 +38,7 @@ Instructions:
 - For complex topics, break down explanations step-by-step
 - If you're unsure about something, acknowledge limitations rather than providing incorrect information
 - When asked about weather, use the weather tool to get real-time information and format it nicely
+- When asked about Earth Engine datasets, use the earthEngineDataset tool to get up-to-date documentation
 
 Common Earth Engine patterns:
 - Image and collection loading: ee.Image(), ee.ImageCollection()
@@ -117,13 +120,63 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       },
     });
 
+    // Define Earth Engine dataset documentation tool
+    const earthEngineDatasetTool = tool({
+      description: 'Get information about Earth Engine datasets including documentation and code examples',
+      parameters: z.object({
+        datasetQuery: z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
+      }),
+      execute: async ({ datasetQuery }) => {
+        try {
+          console.log(`🌍 [EarthEngineDatasetTool] Tool called with query: "${datasetQuery}"`);
+          console.time('EarthEngineDatasetTool execution');
+          
+          // Use the Context7 getDocumentation function to fetch dataset information
+          // The Earth Engine dataset catalog is stored in wybert/earthengine-dataset-catalog-md
+          const result = await getDocumentation(
+            'wybert/earthengine-dataset-catalog-md',
+            datasetQuery,
+            { tokens: 15000 } // Get a good amount of content
+          );
+          
+          console.timeEnd('EarthEngineDatasetTool execution');
+          
+          if (!result.success || !result.content) {
+            console.warn(`❌ [EarthEngineDatasetTool] No results found for "${datasetQuery}". Error: ${result.message}`);
+            return {
+              found: false,
+              message: result.message || `Could not find documentation for "${datasetQuery}"`,
+              suggestion: "Try a more general search term or check the spelling of the dataset name."
+            };
+          }
+          
+          console.log(`✅ [EarthEngineDatasetTool] Found documentation for "${datasetQuery}". Content length: ${result.content.length} chars`);
+          
+          return {
+            found: true,
+            query: datasetQuery,
+            documentation: result.content,
+            message: `Documentation found for Earth Engine dataset related to "${datasetQuery}"`
+          };
+        } catch (error) {
+          console.error(`❌ [EarthEngineDatasetTool] Error fetching Earth Engine dataset info:`, error);
+          return {
+            found: false,
+            message: `Error retrieving Earth Engine dataset information: ${error instanceof Error ? error.message : String(error)}`,
+            suggestion: "Try again with a different dataset name or more specific query."
+          };
+        }
+      },
+    });
+
     // Use streamText for AI generation with tools
     const result = await streamText({
       model: llmProvider(effectiveModel), 
       system: GEE_SYSTEM_PROMPT,
       messages: formattedMessages,
       tools: {
-        weather: weatherTool
+        weather: weatherTool,
+        earthEngineDataset: earthEngineDatasetTool
       },
       maxSteps: 5, // Allow up to 5 steps
       temperature: 0.2
