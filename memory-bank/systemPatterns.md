@@ -6,186 +6,108 @@ The Google Earth Engine (GEE) Agent is built as a Chrome extension with a multi-
 
 ```mermaid
 graph TD
-    UI[Side Panel UI] <--> BG[Background Service Worker]
-    BG <--> CS[Content Script]
-    BG <--> AI[AI Services]
-    CS <--> GEE[Google Earth Engine]
-    AI --> MOD{AI Models}
-    MOD --> C[Claude]
-    MOD --> G[GPT]
+    UI[Side Panel UI] --> BG[Background Script]
+    UI --> Lib[Tool Library @ /src/lib]
+    BG --> Lib
+    BG --> AI[AI Services / chat-handler.ts]
+    BG --> CS[Content Script]
+    Lib -.-> BG_Listener[Background Listener]
+    AI -.-> BG_CS_Comm[Background -> CS Communication]
+    BG_Listener -.-> BG_CS_Comm
+    BG_CS_Comm --> CS
+    CS --> GEE[Google Earth Engine]
 ```
 
-### Key Components
+### Key Components & Flow
 
-1. **Side Panel UI**: Primary user interface housed in Chrome's side panel
-2. **Background Service Worker**: Core orchestration layer handling API requests and message routing
-3. **Content Script**: DOM interaction layer injected into GEE page
-4. **AI Service Layer**: Communication with language models and tool execution
+1.  **Side Panel UI (`src/components/`)**: Primary user interface (React). Can directly call functions from the Tool Library for actions like UI-driven tests.
+2.  **Tool Library (`src/lib/tools/`)**: Contains reusable functions (`editScript`, `runCode`, etc.) designed for GEE interaction. These functions detect their execution context and use `chrome.runtime.sendMessage` when called from the UI or content script.
+3.  **Background Script (`src/background/`)**: Core orchestration layer.
+    *   **`index.ts` (Main Listener):** Listens for `chrome.runtime.onMessage` events from the UI or Tool Library functions. Uses a helper (`sendMessageToEarthEngineTab`) to find the EE tab, validate the content script, and relay the message to the content script using `chrome.tabs.sendMessage`.
+    *   **`chat-handler.ts` (AI Handler):** Handles AI interactions using Vercel AI SDK. Defines AI tools (`earthEngineScriptTool`, etc.). The `execute` block for these tools *must* implement the logic to find the EE tab, validate/inject the content script, and send messages *directly* to the content script using `chrome.tabs.sendMessage`. It **does not** call the Tool Library functions to avoid `window is not defined` errors in the background context.
+4.  **Content Script (`src/content/`)**: Injected into the GEE page. Listens for messages from the background script (`chrome.tabs.onMessage`) and performs actual DOM interactions (e.g., editing CodeMirror, clicking Run).
+5.  **AI Services**: External LLMs (Claude, GPT) accessed via Vercel AI SDK in `chat-handler.ts`.
 
 ## Agent Architecture
 
-The agent architecture is designed to support intelligent, multi-step interactions using tools. There are two primary approaches under consideration:
-
 ### Client-Side Agent (Current Implementation)
 
-```mermaid
-graph TD
-    User[User Query] --> SP[Side Panel]
-    SP --> BG[Background Script]
-    BG --> AI[Vercel AI SDK Agent]
-    AI -- Tool Selection --> T1[Tool 1: Generate Code]
-    AI -- Tool Selection --> T2[Tool 2: Insert Code]
-    AI -- Tool Selection --> T3[Tool 3: Run Code]
-    AI -- Tool Selection --> TN[Tool N: Other Tools]
-    T1 --> BG2[Background Script]
-    T2 --> BG2
-    T3 --> BG2
-    TN --> BG2
-    BG2 --> CS[Content Script]
-    CS --> GEE[Google Earth Engine]
-    GEE --> CS2[Content Script]
-    CS2 --> BG3[Background Script]
-    BG3 --> AI2[AI Agent]
-    AI2 --> SP2[Side Panel]
-    SP2 --> User2[User]
-```
-
-This architecture uses the **Vercel AI SDK** for agent capabilities, allowing:
-- Sequential tool execution (generate → insert → run)
-- In-context reasoning between steps
-- Streaming responses during multi-step operations
-- Client-side context management
+Utilizes the Vercel AI SDK within `chat-handler.ts` for agent capabilities:
+- Sequential tool execution (e.g., `earthEngineDataset` -> `earthEngineScript` -> `earthEngineRunCode`).
+- In-context reasoning between steps.
+- Streaming responses.
+- **Tool Execution Pattern (Background -> Content Script):** AI tool definitions in `chat-handler.ts` handle the direct `chrome.tabs.sendMessage` to the content script for page interactions.
 
 ### Server-Side Agent (Future Consideration)
 
-```mermaid
-graph TD
-    User[User Query] --> SP[Side Panel]
-    SP --> BG[Background Script]
-    BG --> Server[Server: Mastra/Langchain]
-    Server -- Tool Selection --> T1[Tool 1: Generate Code]
-    Server -- Tool Selection --> T2[Tool 2: Insert Code]
-    Server -- Tool Selection --> T3[Tool 3: Run Code]
-    Server -- Tool Selection --> TN[Tool N: Other Tools]
-    T1 --> BG2[Background Script]
-    T2 --> BG2
-    T3 --> BG2
-    TN --> BG2
-    BG2 --> CS[Content Script]
-    CS --> GEE[Google Earth Engine]
-    GEE --> CS2[Content Script]
-    CS2 --> BG3[Background Script]
-    BG3 --> Server2[Server]
-    Server2 --> SP2[Side Panel]
-    SP2 --> User2[User]
-```
-
-This approach would leverage server-side frameworks like **Mastra** or **Langchain** for:
-- Persistent memory across sessions
-- More complex multi-agent coordination
-- Reduced client-side complexity
-- Advanced tool orchestration
+Leveraging Mastra or Langchain could provide persistent memory and more complex orchestration but adds server-side infrastructure requirements.
 
 ## Message Flow Patterns
 
-### User Query Processing
+### User Query Processing (AI)
 
 ```mermaid
 sequenceDiagram
     participant User
     participant UI as Side Panel UI
-    participant BG as Background Script
+    participant BG_Chat as chat-handler.ts
+    participant AI as Vercel AI SDK
+    participant BG_Tool as Tool Execute Block
     participant CS as Content Script
-    participant AI as AI Service
     participant GEE as Google Earth Engine
 
     User->>UI: Submit Query
-    UI->>BG: Send Query
-    BG->>CS: Request Context
-    CS-->>GEE: Extract State
-    CS->>BG: Return Context
-    BG->>AI: Query + Context
-    AI-->>BG: Stream Response
-    BG-->>UI: Stream Response
+    UI->>BG_Chat: Send CHAT_MESSAGE
+    BG_Chat->>AI: Process messages (streamText)
+    AI->>AI: Reasoning / Tool Selection
+    opt Tool Required (e.g., editScript)
+        AI->>BG_Tool: Call earthEngineScriptTool.execute
+        BG_Tool->>CS: Find Tab, Check/Inject CS, Send EDIT_SCRIPT (tabs.sendMessage)
+        CS->>GEE: Interact with Editor DOM
+        CS-->>BG_Tool: Return Tool Result
+        BG_Tool-->>AI: Forward Result
+        AI->>AI: Process Tool Result
+    end
+    AI-->>BG_Chat: Stream Final Response
+    BG_Chat-->>UI: Stream Response Chunks
     UI-->>User: Display Response
 ```
 
-### Tool Execution Flow
-
-```mermaid
-sequenceDiagram
-    participant AI as AI Service
-    participant BG as Background Script
-    participant CS as Content Script
-    participant GEE as Google Earth Engine
-    
-    AI->>BG: Tool Request
-    BG->>CS: Execute Tool
-    CS->>GEE: DOM Operation
-    GEE-->>CS: Operation Result
-    CS-->>BG: Tool Result
-    BG-->>AI: Result
-    AI->>AI: Process Result
-```
-
-### Multi-Step Tool Execution Flow
+### Direct UI Tool Call (e.g., Test Button)
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant AI as AI Agent
-    participant T1 as Tool 1: Generate Code
-    participant T2 as Tool 2: Insert Code
-    participant T3 as Tool 3: Run Code
+    participant UI as Side Panel UI
+    participant LibFunc as editScript() @ /src/lib
+    participant BG_Listener as index.ts Listener
+    participant BG_Helper as sendMessageToEE()
+    participant CS as Content Script
     participant GEE as Google Earth Engine
-    
-    User->>AI: Query ("Show Landsat imagery for NYC")
-    AI->>AI: Initial Reasoning
-    AI->>T1: Generate Earth Engine Code
-    T1-->>AI: Return Generated Code
-    AI->>AI: Analyze Code
-    AI->>T2: Insert Code to Editor
-    T2-->>AI: Return Insertion Result
-    AI->>T3: Run Code in GEE
-    T3->>GEE: Execute Code
-    GEE-->>T3: Execution Result/Error
-    T3-->>AI: Return Run Result
-    AI->>AI: Generate Final Response
-    AI-->>User: Complete Answer with Results
+
+    User->>UI: Click Test Button
+    UI->>LibFunc: Call editScript("id", "code")
+    LibFunc->>LibFunc: detectEnvironment() -> useBackgroundProxy=true
+    LibFunc->>BG_Listener: Send EDIT_SCRIPT (runtime.sendMessage)
+    BG_Listener->>BG_Helper: Call sendMessageToEarthEngineTab()
+    BG_Helper->>CS: Find Tab, Check/Inject CS, Send EDIT_SCRIPT (tabs.sendMessage)
+    CS->>GEE: Interact with Editor DOM
+    CS-->>BG_Helper: Return Result
+    BG_Helper-->>BG_Listener: Forward Result
+    BG_Listener-->>LibFunc: Send Response
+    LibFunc-->>UI: Return Result
+    UI-->>User: Display Result/Status
 ```
 
 ## Component Patterns
 
 ### Side Panel UI
-
-The Side Panel is built as a React application with:
-
-```mermaid
-graph TD
-    App[App] --> Chat[Chat Component]
-    App --> Setting[Settings Component]
-    Chat --> Messages[Messages Container]
-    Chat --> Input[Input Component]
-    Messages --> UserMsg[User Message]
-    Messages --> AIMsg[AI Message]
-    AIMsg --> Stream[Streaming Text]
-    AIMsg --> Tools[Tool Responses]
-```
+(Remains largely the same - standard React component structure)
 
 ### Tools Implementation
-
-Each tool follows a consistent pattern:
-
-```mermaid
-graph TD
-    Tool[Tool Implementation] --> Schema[Tool Schema]
-    Tool --> Handler[Tool Handler]
-    Tool --> Executor[Tool Executor]
-    Handler --> BG[Background Handler]
-    Executor --> CS[Content Script Executor]
-    Schema --> Valid[Input Validation]
-    Schema --> Docs[Documentation]
-```
+- **Reusable Functions (`src/lib/tools/`)**: Contain core logic, environment detection, and `runtime.sendMessage` for delegation.
+- **AI Tool Definitions (`src/background/chat-handler.ts`)**: Define schema for AI, contain `execute` block with background-safe logic using `tabs.sendMessage` for page interactions.
+- **Content Script Handlers (`src/content/index.ts`)**: Implement the actual DOM manipulation logic triggered by messages from the background.
 
 ## Data Flow Patterns
 
