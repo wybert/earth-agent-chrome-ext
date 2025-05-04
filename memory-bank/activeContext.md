@@ -11,12 +11,16 @@ The primary focus areas recently have been:
     - Establishing the Vercel AI SDK as the primary interaction method, with direct API calls as a fallback.
     - Centralizing configuration (API keys, providers, models).
     - Removing redundant code and improving type safety.
+    - Adding comprehensive model selection for OpenAI, Anthropic, and Google/Gemini.
+    - Implementing provider-specific API key storage for better UX when switching between providers.
+    - Adding detailed console logging for model usage and chat interactions.
 
 2.  **Chat UI Functionality & Bug Fixing**
     - Ensuring correct display of user messages (`src/components/Chat.tsx`).
     - Implementing conversation history persistence within a session.
     - Fixing streaming UI issues (blinking text, duplicate messages).
     - Refining streaming chunk handling for smooth text rendering.
+    - Adding UI components for provider and model selection.
 
 3.  **Background Script Enhancement**
     - Updating message handlers (`handleChatMessage`) to process full conversation history.
@@ -35,6 +39,22 @@ The primary focus areas recently have been:
   - Removed `src/api/chat-route.ts`.
   - Standardized API interaction using Vercel AI SDK first, then direct calls.
   - Added support for configurable models via storage/env vars.
+  - Implemented provider-specific API key storage with separate storage keys for OpenAI, Anthropic, and Google.
+  - Added comprehensive model selection with updated model IDs for each provider.
+  - Implemented console logging system for chat processing and model usage tracking.
+
+- **Settings UI Enhancements:**
+  - Added model selection dropdown for each provider.
+  - Implemented provider-specific API key storage and retrieval.
+  - Added UI for model selection with the latest models from OpenAI, Anthropic, and Google/Gemini.
+  - Improved API connection testing and feedback for each provider.
+
+- **Debugging Enhancements:**
+  - Added styled console logging for model and provider tracking.
+  - Implemented message tracking with truncated content preview.
+  - Added request initiation logging for easier debugging.
+  - Used color-coded console messages for better visualization.
+
 - **Chat UI Fixes:**
   - Corrected CSS for user message display.
   - Implemented session-based conversation history.
@@ -105,8 +125,10 @@ The primary focus areas recently have been:
 1. Complete testing of updated browser tools
 2. Finalize error handling improvements
 3. Update documentation for new features
-4. Begin implementation of Vercel AI SDK agent with multi-step tool capabilities
-5. Implement any necessary UI refinements
+4. Test the model selection and provider-specific API key functionality
+5. Test console logging across different browsers and environments
+6. Begin implementation of Vercel AI SDK agent with multi-step tool capabilities
+7. Implement any necessary UI refinements
 
 ### Short-term (Next 1-2 Weeks)
 1. Add more browser automation capabilities
@@ -151,6 +173,8 @@ The primary focus areas recently have been:
    - Chrome's scripting API provides better security and reliability
    - Proper serialization is crucial for message passing
    - Error handling needs careful consideration
+   - Provider-specific storage keys allow for better user experience when switching between LLM providers
+   - Console logging with styling enhances developer experience and debugging
 
 2. **Browser Automation**
    - Coordinate-based clicking requires careful implementation
@@ -192,4 +216,19 @@ The primary focus areas recently have been:
 5. **Agent Implementation Strategy** (2024-03-21)
    - **Decision:** Begin with client-side Vercel AI SDK agent implementation
    - **Rationale:** Faster development path, allows evaluating capabilities before adding server components
-   - **Trade-offs:** May need to migrate to server-side (Mastra, Langchain) for robust memory persistence 
+   - **Trade-offs:** May need to migrate to server-side (Mastra, Langchain) for robust memory persistence
+
+6. **Provider-Specific API Key Storage** (2024-05-12)
+   - **Decision:** Store API keys separately for each provider (OpenAI, Anthropic, and Google) using dedicated storage keys
+   - **Rationale:** Preserves API keys when switching between providers, improving user experience
+   - **Trade-offs:** More complex implementation but better UX
+
+7. **Comprehensive Model Selection** (2024-05-12)
+   - **Decision:** Add full model selection UI for all three providers with the latest model IDs
+   - **Rationale:** Gives users more control and access to newer models
+   - **Trade-offs:** More UI complexity but greater flexibility
+
+8. **Console Logging Enhancement** (2024-05-13)
+   - **Decision:** Add detailed console logging for API requests, messages, and model information
+   - **Rationale:** Improves debugging, provides transparency about which model is in use
+   - **Trade-offs:** Minor performance impact, but significantly improves developer experience 

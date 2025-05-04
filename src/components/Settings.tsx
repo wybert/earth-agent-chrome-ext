@@ -2,54 +2,126 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Check, X, Eye, EyeOff } from 'lucide-react';
+import { Check, X, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from './ui/select';
+import { PROVIDER_MODELS, DEFAULT_MODELS } from '../api/chat';
 
-// Key for storing API key in Chrome Storage
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+// Key for storing API keys in Chrome Storage (provider-specific)
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
-type ApiProvider = 'openai' | 'anthropic';
+type ApiProvider = 'openai' | 'anthropic' | 'google';
 
 interface SettingsProps {
   onClose: () => void;
 }
 
 export function Settings({ onClose }: SettingsProps) {
-  const [apiKey, setApiKey] = useState('');
+  // Store API keys for each provider separately
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
+  const [googleApiKey, setGoogleApiKey] = useState('');
+  
   const [provider, setProvider] = useState<ApiProvider>('openai');
+  const [selectedModel, setSelectedModel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Load saved API key on component mount
+  // Helper to get the current API key based on provider
+  const getCurrentApiKey = () => {
+    switch(provider) {
+      case 'openai': return openaiApiKey;
+      case 'anthropic': return anthropicApiKey;
+      case 'google': return googleApiKey;
+      default: return '';
+    }
+  };
+
+  // Helper to set the current API key based on provider
+  const setCurrentApiKey = (value: string) => {
+    switch(provider) {
+      case 'openai': setOpenaiApiKey(value); break;
+      case 'anthropic': setAnthropicApiKey(value); break;
+      case 'google': setGoogleApiKey(value); break;
+    }
+  };
+
+  // Load saved settings on component mount
   useEffect(() => {
-    chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-      if (result[API_KEY_STORAGE_KEY]) {
-        setApiKey(result[API_KEY_STORAGE_KEY]);
+    chrome.storage.sync.get([
+      OPENAI_API_KEY_STORAGE_KEY, 
+      ANTHROPIC_API_KEY_STORAGE_KEY, 
+      GOOGLE_API_KEY_STORAGE_KEY,
+      API_PROVIDER_STORAGE_KEY, 
+      DEFAULT_MODEL_STORAGE_KEY
+    ], (result) => {
+      // Load saved API keys
+      if (result[OPENAI_API_KEY_STORAGE_KEY]) {
+        setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY]);
       }
+      if (result[ANTHROPIC_API_KEY_STORAGE_KEY]) {
+        setAnthropicApiKey(result[ANTHROPIC_API_KEY_STORAGE_KEY]);
+      }
+      if (result[GOOGLE_API_KEY_STORAGE_KEY]) {
+        setGoogleApiKey(result[GOOGLE_API_KEY_STORAGE_KEY]);
+      }
+
+      // Load saved provider and model
       if (result[API_PROVIDER_STORAGE_KEY]) {
         setProvider(result[API_PROVIDER_STORAGE_KEY] as ApiProvider);
+      }
+      if (result[DEFAULT_MODEL_STORAGE_KEY]) {
+        setSelectedModel(result[DEFAULT_MODEL_STORAGE_KEY]);
+      } else {
+        // Set default model based on provider
+        setSelectedModel(DEFAULT_MODELS[result[API_PROVIDER_STORAGE_KEY] as ApiProvider || 'openai']);
       }
     });
   }, []);
 
+  // Update selected model when provider changes
+  useEffect(() => {
+    setSelectedModel(DEFAULT_MODELS[provider]);
+  }, [provider]);
+
   const handleSave = () => {
     setIsSaving(true);
-    // Store in Chrome sync storage for sync across devices
+    
+    // Determine which API key to save based on current provider
+    const storageKey = provider === 'openai' 
+      ? OPENAI_API_KEY_STORAGE_KEY 
+      : provider === 'anthropic' 
+        ? ANTHROPIC_API_KEY_STORAGE_KEY 
+        : GOOGLE_API_KEY_STORAGE_KEY;
+    
+    const currentApiKey = getCurrentApiKey();
+    
+    // Store in Chrome sync storage
     chrome.storage.sync.set(
       {
-        [API_KEY_STORAGE_KEY]: apiKey,
-        [API_PROVIDER_STORAGE_KEY]: provider
+        [storageKey]: currentApiKey,
+        [API_PROVIDER_STORAGE_KEY]: provider,
+        [DEFAULT_MODEL_STORAGE_KEY]: selectedModel
       },
       () => {
         if (chrome.runtime.lastError) {
-          console.error('Error saving API key:', chrome.runtime.lastError);
+          console.error('Error saving settings:', chrome.runtime.lastError);
           setSaveStatus('error');
         } else {
           setSaveStatus('success');
           // Test the API connection
-          testApiConnection(provider, apiKey);
+          testApiConnection(provider, currentApiKey);
         }
         setIsSaving(false);
         
@@ -95,6 +167,17 @@ export function Settings({ onClose }: SettingsProps) {
           setConnectionStatus('error');
         }
       }
+      // For Google, check if the API key looks valid (simplified check)
+      else if (provider === 'google') {
+        // Google API keys are typically long alphanumeric strings
+        if (key.length > 20) {
+          console.log('Google API key format looks valid');
+          setConnectionStatus('success');
+        } else {
+          console.error('Google API key format looks invalid');
+          setConnectionStatus('error');
+        }
+      }
       
     } catch (error) {
       console.error('Error testing API connection:', error);
@@ -127,7 +210,32 @@ export function Settings({ onClose }: SettingsProps) {
             >
               Anthropic
             </Button>
+            <Button 
+              variant={provider === 'google' ? 'default' : 'outline'}
+              onClick={() => setProvider('google')}
+            >
+              Google
+            </Button>
           </div>
+        </div>
+
+        <div>
+          <label className="text-sm mb-1 block">Select Model</label>
+          <Select 
+            value={selectedModel} 
+            onValueChange={setSelectedModel}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a model" />
+            </SelectTrigger>
+            <SelectContent>
+              {PROVIDER_MODELS[provider].map(model => (
+                <SelectItem key={model.id} value={model.id}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         
         <div>
@@ -136,9 +244,12 @@ export function Settings({ onClose }: SettingsProps) {
             <div className="relative flex-1">
               <Input
                 type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key`}
+                value={getCurrentApiKey()}
+                onChange={(e) => setCurrentApiKey(e.target.value)}
+                placeholder={`Enter your ${
+                  provider === 'openai' ? 'OpenAI' : 
+                  provider === 'anthropic' ? 'Anthropic' : 'Google'
+                } API key`}
                 className="pr-10"
               />
               <button 
@@ -149,20 +260,23 @@ export function Settings({ onClose }: SettingsProps) {
                 {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <Button onClick={handleSave} disabled={isSaving || !apiKey}>
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving || !getCurrentApiKey() || !selectedModel}
+            >
               Save
             </Button>
           </div>
 
           {saveStatus === 'success' && (
             <div className="mt-2 text-sm flex items-center text-green-600">
-              <Check className="h-4 w-4 mr-1" /> API key saved successfully
+              <Check className="h-4 w-4 mr-1" /> Settings saved successfully
             </div>
           )}
 
           {saveStatus === 'error' && (
             <div className="mt-2 text-sm flex items-center text-red-600">
-              <X className="h-4 w-4 mr-1" /> Error saving API key
+              <X className="h-4 w-4 mr-1" /> Error saving settings
             </div>
           )}
 
@@ -180,11 +294,13 @@ export function Settings({ onClose }: SettingsProps) {
         </div>
 
         <div className="text-sm text-gray-500">
-          <p>Your API key is stored securely in Chrome's synced storage and is never sent to our servers.</p>
+          <p>Your API keys are stored securely in Chrome's synced storage and are never sent to our servers.</p>
           <p className="mt-1">
             {provider === 'openai' 
               ? 'You can create an OpenAI API key in your OpenAI dashboard.' 
-              : 'You can create an Anthropic API key in your Anthropic console.'}
+              : provider === 'anthropic'
+                ? 'You can create an Anthropic API key in your Anthropic console.'
+                : 'You can create a Google API key in your Google Cloud console.'}
           </p>
         </div>
       </div>
