@@ -1,4 +1,4 @@
-import { handleChatRoute } from './routes';
+import { handleChatRequest } from './chat-handler';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 
 // Types for messages between components
@@ -15,6 +15,11 @@ const contentScriptTabs = new Map<number, boolean>();
 const CONTENT_SCRIPT_PING_TIMEOUT = 5000; // 5 seconds
 const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
 const MAX_TAB_ACTION_RETRIES = 3;
+
+// API configuration storage keys
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -241,19 +246,27 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     case 'API_REQUEST':
       // Handle API requests directly
       if (message.payload && message.payload.endpoint === '/api/chat') {
-        handleChatRoute(new Request(message.payload.url, {
-          method: 'POST',
-          headers: message.payload.headers || {},
-          body: message.payload.body ? JSON.stringify(message.payload.body) : undefined
-        }))
-          .then(response => {
-            response.json().then(data => {
-              sendResponse({ success: true, data });
-            });
-          })
-          .catch(error => {
-            sendResponse({ success: false, error: error.message });
-          });
+        (async () => {
+          try {
+            const body = await (new Request(message.payload.url, {
+              method: 'POST',
+              headers: message.payload.headers || {},
+              body: message.payload.body ? JSON.stringify(message.payload.body) : undefined
+            })).json();
+
+            const response = await handleChatRequest(
+              body.messages,
+              body.apiKey,
+              body.provider,
+              body.model
+            );
+            
+            const responseData = await response.json();
+            sendResponse({ success: true, data: responseData });
+          } catch (error) {
+            sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+          }
+        })();
         return true; // Will respond asynchronously
       }
       break;
@@ -977,39 +990,58 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     
     console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
     
-    // Prepare body for handleChatRoute
-    const body = {
-      messages: conversationMessages, // Send the original messages structure
-      apiKey: message.apiKey,
-      provider: message.provider,
-      model: message.model // Pass model if provided by frontend
-    };
+    // Get API key and provider from storage
+    const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
+      (resolve, reject) => {
+        chrome.storage.sync.get(
+          [API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], 
+          (result) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            
+            const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+            
+            resolve({
+              apiKey: result[API_KEY_STORAGE_KEY] || '',
+              provider,
+              model: result[DEFAULT_MODEL_STORAGE_KEY] || ''
+            });
+          }
+        );
+      }
+    );
     
-    // Create a request object for the handler
-    // Use a placeholder URL as it's handled internally
-    const request = new Request('chrome-extension://internal/api/chat', {
-      method: 'POST',
-      headers: {
-        // No Authorization needed here as apiKey is in body for handleChatRoute
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    // Call the handler which now uses streamText and returns a Response
-      const response = await handleChatRoute(request);
+    if (!apiConfig.apiKey) {
+      console.error(`[${requestId}] API key not configured`);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
+        error: 'API key not configured. Please configure it in the extension settings.'
+      });
+      return;
+    }
+    
+    // Call the new handler which directly processes messages
+    const response = await handleChatRequest(
+      conversationMessages,
+      apiConfig.apiKey,
+      apiConfig.provider as any, // Cast to Provider type
+      apiConfig.model
+    );
       
-    console.log(`[${requestId}] Response status from handleChatRoute: ${response.status}`);
+    console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
 
     if (!response.ok) {
-      // Handle potential errors from handleChatRoute itself
+      // Handle potential errors from the handler
       let errorPayload;
       try {
           errorPayload = await response.json();
       } catch (e) {
           errorPayload = { error: `API Error: ${response.statusText}` };
       }
-      console.error(`[${requestId}] Error from handleChatRoute:`, errorPayload);
+      console.error(`[${requestId}] Error from chat handler:`, errorPayload);
       port.postMessage({ 
         type: 'ERROR',
         requestId,
@@ -1029,63 +1061,44 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         return; // Stop processing if no body
     }
       
-    // Process the simple text stream from toTextStreamResponse()
+    // Process the simple text stream from response
     const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+    const decoder = new TextDecoder();
     console.log(`[${requestId}] Reading text stream...`);
 
     try {
-            while (true) {
-              const { done, value } = await reader.read();
-              
-              if (done) {
-          console.log(`[${requestId}] Text stream finished.`);
-                port.postMessage({
-                  type: 'CHAT_STREAM_END',
-                  requestId
-                });
-          break; // Exit loop when stream is done
-              }
-              
-        // Decode the chunk and send it directly
-        const chunk = decoder.decode(value, { stream: true });
-        // console.log(`[${requestId}] Sending chunk:`, chunk.substring(0, 50) + '...'); // Optional: Log chunk prefix
-        
-        if (chunk) { // Avoid sending empty chunks if decoder yields them
-                      port.postMessage({ 
-                        type: 'CHAT_STREAM_CHUNK',
-                        requestId,
-             chunk: chunk
-                      });
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            console.log(`[${requestId}] Text stream finished.`);
+            port.postMessage({
+              type: 'CHAT_STREAM_END',
+              requestId
+            });
+            break; // Exit loop when stream is done
+          }
+          
+          // Decode the chunk and send it directly
+          const chunk = decoder.decode(value, { stream: true });
+          
+          if (chunk) { // Avoid sending empty chunks if decoder yields them
+            port.postMessage({ 
+              type: 'CHAT_STREAM_CHUNK',
+              requestId,
+              chunk: chunk
+            });
+          }
         }
-                    }
     } catch (streamError) {
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       console.error(`[${requestId}] Error reading text stream:`, errorMessage);
-            port.postMessage({ 
-              type: 'ERROR',
-              requestId,
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
         error: `Stream reading error: ${errorMessage}` 
-            });
-    } finally {
-       // Ensure reader is cancelled if loop exits unexpectedly
-       // reader.cancel(); // Optional: depends on desired behavior
+      });
     }
-
-    /* Old SSE/JSON Processing Logic Removed 
-    if (response.headers.get('Content-Type')?.includes('text/plain')) {
-      // Handle streaming response (SSE format assumed previously)
-      // ... removed SSE parsing logic ...
-      } else {
-        // Handle JSON response
-        const data = await response.json();
-        port.postMessage({ 
-          type: 'CHAT_RESPONSE',
-          requestId,
-          data 
-        });
-      }
-    */
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -29,3 +29,5 @@ node_modules/
 # tasks/ 
 Browser MCP
 cline-main
+dist
+package-lock.json

@@ -2200,7 +2200,7 @@ var openaiChatChunkSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.union([
             zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
               index: zod__WEBPACK_IMPORTED_MODULE_2__.z.number(),
               id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
-              type: zod__WEBPACK_IMPORTED_MODULE_2__.z.literal("function").optional(),
+              type: zod__WEBPACK_IMPORTED_MODULE_2__.z.literal("function").nullish(),
               function: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
                 name: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
                 arguments: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish()
@@ -2222,7 +2222,7 @@ var openaiChatChunkSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.union([
             })
           ).nullable()
         }).nullish(),
-        finish_reason: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullable().optional(),
+        finish_reason: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
         index: zod__WEBPACK_IMPORTED_MODULE_2__.z.number()
       })
     ),
@@ -2256,10 +2256,22 @@ var reasoningModels = {
   "o1-preview-2024-09-12": {
     systemMessageMode: "remove"
   },
+  o3: {
+    systemMessageMode: "developer"
+  },
+  "o3-2025-04-16": {
+    systemMessageMode: "developer"
+  },
   "o3-mini": {
     systemMessageMode: "developer"
   },
   "o3-mini-2025-01-31": {
+    systemMessageMode: "developer"
+  },
+  "o4-mini": {
+    systemMessageMode: "developer"
+  },
+  "o4-mini-2025-04-16": {
     systemMessageMode: "developer"
   }
 };
@@ -2711,8 +2723,10 @@ var openaiTextEmbeddingResponseSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.objec
 // src/openai-image-settings.ts
 var modelMaxImagesPerCall = {
   "dall-e-3": 1,
-  "dall-e-2": 10
+  "dall-e-2": 10,
+  "gpt-image-1": 10
 };
+var hasDefaultResponseFormat = /* @__PURE__ */ new Set(["gpt-image-1"]);
 
 // src/openai-image-model.ts
 var OpenAIImageModel = class {
@@ -2764,7 +2778,7 @@ var OpenAIImageModel = class {
         n,
         size,
         ...(_d = providerOptions.openai) != null ? _d : {},
-        response_format: "b64_json"
+        ...!hasDefaultResponseFormat.has(this.modelId) ? { response_format: "b64_json" } : {}
       },
       failedResponseHandler: openaiFailedResponseHandler,
       successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonResponseHandler)(
@@ -6533,19 +6547,29 @@ async function callChatApi({
   onToolCall,
   generateId: generateId2,
   fetch: fetch2 = getOriginalFetch(),
-  lastMessage
+  lastMessage,
+  requestType = "generate"
 }) {
-  var _a, _b;
-  const response = await fetch2(api, {
-    method: "POST",
-    body: JSON.stringify(body),
+  var _a, _b, _c;
+  const request = requestType === "resume" ? fetch2(`${api}?chatId=${body.id}`, {
+    method: "GET",
     headers: {
       "Content-Type": "application/json",
       ...headers
     },
     signal: (_a = abortController == null ? void 0 : abortController()) == null ? void 0 : _a.signal,
     credentials
-  }).catch((err) => {
+  }) : fetch2(api, {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+      ...headers
+    },
+    signal: (_b = abortController == null ? void 0 : abortController()) == null ? void 0 : _b.signal,
+    credentials
+  });
+  const response = await request.catch((err) => {
     restoreMessagesOnFailure();
     throw err;
   });
@@ -6559,7 +6583,7 @@ async function callChatApi({
   if (!response.ok) {
     restoreMessagesOnFailure();
     throw new Error(
-      (_b = await response.text()) != null ? _b : "Failed to fetch the chat response."
+      (_c = await response.text()) != null ? _c : "Failed to fetch the chat response."
     );
   }
   if (!response.body) {
@@ -6796,7 +6820,7 @@ async function prepareAttachmentsForRequest(attachmentsFromOptions) {
   if (!attachmentsFromOptions) {
     return [];
   }
-  if (attachmentsFromOptions instanceof FileList) {
+  if (globalThis.FileList && attachmentsFromOptions instanceof globalThis.FileList) {
     return Promise.all(
       Array.from(attachmentsFromOptions).map(async (attachment) => {
         const { name, type } = attachment;
@@ -12838,6 +12862,7 @@ async function generateText({
   experimental_providerMetadata,
   providerOptions = experimental_providerMetadata,
   experimental_activeTools: activeTools,
+  experimental_prepareStep: prepareStep,
   experimental_repairToolCall: repairToolCall,
   _internal: {
     generateId: generateId3 = originalGenerateId3,
@@ -12880,6 +12905,9 @@ async function generateText({
           telemetry
         }),
         ...baseTelemetryAttributes,
+        // model:
+        "ai.model.provider": model.provider,
+        "ai.model.id": model.modelId,
         // specific settings that only make sense on the outer level:
         "ai.prompt": {
           input: () => JSON.stringify({ system, prompt, messages })
@@ -12889,11 +12917,7 @@ async function generateText({
     }),
     tracer,
     fn: async (span) => {
-      var _a18, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k;
-      const mode = {
-        type: "regular",
-        ...prepareToolsAndToolChoice({ tools, toolChoice, activeTools })
-      };
+      var _a18, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
       const callSettings = prepareCallSettings(settings);
       let currentModelResponse;
       let currentToolCalls = [];
@@ -12916,16 +12940,33 @@ async function generateText({
           ...initialPrompt.messages,
           ...responseMessages
         ];
+        const prepareStepResult = await (prepareStep == null ? void 0 : prepareStep({
+          model,
+          steps,
+          maxSteps,
+          stepNumber: stepCount
+        }));
+        const stepToolChoice = (_a18 = prepareStepResult == null ? void 0 : prepareStepResult.toolChoice) != null ? _a18 : toolChoice;
+        const stepActiveTools = (_b = prepareStepResult == null ? void 0 : prepareStepResult.experimental_activeTools) != null ? _b : activeTools;
+        const stepModel = (_c = prepareStepResult == null ? void 0 : prepareStepResult.model) != null ? _c : model;
         const promptMessages = await convertToLanguageModelPrompt({
           prompt: {
             type: promptFormat,
             system: initialPrompt.system,
             messages: stepInputMessages
           },
-          modelSupportsImageUrls: model.supportsImageUrls,
-          modelSupportsUrl: (_a18 = model.supportsUrl) == null ? void 0 : _a18.bind(model)
+          modelSupportsImageUrls: stepModel.supportsImageUrls,
+          modelSupportsUrl: (_d = stepModel.supportsUrl) == null ? void 0 : _d.bind(stepModel)
           // support 'this' context
         });
+        const mode = {
+          type: "regular",
+          ...prepareToolsAndToolChoice({
+            tools,
+            toolChoice: stepToolChoice,
+            activeTools: stepActiveTools
+          })
+        };
         currentModelResponse = await retry(
           () => recordSpan({
             name: "ai.generateText.doGenerate",
@@ -12937,6 +12978,10 @@ async function generateText({
                   telemetry
                 }),
                 ...baseTelemetryAttributes,
+                // model:
+                "ai.model.provider": stepModel.provider,
+                "ai.model.id": stepModel.modelId,
+                // prompt:
                 "ai.prompt.format": { input: () => promptFormat },
                 "ai.prompt.messages": {
                   input: () => JSON.stringify(promptMessages)
@@ -12952,8 +12997,8 @@ async function generateText({
                   input: () => mode.toolChoice != null ? JSON.stringify(mode.toolChoice) : void 0
                 },
                 // standardized gen-ai llm span attributes:
-                "gen_ai.system": model.provider,
-                "gen_ai.request.model": model.modelId,
+                "gen_ai.system": stepModel.provider,
+                "gen_ai.request.model": stepModel.modelId,
                 "gen_ai.request.frequency_penalty": settings.frequencyPenalty,
                 "gen_ai.request.max_tokens": settings.maxTokens,
                 "gen_ai.request.presence_penalty": settings.presencePenalty,
@@ -12966,7 +13011,7 @@ async function generateText({
             tracer,
             fn: async (span2) => {
               var _a19, _b2, _c2, _d2, _e2, _f2;
-              const result = await model.doGenerate({
+              const result = await stepModel.doGenerate({
                 mode,
                 ...callSettings,
                 inputFormat: promptFormat,
@@ -12979,7 +13024,7 @@ async function generateText({
               const responseData = {
                 id: (_b2 = (_a19 = result.response) == null ? void 0 : _a19.id) != null ? _b2 : generateId3(),
                 timestamp: (_d2 = (_c2 = result.response) == null ? void 0 : _c2.timestamp) != null ? _d2 : currentDate(),
-                modelId: (_f2 = (_e2 = result.response) == null ? void 0 : _e2.modelId) != null ? _f2 : model.modelId
+                modelId: (_f2 = (_e2 = result.response) == null ? void 0 : _e2.modelId) != null ? _f2 : stepModel.modelId
               };
               span2.setAttributes(
                 selectTelemetryAttributes({
@@ -13011,7 +13056,7 @@ async function generateText({
           })
         );
         currentToolCalls = await Promise.all(
-          ((_b = currentModelResponse.toolCalls) != null ? _b : []).map(
+          ((_e = currentModelResponse.toolCalls) != null ? _e : []).map(
             (toolCall) => parseToolCall({
               toolCall,
               tools,
@@ -13046,7 +13091,7 @@ async function generateText({
             nextStepType = "tool-result";
           }
         }
-        const originalText = (_c = currentModelResponse.text) != null ? _c : "";
+        const originalText = (_f = currentModelResponse.text) != null ? _f : "";
         const stepTextLeadingWhitespaceTrimmed = stepType === "continue" && // only for continue steps
         text2.trimEnd() !== text2 ? originalText.trimStart() : originalText;
         const stepText = nextStepType === "continue" ? removeTextAfterLastWhitespace(stepTextLeadingWhitespaceTrimmed) : stepTextLeadingWhitespaceTrimmed;
@@ -13054,7 +13099,7 @@ async function generateText({
         currentReasoningDetails = asReasoningDetails(
           currentModelResponse.reasoning
         );
-        sources.push(...(_d = currentModelResponse.sources) != null ? _d : []);
+        sources.push(...(_g = currentModelResponse.sources) != null ? _g : []);
         if (stepType === "continue") {
           const lastMessage = responseMessages[responseMessages.length - 1];
           if (typeof lastMessage.content === "string") {
@@ -13086,18 +13131,18 @@ async function generateText({
           reasoning: asReasoningText(currentReasoningDetails),
           reasoningDetails: currentReasoningDetails,
           files: asFiles(currentModelResponse.files),
-          sources: (_e = currentModelResponse.sources) != null ? _e : [],
+          sources: (_h = currentModelResponse.sources) != null ? _h : [],
           toolCalls: currentToolCalls,
           toolResults: currentToolResults,
           finishReason: currentModelResponse.finishReason,
           usage: currentUsage,
           warnings: currentModelResponse.warnings,
           logprobs: currentModelResponse.logprobs,
-          request: (_f = currentModelResponse.request) != null ? _f : {},
+          request: (_i = currentModelResponse.request) != null ? _i : {},
           response: {
             ...currentModelResponse.response,
-            headers: (_g = currentModelResponse.rawResponse) == null ? void 0 : _g.headers,
-            body: (_h = currentModelResponse.rawResponse) == null ? void 0 : _h.body,
+            headers: (_j = currentModelResponse.rawResponse) == null ? void 0 : _j.headers,
+            body: (_k = currentModelResponse.rawResponse) == null ? void 0 : _k.body,
             // deep clone msgs to avoid mutating past messages in multi-step:
             messages: structuredClone(responseMessages)
           },
@@ -13149,11 +13194,11 @@ async function generateText({
         finishReason: currentModelResponse.finishReason,
         usage,
         warnings: currentModelResponse.warnings,
-        request: (_i = currentModelResponse.request) != null ? _i : {},
+        request: (_l = currentModelResponse.request) != null ? _l : {},
         response: {
           ...currentModelResponse.response,
-          headers: (_j = currentModelResponse.rawResponse) == null ? void 0 : _j.headers,
-          body: (_k = currentModelResponse.rawResponse) == null ? void 0 : _k.body,
+          headers: (_m = currentModelResponse.rawResponse) == null ? void 0 : _m.headers,
+          body: (_n = currentModelResponse.rawResponse) == null ? void 0 : _n.body,
           messages: responseMessages
         },
         logprobs: currentModelResponse.logprobs,
@@ -16198,6 +16243,24 @@ var MCPClient = class {
     await ((_a17 = this.transport) == null ? void 0 : _a17.close());
     this.onClose();
   }
+  assertCapability(method) {
+    switch (method) {
+      case "initialize":
+        break;
+      case "tools/list":
+      case "tools/call":
+        if (!this.serverCapabilities.tools) {
+          throw new MCPClientError({
+            message: `Server does not support tools`
+          });
+        }
+        break;
+      default:
+        throw new MCPClientError({
+          message: `Unsupported method: ${method}`
+        });
+    }
+  }
   async request({
     request,
     resultSchema,
@@ -16211,6 +16274,7 @@ var MCPClient = class {
           })
         );
       }
+      this.assertCapability(request.method);
       const signal = options == null ? void 0 : options.signal;
       signal == null ? void 0 : signal.throwIfAborted();
       const messageId = this.requestMessageId++;
@@ -16239,7 +16303,7 @@ var MCPClient = class {
           resolve(result);
         } catch (error) {
           const parseError = new MCPClientError({
-            message: "Failed to parse server initialization result",
+            message: "Failed to parse server response",
             cause: error
           });
           reject(parseError);
@@ -16255,11 +16319,6 @@ var MCPClient = class {
     params,
     options
   } = {}) {
-    if (!this.serverCapabilities.tools) {
-      throw new MCPClientError({
-        message: `Server does not support tools`
-      });
-    }
     try {
       return this.request({
         request: { method: "tools/list", params },
@@ -16275,11 +16334,6 @@ var MCPClient = class {
     args,
     options
   }) {
-    if (!this.serverCapabilities.tools) {
-      throw new MCPClientError({
-        message: `Server does not support tools`
-      });
-    }
     try {
       return this.request({
         request: { method: "tools/call", params: { name: name17, arguments: args } },
@@ -23553,10 +23607,10 @@ var z = /*#__PURE__*/Object.freeze({
 
 /***/ }),
 
-/***/ "./src/api/chat.ts":
-/*!*************************!*\
-  !*** ./src/api/chat.ts ***!
-  \*************************/
+/***/ "./src/background/chat-handler.ts":
+/*!****************************************!*\
+  !*** ./src/background/chat-handler.ts ***!
+  \****************************************/
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 __webpack_require__.r(__webpack_exports__);
@@ -23564,18 +23618,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   API_VERSIONS: () => (/* binding */ API_VERSIONS),
 /* harmony export */   DEFAULT_MODELS: () => (/* binding */ DEFAULT_MODELS),
 /* harmony export */   GEE_SYSTEM_PROMPT: () => (/* binding */ GEE_SYSTEM_PROMPT),
-/* harmony export */   POST: () => (/* binding */ POST)
+/* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest)
 /* harmony export */ });
-/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
-/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
+/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
 
 
 
-// Chrome storage keys
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
-const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+
 // Default models configuration
 const DEFAULT_MODELS = {
     openai: 'gpt-4o',
@@ -23583,22 +23635,9 @@ const DEFAULT_MODELS = {
 };
 // API versions
 const API_VERSIONS = {
-    openai: '2023-01-01', // Added this for consistency though it's not currently used
+    openai: '2023-01-01',
     anthropic: '2023-06-01'
 };
-// Custom StreamingTextResponse implementation
-class StreamingTextResponse extends Response {
-    constructor(stream) {
-        super(stream, {
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'Transfer-Encoding': 'chunked',
-                'X-Content-Type-Options': 'nosniff',
-                'Cache-Control': 'no-store',
-            },
-        });
-    }
-}
 // Earth Engine system prompt with domain expertise
 const GEE_SYSTEM_PROMPT = `You are Earth Engine Assistant, an AI specialized in Google Earth Engine (GEE) geospatial analysis.
 
@@ -23607,6 +23646,7 @@ Your capabilities:
 - Explain Earth Engine concepts, APIs, and best practices
 - Help troubleshoot Earth Engine code issues
 - Recommend appropriate datasets and methods for geospatial analysis
+- You can use tools to get the weather in a location
 
 Instructions:
 - Always provide code within backticks: \`code\`
@@ -23615,6 +23655,7 @@ Instructions:
 - Cite specific Earth Engine functions and methods when relevant
 - For complex topics, break down explanations step-by-step
 - If you're unsure about something, acknowledge limitations rather than providing incorrect information
+- When asked about weather, use the weather tool to get real-time information and format it nicely
 
 Common Earth Engine patterns:
 - Image and collection loading: ee.Image(), ee.ImageCollection()
@@ -23626,316 +23667,10 @@ Common Earth Engine patterns:
 
 Speak in a helpful, educational tone while providing practical guidance for Earth Engine tasks.`;
 /**
- * Get API configuration from Chrome storage with fallback
- * @returns Promise with API key, provider and model information
+ * Handle chat messages from the UI
  */
-async function getApiConfig() {
-    return new Promise((resolve, reject) => {
-        try {
-            chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], (result) => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
-                    return;
-                }
-                const provider = (result[API_PROVIDER_STORAGE_KEY] || 'openai');
-                resolve({
-                    apiKey: result[API_KEY_STORAGE_KEY] || '',
-                    provider: provider,
-                    model: result[DEFAULT_MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider]
-                });
-            });
-        }
-        catch (error) {
-            // Handle case where chrome is not available (during development/testing)
-            console.warn('Chrome storage API not available, using environment variables');
-            const provider = (process.env.LLM_PROVIDER || 'openai');
-            resolve({
-                apiKey: (provider === 'openai' ?
-                    process.env.OPENAI_API_KEY :
-                    process.env.ANTHROPIC_API_KEY) || '',
-                provider: provider,
-                model: DEFAULT_MODELS[provider]
-            });
-        }
-    });
-}
-/**
- * Main POST handler for the chat API
- */
-async function POST(req) {
+async function handleChatRequest(messages, apiKey, provider, model) {
     try {
-        // Get API configuration
-        let apiConfig;
-        try {
-            apiConfig = await getApiConfig();
-        }
-        catch (error) {
-            console.error('Error getting API config:', error);
-            return new Response(JSON.stringify({
-                error: 'Could not access API configuration',
-                details: error instanceof Error ? error.message : undefined
-            }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-        const { apiKey, provider, model } = apiConfig;
-        if (!apiKey) {
-            return new Response(JSON.stringify({
-                error: 'API key not configured',
-                message: 'Please set your API key in the extension settings'
-            }), {
-                status: 401,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-        // Get messages from request
-        let userMessages;
-        try {
-            const body = await req.json();
-            userMessages = body.messages;
-            if (!userMessages || userMessages.length === 0) {
-                return new Response(JSON.stringify({ error: 'No messages provided' }), {
-                    status: 400,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-        }
-        catch (error) {
-            return new Response(JSON.stringify({
-                error: 'Invalid request format',
-                message: 'Request must include a messages array'
-            }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
-        // Process the request based on provider using AI SDK
-        try {
-            return await processWithAiSdk(provider, apiKey, model, userMessages);
-        }
-        catch (error) {
-            // If AI SDK fails, fall back to direct API call
-            console.warn('AI SDK failed, falling back to direct API call', error);
-            try {
-                return await processWithDirectApi(provider, apiKey, model, userMessages);
-            }
-            catch (fallbackError) {
-                console.error('Both API approaches failed:', fallbackError);
-                return new Response(JSON.stringify({
-                    error: 'AI processing failed',
-                    message: fallbackError instanceof Error ? fallbackError.message : 'Unknown error occurred'
-                }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            }
-        }
-    }
-    catch (error) {
-        console.error('Unhandled chat API error:', error);
-        return new Response(JSON.stringify({
-            error: 'Unhandled exception',
-            message: error instanceof Error ? error.message : 'An unknown error occurred'
-        }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
-    }
-}
-/**
- * Process the chat request using the AI SDK
- */
-async function processWithAiSdk(provider, apiKey, modelName, userMessages) {
-    // Format messages for the AI SDK
-    const messages = userMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-    }));
-    // Common configuration for both providers
-    const config = {
-        temperature: 0.2,
-        maxTokens: 4000,
-        system: GEE_SYSTEM_PROMPT,
-        messages,
-    };
-    let result;
-    if (provider === 'openai') {
-        // Configure OpenAI with API key
-        process.env.OPENAI_API_KEY = apiKey;
-        result = await (0,ai__WEBPACK_IMPORTED_MODULE_0__.streamText)({
-            model: (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__.openai)(modelName || DEFAULT_MODELS.openai),
-            ...config
-        });
-    }
-    else if (provider === 'anthropic') {
-        // Configure Anthropic with API key
-        process.env.ANTHROPIC_API_KEY = apiKey;
-        result = await (0,ai__WEBPACK_IMPORTED_MODULE_0__.streamText)({
-            model: (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.anthropic)(modelName || DEFAULT_MODELS.anthropic),
-            ...config
-        });
-    }
-    else {
-        throw new Error(`Unsupported API provider: ${provider}`);
-    }
-    // Return a streaming response
-    return new StreamingTextResponse(result.textStream);
-}
-/**
- * Process the chat request using direct API calls (fallback)
- */
-async function processWithDirectApi(provider, apiKey, modelName, userMessages) {
-    let responseStream;
-    if (provider === 'openai') {
-        responseStream = await streamOpenAIResponse(apiKey, modelName, userMessages);
-    }
-    else if (provider === 'anthropic') {
-        responseStream = await streamAnthropicResponse(apiKey, modelName, userMessages);
-    }
-    else {
-        throw new Error(`Unsupported API provider: ${provider}`);
-    }
-    // Process the stream to handle different formats
-    const processedStream = createProcessedStream(responseStream, provider);
-    // Return a streaming response
-    return new StreamingTextResponse(processedStream);
-}
-/**
- * Stream API for OpenAI (direct API call)
- */
-async function streamOpenAIResponse(apiKey, model, messages) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: model || DEFAULT_MODELS.openai,
-            messages: [
-                { role: 'system', content: GEE_SYSTEM_PROMPT },
-                ...messages.map(msg => ({
-                    role: msg.role,
-                    content: msg.content
-                }))
-            ],
-            temperature: 0.2,
-            stream: true,
-        })
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `OpenAI API error: ${response.status} ${response.statusText}`);
-    }
-    return response.body;
-}
-/**
- * Stream API for Anthropic (direct API call)
- */
-async function streamAnthropicResponse(apiKey, model, messages) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': API_VERSIONS.anthropic,
-            'Accept': 'text/event-stream'
-        },
-        body: JSON.stringify({
-            model: model || DEFAULT_MODELS.anthropic,
-            max_tokens: 4000,
-            system: GEE_SYSTEM_PROMPT,
-            messages: messages.map(msg => ({
-                role: msg.role,
-                content: msg.content
-            })),
-            temperature: 0.2,
-            stream: true,
-        })
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Anthropic API error: ${response.status} ${response.statusText}`);
-    }
-    return response.body;
-}
-/**
- * Creates a processed stream that handles different provider formats
- */
-function createProcessedStream(stream, provider) {
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-    // Process the stream based on provider format
-    const processedStream = new TransformStream({
-        async transform(chunk, controller) {
-            try {
-                const text = decoder.decode(chunk);
-                // Parse SSE responses or direct text content
-                if (text.includes('data:')) {
-                    // Handle Server-Sent Events format
-                    const lines = text.split('\n').filter(line => line.trim() !== '');
-                    for (const line of lines) {
-                        if (line.startsWith('data:') && !line.includes('[DONE]')) {
-                            try {
-                                const data = line.slice(5).trim();
-                                if (!data)
-                                    continue;
-                                try {
-                                    const json = JSON.parse(data);
-                                    // Handle OpenAI format
-                                    if (provider === 'openai' && json.choices?.[0]?.delta?.content) {
-                                        controller.enqueue(encoder.encode(json.choices[0].delta.content));
-                                    }
-                                    // Handle Anthropic format
-                                    else if (provider === 'anthropic' && json.type === 'content_block_delta' && json.delta?.text) {
-                                        controller.enqueue(encoder.encode(json.delta.text));
-                                    }
-                                }
-                                catch (e) {
-                                    // If not valid JSON, just pass through the text
-                                    controller.enqueue(encoder.encode(data));
-                                }
-                            }
-                            catch (error) {
-                                console.error('Error processing SSE line:', error);
-                            }
-                        }
-                    }
-                }
-                else {
-                    // If it's not SSE, use the raw text
-                    controller.enqueue(encoder.encode(text));
-                }
-            }
-            catch (error) {
-                console.error('Error processing stream chunk:', error);
-                controller.error(error);
-            }
-        }
-    });
-    return stream.pipeThrough(processedStream);
-}
-
-
-/***/ }),
-
-/***/ "./src/background/routes.ts":
-/*!**********************************!*\
-  !*** ./src/background/routes.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   handleChatRoute: () => (/* binding */ handleChatRoute)
-/* harmony export */ });
-/* harmony import */ var _api_chat__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../api/chat */ "./src/api/chat.ts");
-
-// Route handler for /api/chat
-async function handleChatRoute(request) {
-    try {
-        const { messages, apiKey, provider, model } = await request.json();
         if (!apiKey) {
             return new Response(JSON.stringify({
                 error: 'API key not configured',
@@ -23951,13 +23686,16 @@ async function handleChatRoute(request) {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-        // Stream response based on the provider
-        let responseStream;
+        // Setup LLM provider
+        let llmProvider;
+        let effectiveModel;
         if (provider === 'openai') {
-            responseStream = await streamOpenAIResponse(apiKey, model || _api_chat__WEBPACK_IMPORTED_MODULE_0__.DEFAULT_MODELS.openai, messages);
+            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_0__.createOpenAI)({ apiKey });
+            effectiveModel = model || DEFAULT_MODELS.openai;
         }
         else if (provider === 'anthropic') {
-            responseStream = await streamAnthropicResponse(apiKey, model || _api_chat__WEBPACK_IMPORTED_MODULE_0__.DEFAULT_MODELS.anthropic, messages);
+            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_1__.createAnthropic)({ apiKey });
+            effectiveModel = model || DEFAULT_MODELS.anthropic;
         }
         else {
             return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
@@ -23965,80 +23703,59 @@ async function handleChatRoute(request) {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-        // Create a streamText-compatible response
-        return new Response(responseStream, {
-            headers: {
-                'Content-Type': 'text/plain; charset=utf-8',
-                'X-Content-Type-Options': 'nosniff',
-                'Cache-Control': 'no-store',
+        // Simplified message mapping for basic CoreMessage structure
+        const formattedMessages = messages
+            .map((msg) => {
+            // Only include user, assistant, and system roles with simple string content
+            if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') &&
+                typeof msg.content === 'string') {
+                return { role: msg.role, content: msg.content };
             }
+            console.warn('Filtering out message with incompatible role/content:', msg);
+            return null;
+        })
+            .filter((msg) => msg !== null);
+        // Define the weather tool using the AI SDK tool format
+        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_2__.tool)({
+            description: 'Get the weather in a location',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+                location: zod__WEBPACK_IMPORTED_MODULE_3__.z.string().describe('The location to get the weather for'),
+            }),
+            execute: async ({ location }) => {
+                // Simulate weather data
+                const temperature = 72 + Math.floor(Math.random() * 21) - 10;
+                return {
+                    location,
+                    temperature,
+                    description: temperature > 75 ? 'Sunny and warm' : 'Partly cloudy',
+                    humidity: Math.floor(Math.random() * 30) + 50, // Random humidity between 50-80%
+                };
+            },
         });
+        // Use streamText for AI generation with tools
+        const result = await (0,ai__WEBPACK_IMPORTED_MODULE_2__.streamText)({
+            model: llmProvider(effectiveModel),
+            system: GEE_SYSTEM_PROMPT,
+            messages: formattedMessages,
+            tools: {
+                weather: weatherTool
+            },
+            maxSteps: 5, // Allow up to 5 steps
+            temperature: 0.2
+        });
+        // Convert to text stream response
+        return result.toTextStreamResponse();
     }
     catch (error) {
-        console.error('Chat API error:', error);
+        console.error('Chat handler error:', error);
         return new Response(JSON.stringify({
-            error: 'Chat API error',
-            message: error.message || 'An unknown error occurred'
+            error: 'Chat processing failed',
+            message: error instanceof Error ? error.message : 'Unknown error occurred'
         }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });
     }
-}
-// Stream API for OpenAI
-async function streamOpenAIResponse(apiKey, model, messages) {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: model,
-            messages: [
-                { role: 'system', content: _api_chat__WEBPACK_IMPORTED_MODULE_0__.GEE_SYSTEM_PROMPT },
-                ...messages.map(msg => ({
-                    role: msg.role,
-                    content: msg.content
-                }))
-            ],
-            temperature: 0.2,
-            stream: true,
-        })
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `OpenAI API error: ${response.status} ${response.statusText}`);
-    }
-    return response.body;
-}
-// Stream API for Anthropic
-async function streamAnthropicResponse(apiKey, model, messages) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': _api_chat__WEBPACK_IMPORTED_MODULE_0__.API_VERSIONS.anthropic,
-            'Accept': 'text/event-stream'
-        },
-        body: JSON.stringify({
-            model: model,
-            max_tokens: 4000,
-            system: _api_chat__WEBPACK_IMPORTED_MODULE_0__.GEE_SYSTEM_PROMPT,
-            messages: messages.map(msg => ({
-                role: msg.role,
-                content: msg.content
-            })),
-            temperature: 0.2,
-            stream: true,
-        })
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Anthropic API error: ${response.status} ${response.statusText}`);
-    }
-    return response.body;
 }
 
 
@@ -24464,7 +24181,10 @@ var __webpack_exports__ = {};
   !*** ./src/background/index.ts ***!
   \*********************************/
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _routes__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./routes */ "./src/background/routes.ts");
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   sendMessageToEarthEngineTab: () => (/* binding */ sendMessageToEarthEngineTab)
+/* harmony export */ });
+/* harmony import */ var _chat_handler__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./chat-handler */ "./src/background/chat-handler.ts");
 /* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
 
 
@@ -24474,6 +24194,10 @@ const contentScriptTabs = new Map();
 const CONTENT_SCRIPT_PING_TIMEOUT = 5000; // 5 seconds
 const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
 const MAX_TAB_ACTION_RETRIES = 3;
+// API configuration storage keys
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
     // Only open side panel if we're on the Earth Engine Code Editor
@@ -24670,19 +24394,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'API_REQUEST':
             // Handle API requests directly
             if (message.payload && message.payload.endpoint === '/api/chat') {
-                (0,_routes__WEBPACK_IMPORTED_MODULE_0__.handleChatRoute)(new Request(message.payload.url, {
-                    method: 'POST',
-                    headers: message.payload.headers || {},
-                    body: message.payload.body ? JSON.stringify(message.payload.body) : undefined
-                }))
-                    .then(response => {
-                    response.json().then(data => {
-                        sendResponse({ success: true, data });
-                    });
-                })
-                    .catch(error => {
-                    sendResponse({ success: false, error: error.message });
-                });
+                (async () => {
+                    try {
+                        const body = await (new Request(message.payload.url, {
+                            method: 'POST',
+                            headers: message.payload.headers || {},
+                            body: message.payload.body ? JSON.stringify(message.payload.body) : undefined
+                        })).json();
+                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(body.messages, body.apiKey, body.provider, body.model);
+                        const responseData = await response.json();
+                        sendResponse({ success: true, data: responseData });
+                    }
+                    catch (error) {
+                        sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+                    }
+                })();
                 return true; // Will respond asynchronously
             }
             break;
@@ -25319,154 +25045,112 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 // Helper function to handle chat messages
 async function handleChatMessage(message, port) {
+    const requestId = `req_${Date.now()}`;
+    console.log(`[${requestId}] Handling chat message...`);
     try {
-        const requestId = Date.now().toString();
-        // Check if we have a history of messages from the sidepanel
         const conversationMessages = message.messages || [{
                 role: 'user',
                 content: message.message
             }];
-        // Log message history
-        console.log(`Processing chat with ${conversationMessages.length} messages in history`);
-        // Format messages for the API (strip id property)
-        const formattedMessages = conversationMessages.map((msg) => ({
-            role: msg.role,
-            content: msg.content
-        }));
-        // Instead of trying to use fetch to an API endpoint within the extension,
-        // directly call the handler function with properly formatted request
-        const body = {
-            messages: formattedMessages,
-            apiKey: message.apiKey,
-            provider: message.provider
-        };
-        // Create a request object for the handler
-        const request = new Request('chrome-extension://internal/api/chat', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${message.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        });
-        try {
-            // Call the handler directly instead of using fetch
-            const response = await (0,_routes__WEBPACK_IMPORTED_MODULE_0__.handleChatRoute)(request);
-            if (response.headers.get('Content-Type')?.includes('text/plain')) {
-                // Handle streaming response
-                const reader = response.body?.getReader();
-                const decoder = new TextDecoder();
-                if (reader) {
-                    try {
-                        let accumulatedText = '';
-                        let buffer = '';
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) {
-                                // When the stream is done, ONLY send the end signal.
-                                // The frontend will finalize the message based on received chunks.
-                                port.postMessage({
-                                    type: 'CHAT_STREAM_END',
-                                    requestId
-                                });
-                                break;
-                            }
-                            // Decode the chunk with proper streaming setup
-                            buffer += decoder.decode(value, { stream: true });
-                            // Process SSE format
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop() || ''; // Keep the last (potentially incomplete) line in the buffer
-                            for (const line of lines) {
-                                if (line.startsWith('data: ')) {
-                                    const data = line.slice(6); // Remove 'data: ' prefix (Note: was slice(5) - fixed potential bug)
-                                    // Handle [DONE] message from providers like OpenAI
-                                    if (data.trim() === '[DONE]') {
-                                        continue; // Don't process the [DONE] marker itself
-                                    }
-                                    try {
-                                        const parsedData = JSON.parse(data);
-                                        let contentChunk = null;
-                                        // Extract content from OpenAI response format
-                                        if (parsedData.choices && parsedData.choices.length > 0 && parsedData.choices[0].delta?.content) {
-                                            contentChunk = parsedData.choices[0].delta.content;
-                                        }
-                                        // Handle Anthropic format
-                                        else if (parsedData.type === 'content_block_delta' && parsedData.delta?.text) {
-                                            contentChunk = parsedData.delta.text;
-                                        }
-                                        if (contentChunk !== null) {
-                                            accumulatedText += contentChunk;
-                                            port.postMessage({
-                                                type: 'CHAT_STREAM_CHUNK',
-                                                requestId,
-                                                chunk: contentChunk
-                                            });
-                                        }
-                                    }
-                                    catch (error) {
-                                        // It might not be JSON, could be just text after 'data: '
-                                        if (data.trim()) { // Check if there's actual text content
-                                            accumulatedText += data + '\n'; // Append raw data if not JSON
-                                            port.postMessage({
-                                                type: 'CHAT_STREAM_CHUNK',
-                                                requestId,
-                                                chunk: data + '\n'
-                                            });
-                                        }
-                                        else {
-                                            console.warn('Empty or non-JSON SSE data line ignored:', line);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (error) {
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        console.error('Error reading stream:', errorMessage);
-                        port.postMessage({
-                            type: 'ERROR',
-                            requestId,
-                            error: errorMessage
-                        });
-                    }
+        console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
+        // Get API key and provider from storage
+        const apiConfig = await new Promise((resolve, reject) => {
+            chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], (result) => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                    return;
                 }
-            }
-            else {
-                // Handle JSON response
-                const data = await response.json();
-                port.postMessage({
-                    type: 'CHAT_RESPONSE',
-                    requestId,
-                    data
+                const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+                resolve({
+                    apiKey: result[API_KEY_STORAGE_KEY] || '',
+                    provider,
+                    model: result[DEFAULT_MODEL_STORAGE_KEY] || ''
                 });
+            });
+        });
+        if (!apiConfig.apiKey) {
+            console.error(`[${requestId}] API key not configured`);
+            port.postMessage({
+                type: 'ERROR',
+                requestId,
+                error: 'API key not configured. Please configure it in the extension settings.'
+            });
+            return;
+        }
+        // Call the new handler which directly processes messages
+        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(conversationMessages, apiConfig.apiKey, apiConfig.provider, // Cast to Provider type
+        apiConfig.model);
+        console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
+        if (!response.ok) {
+            // Handle potential errors from the handler
+            let errorPayload;
+            try {
+                errorPayload = await response.json();
+            }
+            catch (e) {
+                errorPayload = { error: `API Error: ${response.statusText}` };
+            }
+            console.error(`[${requestId}] Error from chat handler:`, errorPayload);
+            port.postMessage({
+                type: 'ERROR',
+                requestId,
+                error: errorPayload.error || errorPayload.message || 'Unknown API error'
+            });
+            return; // Stop processing on error
+        }
+        // Check if the response body exists
+        if (!response.body) {
+            console.error(`[${requestId}] Response body is null.`);
+            port.postMessage({
+                type: 'ERROR',
+                requestId,
+                error: 'Received empty response from API handler'
+            });
+            return; // Stop processing if no body
+        }
+        // Process the simple text stream from response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        console.log(`[${requestId}] Reading text stream...`);
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    console.log(`[${requestId}] Text stream finished.`);
+                    port.postMessage({
+                        type: 'CHAT_STREAM_END',
+                        requestId
+                    });
+                    break; // Exit loop when stream is done
+                }
+                // Decode the chunk and send it directly
+                const chunk = decoder.decode(value, { stream: true });
+                if (chunk) { // Avoid sending empty chunks if decoder yields them
+                    port.postMessage({
+                        type: 'CHAT_STREAM_CHUNK',
+                        requestId,
+                        chunk: chunk
+                    });
+                }
             }
         }
-        catch (error) {
-            console.error('Error processing chat:', error);
-            // Use fallback mode
-            const fallbackResponse = {
-                type: 'CHAT_RESPONSE',
+        catch (streamError) {
+            const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+            console.error(`[${requestId}] Error reading text stream:`, errorMessage);
+            port.postMessage({
+                type: 'ERROR',
                 requestId,
-                data: {
-                    choices: [{
-                            message: {
-                                content: "I'm having trouble connecting to the API. Let me use my fallback mode to help you with Earth Engine.\n\n" +
-                                    generateFallbackResponse(message.message)
-                            }
-                        }]
-                }
-            };
-            port.postMessage(fallbackResponse);
+                error: `Stream reading error: ${errorMessage}`
+            });
         }
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Chat processing error:', errorMessage);
+        console.error(`[${requestId}] Chat processing error:`, errorMessage);
         port.postMessage({
             type: 'ERROR',
-            requestId: Date.now().toString(),
-            error: errorMessage
+            requestId,
+            error: `Chat handler error: ${errorMessage}`
         });
     }
 }
