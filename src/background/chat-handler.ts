@@ -3,6 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
+import { editScript } from '../lib/tools/earth-engine/editScript';
 
 // Available providers
 export type Provider = 'openai' | 'anthropic';
@@ -29,12 +30,19 @@ Your capabilities:
 - Recommend appropriate datasets and methods for geospatial analysis
 - You can use tools to get the weather in a location
 - You can search for Earth Engine datasets and get documentation
+- You can insert JavaScript code directly into the Earth Engine code editor
 
 Workflow for map-related questions:
 1. When a user asks about creating a map, visualizing data, or needs geospatial analysis, ALWAYS use the earthEngineDataset tool FIRST to retrieve relevant dataset information
 2. Wait for the tool response to get dataset IDs, paths, and documentation
 3. Based on the retrieved information, craft appropriate code examples that correctly reference the dataset
 4. Provide a complete, working solution that includes proper dataset loading, processing, and visualization
+
+Workflow for implementing code:
+1. When a user wants to implement/run code, first ensure the code is complete and correct
+2. Use the earthEngineScript tool to insert the code into the Google Earth Engine editor
+3. Specify "current" as the scriptId to edit the currently open script
+4. Inform the user that the code has been inserted and they can run it
 
 Instructions:
 - Always provide code within backticks: \`code\`
@@ -46,6 +54,7 @@ Instructions:
 - When asked about weather, use the weather tool to get real-time information and format it nicely
 - When asked about Earth Engine datasets, use the earthEngineDataset tool to get up-to-date documentation
 - For ANY map or geospatial visualization request, FIRST use earthEngineDataset tool before providing code
+- When a user wants to implement your code suggestion, use the earthEngineScript tool to insert it directly
 
 Common Earth Engine patterns:
 - Image and collection loading: ee.Image(), ee.ImageCollection()
@@ -60,6 +69,12 @@ Dataset-Driven Code Examples:
 - Match your code examples to the specific bands, properties, and structure of the dataset
 - Include appropriate visualization parameters based on the dataset type
 - Reference key metadata like resolution, time range, and units when available
+
+Code Implementation:
+- When a user asks to implement a code example, offer to insert it directly using the earthEngineScript tool
+- Before inserting, ensure the code is complete, properly formatted and includes all necessary imports
+- Always offer to help troubleshoot any errors that may occur when running the inserted code
+- If a user is asked to "try this code", automatically offer to insert it for them
 
 Speak in a helpful, educational tone while providing practical guidance for Earth Engine tasks.`;
 
@@ -182,6 +197,168 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       },
     });
 
+    // Define Earth Engine script editor tool
+    const earthEngineScriptTool = tool({
+      description: 'Insert JavaScript code into the Google Earth Engine code editor',
+      parameters: z.object({
+        scriptId: z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
+        code: z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
+      }),
+      execute: async ({ scriptId, code }) => {
+        try {
+          console.log(`🔧 [EarthEngineScriptTool] Tool called to edit script "${scriptId}"`);
+          console.time('EarthEngineScriptTool execution');
+          
+          const targetScriptId = scriptId === 'current' ? 'current_editor' : scriptId;
+          
+          // Check if Chrome tabs API is available (we're in a proper extension context)
+          if (typeof chrome === 'undefined' || !chrome.tabs) {
+            console.warn('❌ [EarthEngineScriptTool] Chrome tabs API not available');
+            return {
+              success: false,
+              error: 'Cannot edit Earth Engine scripts: Extension context not available',
+              suggestion: "This operation requires running in a Chrome extension environment"
+            };
+          }
+          
+          // Find the Earth Engine tab first
+          const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+              resolve(tabs || []);
+            });
+          });
+          
+          if (earthEngineTabs.length === 0) {
+            console.warn('❌ [EarthEngineScriptTool] No Earth Engine tab found');
+            return {
+              success: false,
+              error: 'No Earth Engine tab found',
+              suggestion: "Please open Google Earth Engine in a browser tab first"
+            };
+          }
+          
+          const tabId = earthEngineTabs[0].id;
+          if (!tabId) {
+            console.warn('❌ [EarthEngineScriptTool] Invalid Earth Engine tab');
+            return {
+              success: false,
+              error: 'Invalid Earth Engine tab',
+              suggestion: "Please reload your Earth Engine tab and try again"
+            };
+          }
+
+          console.log(`🔧 [EarthEngineScriptTool] Found Earth Engine tab: ${tabId}`);
+          
+          // First check if our content script is ready by sending a ping
+          try {
+            const pingResult = await new Promise<any>((resolve, reject) => {
+              // Set a timeout in case there's no response
+              const timeout = setTimeout(() => {
+                reject(new Error('Content script ping timed out'));
+              }, 300);
+              
+              chrome.tabs.sendMessage(
+                tabId,
+                { type: 'PING' },
+                (response) => {
+                  clearTimeout(timeout);
+                  
+                  if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message || 'Error pinging content script'));
+                    return;
+                  }
+                  
+                  resolve(response);
+                }
+              );
+            });
+            
+            console.log(`🔧 [EarthEngineScriptTool] Content script is ready: ${JSON.stringify(pingResult)}`);
+          } catch (pingError: unknown) {
+            // Content script isn't ready, try to inject it
+            const errorMessage = pingError instanceof Error ? pingError.message : String(pingError);
+            console.log(`🔧 [EarthEngineScriptTool] Content script not ready: ${errorMessage}, injecting...`);
+            
+            try {
+              // Try to inject the content script
+              await new Promise<void>((resolve, reject) => {
+                chrome.scripting.executeScript(
+                  {
+                    target: { tabId },
+                    files: ['content.js']
+                  },
+                  (results) => {
+                    if (chrome.runtime.lastError) {
+                      reject(new Error(chrome.runtime.lastError.message || 'Failed to inject content script'));
+                      return;
+                    }
+                    
+                    // Give the content script a moment to initialize
+                    setTimeout(resolve, 500);
+                  }
+                );
+              });
+              
+              console.log(`🔧 [EarthEngineScriptTool] Content script injected successfully`);
+            } catch (injectError: unknown) {
+              const errorMessage = injectError instanceof Error ? injectError.message : String(injectError);
+              console.warn(`❌ [EarthEngineScriptTool] Failed to inject content script: ${errorMessage}`);
+              return {
+                success: false,
+                error: `Content script not available: ${errorMessage}`,
+                suggestion: "Try refreshing the Earth Engine tab and ensure the extension has permission to access Earth Engine"
+              };
+            }
+          }
+          
+          // Send message directly to the content script in the Earth Engine tab
+          const result: any = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(
+              tabId,
+              { type: 'EDIT_SCRIPT', scriptId: targetScriptId, content: code },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  resolve({
+                    success: false,
+                    error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
+                  });
+                  return;
+                }
+                resolve(response || { success: false, error: 'No response from Earth Engine tab' });
+              }
+            );
+          });
+          
+          console.timeEnd('EarthEngineScriptTool execution');
+          
+          if (!result.success) {
+            console.warn(`❌ [EarthEngineScriptTool] Failed to edit script: ${result.error}`);
+            return {
+              success: false,
+              error: result.error || 'Unknown error occurred while editing script',
+              suggestion: "Make sure Google Earth Engine is open and accessible"
+            };
+          }
+          
+          console.log(`✅ [EarthEngineScriptTool] Successfully edited script "${targetScriptId}"`);
+          
+          return {
+            success: true,
+            scriptId: targetScriptId,
+            message: result.message || `Successfully inserted code into Earth Engine script "${targetScriptId}"`,
+            nextSteps: "You can now run the script in Earth Engine by clicking the 'Run' button"
+          };
+        } catch (error) {
+          console.error(`❌ [EarthEngineScriptTool] Error editing script:`, error);
+          return {
+            success: false,
+            error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`,
+            suggestion: "Make sure Google Earth Engine is open and you have permission to edit the script"
+          };
+        }
+      },
+    });
+
     // Use streamText for AI generation with tools
     const result = await streamText({
       model: llmProvider(effectiveModel), 
@@ -189,7 +366,8 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       messages: formattedMessages,
       tools: {
         weather: weatherTool,
-        earthEngineDataset: earthEngineDatasetTool
+        earthEngineDataset: earthEngineDatasetTool,
+        earthEngineScript: earthEngineScriptTool
       },
       maxSteps: 5, // Allow up to 5 steps
       temperature: 0.2
