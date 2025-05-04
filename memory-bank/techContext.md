@@ -48,27 +48,24 @@
 - **Chrome Storage**: Persistent application state
 - **Context API**: Shared application state
 
-### Messaging System
-- **Background-Content Communication**: Chrome runtime messaging
-- **Content-Side Panel Communication**: Chrome runtime messaging
-- **Message Types**: Typed message definitions for type safety
+### Messaging System (Updated August 6, 2024)
+- **Background <-> Content Communication**: Uses `chrome.tabs.sendMessage` initiated from the background script (`index.ts` or `chat-handler.ts`) to a listener in the content script (`content/index.ts`). Requires tab finding and content script validation (ping/inject) logic within the background script caller.
+- **UI <-> Background Communication**: Uses `chrome.runtime.sendMessage` initiated from the UI or library functions (`src/lib/`) to the main listener in the background script (`background/index.ts`).
+- **Message Types**: Defined interfaces (`Message`, tool-specific responses) ensure type safety.
 
-### AI Integration
-- **Vercel AI SDK**
-  - Primary method for AI interactions
-  - Streaming response handling
-  - Tool invocation framework
-  - Agent capabilities for multi-step reasoning
+### AI Integration (Updated August 6, 2024)
+- **Vercel AI SDK**: Primary framework used in `src/background/chat-handler.ts`.
+  - Handles streaming responses.
+  - Provides `tool()` function for defining AI-callable tools.
+  - Manages interaction flow with LLMs.
+- **AI Tool Implementation Pattern**: For tools requiring page interaction (like Earth Engine tools):
+  - The `execute` block within the `tool()` definition in `chat-handler.ts` is responsible for:
+    1. Finding the target Earth Engine tab (`chrome.tabs.query`).
+    2. Verifying the content script is ready (sending `PING` via `tabs.sendMessage`, potentially injecting via `scripting.executeScript`).
+    3. Sending the specific action message (e.g., `EDIT_SCRIPT`, `RUN_CODE`) directly to the content script using `tabs.sendMessage`.
+  - This pattern avoids calling library functions from `src/lib/` directly within the `execute` block to prevent `window is not defined` errors.
 
-- **Direct API Integration (Fallback)**
-  - Anthropic API
-  - OpenAI API
-
-- **Agent System Options**
-  - **Client-side approach**: Using Vercel AI SDK agents
-  - **Server-side options**: Mastra or Langchain (potential future implementation)
-
-## Tools & Implementations
+## Tools & Implementations (Updated August 6, 2024)
 
 ### Browser Tools
 1. **Click Tool**
@@ -91,36 +88,19 @@
    - Implementation: Uses `chrome.scripting.executeScript` to find and return element properties
    - Options: Property selection, multiple elements
 
-### Earth Engine Tools
-1. **Run Code Tool**
-   - Function: `runCode()`
-   - Implementation: Simulates clicking the run button in the GEE editor
-   - Status: Basic implementation complete
-
-2. **Edit Script Tool**
-   - Function: `editScript(code)`
-   - Implementation: Finds the code editor element and sets its content
-   - Status: Basic implementation in progress
-
-3. **Get Map Layers Tool**
-   - Function: `getMapLayers()`
-   - Implementation: Extracts layer information from the map interface
-   - Status: Basic implementation in progress
-
-4. **Inspect Map Tool**
-   - Function: `inspectMap()`
-   - Implementation: Captures current map state and visualization parameters
-   - Status: Basic implementation in progress
-
-5. **Check Console Tool**
-   - Function: `checkConsole()`
-   - Implementation: Captures output from the GEE console
-   - Status: Basic implementation in progress
-
-6. **Get Tasks Tool**
-   - Function: `getTasks()`
-   - Implementation: Retrieves current GEE task status information
-   - Status: Basic implementation in progress
+### Earth Engine Tools (`src/lib/tools/earth-engine/`)
+- **Core Functions**: Files like `editScript.ts`, `runCode.ts`, `getMapLayers.ts` contain reusable logic.
+  - Designed to be callable from UI/Content Script.
+  - Use `detectEnvironment()` and `chrome.runtime.sendMessage` to delegate to the background listener (`index.ts`) when needed.
+- **AI Tool Definitions (`src/background/chat-handler.ts`)**: Separate definitions using `tool()`.
+  - **Weather Tool**: Basic simulation (no page interaction).
+  - **Context7 Dataset Tool**: Uses Context7 API (no page interaction).
+  - **`earthEngineScriptTool`**: ✅ Implemented. `execute` block handles background->content messaging for `EDIT_SCRIPT`.
+  - **`earthEngineRunCodeTool`**: ✅ Implemented. `execute` block handles background->content messaging for `RUN_CODE`.
+  - **`getMapLayers`**: 🔄 Planning AI Tool implementation.
+  - **`inspectMap`**: 🔄 Planning AI Tool implementation.
+  - **`checkConsole`**: 🔄 Planning AI Tool implementation.
+  - **`getTasks`**: 🔄 Planning AI Tool implementation.
 
 ### Context Tools
 1. **Context7 Integration**

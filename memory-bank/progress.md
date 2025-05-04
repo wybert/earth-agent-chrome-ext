@@ -1,176 +1,71 @@
 # Project Progress: Google Earth Engine Agent
 
-## Project Status (Updated August 5, 2024)
+## Project Status (Updated August 6, 2024)
 
-**Current Phase:** MVP Foundation  
-**Overall Completion:** ~40%  
-**Last Updated:** [Insert Current Date]  
+**Current Phase:** MVP Foundation
+**Overall Completion:** ~45% (Increased due to tool implementation and fixes)
 
 ## Milestone Progress
 
-| Milestone | Status | Completion |
-|-----------|--------|------------|
-| Basic Extension Structure | In Progress | 85% |
-| UI Components | In Progress | 75% |
-| Messaging System | In Progress | 65% |
-| AI Integration | In Progress | 40% |
-| Agent System Implementation | Planning | 10% |
-| GEE Tools | In Progress | 15% |
-| Advanced Features | Not Started | 0% |
+| Milestone                 | Status      | Completion |
+|---------------------------|-------------|------------|
+| Basic Extension Structure | Completed   | 100%       |
+| UI Components             | In Progress | 80%        |
+| Messaging System          | Completed   | 100%       |
+| AI Integration            | In Progress | 60%        |
+| Agent System Implementation | Planning    | 15%        |
+| GEE Tools                 | In Progress | 40%        |
+| Advanced Features         | Not Started | 0%         |
 
 ## What Works
 
-### Browser Automation Tools
-1. **Click Tool**
-   - ✅ CSS selector-based clicking
-   - ✅ Coordinate-based clicking
-   - ✅ Element verification
-   - ✅ Click event simulation
-   - ✅ Error handling
-
-2. **Type Tool**
-   - ✅ Input element typing
-   - ✅ Content replacement
-   - ✅ Event simulation
-   - ✅ Error handling
-   - ✅ Response formatting
-
-3. **Snapshot Tool**
-   - ✅ Configurable depth traversal
-   - ✅ Accessibility tree construction
-   - ✅ DOM structure capture
-   - ✅ Error handling
-   - ✅ Memory optimization
-
-4. **Element Tool**
-   - ✅ Element property extraction
-   - ✅ Position information
-   - ✅ State detection
-   - ✅ Error handling
-
-### Chrome Extension Framework
-1. **Manifest V3 Migration**
-   - ✅ Background service worker
-   - ✅ Chrome scripting API
-   - ✅ Message passing system
-   - ✅ Content script integration
-
-2. **UI Components**
-   - ✅ Tools test panel
-   - ✅ Error display
-   - ✅ Loading states
-   - ✅ Response formatting
-   - ✅ Basic chat UI displays messages correctly (User & Assistant)
-   - ✅ Streaming response rendering (Progressive text display)
-
-### Basic Extension Setup
-- ✅ Chrome extension with manifest.json configured correctly
-- ✅ Background service worker initializes and loads properly
-- ✅ Content script loads on Google Earth Engine pages
-- ✅ Side panel UI opens and displays basic interface
+### Core Extension & Architecture
+- ✅ Manifest V3 structure and permissions.
+- ✅ Background service worker initialization.
+- ✅ Content script injection and basic interaction with GEE page.
+- ✅ Side panel UI rendering.
+- ✅ Robust message passing between UI, Background (index.ts listener), and Content Script using `runtime.sendMessage` and `tabs.sendMessage`.
+- ✅ Centralized helper (`sendMessageToEarthEngineTab`) in background for reliable content script communication (tab finding, ping/reload).
+- ✅ Content script readiness tracking (`CONTENT_SCRIPT_LOADED`, `HEARTBEAT`).
 
 ### UI Components
-- ✅ Basic chat interface displays in side panel
-- ✅ Message input and submission functionality
-- ✅ Message display with user/assistant differentiation
-- ✅ Basic styling and responsive design with TailwindCSS
-- ✅ Basic UI component structure with shadcn/ui
-- ✅ Chat history persistence within a session
-- ✅ Streaming text display
+- ✅ Basic chat interface with message display (User/Assistant).
+- ✅ Input submission.
+- ✅ Session-based chat history.
+- ✅ Streaming text rendering.
 
-### Messaging System
-- ✅ Basic message passing between background and content scripts
-- ✅ Basic message passing between background and side panel
-- ✅ Type definitions for message structures (including chat history)
-- ✅ Initial error handling for message failures
-- ✅ Background script handles message history context
+### AI Integration (`chat-handler.ts`)
+- ✅ Vercel AI SDK integration for chat completion.
+- ✅ API key/provider configuration via storage.
+- ✅ Streaming response handling.
+- ✅ Basic system prompt (`GEE_SYSTEM_PROMPT`).
+- ✅ Tool definition framework using `tool()`.
 
-### AI Integration
-- ✅ Vercel AI SDK integration (Primary method)
-- ✅ Direct API calls (Fallback method)
-- ✅ API key configuration mechanism
-- ✅ Basic prompt handling setup
-- ✅ Support for multiple AI providers (Anthropic, OpenAI)
-- ✅ Streaming response implementation (Backend & Frontend)
-- ✅ Centralized API logic in `src/api/chat.ts`
+### Implemented Tools
+- ✅ **Weather Tool**: Basic simulation.
+- ✅ **Context7 Dataset Tool**: Fetches EE dataset docs via Context7 API.
+- ✅ **Earth Engine Script Tool (`earthEngineScriptTool`)**: AI can insert code into the EE editor via background->content script messaging.
+- ✅ **Earth Engine Run Code Tool (`earthEngineRunCodeTool`)**: AI can execute code in the EE environment via background->content script messaging.
+- ✅ **Browser Tools (Click, Type, Snapshot, GetElement)**: Functional via background->content script messaging.
+
+### Fixes
+- ✅ Resolved `window is not defined` errors for AI tools (`editScript`, `runCode`) by implementing direct message passing in `chat-handler.ts` tool definitions.
+- ✅ Optimized background listener (`index.ts`) for direct UI/CS tool calls.
 
 ## In Progress
 
 ### Agent System Development
-1. **Vercel AI SDK Integration**
-   - 🔄 Defining tool schemas for Earth Engine tools
-   - 🔄 Implementing multi-step tool execution flow
-   - 🔄 Setting up agent initialization and configuration
-   - 🔄 Creating tool handlers for Earth Engine operations
-   - 🔄 Designing sequential execution patterns
-
-2. **Agent Architecture**
-   - 🔄 Client-side agent implementation
-   - 🔄 Evaluating server-side options (Mastra, Langchain)
-   - 🔄 Designing memory persistence model
-   - 🔄 Planning tool coordination system
-   - 🔄 Testing sequential tool execution (generate → insert → run)
-
-### Browser Tools Enhancement
-1. **Click Tool**
-   - 🔄 Additional click types (right-click, double-click)
-   - 🔄 Element highlighting
-   - 🔄 Click confirmation
-
-2. **Type Tool**
-   - 🔄 Special key simulation
-   - 🔄 Input validation
-   - 🔄 Paste support
-
-3. **Snapshot Tool**
-   - 🔄 Performance optimization
-   - 🔄 Filtering options
-   - 🔄 Custom property collection
-
-4. **Element Tool**
-   - 🔄 Multiple element support
-   - 🔄 Computed style collection
-   - 🔄 Event listener detection
+- 🔄 Testing `earthEngineScriptTool` and `earthEngineRunCodeTool` functionality thoroughly.
+- 🔄 Refining the `GEE_SYSTEM_PROMPT` for optimal use of all implemented tools.
+- 🔄 Planning implementation for remaining GEE Tools as AI tools (`GET_MAP_LAYERS`, `INSPECT_MAP`, `CHECK_CONSOLE`, `GET_TASKS`) within `chat-handler.ts`.
+- 🔄 Planning implementation of corresponding background listener cases in `index.ts` for direct calls to these remaining tools.
 
 ### Framework Improvements
-1. **Error Handling**
-   - 🔄 Detailed error messages across API layer
-   - 🔄 Recovery strategies (e.g., fallback API)
-   - 🔄 User feedback for API/connection issues
-
-2. **Performance**
-   - 🔄 Message passing optimization
-   - 🔄 DOM operation efficiency
-   - 🔄 Memory management
-
-### Messaging System
-- 🔄 Comprehensive type-safe messaging between all components
-- 🔄 Complete error handling for all failure cases
-- 🔄 Reliable content script reinitialization after extension update
-- 🔄 Extension state persistence (beyond session)
+- 🔄 Adding more comprehensive logging for debugging message flows.
+- 🔄 Improving error handling and reporting for tool failures (especially EE runtime errors).
 
 ### UI Components
-- 🔄 Loading states and animations refinement
-- 🔄 Error message display improvements
-- 🔄 Settings panel design and implementation
-- 🔄 Responsive design improvements
-
-### DOM Interaction
-- 🔄 GEE editor DOM structure research
-- 🔄 Code editor element selection and interaction
-- 🔄 Console output capture and parsing
-- 🔄 Map element interaction
-
-### AI Integration
-- 🔄 Context window management
-- 🔄 Tool calling framework setup
-- 🔄 Structured formatting for GEE-specific prompts
-- 🔄 Testing API fallback mechanism
-
-### GEE Tools
-- 🔄 Initial tool interfaces definition
-- 🔄 Basic code generation capabilities
-- 🔄 Dataset search tool planning
+- 🔄 Designing UI feedback for tool execution status (loading, success, error).
 
 ## Not Started Yet
 
@@ -198,76 +93,14 @@
 
 ## Known Issues
 
-### Critical Issues
-1. **Type Definition Errors** 🔴
-   - Several TypeScript errors in background script related to Chrome API types
-   - Resolution: Need to add proper type declarations and adjust tsconfig.json
-
-2. **Content Script Reloading** 🔴
-   - Content script sometimes fails to reload after extension update
-   - Resolution: Implement robust reinitialization and lifecycle management
-
 ### Major Issues
-1. **Message Error Handling** 🟠
-   - Error handling for message passing is incomplete
-   - Resolution: Implement comprehensive error handling and recovery
-
-2. **DOM Interaction Reliability** 🟠
-   - Current placeholder DOM selectors are not robust
-   - Resolution: Research and document GEE DOM structure, implement robust selectors
-
-3. **AI Key Management** 🟠
-   - Secure storage of API keys needs improvement
-   - Resolution: Implement proper encryption and secure storage
-
-4. **Agent Execution Flow** 🟠
-   - Sequential tool execution pattern needs formalization
-   - Resolution: Implement structured tool execution flow in Vercel AI SDK
+- **DOM Interaction Reliability** 🟠: Need to verify robustness of selectors used in content script handlers (`handleEditScript`, `handleRunCode`, etc.).
+- **Error Propagation** 🟠: Need to ensure errors from the EE environment (captured by content script) are properly sent back through the message chain to the UI/AI.
 
 ### Minor Issues
-1. **UI Responsiveness** 🟡
-   - Side panel UI doesn't adjust well to different window sizes
-   - Resolution: Improve responsive design with flexible layouts
-
-2. **Asset Management** 🟡
-   - Extension icons and assets need proper sizing and optimization
-   - Resolution: Create proper icon set and optimize asset loading
-
-3. **Tool Interface Consistency** 🟡
-   - Tool interfaces need standardization
-   - Resolution: Create consistent patterns for tool implementation
-
-### Browser Tools
-1. **Click Tool**
-   - Shadow DOM interaction limitations
-   - Dynamic element targeting challenges
-   - Event simulation edge cases
-
-2. **Type Tool**
-   - Complex input handling issues
-   - Event order dependencies
-   - Focus management challenges
-
-3. **Snapshot Tool**
-   - Large DOM tree performance
-   - Memory usage optimization
-   - Serialization limitations
-
-4. **Element Tool**
-   - Cross-origin limitations
-   - Dynamic content handling
-   - Property access restrictions
-
-### Framework
-1. **Chrome API**
-   - Function serialization limits
-   - Execution context challenges
-   - Message size limitations
-
-2. **Performance**
-   - DOM operation overhead
-   - Message passing latency
-   - Memory usage optimization
+- **UI Responsiveness** 🟡
+- **Asset Management** 🟡
+- **Tool Interface Consistency** 🟡 (Ensure all GEE tools follow the established background->content script pattern).
 
 ## Next Milestones
 
