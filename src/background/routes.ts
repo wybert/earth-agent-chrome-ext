@@ -7,6 +7,9 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 // Import the function to send messages to the content script
 import { sendMessageToEarthEngineTab } from './index';
 
+// Import the POST handler from chat.ts
+import { POST } from '../api/chat';
+
 // --- Route Handler --- 
 export async function handleChatRoute(request: Request): Promise<Response> {
   try {
@@ -63,15 +66,19 @@ export async function handleChatRoute(request: Request): Promise<Response> {
       })
       .filter((msg): msg is CoreMessage => msg !== null);
 
-    // Use streamText for basic LLM text generation
-    const result = await streamText({
-      model: llmProvider(effectiveModel), 
-      system: GEE_SYSTEM_PROMPT,
-      messages: formattedMessages,
-    });
-    
-    // --- Convert AIStream to plain text stream Response --- 
-    return result.toTextStreamResponse();
+    // Instead of directly using streamText, call the POST handler from chat.ts
+    return await POST(new Request('chrome-extension://internal/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messages: inputMessages,
+        apiKey,
+        provider,
+        model
+      })
+    }));
 
   } catch (error: any) {
     console.error('Chat API error:', error);
