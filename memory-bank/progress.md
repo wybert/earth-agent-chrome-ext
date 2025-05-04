@@ -3,8 +3,8 @@
 ## Project Status
 
 **Current Phase:** MVP Foundation  
-**Overall Completion:** ~47%  
-**Last Updated:** May 13, 2024
+**Overall Completion:** ~40%  
+**Last Updated:** [Insert Current Date]  
 
 ## Milestone Progress
 
@@ -90,27 +90,9 @@
 - ✅ Direct API calls (Fallback method)
 - ✅ API key configuration mechanism
 - ✅ Basic prompt handling setup
-- ✅ Support for multiple AI providers (Anthropic, OpenAI, Google/Gemini)
+- ✅ Support for multiple AI providers (Anthropic, OpenAI)
 - ✅ Streaming response implementation (Backend & Frontend)
 - ✅ Centralized API logic in `src/api/chat.ts`
-- ✅ Provider-specific API key storage for better UX
-- ✅ Comprehensive model selection for all providers
-- ✅ Support for latest models (GPT-4o, Claude 3.7, Gemini 2.5)
-- ✅ Styled console logging for model and chat tracking
-
-### UI Enhancements
-- ✅ Settings panel with provider tabs
-- ✅ Model selection dropdown for each provider
-- ✅ API connection verification
-- ✅ API key validation and feedback
-- ✅ Provider-specific configuration storage
-
-### Developer Tools
-- ✅ Styled console logging for debugging
-- ✅ Model usage tracking and display
-- ✅ Chat request monitoring
-- ✅ Message content preview logging
-- ✅ Color-coded log messages for readability
 
 ## In Progress
 
@@ -184,9 +166,6 @@
 - 🔄 Tool calling framework setup
 - 🔄 Structured formatting for GEE-specific prompts
 - 🔄 Testing API fallback mechanism
-- 🔄 Full implementation of Google Gemini API
-- 🔄 Enhanced error handling for API keys and requests
-- 🔄 Additional debugging logs for error scenarios
 
 ### GEE Tools
 - 🔄 Initial tool interfaces definition
@@ -257,10 +236,6 @@
 3. **Tool Interface Consistency** 🟡
    - Tool interfaces need standardization
    - Resolution: Create consistent patterns for tool implementation
-
-4. **Google Gemini Integration** 🟡
-   - Current Gemini implementation is a placeholder
-   - Resolution: Implement actual Google Generative Language API integration
 
 ### Browser Tools
 1. **Click Tool**
@@ -334,9 +309,6 @@
 - Established proper project structure and build system
 - Integrated AI libraries and basic prompt handling
 - Added support for multiple AI providers
-- Implemented provider-specific API key storage
-- Added comprehensive model selection with updated IDs
-- Implemented console logging system for model tracking
 
 ## Blockers
 - Need to complete GEE DOM structure research
