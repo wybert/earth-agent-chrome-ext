@@ -299,4 +299,61 @@
 6. **Server-side vs. Client-side Agents**
    - What are the trade-offs between client-only and server-assisted approaches?
    - How to implement memory persistence with reasonable complexity?
-   - When is it appropriate to transition to a server-side solution? 
+   - When is it appropriate to transition to a server-side solution?
+
+## AI Agent Implementation (Updated August 5, 2024)
+
+### Core AI Components
+
+The Earth Engine Agent uses Vercel's AI SDK with a structured workflow approach:
+
+1. **Chat Handler (`src/background/chat-handler.ts`)**
+   - Core implementation for handling chat requests
+   - Configures the AI provider (OpenAI or Anthropic)
+   - Defines and registers tools
+   - Processes user messages and generates responses
+
+2. **Agent Workflow**
+   - Implements a chaining workflow pattern for map-related queries
+   - First retrieves dataset information using the earthEngineDataset tool
+   - Then uses that information to generate code examples
+   - Follows a clear sequence of steps defined in the system prompt
+
+3. **Tool Integration**
+   - Weather tool for simulated weather information
+   - Earth Engine dataset documentation tool using Context7
+   - Tools defined using Vercel AI SDK's tool interface with Zod schemas
+
+### Context7 Integration
+
+Context7 is used to provide Earth Engine dataset documentation through the following flow:
+
+1. **Tool Definition**
+   - Defined in `chat-handler.ts` as `earthEngineDatasetTool`
+   - Uses Zod schema to define parameter requirements
+   - Accepts dataset queries like "LANDSAT", "elevation", etc.
+
+2. **Documentation Retrieval**
+   - Uses Context7's `getDocumentation` function from `lib/tools/context7`
+   - Fetches documentation from `wybert/earthengine-dataset-catalog-md`
+   - Configures token limits to retrieve comprehensive information
+   - Implements fallback mechanisms for connection failures
+
+3. **Result Processing**
+   - Formats retrieved documentation for use by the AI
+   - Handles errors and provides useful fallback suggestions
+   - Includes detailed logging for tracking and debugging
+
+### AI Providers and Models
+
+The extension supports multiple LLM providers:
+
+1. **OpenAI**
+   - Default model: gpt-4o
+   - Created using `createOpenAI` from `@ai-sdk/openai`
+
+2. **Anthropic**
+   - Default model: claude-3-haiku-20240307
+   - Created using `createAnthropic` from `@ai-sdk/anthropic`
+
+The specific provider and model are configurable via extension settings and stored in Chrome's storage. 

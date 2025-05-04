@@ -477,4 +477,73 @@ flowchart TD
     
     Phase4 --> P4MA[Multiple Specialized Agents]
     Phase4 --> P4O[Orchestration Layer]
+```
+
+## Chrome Extension Architecture (Updated August 5, 2024)
+
+The Earth Agent extension follows a standard Chrome extension architecture with clear separation of responsibilities:
+
+1. **Background Script**: Central hub that coordinates all extension functionality
+   - Located in `src/background/`
+   - Runs persistently in the background
+   - Handles message routing between components
+   - Manages API requests and external services
+   - Contains the AI agent logic in `chat-handler.ts`
+
+2. **Content Script**: Runs in the context of Google Earth Engine web pages
+   - Allows interaction with the page content
+   - Communicates with the background script
+
+3. **Side Panel UI**: User interface for interacting with the extension
+   - Implemented with React components
+   - Communicates with the background script via Chrome messaging
+
+#### Key Components
+
+- **Background Script (`src/background/`)**
+  - `index.ts`: Main entry point handling message routing and tab connections
+  - `chat-handler.ts`: Core AI logic for handling chat messages and tool execution
+
+- **UI Components (`src/components/`)**
+  - `Chat.tsx`: Main chat interface that passes messages to the background script
+  - Supporting components for the UI experience
+
+- **Content Script**
+  - Interacts with Google Earth Engine pages
+  - Extracts relevant information for the AI
+
+- **Tools Library (`src/lib/tools/`)**
+  - Context7 integration for documentation retrieval
+  - Weather information tool
+  - Earth Engine dataset documentation tool
+
+### Background-centric Message Flow
+
+1. User inputs a message in the UI (`Chat.tsx`)
+2. Message is sent to the background script via Chrome messaging
+3. Background script processes the message in `chat-handler.ts`
+4. If tools are needed, they are called within the handler
+5. Response is streamed back to the UI via the messaging port
+
+### Agent Workflow Patterns
+
+The Earth Engine assistant implements a sophisticated AI agent workflow based on the following patterns:
+
+1. **Chaining Workflow for Dataset-Code Generation**:
+   - When user asks about maps or visualizations, the agent follows a sequential process:
+   - Step 1: Agent calls the earthEngineDataset tool to retrieve dataset information
+   - Step 2: Agent processes the dataset information and metadata
+   - Step 3: Agent generates code examples based on the retrieved dataset details
+   
+2. **Tool Integration Pattern**:
+   - Tools are defined using Vercel AI SDK's tool interface
+   - Each tool has a clear description, parameter schema, and execute function
+   - Tools are made available to the AI model via the streamText configuration
+   - The system prompt instructs the agent on when and how to use specific tools
+
+3. **Error Resilience Pattern**:
+   - Tools implement fallback mechanisms for communication failures
+   - Context7 documentation retrieval first attempts Chrome messaging
+   - Automatically falls back to direct API calls when primary method fails
+   - Detailed logging captures tool execution performance and issues
 ``` 

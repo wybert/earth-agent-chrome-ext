@@ -1071,7 +1071,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           const { done, value } = await reader.read();
           
           if (done) {
-            // console.log(`[${requestId}] Text stream finished.`);
+            console.log(`[${requestId}] Text stream finished.`);
             port.postMessage({
               type: 'CHAT_STREAM_END',
               requestId
