@@ -343,12 +343,10 @@ export function ChatUI() {
     const messagePayload: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
           message: userMessageContent,
-          apiKey,
-          provider: apiProvider,
           messages: messagesForApi
         };
     port.postMessage(messagePayload);
-  }, [input, isLocalLoading, port, activeSessionId, apiKey, apiProvider, sessions]);
+  }, [input, isLocalLoading, port, activeSessionId, sessions]);
 
   // Restore regenerate handler
   const handleRegenerate = useCallback(() => {
@@ -370,11 +368,11 @@ export function ChatUI() {
       const messagePayload: ExtensionMessage = {
         type: 'CHAT_MESSAGE',
         message: lastUserMessage.content,
-        apiKey, provider: apiProvider, messages: messagesForApi
+        messages: messagesForApi
       };
       port.postMessage(messagePayload);
     }
-  }, [messages, isLocalLoading, port, activeSessionId, apiKey, apiProvider]);
+  }, [messages, isLocalLoading, port, activeSessionId]);
 
   // Restore stop handler
   const stop = useCallback(() => {
