@@ -31,12 +31,21 @@ Your capabilities:
 - You can search for Earth Engine datasets and get documentation
 - You can insert JavaScript code directly into the Earth Engine code editor
 - You can execute JavaScript code in the Earth Engine environment
+- You can take a screenshot of the current browser tab and include it directly in your responses
 
 Workflow for map-related questions:
 1. When a user asks about creating a map, visualizing data, or needs geospatial analysis, ALWAYS use the earthEngineDataset tool FIRST to retrieve relevant dataset information
 2. Wait for the tool response to get dataset IDs, paths, and documentation
 3. Based on the retrieved information, craft appropriate code examples that correctly reference the dataset
 4. Provide a complete, working solution that includes proper dataset loading, processing, and visualization
+5. If the user reports issues or you need to see the visual output, consider using the screenshot tool to capture the current state of the map or console.
+
+Visual Assistance Workflow:
+1. When a user asks about what's on their map or to analyze current visual elements, use the screenshot tool
+2. The screenshot will be captured and included directly in your response
+3. You can then analyze what's visible in the image and provide context, explanations, or suggestions
+4. Use phrases like "As I can see in the screenshot..." when referring to visual elements
+5. When analyzing maps, point out relevant features like coastlines, urban areas, vegetation patterns, etc.
 
 Workflow for implementing code:
 1. When a user wants to implement/run code, first ensure the code is complete and correct
@@ -51,6 +60,12 @@ When to use earthEngineScript vs earthEngineRunCode:
 - If the user says "add this code" or "put this in the editor", use earthEngineScript
 - When uncertain, use earthEngineScript as it's less invasive
 
+Debugging Workflow:
+1. If a user reports an error after running code, ask for the specific error message.
+2. Check the code you provided for obvious syntax errors or logical flaws.
+3. If the error isn't clear, consider using the screenshot tool to see the GEE console output or map state.
+4. Based on the error message and potentially the screenshot, suggest corrections or alternative approaches.
+
 Instructions:
 - Always provide code within backticks: \`code\`
 - Format Earth Engine code with proper JavaScript/Python syntax
@@ -62,6 +77,8 @@ Instructions:
 - When asked about Earth Engine datasets, use the earthEngineDataset tool to get up-to-date documentation
 - For ANY map or geospatial visualization request, FIRST use earthEngineDataset tool before providing code
 - When a user wants to implement your code suggestion, use the appropriate tool based on their intent
+- Use the screenshot tool judiciously when visual context is needed for debugging or understanding results.
+- When users ask you to "make a screenshot and tell me about what's going on", use the screenshot tool and analyze the image in your response
 
 Common Earth Engine patterns:
 - Image and collection loading: ee.Image(), ee.ImageCollection()
@@ -472,6 +489,151 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       },
     });
 
+    // Define Screenshot tool
+    const screenshotTool = tool({
+      description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
+      parameters: z.object({}), // No parameters needed
+      execute: async () => {
+        try {
+          console.log(`📸 [ScreenshotTool] Tool called`);
+          console.time('ScreenshotTool execution');
+
+          // Check if Chrome tabs API is available
+          if (typeof chrome === 'undefined' || !chrome.tabs) {
+            console.warn('❌ [ScreenshotTool] Chrome tabs API not available');
+            return {
+              success: false,
+              error: 'Cannot take screenshots: Extension context not available',
+            };
+          }
+
+          // Get the active tab in the current window
+          const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+              resolve(tabs || []);
+            });
+          });
+
+          if (!tabs || tabs.length === 0) {
+            console.warn('❌ [ScreenshotTool] No active tab found');
+            return {
+              success: false,
+              error: 'No active tab found',
+            };
+          }
+
+          const activeTab = tabs[0];
+          if (!activeTab.id || !activeTab.windowId) {
+             console.warn('❌ [ScreenshotTool] Invalid active tab information');
+            return {
+              success: false,
+              error: 'Could not get active tab information',
+            };
+          }
+          
+          console.log(`📸 [ScreenshotTool] Capturing visible area of tab ${activeTab.id}`);
+
+          // Capture the visible tab area with reduced quality
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+             chrome.tabs.captureVisibleTab(activeTab.windowId, { format: 'jpeg', quality: 50 }, (dataUrl) => {
+               if (chrome.runtime.lastError) {
+                 reject(new Error(chrome.runtime.lastError.message || 'Unknown error capturing tab'));
+               } else if (!dataUrl) {
+                  reject(new Error('captureVisibleTab returned empty data URL'));
+               } else {
+                 resolve(dataUrl);
+               }
+             });
+          });
+
+          // Resize the image in the active tab's content script
+          let resizedDataUrl = dataUrl;
+          try {
+            if (activeTab.id) {
+              // Inject and execute the resizing script in the active tab
+              const results = await chrome.scripting.executeScript({
+                target: { tabId: activeTab.id },
+                func: (imgSrc: string, maxWidth: number) => {
+                  return new Promise<string>((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                      const canvas = document.createElement('canvas');
+                      let width = img.width;
+                      let height = img.height;
+                      
+                      // Calculate new dimensions while maintaining aspect ratio
+                      if (width > maxWidth) {
+                        const ratio = maxWidth / width;
+                        width = maxWidth;
+                        height = Math.floor(height * ratio);
+                      }
+                      
+                      canvas.width = width;
+                      canvas.height = height;
+                      
+                      const ctx = canvas.getContext('2d');
+                      if (!ctx) {
+                        reject('Could not get canvas context');
+                        return;
+                      }
+                      
+                      // Draw and compress
+                      ctx.drawImage(img, 0, 0, width, height);
+                      
+                      // Return as JPEG with reduced quality
+                      const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                      resolve(resizedDataUrl);
+                    };
+                    
+                    img.onerror = () => reject('Error loading image for resizing');
+                    img.src = imgSrc;
+                  });
+                },
+                args: [dataUrl, 640] // Limit width to 640px max
+              });
+              
+              if (results && results[0] && results[0].result) {
+                resizedDataUrl = results[0].result as string;
+                console.log(`📸 [ScreenshotTool] Successfully resized image: ${resizedDataUrl.length} bytes`);
+              }
+            }
+          } catch (resizeError) {
+            console.warn(`📸 [ScreenshotTool] Error resizing image:`, resizeError);
+            // Continue with original image if resize fails
+          }
+          
+          console.timeEnd('ScreenshotTool execution');
+          console.log(`✅ [ScreenshotTool] Screenshot captured (data URL length: ${resizedDataUrl.length})`);
+
+          // Return multi-modal response with both text and image
+          return {
+            success: true,
+            message: 'Screenshot captured successfully.',
+            screenshotDataUrl: resizedDataUrl,
+            content: [
+              {
+                type: 'text',
+                text: 'Here is the screenshot of the current browser tab:'
+              },
+              {
+                type: 'image',
+                data: resizedDataUrl
+              }
+            ]
+          };
+
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ [ScreenshotTool] Error capturing screenshot:`, error);
+          console.timeEnd('ScreenshotTool execution'); // Ensure timeEnd is called on error
+          return {
+            success: false,
+            error: `Error taking screenshot: ${errorMessage}`,
+          };
+        }
+      },
+    });
+
     // Use streamText for AI generation with tools
     const result = await streamText({
       model: llmProvider(effectiveModel), 
@@ -481,11 +643,14 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
         weather: weatherTool,
         earthEngineDataset: earthEngineDatasetTool,
         earthEngineScript: earthEngineScriptTool,
-        earthEngineRunCode: earthEngineRunCodeTool
+        earthEngineRunCode: earthEngineRunCodeTool,
+        screenshot: screenshotTool
       },
       maxSteps: 5, // Allow up to 5 steps
-      temperature: 0.2
-    });
+      temperature: 0.2,
+      // Enable experimental content for multi-modal tool responses (supported by Anthropic)
+      experimental_enableToolContentInResult: true
+    } as any); // Type assertion to avoid compile errors with experimental parameters
     
     // Convert to text stream response
     return result.toTextStreamResponse();
