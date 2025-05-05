@@ -38,7 +38,9 @@ const ChatResponseSchema = z.object({
 // Chrome storage keys (Keep)
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
 const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 
 // Default welcome message (Restore)
@@ -77,12 +79,32 @@ export function ChatUI() {
 
   // Restore API config check useEffect
   useEffect(() => {
-    chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-      const hasApiKey = !!result[API_KEY_STORAGE_KEY];
+    chrome.storage.sync.get([
+      API_KEY_STORAGE_KEY, 
+      OPENAI_API_KEY_STORAGE_KEY,
+      ANTHROPIC_API_KEY_STORAGE_KEY,
+      API_PROVIDER_STORAGE_KEY
+    ], (result) => {
+      const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+      
+      // Determine if an API key is configured for the selected provider
+      let hasKey = false;
+      let currentKey = '';
+      
+      if (provider === 'openai') {
+        currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        hasKey = !!currentKey;
+      } else if (provider === 'anthropic') {
+        currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        hasKey = !!currentKey;
+      }
+      
+      const hasApiKey = hasKey;
       setApiConfigured(hasApiKey);
-      setApiKey(result[API_KEY_STORAGE_KEY] || '');
-      setApiProvider(result[API_PROVIDER_STORAGE_KEY] || 'openai');
-      if (!hasApiKey) {
+      setApiKey(currentKey);
+      setApiProvider(provider);
+      
+      if (!hasKey) {
         setShowSettings(true);
       }
     });
@@ -440,14 +462,33 @@ export function ChatUI() {
   if (showSettings) {
     return <Settings onClose={() => {
       setShowSettings(false);
-      chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-        const hasApiKey = !!result[API_KEY_STORAGE_KEY];
-        setApiConfigured(hasApiKey);
-        setApiKey(result[API_KEY_STORAGE_KEY] || '');
-        setApiProvider(result[API_PROVIDER_STORAGE_KEY] || 'openai');
-        if (hasApiKey && fallbackMode) {
+      chrome.storage.sync.get([
+        API_KEY_STORAGE_KEY, 
+        OPENAI_API_KEY_STORAGE_KEY,
+        ANTHROPIC_API_KEY_STORAGE_KEY,
+        API_PROVIDER_STORAGE_KEY
+      ], (result) => {
+        const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+        
+        // Determine if an API key is configured for the selected provider
+        let hasKey = false;
+        let currentKey = '';
+        
+        if (provider === 'openai') {
+          currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          hasKey = !!currentKey;
+        } else if (provider === 'anthropic') {
+          currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          hasKey = !!currentKey;
+        }
+        
+        setApiConfigured(hasKey);
+        setApiKey(currentKey);
+        setApiProvider(provider);
+        
+        if (hasKey && fallbackMode) {
           handleRetryAPI();
-        } else if (!hasApiKey) {
+        } else if (!hasKey) {
           setError(new Error("API Key not configured."));
           setFallbackMode(true);
         }

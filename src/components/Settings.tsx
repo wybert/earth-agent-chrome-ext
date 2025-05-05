@@ -5,7 +5,9 @@ import { Button } from './ui/button';
 import { Check, X, Eye, EyeOff } from 'lucide-react';
 
 // Key for storing API key in Chrome Storage
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 
 type ApiProvider = 'openai' | 'anthropic';
@@ -24,24 +26,60 @@ export function Settings({ onClose }: SettingsProps) {
 
   // Load saved API key on component mount
   useEffect(() => {
-    chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-      if (result[API_KEY_STORAGE_KEY]) {
-        setApiKey(result[API_KEY_STORAGE_KEY]);
-      }
-      if (result[API_PROVIDER_STORAGE_KEY]) {
-        setProvider(result[API_PROVIDER_STORAGE_KEY] as ApiProvider);
+    chrome.storage.sync.get([
+      API_KEY_STORAGE_KEY, 
+      OPENAI_API_KEY_STORAGE_KEY,
+      ANTHROPIC_API_KEY_STORAGE_KEY,
+      API_PROVIDER_STORAGE_KEY
+    ], (result) => {
+      const savedProvider = result[API_PROVIDER_STORAGE_KEY] as ApiProvider || 'openai';
+      setProvider(savedProvider);
+      
+      // Load the appropriate API key based on provider
+      if (savedProvider === 'openai') {
+        const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(openaiKey);
+      } else if (savedProvider === 'anthropic') {
+        const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(anthropicKey);
       }
     });
   }, []);
 
+  // Load the provider-specific API key when provider changes
+  useEffect(() => {
+    chrome.storage.sync.get([
+      API_KEY_STORAGE_KEY, 
+      OPENAI_API_KEY_STORAGE_KEY,
+      ANTHROPIC_API_KEY_STORAGE_KEY
+    ], (result) => {
+      if (provider === 'openai') {
+        const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(openaiKey);
+      } else if (provider === 'anthropic') {
+        const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(anthropicKey);
+      }
+    });
+  }, [provider]);
+
   const handleSave = () => {
     setIsSaving(true);
     // Store in Chrome sync storage for sync across devices
+    const storageData: { [key: string]: any } = {
+      [API_PROVIDER_STORAGE_KEY]: provider
+    };
+    
+    // Store API key in the provider-specific key and the legacy key for backward compatibility
+    if (provider === 'openai') {
+      storageData[OPENAI_API_KEY_STORAGE_KEY] = apiKey;
+    } else if (provider === 'anthropic') {
+      storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
+    }
+    storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
+    
     chrome.storage.sync.set(
-      {
-        [API_KEY_STORAGE_KEY]: apiKey,
-        [API_PROVIDER_STORAGE_KEY]: provider
-      },
+      storageData,
       () => {
         if (chrome.runtime.lastError) {
           console.error('Error saving API key:', chrome.runtime.lastError);
