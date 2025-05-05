@@ -247,7 +247,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       console.log('Received heartbeat from content script', sender.tab?.id);
       sendResponse({ success: true, message: 'Heartbeat acknowledged' });
       return false; // Synchronous response
-
+    
     case 'VALIDATE_SERVER':
       if (message.payload && message.payload.host && message.payload.port) {
         validateServerIdentity(message.payload.host, message.payload.port)
@@ -314,10 +314,10 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
     case 'GET_TASKS':
       console.log(`Routing ${message.type} message to Earth Engine tab...`);
       sendMessageToEarthEngineTab(message)
-        .then(response => {
+          .then(response => {
           sendResponse(response); // Forward the response from content script
-        })
-        .catch(error => {
+          })
+          .catch(error => {
           console.error(`Error routing ${message.type} to EE tab:`, error);
           sendResponse({ 
             success: false, 
@@ -325,7 +325,7 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
           });
         });
       return true; // Indicate asynchronous response
-
+    
     // Handle Context7 API requests
     case 'CONTEXT7_RESOLVE_LIBRARY_ID':
       (async () => {
@@ -1003,19 +1003,19 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       
     // Process the simple text stream from response
     const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+        const decoder = new TextDecoder();
     console.log(`[${requestId}] Reading text stream...`);
-
-    try {
-        while (true) {
-          const { done, value } = await reader.read();
-          
-          if (done) {
+        
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              
+              if (done) {
             console.log(`[${requestId}] Text stream finished.`);
-            port.postMessage({
-              type: 'CHAT_STREAM_END',
-              requestId
-            });
+                port.postMessage({
+                  type: 'CHAT_STREAM_END',
+                  requestId
+                });
             break; // Exit loop when stream is done
           }
           
@@ -1023,19 +1023,19 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           const chunk = decoder.decode(value, { stream: true });
           
           if (chunk) { // Avoid sending empty chunks if decoder yields them
-            port.postMessage({ 
-              type: 'CHAT_STREAM_CHUNK',
-              requestId,
+                      port.postMessage({ 
+                        type: 'CHAT_STREAM_CHUNK',
+                        requestId,
               chunk: chunk
-            });
+                      });
           }
-        }
+                    }
     } catch (streamError) {
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       console.error(`[${requestId}] Error reading text stream:`, errorMessage);
-      port.postMessage({ 
-        type: 'ERROR',
-        requestId,
+            port.postMessage({ 
+              type: 'ERROR',
+              requestId,
         error: `Stream reading error: ${errorMessage}` 
       });
     }

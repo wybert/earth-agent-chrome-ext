@@ -117,7 +117,7 @@ export function ChatUI() {
       updatedSessions[activeSessionId] = messages;
       setSessions(updatedSessions);
       chrome.storage.local.set({ [CHAT_SESSIONS_KEY]: updatedSessions });
-    }
+      }
   }, [messages, activeSessionId]);
 
   // Restore port connection useEffect
@@ -125,7 +125,7 @@ export function ChatUI() {
     let currentPort: chrome.runtime.Port | null = null;
     let reconnectTimer: NodeJS.Timeout | null = null;
     let isActive = true;
-
+    
     const connectToBackground = () => {
       if (!isActive) return;
       try {
@@ -150,8 +150,8 @@ export function ChatUI() {
                      console.log(`Attempting to reconnect (${nextAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
                      reconnectTimer = setTimeout(connectToBackground, 1000 * nextAttempts);
                      return nextAttempts;
-                   } else {
-                     setFallbackMode(true);
+            } else {
+              setFallbackMode(true);
                      setError(new Error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switched to Fallback Mode.`));
                      console.error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switching to fallback mode.`);
                      return nextAttempts;
@@ -160,20 +160,20 @@ export function ChatUI() {
              } else {
                console.log('Port disconnected normally.');
                reconnectTimer = setTimeout(connectToBackground, 500);
-             }
+            }
           }
         });
         console.log('Connected to background script');
         currentPort.postMessage({ type: 'PING' });
       } catch (error: any) {
         if (isActive) {
-           console.error('Failed to connect to background script:', error);
+        console.error('Failed to connect to background script:', error);
            setError(new Error(`Failed to connect: ${error.message}. Using Fallback Mode.`));
-           setFallbackMode(true);
+        setFallbackMode(true);
         }
       }
     };
-
+    
     const handleResponseWrapper = (response: any) => {
       if (isActive) {
         handleResponse(response);
@@ -186,7 +186,7 @@ export function ChatUI() {
       console.log('ChatUI unmounting, disconnecting port...');
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (currentPort) {
-        currentPort.disconnect();
+          currentPort.disconnect();
       }
       setPort(null);
     };
@@ -214,11 +214,11 @@ export function ChatUI() {
     // Only log non-stream chunks for debugging
     if (response.type !== 'CHAT_STREAM_CHUNK') {
       console.log('Received message from background:', response);
-      try {
-        console.log('Full response object:', JSON.stringify(response, null, 2));
+    try {
+      console.log('Full response object:', JSON.stringify(response, null, 2));
       } catch (e) { /* ignore */ }
     }
-
+    
     switch (response.type) {
       case 'CHAT_RESPONSE':
         try {
@@ -268,7 +268,7 @@ export function ChatUI() {
                   return newMessages;
               } else {
                   return [...prev, errorAssistantMessage];
-              }
+        }
           });
         }
         break;
@@ -278,11 +278,11 @@ export function ChatUI() {
              const lastMessageIndex = prevMessages.length - 1;
              if (lastMessageIndex < 0 || !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
               return prevMessages;
-             }
-             const updatedLastMessage = {
-               ...prevMessages[lastMessageIndex],
-               content: prevMessages[lastMessageIndex].content + response.chunk
-             };
+            }
+            const updatedLastMessage = {
+              ...prevMessages[lastMessageIndex],
+              content: prevMessages[lastMessageIndex].content + response.chunk
+            };
              return [...prevMessages.slice(0, lastMessageIndex), updatedLastMessage];
           });
         }
@@ -484,7 +484,7 @@ export function ChatUI() {
           )}
         </div>
       </div>
-
+      
       <div className="flex-1 overflow-hidden">
         <Chat
           messages={displayMessages as any} // Keep cast for now
@@ -497,7 +497,7 @@ export function ChatUI() {
           append={append as any} // Pass append even if unused by Chat component itself
           className="h-full"
         />
-      </div>
+              </div>
 
       {/* Restore Error and Fallback Displays */}
       {error && (
@@ -515,7 +515,7 @@ export function ChatUI() {
                 </Button>
              )}
          </Card>
-      )}
+          )}
       {fallbackMode && (
          <Card className="p-4 m-2 bg-yellow-100 border-yellow-300 text-yellow-800">
            <p className="text-sm font-medium">Fallback Mode</p>

@@ -74,9 +74,10 @@ function BubbleMessage({
 interface TextPart { type: "text"; text: string; }
 interface ToolInvocationPart { type: "tool-invocation"; toolName: string; args: any; result?: any; }
 interface FilePart { type: "file"; file: any; }
+interface ImagePart { type: "image"; data: string; }
 // Add other part types if used elsewhere (e.g., reasoning, source, error)
 
-type MessagePart = TextPart | ToolInvocationPart | FilePart; // Combine defined parts
+type MessagePart = TextPart | ToolInvocationPart | FilePart | ImagePart; // Include ImagePart
 
 export interface Message {
   id: string
@@ -136,6 +137,17 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                 actions={actions}
               />
             )
+          } else if (part.type === "image") {
+            return (
+              <div key={index} className="rounded-lg overflow-hidden max-w-[500px]">
+                <img 
+                  src={part.data} 
+                  alt="Screenshot" 
+                  className="w-full h-auto object-contain max-h-[400px]"
+                  loading="lazy"
+                />
+              </div>
+            )
           } else if (part.type === "tool-invocation") {
             return (
               <div
@@ -153,9 +165,35 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                   <>
                     <hr className="my-2 border-zinc-200 dark:border-zinc-700" />
                     <p className="text-sm font-semibold">Tool Result:</p>
-                    <pre className="mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
-                      {JSON.stringify(part.result, null, 2)}
-                    </pre>
+                    {part.result.content ? (
+                      <div className="mt-1">
+                        {Array.isArray(part.result.content) ? part.result.content.map((contentPart: any, i: number) => {
+                          if (contentPart.type === 'text') {
+                            return <div key={i} className="mb-2">{contentPart.text}</div>;
+                          } else if (contentPart.type === 'image') {
+                            return (
+                              <div key={i} className="rounded overflow-hidden mt-2">
+                                <img 
+                                  src={contentPart.data} 
+                                  alt="Tool result image" 
+                                  className="max-w-full h-auto max-h-[400px]" 
+                                  loading="lazy"
+                                />
+                              </div>
+                            );
+                          }
+                          return null;
+                        }) : (
+                          <pre className="overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                            {JSON.stringify(part.result, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    ) : (
+                      <pre className="mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                        {JSON.stringify(part.result, null, 2)}
+                      </pre>
+                    )}
                   </>
                 )}
               </div>
@@ -186,9 +224,35 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
               <>
                 <hr className="my-2 border-zinc-200 dark:border-zinc-700" />
                 <p className="text-sm font-semibold">Tool Result:</p>
-                <pre className="mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
-                  {JSON.stringify(toolInvocation.result, null, 2)}
-                </pre>
+                {toolInvocation.result.content ? (
+                  <div className="mt-1">
+                    {Array.isArray(toolInvocation.result.content) ? toolInvocation.result.content.map((contentPart: any, i: number) => {
+                      if (contentPart.type === 'text') {
+                        return <div key={i} className="mb-2">{contentPart.text}</div>;
+                      } else if (contentPart.type === 'image') {
+                        return (
+                          <div key={i} className="rounded overflow-hidden mt-2">
+                            <img 
+                              src={contentPart.data} 
+                              alt="Tool result image" 
+                              className="max-w-full h-auto max-h-[400px]" 
+                              loading="lazy"
+                            />
+                          </div>
+                        );
+                      }
+                      return null;
+                    }) : (
+                      <pre className="overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                        {JSON.stringify(toolInvocation.result, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ) : (
+                  <pre className="mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                    {JSON.stringify(toolInvocation.result, null, 2)}
+                  </pre>
+                )}
               </>
             )}
           </div>
