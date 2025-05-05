@@ -17,7 +17,9 @@ const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
 const MAX_TAB_ACTION_RETRIES = 3;
 
 // API configuration storage keys
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
@@ -934,7 +936,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
       (resolve, reject) => {
         chrome.storage.sync.get(
-          [API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], 
+          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], 
           (result) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -943,8 +945,18 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
             
             const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
             
+            // Choose the appropriate API key based on provider
+            let apiKey = '';
+            if (provider === 'openai') {
+              apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+            } else if (provider === 'anthropic') {
+              apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+            } else {
+              apiKey = result[API_KEY_STORAGE_KEY] || '';
+            }
+            
             resolve({
-              apiKey: result[API_KEY_STORAGE_KEY] || '',
+              apiKey,
               provider,
               model: result[DEFAULT_MODEL_STORAGE_KEY] || ''
             });

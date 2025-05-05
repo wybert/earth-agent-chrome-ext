@@ -31,7 +31,9 @@ alwaysApply: true
   // ❌ DON'T: Show anti-patterns
   const badExample = false;
   ```
-
+- always in mind
+  - run `npm run build` in the end
+  - 
 - **Rule Content Guidelines:**
   - Start with high-level overview
   - Include specific, actionable requirements
