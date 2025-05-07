@@ -1,14 +1,20 @@
-# Earth Agent AI SDK
+# Earth Agent Chrome Extension
 
-Chrome extension for Earth Engine AI assistance.
+Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome extension. It helps you do anything related to Google Earth Engine automatically through chatting. Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
+
 
 ## Features
 
 - Chat interface for Earth Engine assistance
-- Integration with Context7 for retrieving Earth Engine dataset documentation
-- Tools test panel for verifying Context7 functionality
+- Knows Earth Engine Data Catalog as well as community dataset
+- Help you write code, and run the code
+- Help debug the code
+- Help you explian the map
+- Planning and reasoning
 
 ## Installation
+
+Current only support install from local
 
 1. Clone the repository
 2. Install dependencies with `npm install`
@@ -17,26 +23,16 @@ Chrome extension for Earth Engine AI assistance.
 
 ## Development
 
-- Run `npm run dev` to start the development server with watch mode
-- Run `npm run test` to run the test suite
-- Run `npm run test:context7` to test the Context7 tools from the command line
+You need nodejs and npm,
 
-## Using the Tools Test Panel
+1. Clone the repository
+2. Install dependencies with `npm install`
+3. Build the extension with `npm run build`
+4. Load the unpacked extension from the `dist` directory in Chrome
+5. Create branches and make changes
+6. Build the project and refresh the chrome extension to see updates
+7. push changes if all works good
 
-The extension includes a tools test panel that allows you to test the Context7 tools directly from the UI:
-
-1. Open the extension and click the wrench icon in the top right corner
-2. Select the tool you want to test from the tabs
-3. Fill in the required fields
-4. Click "Run Test" to execute the tool and see the results
-
-The tools test panel supports testing all Context7 tools:
-
-- **Resolve Library ID**: Searches for Earth Engine dataset libraries
-- **Get Documentation**: Retrieves documentation using a library ID
-- **Search Datasets**: Searches specifically for Earth Engine datasets
-- **Get EE Documentation**: Gets Earth Engine documentation
-- **Get Dataset Info**: Combined search and retrieve function
 
 ## CORS Handling
 
@@ -56,3 +52,9 @@ If you encounter CORS issues:
 ## License
 
 MIT
+
+## Thanks
+
+- [Sundai Club](https://www.sundai.club/)
+- React
+- Vercel AI SDK
