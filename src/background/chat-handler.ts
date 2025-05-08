@@ -975,13 +975,34 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
                   chunkCount++;
                   totalBytes += value.length;
                   const text = new TextDecoder().decode(value, { stream: true });
-                  console.log(`[chat-handler] Stream chunk ${chunkCount}: ${value.length} bytes, text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+                  
+                  // Enhanced debugging for chunks to detect tool calls or responses
+                  if (text.includes('tool_call') || text.includes('tool:') || text.includes('tool_result') || text.includes('function_call')) {
+                    console.log(`[chat-handler] Tool usage detected in chunk ${chunkCount}`);
+                    try {
+                      // Highlight tool usage in logs but don't expose full content for privacy
+                      const toolMatch = text.match(/tool_call|tool:|tool_result|function_call/g);
+                      if (toolMatch) {
+                        console.log(`[chat-handler] Tool operations found: ${toolMatch.join(', ')}`);
+                      }
+                    } catch (e) {
+                      console.log('[chat-handler] Could not parse tool details in chunk');
+                    }
+                  }
+                  
+                  console.log(`[chat-handler] Stream chunk ${chunkCount}: ${value.length} bytes, text snippet: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
                   
                   // Forward chunk to new stream
                   controller.enqueue(value);
                 }
               } catch (error) {
                 console.error(`[chat-handler] Stream reading error:`, error);
+                // Add more context to the error
+                if (chunkCount === 0) {
+                  console.error('[chat-handler] Stream failed without receiving any chunks. This may indicate a connectivity issue or API problem.');
+                } else {
+                  console.error(`[chat-handler] Stream failed after receiving ${chunkCount} chunks (${totalBytes} bytes).`);
+                }
                 controller.error(error);
               }
             }

@@ -296,6 +296,13 @@ export function ChatUI() {
         break;
       case 'CHAT_STREAM_CHUNK':
         if (response.chunk) {
+          // Enhanced logging for tool-related chunks
+          if (response.chunk.includes('tool_call') || response.chunk.includes('function_call')) {
+            console.log('Received tool call chunk. Processing...');
+          } else if (response.chunk.includes('tool_result') || response.chunk.includes('tool:')) {
+            console.log('Received tool result chunk. Processing...');
+          }
+          
           setMessages(prevMessages => {
              const lastMessageIndex = prevMessages.length - 1;
              if (lastMessageIndex < 0 || !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
@@ -315,7 +322,22 @@ export function ChatUI() {
             const lastMessageIndex = prevMessages.length - 1;
           if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
             const finalId = response.requestId || prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
-            const finalizedMessage = { ...prevMessages[lastMessageIndex], id: finalId };
+            
+            // Check for incomplete tool responses
+            const content = prevMessages[lastMessageIndex].content;
+            let finalizedContent = content;
+            
+            // Ensure tool call responses are properly formatted if they appear incomplete
+            if ((content.includes('tool_call') || content.includes('function_call')) && 
+                (!content.includes('tool_result') && !content.includes('final result'))) {
+              console.log('Tool call without result detected. This may indicate an incomplete response.');
+            }
+            
+            const finalizedMessage = { 
+              ...prevMessages[lastMessageIndex], 
+              id: finalId,
+              content: finalizedContent 
+            };
             return [...prevMessages.slice(0, lastMessageIndex), finalizedMessage];
           }
           return prevMessages;
