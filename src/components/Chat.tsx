@@ -323,12 +323,28 @@ export function ChatUI() {
         break;
       case 'ERROR':
         console.error('Background script error:', response.error);
-        setError(new Error(`API Error: ${response.error || 'Unknown error.'}`));
+        // Extract API key errors and provide more helpful messages
+        let errorMessage = response.error || 'Unknown error';
+        let errorSuggestion = '';
+        
+        if (errorMessage.includes('API key') || errorMessage.includes('authorization') || 
+            errorMessage.includes('authenticate') || errorMessage.includes('401')) {
+          errorMessage = 'API key issue: ' + errorMessage;
+          errorSuggestion = 'Please check your API key in Settings.';
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+          errorMessage = 'Rate limiting: ' + errorMessage;
+          errorSuggestion = 'Try again in a few minutes.';
+        } else if (errorMessage.includes('model') && errorMessage.includes('not')) {
+          errorMessage = 'Model availability issue: ' + errorMessage;
+          errorSuggestion = 'Check available models or try a different model in Settings.';
+        }
+        
+        setError(new Error(`${errorMessage} ${errorSuggestion}`));
         setIsLocalLoading(false);
         const errorAssistantMessage: Message = {
           id: response.requestId || (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Sorry, I encountered an error: ${response.error}.`
+          content: `Sorry, I encountered an error: ${errorMessage}. ${errorSuggestion}`
         };
         setMessages(prev => {
             const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
@@ -458,6 +474,15 @@ export function ChatUI() {
     }, 500);
   };
 
+  // Restore test API handler
+  const handleTestAPI = useCallback(() => {
+    if (!port) {
+      setError(new Error("Connection error: Cannot reach background service."));
+      return;
+    }
+    port.postMessage({ type: 'TEST_API' });
+  }, [port]);
+
   // --- Render Logic ---
   if (showSettings) {
     return <Settings onClose={() => {
@@ -512,6 +537,9 @@ export function ChatUI() {
             </h2>
          </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={handleTestAPI} aria-label="Test API" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="Test API Connection">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-600"><circle cx="12" cy="12" r="10"/><path d="m8 12 2 2 6-6"/></svg>
+          </Button>
           <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
             <Wrench className="h-5 w-5 text-gray-600" />
           </Button>

@@ -1,4 +1,4 @@
-import { handleChatRequest } from './chat-handler';
+import { handleChatRequest, DEFAULT_MODELS } from './chat-handler';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 
 // Types for messages between components
@@ -223,9 +223,9 @@ function pingContentScript(tabId: number, timeout = CONTENT_SCRIPT_PING_TIMEOUT)
 }
 
 // Handle messages from content script or side panel
-chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
-  console.log('Background script received message:', message);
-
+chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
+  console.log('Received runtime message:', message, 'from', sender);
+  
   switch (message.type) {
     case 'INIT':
       // Handle initialization
@@ -270,13 +270,25 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
         (async () => {
           try {
             // Get API key/provider from storage
-            const config = await chrome.storage.local.get([
+            const config = await chrome.storage.sync.get([
               API_KEY_STORAGE_KEY,
+              OPENAI_API_KEY_STORAGE_KEY,
+              ANTHROPIC_API_KEY_STORAGE_KEY,
               API_PROVIDER_STORAGE_KEY,
               DEFAULT_MODEL_STORAGE_KEY
             ]);
-            const apiKey = config[API_KEY_STORAGE_KEY];
+            
+            // Choose the appropriate API key based on provider
             const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
+            let apiKey = '';
+            if (provider === 'openai') {
+              apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+            } else if (provider === 'anthropic') {
+              apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+            } else {
+              apiKey = config[API_KEY_STORAGE_KEY] || '';
+            }
+            
             const model = config[DEFAULT_MODEL_STORAGE_KEY];
 
             if (!apiKey) {
@@ -877,9 +889,9 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
       
     default:
       console.warn(`Unknown message type received in background: ${message.type}`);
-      sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
-      return false; // Synchronous response
   }
+  
+  return true; // Will respond asynchronously
 });
 
 // Listen for side panel connections
@@ -907,9 +919,174 @@ chrome.runtime.onConnect.addListener((port) => {
           port.postMessage({ type: 'PONG', timestamp: Date.now() });
           break;
           
+        case 'TEST_API':
+          console.log('Testing API connection');
+          (async () => {
+            try {
+              // Extract API details from message
+              const provider = message.provider || 'openai';
+              const apiKey = message.apiKey || '';
+              
+              console.log(`Testing ${provider} API connection with key: ${apiKey ? '(key provided)' : '(no key)'}`);
+              
+              if (!apiKey) {
+                port.postMessage({ 
+                  type: 'TEST_API_RESPONSE', 
+                  success: false,
+                  error: 'No API key provided'
+                });
+                return;
+              }
+              
+              let success = false;
+              let error = '';
+              
+              // Test API connection based on provider
+              if (provider === 'openai') {
+                try {
+                  const response = await fetch('https://api.openai.com/v1/models', {
+                    method: 'GET',
+                    headers: {
+                      'Authorization': `Bearer ${apiKey}`,
+                      'Content-Type': 'application/json'
+                    }
+                  });
+                  
+                  if (response.ok) {
+                    console.log('OpenAI API connection test successful');
+                    success = true;
+                  } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    error = `API returned status ${response.status}: ${JSON.stringify(errorData)}`;
+                    console.error('OpenAI API test failed:', error);
+                  }
+                } catch (err) {
+                  error = err instanceof Error ? err.message : String(err);
+                  console.error('Error testing OpenAI API:', error);
+                }
+              } else if (provider === 'anthropic') {
+                try {
+                  console.log('Testing Anthropic API connection with model claude-3-7-sonnet-20250219');
+                  
+                  // Log API key format details (without exposing the key)
+                  if (!apiKey.startsWith('sk-ant-')) {
+                    console.warn('API key does not start with sk-ant-, which is required for Anthropic');
+                  }
+                  console.log(`API key length: ${apiKey.length}`);
+                  
+                  // Log full request details
+                  const requestBody = JSON.stringify({
+                    model: 'claude-3-7-sonnet-20250219',
+                    max_tokens: 10,
+                    messages: [
+                      { role: 'user', content: 'Hello' }
+                    ]
+                  });
+                  
+                  console.log('Anthropic test request body:', requestBody);
+                  console.log('Adding anthropic-dangerous-direct-browser-access header');
+                  
+                  const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                      'x-api-key': apiKey,
+                      'anthropic-version': '2023-06-01',
+                      'Content-Type': 'application/json',
+                      'anthropic-dangerous-direct-browser-access': 'true' // Required by Anthropic for browser access
+                    },
+                    body: requestBody
+                  });
+                  
+                  console.log(`Anthropic test response status: ${response.status}`);
+                  console.log(`Response type: ${response.type}`);
+                  
+                  // Log response headers
+                  const responseHeaders: Record<string, string> = {};
+                  response.headers.forEach((value, key) => {
+                    responseHeaders[key] = value;
+                  });
+                  console.log('Response headers:', responseHeaders);
+                  
+                  // Even if status is 200, we need to verify we got an actual response
+                  if (response.ok) {
+                    try {
+                      // First try to get the raw text
+                      const rawText = await response.text();
+                      console.log(`Raw response text (${rawText.length} chars): ${rawText.substring(0, 100)}${rawText.length > 100 ? '...' : ''}`);
+                      
+                      if (!rawText || rawText.trim() === '') {
+                        console.warn('Anthropic API returned empty response body');
+                        error = 'Anthropic API returned empty response';
+                        success = false;
+                      } else {
+                        try {
+                          // Then parse as JSON
+                          const data = JSON.parse(rawText);
+                          if (!data || !data.content) {
+                            console.warn('Anthropic API returned response without content field:', data);
+                            error = 'Anthropic API returned invalid response format';
+                            success = false;
+                          } else {
+                            console.log('Anthropic API connection test successful. Response:', data);
+                            console.log('Content:', data.content);
+                            success = true;
+                          }
+                        } catch (parseErr) {
+                          console.error('Error parsing Anthropic API response:', parseErr);
+                          error = `Invalid JSON in response: ${rawText}`;
+                          success = false;
+                        }
+                      }
+                    } catch (textErr) {
+                      console.error('Error reading Anthropic API response text:', textErr);
+                      error = 'Could not read API response';
+                      success = false;
+                    }
+                  } else {
+                    try {
+                      const errorText = await response.text();
+                      console.error('Anthropic API error response:', errorText);
+                      try {
+                        const errorData = JSON.parse(errorText);
+                        error = `API returned status ${response.status}: ${JSON.stringify(errorData)}`;
+                      } catch (e) {
+                        error = `API returned status ${response.status}: ${errorText}`;
+                      }
+                    } catch (e) {
+                      error = `API returned status ${response.status}`;
+                    }
+                    console.error('Anthropic API test failed:', error);
+                  }
+                } catch (err) {
+                  error = err instanceof Error ? err.message : String(err);
+                  console.error('Error testing Anthropic API:', error);
+                }
+              }
+              
+              // Send response back to the sidepanel
+              port.postMessage({ 
+                type: 'TEST_API_RESPONSE', 
+                success,
+                error: error || undefined
+              });
+              
+            } catch (error) {
+              console.error('Error in TEST_API handler:', error);
+              port.postMessage({ 
+                type: 'TEST_API_RESPONSE', 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Unknown error testing API connection'
+              });
+            }
+          })();
+          break;
+          
         default:
           console.warn('Unknown side panel message type:', message.type);
-          port.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+          port.postMessage({ 
+            type: 'ERROR', 
+            error: `Unknown message type: ${message.type}` 
+          });
       }
     });
 
@@ -955,6 +1132,18 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               apiKey = result[API_KEY_STORAGE_KEY] || '';
             }
             
+            console.log(`[${requestId}] Using provider: ${provider}`);
+            console.log(`[${requestId}] API key present: ${apiKey ? 'Yes' : 'No'}`);
+            if (apiKey) {
+              console.log(`[${requestId}] API key length: ${apiKey.length}`);
+              // Simple validation - don't log full key but check basic format
+              if (provider === 'openai' && !apiKey.startsWith('sk-')) {
+                console.warn(`[${requestId}] Warning: OpenAI API key has invalid format (should start with sk-)`);
+              } else if (provider === 'anthropic' && !apiKey.startsWith('sk-ant-')) {
+                console.warn(`[${requestId}] Warning: Anthropic API key has invalid format (should start with sk-ant-)`);
+              }
+            }
+            
             resolve({
               apiKey,
               provider,
@@ -975,7 +1164,51 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       return;
     }
     
+    // Validate key format based on provider
+    if (apiConfig.provider === 'openai' && !apiConfig.apiKey.startsWith('sk-')) {
+      console.error(`[${requestId}] Invalid OpenAI API key format`);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
+        error: 'Invalid OpenAI API key format. OpenAI keys should start with "sk-".'
+      });
+      return;
+    } else if (apiConfig.provider === 'anthropic' && !apiConfig.apiKey.startsWith('sk-ant-')) {
+      console.error(`[${requestId}] Invalid Anthropic API key format`);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
+        error: 'Invalid Anthropic API key format. Anthropic keys should start with "sk-ant-".'
+      });
+      return;
+    }
+    
+    // Log model information
+    console.log(`[${requestId}] Using model: ${apiConfig.model || 'Default model for provider'}`);
+    
+    // Validate model compatibility with provider
+    if (apiConfig.provider === 'openai' && apiConfig.model && apiConfig.model.includes('claude')) {
+      console.warn(`[${requestId}] Warning: Using Claude model (${apiConfig.model}) with OpenAI provider. This will fail.`);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
+        error: 'Model/provider mismatch: Cannot use Claude models with OpenAI provider. Please change either the model or provider in settings.'
+      });
+      return;
+    }
+    
+    if (apiConfig.provider === 'anthropic' && apiConfig.model && !apiConfig.model.includes('claude')) {
+      console.warn(`[${requestId}] Warning: Using non-Claude model (${apiConfig.model}) with Anthropic provider. This will fail.`);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
+        error: 'Model/provider mismatch: Anthropic provider only supports Claude models. Please change either the model or provider in settings.'
+      });
+      return;
+    }
+    
     // Call the new handler which directly processes messages
+    console.log(`[${requestId}] Calling LLM API with provider: ${apiConfig.provider}`);
     const response = await handleChatRequest(
       conversationMessages,
       apiConfig.apiKey,
@@ -1015,46 +1248,87 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       
     // Process the simple text stream from response
     const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+    const decoder = new TextDecoder();
     console.log(`[${requestId}] Reading text stream...`);
+    
+    let chunkCount = 0;
+    let totalCharsReceived = 0;
         
-          try {
-            while (true) {
-              const { done, value } = await reader.read();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          console.log(`[${requestId}] Text stream finished. Received ${chunkCount} chunks, ${totalCharsReceived} total characters.`);
+          
+          // Add diagnostic information for empty responses
+          if (chunkCount === 0) {
+            console.warn(`[${requestId}] Empty response received. This could indicate:`);
+            
+            if (apiConfig.provider === 'anthropic') {
+              console.warn(`[${requestId}] 1. Anthropic API key format issue - should start with sk-ant-`);
+              console.warn(`[${requestId}] 2. Model compatibility - '${apiConfig.model}' may not be supported or spelled correctly`);
+              console.warn(`[${requestId}] 3. Required header 'anthropic-dangerous-direct-browser-access: true' might be missing`);
+              console.warn(`[${requestId}] 4. Network CORS issues - check console for any blocked requests`);
               
-              if (done) {
-            console.log(`[${requestId}] Text stream finished.`);
-                port.postMessage({
-                  type: 'CHAT_STREAM_END',
-                  requestId
-                });
-            break; // Exit loop when stream is done
+              port.postMessage({ 
+                type: 'ERROR',
+                requestId,
+                error: `No response from Anthropic API. Please check that your Anthropic API key is valid (should start with sk-ant-) and that the model "${apiConfig.model}" is correct.`
+              });
+            } else {
+              console.warn(`[${requestId}] 1. OpenAI API key format issue - should start with sk-`);
+              console.warn(`[${requestId}] 2. Model compatibility - '${apiConfig.model}' may not be supported`);
+              console.warn(`[${requestId}] 3. Network CORS issues - check console for blocked requests`);
+              
+              port.postMessage({ 
+                type: 'ERROR',
+                requestId,
+                error: `No response from OpenAI API. Please check that your OpenAI API key is valid and that the model "${apiConfig.model}" is correct.`
+              });
+            }
+            
+            // We've already sent an error message, so no need to send the CHAT_STREAM_END
+            return;
           }
           
-          // Decode the chunk and send it directly
-          const chunk = decoder.decode(value, { stream: true });
+          port.postMessage({
+            type: 'CHAT_STREAM_END',
+            requestId
+          });
+          break; // Exit loop when stream is done
+        }
+        
+        // Decode the chunk and send it directly
+        const chunk = decoder.decode(value, { stream: true });
+        
+        if (chunk) { // Avoid sending empty chunks if decoder yields them
+          chunkCount++;
+          totalCharsReceived += chunk.length;
+          console.log(`[${requestId}] Chunk ${chunkCount}: ${chunk.length} chars, text: "${chunk.substring(0, 50)}${chunk.length > 50 ? '...' : ''}"`);
           
-          if (chunk) { // Avoid sending empty chunks if decoder yields them
-                      port.postMessage({ 
-                        type: 'CHAT_STREAM_CHUNK',
-                        requestId,
-              chunk: chunk
-                      });
-          }
-                    }
+          port.postMessage({ 
+            type: 'CHAT_STREAM_CHUNK',
+            requestId,
+            chunk: chunk
+          });
+        } else {
+          console.log(`[${requestId}] Received empty chunk (length: ${value ? value.length : 0} bytes)`);
+        }
+      }
     } catch (streamError) {
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
-      console.error(`[${requestId}] Error reading text stream:`, errorMessage);
-            port.postMessage({ 
-              type: 'ERROR',
-              requestId,
+      console.error(`[${requestId}] Error reading text stream:`, streamError);
+      port.postMessage({ 
+        type: 'ERROR',
+        requestId,
         error: `Stream reading error: ${errorMessage}` 
       });
     }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[${requestId}] Chat processing error:`, errorMessage);
+    console.error(`[${requestId}] Chat processing error:`, error);
     port.postMessage({ 
       type: 'ERROR',
       requestId,

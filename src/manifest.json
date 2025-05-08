@@ -12,7 +12,9 @@
   ],
   "host_permissions": [
     "https://code.earthengine.google.com/*",
-    "https://context7.com/*"
+    "https://context7.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.openai.com/*"
   ],
   "action": {
     "default_icon": {

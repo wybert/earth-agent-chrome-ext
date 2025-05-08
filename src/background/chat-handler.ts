@@ -10,7 +10,7 @@ export type Provider = 'openai' | 'anthropic';
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
-  anthropic: 'claude-3-haiku-20240307'
+  anthropic: 'claude-3-7-sonnet-20250219'
 };
 
 // API versions
@@ -107,8 +107,10 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
  * Handle chat messages from the UI
  */
 export async function handleChatRequest(messages: Message[], apiKey: string, provider: Provider, model?: string): Promise<Response> {
+  console.log(`[chat-handler] handleChatRequest called with provider: ${provider}`);
   try {
     if (!apiKey) {
+      console.error('[chat-handler] No API key provided');
       return new Response(JSON.stringify({ 
         error: 'API key not configured',
         message: 'Please set your API key in the extension settings' 
@@ -119,6 +121,7 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     }
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error('[chat-handler] No valid messages provided');
       return new Response(JSON.stringify({ error: 'No messages provided' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -130,17 +133,47 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     let effectiveModel: string;
     
     if (provider === 'openai') {
+      console.log(`[chat-handler] Using OpenAI provider${model ? ` with model ${model}` : ''}`);
       llmProvider = createOpenAI({ apiKey });
-      effectiveModel = model || DEFAULT_MODELS.openai;
+      
+      // Validate model - ensure we're using an OpenAI model
+      if (model && (model.includes('claude') || !model.includes('gpt'))) {
+        console.warn(`[chat-handler] Warning: ${model} appears to be an Anthropic model but provider is OpenAI, defaulting to ${DEFAULT_MODELS.openai}`);
+        effectiveModel = DEFAULT_MODELS.openai;
+      } else {
+        effectiveModel = model || DEFAULT_MODELS.openai;
+      }
     } else if (provider === 'anthropic') {
-      llmProvider = createAnthropic({ apiKey });
-      effectiveModel = model || DEFAULT_MODELS.anthropic;
+      console.log(`[chat-handler] Using Anthropic provider${model ? ` with model ${model}` : ''}`);
+      
+      // Enhanced configuration for Anthropic
+      const anthropicOptions = { 
+        apiKey,
+        // Explicitly define the headers needed for Anthropic browser requests
+        headers: {
+          'anthropic-dangerous-direct-browser-access': 'true'
+        }
+      };
+      
+      console.log('[chat-handler] Initializing Anthropic provider with browser support headers');
+      llmProvider = createAnthropic(anthropicOptions);
+      
+      // Validate model - ensure we're using an Anthropic model
+      if (model && !model.includes('claude')) {
+        console.warn(`[chat-handler] Warning: ${model} doesn't appear to be an Anthropic model but provider is Anthropic, defaulting to ${DEFAULT_MODELS.anthropic}`);
+        effectiveModel = DEFAULT_MODELS.anthropic;
+      } else {
+        effectiveModel = model || DEFAULT_MODELS.anthropic;
+      }
     } else {
+      console.error(`[chat-handler] Unsupported provider: ${provider}`);
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    console.log(`[chat-handler] Using model: ${effectiveModel}`);
 
     // Simplified message mapping for basic CoreMessage structure
     const formattedMessages: CoreMessage[] = messages
@@ -150,10 +183,19 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
             typeof msg.content === 'string') {
           return { role: msg.role, content: msg.content };
         }
-        console.warn('Filtering out message with incompatible role/content:', msg);
+        console.warn('[chat-handler] Filtering out message with incompatible role/content:', msg);
         return null; 
       })
       .filter((msg): msg is CoreMessage => msg !== null);
+
+    // Log the first user message for debugging (without logging whole conversation)
+    const userMsg = formattedMessages.find(m => m.role === 'user');
+    if (userMsg) {
+      const content = typeof userMsg.content === 'string' 
+        ? userMsg.content 
+        : 'Non-string content';
+      console.log(`[chat-handler] User query: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`);
+    }
 
     // Define the weather tool using the AI SDK tool format
     const weatherTool = tool({
@@ -635,25 +677,367 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     });
 
     // Use streamText for AI generation with tools
-    const result = await streamText({
-      model: llmProvider(effectiveModel), 
-      system: GEE_SYSTEM_PROMPT,
-      messages: formattedMessages,
-      tools: {
-        weather: weatherTool,
-        earthEngineDataset: earthEngineDatasetTool,
-        earthEngineScript: earthEngineScriptTool,
-        earthEngineRunCode: earthEngineRunCodeTool,
-        screenshot: screenshotTool
-      },
-      maxSteps: 5, // Allow up to 5 steps
-      temperature: 0.2,
-      // Enable experimental content for multi-modal tool responses (supported by Anthropic)
-      experimental_enableToolContentInResult: true
-    } as any); // Type assertion to avoid compile errors with experimental parameters
-    
-    // Convert to text stream response
-    return result.toTextStreamResponse();
+    try {
+      console.log('[chat-handler] Calling streamText with tools');
+      
+      // Add extra debug log for request
+      try {
+        // Safely get the last message content preview
+        const lastMessage = formattedMessages[formattedMessages.length-1];
+        let lastMessagePreview = "No message";
+        if (lastMessage && typeof lastMessage.content === 'string') {
+          lastMessagePreview = lastMessage.content.substring(0, 50) + (lastMessage.content.length > 50 ? '...' : '');
+        }
+        
+        console.log(`[chat-handler] streamText request details: 
+          - Provider: ${provider}
+          - Model: ${effectiveModel}
+          - System prompt length: ${GEE_SYSTEM_PROMPT.length} chars
+          - User messages: ${formattedMessages.length}
+          - Last message preview: "${lastMessagePreview}"
+        `);
+        
+        // Configure provider-specific fetch options
+        let customFetchOptions: any = {};
+        
+        // Create a CORS-safe fetch implementation with provider-specific headers
+        const enhancedProxyFetch = async (url: string, options: RequestInit) => {
+          console.log(`[chat-handler] Making API request to: ${url} using ${provider} provider`);
+          
+          // Deep clone the options to avoid modifying the original
+          const fetchOptions = JSON.parse(JSON.stringify({
+            ...options,
+            headers: { ...options.headers }
+          }));
+          
+          // Set up provider-specific headers
+          const requestHeaders = fetchOptions.headers as Record<string, string>;
+          
+          if (provider === 'anthropic') {
+            // Ensure Anthropic headers are correctly set up
+            console.log('[chat-handler] Setting up Anthropic-specific headers for browser request');
+            
+            // Remove Authorization header if present (Anthropic uses x-api-key)
+            if (requestHeaders.Authorization) {
+              console.log('[chat-handler] Removing Authorization header for Anthropic request');
+              delete requestHeaders.Authorization;
+            }
+            
+            // Add required Anthropic headers
+            console.log('[chat-handler] Adding x-api-key and anthropic headers');
+            requestHeaders['x-api-key'] = apiKey;
+            requestHeaders['anthropic-version'] = '2023-06-01';
+            requestHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
+            
+            // Ensure content-type is correctly set
+            requestHeaders['Content-Type'] = 'application/json';
+          }
+          
+          // Don't log API keys to console
+          const sanitizedHeaders = {...requestHeaders};
+          if (sanitizedHeaders['Authorization']) {
+            sanitizedHeaders['Authorization'] = '***API KEY REDACTED***';
+          }
+          if (sanitizedHeaders['x-api-key']) {
+            sanitizedHeaders['x-api-key'] = '***API KEY REDACTED***';
+          }
+          console.log(`[chat-handler] Request headers:`, sanitizedHeaders);
+          console.log(`[chat-handler] Request method: ${fetchOptions.method}`);
+          
+          if (fetchOptions.body) {
+            try {
+              // Try to parse and log the body for debugging
+              const bodyObj = JSON.parse(fetchOptions.body as string);
+              console.log(`[chat-handler] Request body (model): ${bodyObj.model}`);
+              console.log(`[chat-handler] Request body structure:`, 
+                {
+                  messageCount: bodyObj.messages?.length || 0,
+                  hasSystem: !!bodyObj.system,
+                  maxTokens: bodyObj.max_tokens
+                }
+              );
+            } catch (e) {
+              console.log('[chat-handler] Could not parse request body for logging');
+            }
+          }
+
+          try {
+            // Use chrome extension's privileged fetch which bypasses CORS
+            console.log('[chat-handler] Sending fetch request...');
+            const response = await fetch(url, {
+              ...fetchOptions,
+              headers: requestHeaders,
+              mode: 'cors',
+              credentials: 'omit'
+            });
+            
+            console.log(`[chat-handler] API response status: ${response.status}`);
+            console.log(`[chat-handler] API response type: ${response.type}`);
+            
+            // Log response headers for debugging
+            const responseHeadersLog: Record<string, string> = {};
+            response.headers.forEach((value, key) => {
+              responseHeadersLog[key] = value;
+            });
+            console.log('[chat-handler] Response headers:', responseHeadersLog);
+            
+            // Check for error status
+            if (!response.ok) {
+              const errorBody = await response.text();
+              console.error(`[chat-handler] API error response: ${errorBody}`);
+              
+              // Add provider-specific error messages
+              if (provider === 'anthropic' && response.status === 200 && !errorBody) {
+                console.error('[chat-handler] Anthropic API returned empty response with status 200. This could be due to incorrect model name or API key format issues.');
+              } else if (response.status === 401) {
+                console.error(`[chat-handler] Authentication error with ${provider}: Invalid API key or authentication failure`);
+              } else if (response.status === 403) {
+                console.error(`[chat-handler] Authorization error with ${provider}: API key does not have access to the requested resource`);
+              } else if (response.status === 429) {
+                console.error(`[chat-handler] Rate limit error with ${provider}: Too many requests`);
+              } else if (response.status >= 500) {
+                console.error(`[chat-handler] Server error with ${provider}: The provider API is experiencing issues`);
+              }
+              
+              throw new Error(`${provider} API returned error ${response.status}: ${errorBody}`);
+            }
+            
+            return response;
+          } catch (error) {
+            console.error(`[chat-handler] Fetch error with ${provider}:`, error);
+            throw error;
+          }
+        };
+        
+        // Configure the appropriate LLM provider with enhanced fetch
+        if (provider === 'anthropic') {
+          // Special configuration for Anthropic - use x-api-key and properly structured options
+          console.log('[chat-handler] Setting up Anthropic provider with the following config:');
+          console.log(`[chat-handler] - Model: ${effectiveModel}`);
+          console.log('[chat-handler] - Using custom fetch wrapper with CORS headers');
+          
+          // Create properly formatted Anthropic provider
+          llmProvider = createAnthropic({
+            apiKey,
+            fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+              // Convert input to string URL
+              const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+              
+              console.log(`[chat-handler] Making API request to: ${url} using Anthropic provider`);
+              
+              // Deep clone the options to avoid modifying the original
+              const fetchOptions = JSON.parse(JSON.stringify({
+                ...init,
+                headers: { ...(init?.headers || {}) }
+              }));
+              
+              // Ensure Anthropic headers are correctly set up
+              const requestHeaders = fetchOptions.headers as Record<string, string>;
+              requestHeaders['anthropic-dangerous-direct-browser-access'] = 'true';
+              
+              try {
+                const response = await fetch(url, fetchOptions);
+                
+                // Debug information for non-successful responses
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.log(`[chat-handler] API error response: ${errorText}`);
+                  
+                  // Special handling for 404 errors which usually indicate model not found
+                  if (response.status === 404) {
+                    console.error(`[chat-handler] Error 404: Model "${effectiveModel}" not found. Please verify the model ID is exactly correct.`);
+                    console.error(`[chat-handler] Valid Anthropic model IDs include: claude-3-7-sonnet-20250219, claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022`);
+                  }
+                  
+                  throw new Error(`Anthropic API returned error ${response.status}: ${errorText}`);
+                }
+                
+                return response;
+              } catch (error) {
+                console.error(`[chat-handler] Fetch error with ${provider}:`, error);
+                throw error;
+              }
+            }
+          });
+          
+          // Make a direct test call to verify API connectivity
+          try {
+            console.log('[chat-handler] Making a diagnostic direct API call to Anthropic');
+            const testResponse = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json',
+                'anthropic-dangerous-direct-browser-access': 'true'
+              },
+              body: JSON.stringify({
+                model: effectiveModel,
+                max_tokens: 10,
+                messages: [
+                  { role: 'user', content: 'Test message' }
+                ]
+              })
+            });
+            
+            console.log(`[chat-handler] Anthropic test response status: ${testResponse.status}`);
+            
+            if (testResponse.ok) {
+              try {
+                const textData = await testResponse.text();
+                console.log(`[chat-handler] Anthropic test response body: ${textData.substring(0, 100)}...`);
+                try {
+                  const jsonData = JSON.parse(textData);
+                  console.log('[chat-handler] Parsed JSON response successfully:', jsonData.content?.[0]?.text || 'No content field');
+                } catch (e) {
+                  console.warn('[chat-handler] Could not parse response as JSON:', e);
+                }
+              } catch (e) {
+                console.warn('[chat-handler] Could not read response text:', e);
+              }
+            } else {
+              console.error(`[chat-handler] Anthropic test failed with status ${testResponse.status}`);
+              try {
+                const errorText = await testResponse.text();
+                console.error(`[chat-handler] Error response: ${errorText}`);
+              } catch (e) {
+                console.error('[chat-handler] Could not read error response:', e);
+              }
+            }
+          } catch (e) {
+            console.error('[chat-handler] Diagnostic API call failed:', e);
+          }
+        } else {
+          // OpenAI uses standard Authorization header
+          llmProvider = createOpenAI({ 
+            apiKey,
+            fetch: (input: RequestInfo | URL, init?: RequestInit) => {
+              // Cast to string if it's a URL or Request
+              const url = typeof input === 'string' ? input : input.toString();
+              return enhancedProxyFetch(url, init || {});
+            }
+          });
+        }
+        
+        const result = await streamText({
+          model: llmProvider(effectiveModel),
+          system: GEE_SYSTEM_PROMPT,
+          messages: formattedMessages,
+          tools: {
+            weather: weatherTool,
+            earthEngineDataset: earthEngineDatasetTool,
+            earthEngineScript: earthEngineScriptTool,
+            earthEngineRunCode: earthEngineRunCodeTool,
+            screenshot: screenshotTool
+          },
+          maxSteps: 5, // Allow up to 5 steps
+          temperature: 0.2,
+          // Enable experimental content for multi-modal tool responses (supported by Anthropic)
+          experimental_enableToolContentInResult: true
+        } as any); // Type assertion to avoid compile errors with experimental parameters
+        
+        console.log('[chat-handler] streamText returned successfully');
+        
+        // Get response and add debugging for the stream
+        const response = result.toTextStreamResponse();
+        
+        // Wrap the original stream with debugging
+        const originalBody = response.body;
+        if (originalBody) {
+          const reader = originalBody.getReader();
+          const debugStream = new ReadableStream({
+            async start(controller) {
+              let chunkCount = 0;
+              let totalBytes = 0;
+              
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  
+                  if (done) {
+                    console.log(`[chat-handler] Stream complete. Received ${chunkCount} chunks, ${totalBytes} total bytes.`);
+                    
+                    // Add diagnostic for zero chunks with Anthropic
+                    if (chunkCount === 0 && provider === 'anthropic') {
+                      console.warn(`[chat-handler] Warning: No chunks received from Anthropic API.
+                        This could indicate:
+                        1. Anthropic API key issues - check the format (should start with sk-ant-)
+                        2. Model compatibility issues - using ${effectiveModel}
+                        3. CORS issues - check for network errors
+                        4. Empty response from Anthropic API`);
+                    }
+                    
+                    controller.close();
+                    break;
+                  }
+                  
+                  // Log chunk info
+                  chunkCount++;
+                  totalBytes += value.length;
+                  const text = new TextDecoder().decode(value, { stream: true });
+                  console.log(`[chat-handler] Stream chunk ${chunkCount}: ${value.length} bytes, text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
+                  
+                  // Forward chunk to new stream
+                  controller.enqueue(value);
+                }
+              } catch (error) {
+                console.error(`[chat-handler] Stream reading error:`, error);
+                controller.error(error);
+              }
+            }
+          });
+          
+          // Return a new response with the debug stream
+          return new Response(debugStream, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: response.headers
+          });
+        }
+        
+        return response;
+      } catch (streamError: unknown) {
+        console.error('[chat-handler] Error in streamText call:', streamError);
+        
+        // Try to extract meaningful error information
+        let errorMessage = 'An error occurred while processing your request';
+        let statusCode = 500;
+        
+        if (streamError instanceof Error) {
+          errorMessage = streamError.message;
+          
+          // Check for common API errors
+          if (errorMessage.includes('API key')) {
+            statusCode = 401;
+            errorMessage = 'Invalid API key. Please check your API key in the extension settings.';
+          } else if (errorMessage.includes('rate limit') || errorMessage.includes('quota')) {
+            statusCode = 429;
+            errorMessage = 'Rate limit exceeded. Please try again later.';
+          } else if (errorMessage.includes('CORS') || errorMessage.includes('fetch')) {
+            statusCode = 500;
+            errorMessage = 'CORS error: The extension cannot connect to the API directly. This is likely a configuration issue.';
+            console.error('[chat-handler] CORS error details:', streamError);
+          }
+        }
+        
+        return new Response(JSON.stringify({ 
+          error: 'Chat processing failed',
+          message: errorMessage
+        }), {
+          status: statusCode,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (error: any) {
+      console.error('Chat handler error:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Chat processing failed',
+        message: error instanceof Error ? error.message : 'Unknown error occurred' 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   } catch (error: any) {
     console.error('Chat handler error:', error);
     return new Response(JSON.stringify({ 
