@@ -23749,10 +23749,12 @@ async function handleChatRequest(messages, apiKey, provider, model) {
         if (provider === 'openai') {
             llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__.createOpenAI)({ apiKey });
             effectiveModel = model || DEFAULT_MODELS.openai;
+            console.log(`Using OpenAI provider with model: ${effectiveModel}`);
         }
         else if (provider === 'anthropic') {
             llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)({ apiKey });
             effectiveModel = model || DEFAULT_MODELS.anthropic;
+            console.log(`Using Anthropic provider with model: ${effectiveModel}`);
         }
         else {
             return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
@@ -23760,13 +23762,54 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 headers: { 'Content-Type': 'application/json' }
             });
         }
-        // Simplified message mapping for basic CoreMessage structure
+        // Message mapping that supports both string content and multi-modal content with parts
         const formattedMessages = messages
             .map((msg) => {
-            // Only include user, assistant, and system roles with simple string content
+            // Handle messages with simple string content
             if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') &&
                 typeof msg.content === 'string') {
                 return { role: msg.role, content: msg.content };
+            }
+            // Handle messages with parts (multi-modal content)
+            else if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') &&
+                msg.parts && Array.isArray(msg.parts)) {
+                // Log that we're processing a multi-modal message
+                console.log('Processing multi-modal message with parts:', msg.parts.length);
+                console.log('Multi-modal message parts types:', msg.parts.map(p => p.type).join(', '));
+                // Build an array of properly-typed parts
+                const formattedParts = [];
+                for (const part of msg.parts) {
+                    if (part.type === 'text' && part.text) {
+                        console.log('Processing text part:', part.text.substring(0, 50) + (part.text.length > 50 ? '...' : ''));
+                        formattedParts.push({ type: 'text', text: part.text });
+                    }
+                    else if (part.type === 'file' && part.mimeType?.startsWith('image/') && part.data) {
+                        console.log('Processing image attachment in message', {
+                            mimeType: part.mimeType,
+                            dataLength: part.data.length,
+                            dataPrefix: part.data.substring(0, 30) + '...'
+                        });
+                        // Ensure data URL format is correct (should start with data:image/...)
+                        let imageData = part.data;
+                        if (!imageData.startsWith('data:')) {
+                            imageData = `data:${part.mimeType || 'image/png'};base64,${part.data}`;
+                            console.log('Added proper data URL prefix to image');
+                        }
+                        formattedParts.push({
+                            type: 'image',
+                            image: imageData,
+                            mimeType: part.mimeType
+                        });
+                    }
+                }
+                // Only return if we have valid parts
+                if (formattedParts.length > 0) {
+                    console.log(`Created formatted message with ${formattedParts.length} parts:`, formattedParts.map(p => p.type).join(', '));
+                    return { role: msg.role, content: formattedParts };
+                }
+                else {
+                    console.warn('No valid parts found in multi-modal message');
+                }
             }
             console.warn('Filtering out message with incompatible role/content:', msg);
             return null;
@@ -24217,6 +24260,26 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 }
             },
         });
+        // Log the final messages being sent to AI provider
+        console.log(`[Chat Handler] Sending ${formattedMessages.length} messages to AI provider ${provider} (${effectiveModel})`);
+        // Log details of messages with image parts for debugging
+        formattedMessages.forEach((msg, idx) => {
+            if (Array.isArray(msg.content)) {
+                const partTypes = msg.content.map(p => p.type).join(', ');
+                console.log(`[Chat Handler] Message ${idx} (${msg.role}) contains parts: ${partTypes}`);
+                // Log image parts specifically
+                const imageParts = msg.content.filter(p => p.type === 'image');
+                if (imageParts.length > 0) {
+                    console.log(`[Chat Handler] Message ${idx} contains ${imageParts.length} image parts`);
+                    imageParts.forEach((p, i) => {
+                        console.log(`[Chat Handler] Image ${i + 1} data type: ${typeof p.image}, length: ${typeof p.image === 'string' ? p.image.substring(0, 50) + '...' : 'non-string'}`);
+                    });
+                }
+            }
+            else {
+                console.log(`[Chat Handler] Message ${idx} (${msg.role}): Simple string content`);
+            }
+        });
         // Use streamText for AI generation with tools
         const result = await (0,ai__WEBPACK_IMPORTED_MODULE_3__.streamText)({
             model: llmProvider(effectiveModel),
@@ -24230,7 +24293,8 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 screenshot: screenshotTool
             },
             maxSteps: 5, // Allow up to 5 steps
-            temperature: 0.2,
+            // Set high temperature for more creative responses with images
+            temperature: 0.7,
             // Enable experimental content for multi-modal tool responses (supported by Anthropic)
             experimental_enableToolContentInResult: true
         }); // Type assertion to avoid compile errors with experimental parameters
@@ -25626,11 +25690,67 @@ chrome.runtime.onConnect.addListener((newPort) => {
 async function handleChatMessage(message, port) {
     const requestId = `req_${Date.now()}`;
     console.log(`[${requestId}] Handling chat message...`);
+    // Log attachment information
+    if (message.attachments && message.attachments.length > 0) {
+        console.log(`[${requestId}] Message contains ${message.attachments.length} attachment(s)`);
+        message.attachments.forEach((att, index) => {
+            console.log(`[${requestId}] Attachment ${index + 1}: type=${att.type}, data length=${att.data ? att.data.length : 'undefined'}`);
+        });
+    }
+    else {
+        console.log(`[${requestId}] Message contains no attachments`);
+    }
     try {
-        const conversationMessages = message.messages || [{
-                role: 'user',
-                content: message.message
-            }];
+        let conversationMessages;
+        // If there are attachments, create a message with parts array
+        if (message.attachments && message.attachments.length > 0) {
+            const lastMessage = message.messages ? message.messages[message.messages.length - 1] : null;
+            // If we're adding to existing messages, replace the last user message with one that has parts
+            if (message.messages && message.messages.length > 0) {
+                // Copy all except the last message if it's a user message
+                conversationMessages = lastMessage && lastMessage.role === 'user'
+                    ? message.messages.slice(0, -1)
+                    : [...message.messages];
+                // Add a new user message with parts array
+                conversationMessages.push({
+                    role: 'user',
+                    parts: [
+                        { type: 'text', text: message.message || "Here's an image:" },
+                        ...message.attachments.map((img) => ({
+                            type: 'file',
+                            mimeType: img.mimeType || 'image/png',
+                            name: 'image.png',
+                            data: img.data,
+                            size: img.data.length
+                        }))
+                    ]
+                });
+            }
+            else {
+                // No existing messages, create new array with single user message
+                conversationMessages = [{
+                        role: 'user',
+                        parts: [
+                            { type: 'text', text: message.message || "Here's an image:" },
+                            ...message.attachments.map((img) => ({
+                                type: 'file',
+                                mimeType: img.mimeType || 'image/png',
+                                name: 'image.png',
+                                data: img.data,
+                                size: img.data.length
+                            }))
+                        ]
+                    }];
+            }
+            console.log(`[${requestId}] Created message with ${message.attachments.length} attachments in parts array`);
+        }
+        else {
+            // No attachments, proceed with normal message
+            conversationMessages = message.messages || [{
+                    role: 'user',
+                    content: message.message
+                }];
+        }
         console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
         // Get API key and provider from storage
         const apiConfig = await new Promise((resolve, reject) => {
@@ -25666,6 +25786,11 @@ async function handleChatMessage(message, port) {
                 error: 'API key not configured. Please configure it in the extension settings.'
             });
             return;
+        }
+        // Check if any messages have parts or attachments
+        const hasMultiModalContent = conversationMessages.some((msg) => msg.parts && Array.isArray(msg.parts));
+        if (hasMultiModalContent) {
+            console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
         }
         // Call the new handler which directly processes messages
         const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(conversationMessages, apiConfig.apiKey, apiConfig.provider, // Cast to Provider type

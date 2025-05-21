@@ -56,12 +56,24 @@ const processImageFile = (file: File): Promise<string> => {
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
-        resolve(e.target.result.toString());
+        const dataUrl = e.target.result.toString();
+        console.log(`Processed image: ${file.type}, size: ${file.size}, data URL length: ${dataUrl.length}`);
+        // Ensure data URL is properly formatted with correct MIME type
+        if (!dataUrl.startsWith('data:')) {
+          const formattedUrl = `data:${file.type || 'image/png'};base64,${dataUrl}`;
+          resolve(formattedUrl);
+        } else {
+          resolve(dataUrl);
+        }
       } else {
+        console.error('Reader result was null when processing image');
         reject(new Error('Failed to read image file'));
       }
     };
-    reader.onerror = () => reject(new Error('Error reading file'));
+    reader.onerror = (error) => {
+      console.error('Error reading image file:', error);
+      reject(new Error('Error reading file'));
+    };
     reader.readAsDataURL(file);
   });
 };
@@ -370,8 +382,15 @@ export function ChatUI() {
   const handleChatSubmit = useCallback(async (e?: React.FormEvent, options?: { experimental_attachments?: FileList }) => {
     e?.preventDefault();
     if ((!input.trim() && !options?.experimental_attachments?.length) || isLocalLoading || !port || !activeSessionId) {
-       if(!port) setError(new Error("Connection error: Cannot reach background service."));
+       if(!port) setError(new Error("Connection connection error: Cannot reach background service."));
        return;
+    }
+    
+    if (options?.experimental_attachments?.length) {
+      console.log(`Received ${options.experimental_attachments.length} attachments in handleChatSubmit`);
+      Array.from(options.experimental_attachments).forEach((file, i) => {
+        console.log(`Attachment ${i+1}: ${file.name}, ${file.type}, ${file.size} bytes`);
+      });
     }
 
     // Process any attached files
@@ -387,18 +406,36 @@ export function ChatUI() {
         for (const file of files) {
           // Check if it's an image
           if (file.type.startsWith('image/')) {
-            const dataUrl = await processImageFile(file);
-            imageAttachments.push({
-              type: 'image',
-              data: dataUrl
-            });
+            try {
+              const dataUrl = await processImageFile(file);
+              const mimeType = file.type || 'image/png';
+              console.log(`Adding image attachment: ${mimeType}, data URL prefix: ${dataUrl.substring(0, 30)}...`);
+              
+              // Add to both structures for compatibility
+              messageParts.push({
+                type: 'file' as const,
+                mimeType: mimeType,
+                name: file.name || 'image.png',
+                data: dataUrl,
+                size: file.size
+              });
+              
+              imageAttachments.push({
+                type: 'image',
+                mimeType: mimeType,
+                data: dataUrl
+              });
+              console.log(`Successfully added image attachment (${dataUrl.length} bytes)`);
+            } catch (error) {
+              console.error('Failed to process image file:', error);
+              setError(new Error(`Failed to process image: ${error instanceof Error ? error.message : String(error)}`));
+            }
           } else {
-            console.warn('Non-image file attachment not supported:', file.name);
+            console.log(`Unsupported file type: ${file.type}`);
           }
         }
-      } catch (error) {
-        console.error('Error processing file attachments:', error);
-        setError(new Error(`Error processing attachments: ${error instanceof Error ? error.message : String(error)}`));
+      } catch (e) {
+        console.error("Error processing file attachments:", e);
       }
     }
 
@@ -448,6 +485,12 @@ export function ChatUI() {
       messages: messagesForApi,
       attachments: imageAttachments.length > 0 ? imageAttachments : undefined
     };
+    
+    if (imageAttachments.length > 0) {
+      console.log(`Sending message with ${imageAttachments.length} image attachments`);
+      console.log(`Image attachments: ${imageAttachments.map(img => 
+        `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
+    }
     
     port.postMessage(messagePayload);
   }, [input, isLocalLoading, port, activeSessionId, sessions]);

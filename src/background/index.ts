@@ -1,8 +1,9 @@
 import { handleChatRequest } from './chat-handler';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
+import { Message, ExtensionMessage } from '../types/extension';
 
 // Types for messages between components
-interface Message {
+interface MessageBase {
   type: string;
   payload?: any;
   [key: string]: any; // Allow for additional properties
@@ -232,7 +233,7 @@ function pingContentScript(tabId: number, timeout = CONTENT_SCRIPT_PING_TIMEOUT)
 }
 
 // Handle messages from content script or side panel
-chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse) => {
   console.log('Background script received message:', message);
 
   switch (message.type) {
@@ -1088,12 +1089,69 @@ chrome.runtime.onConnect.addListener((newPort) => {
 async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   const requestId = `req_${Date.now()}`;
   console.log(`[${requestId}] Handling chat message...`);
+  
+  // Log attachment information
+  if (message.attachments && message.attachments.length > 0) {
+    console.log(`[${requestId}] Message contains ${message.attachments.length} attachment(s)`);
+    message.attachments.forEach((att: {type: string, mimeType?: string, data: string}, index: number) => {
+      console.log(`[${requestId}] Attachment ${index + 1}: type=${att.type}, data length=${att.data ? att.data.length : 'undefined'}`);
+    });
+  } else {
+    console.log(`[${requestId}] Message contains no attachments`);
+  }
     
   try {
-    const conversationMessages = message.messages || [{
-      role: 'user',
-      content: message.message
-    }];
+    let conversationMessages;
+    
+    // If there are attachments, create a message with parts array
+    if (message.attachments && message.attachments.length > 0) {
+      const lastMessage = message.messages ? message.messages[message.messages.length - 1] : null;
+      
+      // If we're adding to existing messages, replace the last user message with one that has parts
+      if (message.messages && message.messages.length > 0) {
+        // Copy all except the last message if it's a user message
+        conversationMessages = lastMessage && lastMessage.role === 'user' 
+          ? message.messages.slice(0, -1) 
+          : [...message.messages];
+          
+        // Add a new user message with parts array
+        conversationMessages.push({
+          role: 'user',
+          parts: [
+            { type: 'text', text: message.message || "Here's an image:" },
+            ...message.attachments.map((img: {type: string, mimeType?: string, data: string}) => ({
+              type: 'file',
+              mimeType: img.mimeType || 'image/png',
+              name: 'image.png',
+              data: img.data,
+              size: img.data.length
+            }))
+          ]
+        });
+      } else {
+        // No existing messages, create new array with single user message
+        conversationMessages = [{
+          role: 'user',
+          parts: [
+            { type: 'text', text: message.message || "Here's an image:" },
+            ...message.attachments.map((img: {type: string, mimeType?: string, data: string}) => ({
+              type: 'file',
+              mimeType: img.mimeType || 'image/png',
+              name: 'image.png',
+              data: img.data,
+              size: img.data.length
+            }))
+          ]
+        }];
+      }
+      console.log(`[${requestId}] Created message with ${message.attachments.length} attachments in parts array`);
+    } else {
+      // No attachments, proceed with normal message
+      conversationMessages = message.messages || [{
+        role: 'user',
+        content: message.message
+      }];
+    }
     
     console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
     
@@ -1138,6 +1196,12 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         error: 'API key not configured. Please configure it in the extension settings.'
       });
       return;
+    }
+    
+    // Check if any messages have parts or attachments
+    const hasMultiModalContent = conversationMessages.some((msg: any) => msg.parts && Array.isArray(msg.parts));
+    if (hasMultiModalContent) {
+      console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
     }
     
     // Call the new handler which directly processes messages
