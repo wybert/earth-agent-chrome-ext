@@ -8,6 +8,15 @@ interface Message {
   [key: string]: any; // Allow for additional properties
 }
 
+// Provider type for API providers
+type Provider = 'openai' | 'anthropic';
+
+// Store active port connections
+let port: chrome.runtime.Port | null = null;
+
+// Store connections from side panel ports with type safety
+const sidePanelPorts = new Map<string, chrome.runtime.Port>();
+
 // Store information about loaded content scripts
 const contentScriptTabs = new Map<number, boolean>();
 
@@ -309,24 +318,174 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
 
     // --- Handlers for Direct Earth Engine Tool Calls --- 
     case 'EDIT_SCRIPT':
-    case 'RUN_CODE':
-    case 'GET_MAP_LAYERS':
-    case 'INSPECT_MAP':
-    case 'CHECK_CONSOLE':
-    case 'GET_TASKS':
-      console.log(`Routing ${message.type} message to Earth Engine tab...`);
-      sendMessageToEarthEngineTab(message)
-          .then(response => {
-          sendResponse(response); // Forward the response from content script
-          })
-          .catch(error => {
-          console.error(`Error routing ${message.type} to EE tab:`, error);
-          sendResponse({ 
-            success: false, 
-            error: `Failed to execute ${message.type}: ${error instanceof Error ? error.message : String(error)}` 
+      // Forward to Earth Engine tab
+      (async () => {
+        try {
+          const response = await sendMessageToEarthEngineTab(message);
+          sendResponse(response);
+        } catch (error) {
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : String(error)
           });
-        });
-      return true; // Indicate asynchronous response
+        }
+      })();
+      return true; // Will respond asynchronously
+    
+    case 'CHAT_MESSAGE':
+      // Handle chat messages from the sidepanel
+      (async () => {
+        try {
+          console.log('Processing chat message');
+          
+          // Get API key/provider from storage
+          const config = await chrome.storage.local.get([
+            API_KEY_STORAGE_KEY,
+            OPENAI_API_KEY_STORAGE_KEY,
+            ANTHROPIC_API_KEY_STORAGE_KEY,
+            API_PROVIDER_STORAGE_KEY,
+            DEFAULT_MODEL_STORAGE_KEY
+          ]);
+          
+          // Determine provider and API key to use
+          const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
+          let apiKey = '';
+          
+          if (provider === 'openai') {
+            apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+          } else if (provider === 'anthropic') {
+            apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+          }
+          
+          const model = config[DEFAULT_MODEL_STORAGE_KEY];
+          
+          if (!apiKey) {
+            sendResponse({
+              type: 'ERROR',
+              error: 'API key not configured. Please set your API key in the extension settings.'
+            });
+            return;
+          }
+          
+          // Create a unique request ID for tracking
+          const requestId = Date.now().toString();
+          
+          // Process the chat messages
+          const chatMessages = message.messages || [];
+          
+          // Handle image attachments if present
+          if (message.attachments && message.attachments.length > 0) {
+            // Find the last user message and ensure it has parts
+            const lastUserMessageIndex = chatMessages.length - 1;
+            if (lastUserMessageIndex >= 0 && chatMessages[lastUserMessageIndex].role === 'user') {
+              // Convert the message to use parts if it doesn't have them already
+              if (!chatMessages[lastUserMessageIndex].parts) {
+                chatMessages[lastUserMessageIndex].parts = [
+                  { type: 'text', text: chatMessages[lastUserMessageIndex].content || '' }
+                ];
+              }
+              
+              // Add image parts
+              message.attachments.forEach((attachment: {type: string, data: string}) => {
+                if (attachment.type === 'image' && chatMessages[lastUserMessageIndex].parts) {
+                  chatMessages[lastUserMessageIndex].parts.push(attachment);
+                }
+              });
+            }
+          }
+          
+          try {
+            // Handle the chat request through the appropriate handler
+            const response = await handleChatRequest(
+              chatMessages,
+              apiKey,
+              provider as Provider,
+              model
+            );
+            
+            // Get response body as a readable stream
+            const reader = response.body?.getReader();
+            if (!reader) {
+              throw new Error('No readable stream available from response');
+            }
+            
+            // Stream the response back to the sender
+            let accumulatedResponse = '';
+            
+            // Use a loop to read all chunks from the stream
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              // Convert the chunk to text
+              const chunkText = new TextDecoder().decode(value);
+              accumulatedResponse += chunkText;
+              
+              // Forward the chunk to the sender - using proper API
+              if (sender.tab && sender.tab.id) {
+                chrome.tabs.sendMessage(sender.tab.id, {
+                  type: 'CHAT_STREAM_CHUNK',
+                  requestId,
+                  chunk: chunkText
+                });
+              } else if (port) {
+                // If this is from a port connection like sidebar
+                port.postMessage({
+                  type: 'CHAT_STREAM_CHUNK',
+                  requestId,
+                  chunk: chunkText
+                });
+              }
+            }
+            
+            // Send the end of stream notification
+            if (sender.tab && sender.tab.id) {
+              chrome.tabs.sendMessage(sender.tab.id, {
+                type: 'CHAT_STREAM_END',
+                requestId,
+                fullText: accumulatedResponse
+              });
+            } else if (port) {
+              // If this is from a port connection like sidebar
+              port.postMessage({
+                type: 'CHAT_STREAM_END',
+                requestId,
+                fullText: accumulatedResponse
+              });
+            }
+            
+          } catch (error: unknown) {
+            console.error('Error processing chat request:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Send error response using proper API
+            if (sender.tab && sender.tab.id) {
+              chrome.tabs.sendMessage(sender.tab.id, {
+                type: 'ERROR',
+                requestId,
+                error: `Chat request failed: ${errorMessage}`
+              });
+            } else if (port) {
+              // If this is from a port connection like sidebar
+              port.postMessage({
+                type: 'ERROR',
+                requestId,
+                error: `Chat request failed: ${errorMessage}`
+              });
+            }
+          }
+        } catch (error: unknown) {
+          console.error('Error handling chat message:', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          
+          // Send error response
+          sendResponse({
+            type: 'ERROR',
+            error: `Error handling chat message: ${errorMessage}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
     
     // Handle Context7 API requests
     case 'CONTEXT7_RESOLVE_LIBRARY_ID':
@@ -883,38 +1042,44 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) =>
 });
 
 // Listen for side panel connections
-chrome.runtime.onConnect.addListener((port) => {
-  if (port.name === 'sidepanel') {
+chrome.runtime.onConnect.addListener((newPort) => {
+  if (newPort.name === 'sidepanel') {
     console.log('Side panel connected');
+    // Store the port globally so it can be used by other message handlers
+    port = newPort;
     
-    port.onMessage.addListener(async (message: any) => {
+    newPort.onMessage.addListener(async (message: any) => {
       console.log('Received message from side panel:', message);
       
       // Handle side panel specific messages
       switch (message.type) {
         case 'INIT':
-          port.postMessage({ type: 'INIT_RESPONSE', status: 'initialized' });
+          newPort.postMessage({ type: 'INIT_RESPONSE', status: 'initialized' });
           break;
           
         case 'CHAT_MESSAGE':
           // Handle chat messages from side panel
-          handleChatMessage(message, port);
+          handleChatMessage(message, newPort);
           break;
           
         case 'PING':
           // Handle ping messages from side panel
           console.log('Received PING from side panel, responding with PONG');
-          port.postMessage({ type: 'PONG', timestamp: Date.now() });
+          newPort.postMessage({ type: 'PONG', timestamp: Date.now() });
           break;
           
         default:
           console.warn('Unknown side panel message type:', message.type);
-          port.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+          newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
       }
     });
 
-    port.onDisconnect.addListener(() => {
+    newPort.onDisconnect.addListener(() => {
       console.log('Side panel disconnected');
+      if (port === newPort) {
+        // Clear the global port reference when this port disconnects
+        port = null;
+      }
     });
   }
 });

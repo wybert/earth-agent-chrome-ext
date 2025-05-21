@@ -13,4 +13,6 @@ export interface ExtensionMessage {
   apiKey?: string;
   provider?: string;
   messages?: Array<{ id: string; role: string; content: string }>;
+  attachments?: Array<{ type: string; data: string }>; // Add support for image attachments
+  sender?: string;
 }

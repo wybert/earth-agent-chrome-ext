@@ -124,7 +124,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
       <div
         className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}
       >
-        {content ? (
+        {content && !message.parts?.length ? (
           <BubbleMessage content={content} isUser={isUser} actions={actions} />
         ) : null}
         {message.parts?.map((part, index) => {
@@ -134,15 +134,26 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                 key={index}
                 content={part.text}
                 isUser={isUser}
-                actions={actions}
+                actions={index === 0 ? actions : undefined}
+              />
+            )
+          } else if (part.type === "file") {
+            return (
+              <FilePreview
+                key={index}
+                file={part}
               />
             )
           } else if (part.type === "image") {
+            // Direct rendering for image parts
             return (
-              <div key={index} className="rounded-lg overflow-hidden max-w-[500px]">
+              <div key={index} className={cn(
+                "rounded-lg overflow-hidden max-w-[500px]",
+                isUser ? "ml-auto" : "mr-auto"
+              )}>
                 <img 
                   src={part.data} 
-                  alt="Screenshot" 
+                  alt="Uploaded image" 
                   className="w-full h-auto object-contain max-h-[400px]"
                   loading="lazy"
                 />
@@ -197,13 +208,6 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                   </>
                 )}
               </div>
-            )
-          } else if (part.type === "file") {
-            return (
-              <FilePreview
-                key={index}
-                file={part.file}
-              />
             )
           }
           // Handle other part types as needed
