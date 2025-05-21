@@ -1,4 +1,4 @@
-import { Message, CoreMessage, streamText, tool } from 'ai';
+import { Message, CoreMessage, streamText, tool, TextPart, ImagePart, FilePart } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
@@ -132,9 +132,11 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     if (provider === 'openai') {
       llmProvider = createOpenAI({ apiKey });
       effectiveModel = model || DEFAULT_MODELS.openai;
+      console.log(`Using OpenAI provider with model: ${effectiveModel}`);
     } else if (provider === 'anthropic') {
       llmProvider = createAnthropic({ apiKey });
       effectiveModel = model || DEFAULT_MODELS.anthropic;
+      console.log(`Using Anthropic provider with model: ${effectiveModel}`);
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
@@ -142,13 +144,59 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       });
     }
 
-    // Simplified message mapping for basic CoreMessage structure
+    // Message mapping that supports both string content and multi-modal content with parts
     const formattedMessages: CoreMessage[] = messages
       .map((msg): CoreMessage | null => {
-        // Only include user, assistant, and system roles with simple string content
+        // Handle messages with simple string content
         if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') && 
             typeof msg.content === 'string') {
           return { role: msg.role, content: msg.content };
+        }
+        // Handle messages with parts (multi-modal content)
+        else if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') && 
+                 msg.parts && Array.isArray(msg.parts)) {
+          
+          // Log that we're processing a multi-modal message
+          console.log('Processing multi-modal message with parts:', msg.parts.length);
+          console.log('Multi-modal message parts types:', msg.parts.map(p => p.type).join(', '));
+          
+          // Build an array of properly-typed parts
+          const formattedParts: (TextPart | ImagePart)[] = [];
+          
+          for (const part of msg.parts) {
+            if (part.type === 'text' && part.text) {
+              console.log('Processing text part:', part.text.substring(0, 50) + (part.text.length > 50 ? '...' : ''));
+              formattedParts.push({ type: 'text', text: part.text } as TextPart);
+            } else if (part.type === 'file' && part.mimeType?.startsWith('image/') && part.data) {
+              console.log('Processing image attachment in message', {
+                mimeType: part.mimeType,
+                dataLength: part.data.length,
+                dataPrefix: part.data.substring(0, 30) + '...'
+              });
+              
+              // Ensure data URL format is correct (should start with data:image/...)
+              let imageData = part.data;
+              if (!imageData.startsWith('data:')) {
+                imageData = `data:${part.mimeType || 'image/png'};base64,${part.data}`;
+                console.log('Added proper data URL prefix to image');
+              }
+              
+              formattedParts.push({ 
+                type: 'image', 
+                image: imageData,
+                mimeType: part.mimeType 
+              } as ImagePart);
+            }
+          }
+          
+          // Only return if we have valid parts
+          if (formattedParts.length > 0) {
+            console.log(`Created formatted message with ${formattedParts.length} parts:`, 
+              formattedParts.map(p => p.type).join(', '));
+            return { role: msg.role, content: formattedParts as any };
+          } else {
+            console.warn('No valid parts found in multi-modal message');
+          }
         }
         console.warn('Filtering out message with incompatible role/content:', msg);
         return null; 
@@ -634,6 +682,30 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       },
     });
 
+    // Log the final messages being sent to AI provider
+    console.log(`[Chat Handler] Sending ${formattedMessages.length} messages to AI provider ${provider} (${effectiveModel})`);
+    
+    // Log details of messages with image parts for debugging
+    formattedMessages.forEach((msg, idx) => {
+      if (Array.isArray(msg.content)) {
+        const partTypes = msg.content.map(p => p.type).join(', ');
+        console.log(`[Chat Handler] Message ${idx} (${msg.role}) contains parts: ${partTypes}`);
+        
+        // Log image parts specifically
+        const imageParts = msg.content.filter(p => p.type === 'image');
+        if (imageParts.length > 0) {
+          console.log(`[Chat Handler] Message ${idx} contains ${imageParts.length} image parts`);
+          imageParts.forEach((p: any, i) => {
+            console.log(`[Chat Handler] Image ${i+1} data type: ${typeof p.image}, length: ${
+              typeof p.image === 'string' ? p.image.substring(0, 50) + '...' : 'non-string'
+            }`);
+          });
+        }
+      } else {
+        console.log(`[Chat Handler] Message ${idx} (${msg.role}): Simple string content`);
+      }
+    });
+    
     // Use streamText for AI generation with tools
     const result = await streamText({
       model: llmProvider(effectiveModel), 
@@ -647,7 +719,8 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
         screenshot: screenshotTool
       },
       maxSteps: 5, // Allow up to 5 steps
-      temperature: 0.2,
+      // Set high temperature for more creative responses with images
+      temperature: 0.7,
       // Enable experimental content for multi-modal tool responses (supported by Anthropic)
       experimental_enableToolContentInResult: true
     } as any); // Type assertion to avoid compile errors with experimental parameters

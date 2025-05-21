@@ -1,4 +1,20 @@
 // Types for extension messaging
+export interface MessagePart {
+  type: string;
+  text?: string;
+  mimeType?: string;
+  name?: string;
+  data?: string;
+  size?: number;
+}
+
+export interface Message {
+  id?: string;
+  role: string;
+  content?: string;
+  parts?: MessagePart[];
+}
+
 export interface ExtensionMessage {
   type: string;
   payload?: any;
@@ -12,7 +28,8 @@ export interface ExtensionMessage {
   message?: string;
   apiKey?: string;
   provider?: string;
-  messages?: Array<{ id: string; role: string; content: string }>;
-  attachments?: Array<{ type: string; data: string }>; // Add support for image attachments
+  messages?: Message[];
+  attachments?: Array<{ type: string; mimeType?: string; data: string }>; // Support for image attachments
+  hasMultiModal?: boolean; // Flag to indicate multi-modal content
   sender?: string;
 }
