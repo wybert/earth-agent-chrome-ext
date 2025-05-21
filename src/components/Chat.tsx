@@ -50,6 +50,22 @@ const createWelcomeMessage = (): Message => ({
   content: 'Hello! I\'m your Earth Engine Assistant. How can I help you with Earth Engine today?'
 });
 
+// Helper function to handle image files
+const processImageFile = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        resolve(e.target.result.toString());
+      } else {
+        reject(new Error('Failed to read image file'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Error reading file'));
+    reader.readAsDataURL(file);
+  });
+};
+
 // Type for session data storage (Keep)
 interface ChatSessions {
   [sessionId: string]: Message[];
@@ -351,27 +367,88 @@ export function ChatUI() {
   };
 
   // Restore original submit handler using port
-  const handleChatSubmit = useCallback(async (e?: React.FormEvent) => {
+  const handleChatSubmit = useCallback(async (e?: React.FormEvent, options?: { experimental_attachments?: FileList }) => {
     e?.preventDefault();
-    if (!input.trim() || isLocalLoading || !port || !activeSessionId) {
+    if ((!input.trim() && !options?.experimental_attachments?.length) || isLocalLoading || !port || !activeSessionId) {
        if(!port) setError(new Error("Connection error: Cannot reach background service."));
        return;
     }
-    const userMessageContent = input.trim();
-    const newUserMessage: Message = { id: 'user-' + Date.now(), role: 'user', content: userMessageContent };
+
+    // Process any attached files
+    let messageParts = [];
+    let imageAttachments = [];
+    
+    // Handle file attachments if present
+    if (options?.experimental_attachments && options.experimental_attachments.length > 0) {
+      try {
+        const files = Array.from(options.experimental_attachments);
+        
+        // Process each file
+        for (const file of files) {
+          // Check if it's an image
+          if (file.type.startsWith('image/')) {
+            const dataUrl = await processImageFile(file);
+            imageAttachments.push({
+              type: 'image',
+              data: dataUrl
+            });
+          } else {
+            console.warn('Non-image file attachment not supported:', file.name);
+          }
+        }
+      } catch (error) {
+        console.error('Error processing file attachments:', error);
+        setError(new Error(`Error processing attachments: ${error instanceof Error ? error.message : String(error)}`));
+      }
+    }
+
+    // Create appropriate message structures
+    const userMessageId = 'user-' + Date.now();
+    
+    let newUserMessage: Message;
+    if (imageAttachments.length > 0) {
+      // If there are image attachments, create a message with parts
+      newUserMessage = {
+        id: userMessageId,
+        role: 'user',
+        content: input.trim() || "Here's an image:",
+        parts: [
+          { type: 'text', text: input.trim() || "Here's an image:" },
+          ...imageAttachments.map(img => ({
+            type: 'file' as const,
+            mimeType: 'image/png',
+            name: 'image.png',
+            data: img.data,
+            size: img.data.length
+          }))
+        ]
+      };
+    } else {
+      // Text-only message
+      newUserMessage = { 
+        id: userMessageId, 
+        role: 'user', 
+        content: input.trim() 
+      };
+    }
+    
     const assistantPlaceholder: Message = { id: 'assistant-placeholder-' + Date.now(), role: 'assistant', content: '' };
     setMessages(prev => [...prev, newUserMessage, assistantPlaceholder]);
     setInput('');
     setIsLocalLoading(true);
     setError(null);
+    
     const messagesForApi = sessions[activeSessionId]
       ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
       .concat(newUserMessage) || [newUserMessage];
+      
     const messagePayload: ExtensionMessage = {
-          type: 'CHAT_MESSAGE',
-          message: userMessageContent,
-          messages: messagesForApi
-        };
+      type: 'CHAT_MESSAGE',
+      message: input.trim(),
+      messages: messagesForApi,
+      attachments: imageAttachments.length > 0 ? imageAttachments : undefined
+    };
+    
     port.postMessage(messagePayload);
   }, [input, isLocalLoading, port, activeSessionId, sessions]);
 
@@ -406,7 +483,7 @@ export function ChatUI() {
       if (!port) return;
       port.postMessage({ type: 'CANCEL_STREAM' });
       setIsLocalLoading(false);
-      setMessages(prev => prev.filter(m => !m.id.startsWith('assistant-placeholder-')));
+      setMessages(prev => prev.filter((m) => !m.id.startsWith('assistant-placeholder-')));
   }, [port]);
 
   // Restore append (if needed, though likely unused with port logic)

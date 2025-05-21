@@ -23620,10 +23620,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   GEE_SYSTEM_PROMPT: () => (/* binding */ GEE_SYSTEM_PROMPT),
 /* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest)
 /* harmony export */ });
-/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
-/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
+/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
+/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+
 
 
 
@@ -23647,6 +23649,43 @@ Your capabilities:
 - Help troubleshoot Earth Engine code issues
 - Recommend appropriate datasets and methods for geospatial analysis
 - You can use tools to get the weather in a location
+- You can search for Earth Engine datasets and get documentation
+- You can insert JavaScript code directly into the Earth Engine code editor
+- You can execute JavaScript code in the Earth Engine environment
+- You can take a screenshot of the current browser tab and include it directly in your responses
+
+Workflow for map-related questions:
+1. When a user asks about creating a map, visualizing data, or needs geospatial analysis, ALWAYS use the earthEngineDataset tool FIRST to retrieve relevant dataset information
+2. Wait for the tool response to get dataset IDs, paths, and documentation
+3. Based on the retrieved information, craft appropriate code examples that correctly reference the dataset
+4. Provide a complete, working solution that includes proper dataset loading, processing, and visualization
+5. If the user reports issues or you need to see the visual output, consider using the screenshot tool to capture the current state of the map or console.
+
+Visual Assistance Workflow:
+1. When a user asks about what's on their map or to analyze current visual elements, use the screenshot tool
+2. The screenshot will be captured and included directly in your response
+3. You can then analyze what's visible in the image and provide context, explanations, or suggestions
+4. Use phrases like "As I can see in the screenshot..." when referring to visual elements
+5. When analyzing maps, point out relevant features like coastlines, urban areas, vegetation patterns, etc.
+
+Workflow for implementing code:
+1. When a user wants to implement/run code, first ensure the code is complete and correct
+2. You have TWO options for executing code:
+   a. Use the earthEngineScript tool to INSERT the code into the Google Earth Engine editor
+   b. Use the earthEngineRunCode tool to DIRECTLY RUN the code in the Earth Engine environment
+
+When to use earthEngineScript vs earthEngineRunCode:
+- Use earthEngineScript when the user wants to examine, modify, or save the code before running it
+- Use earthEngineRunCode when the user wants immediate results or to execute a quick test
+- If the user says "run this code" or "execute this", use earthEngineRunCode
+- If the user says "add this code" or "put this in the editor", use earthEngineScript
+- When uncertain, use earthEngineScript as it's less invasive
+
+Debugging Workflow:
+1. If a user reports an error after running code, ask for the specific error message.
+2. Check the code you provided for obvious syntax errors or logical flaws.
+3. If the error isn't clear, consider using the screenshot tool to see the GEE console output or map state.
+4. Based on the error message and potentially the screenshot, suggest corrections or alternative approaches.
 
 Instructions:
 - Always provide code within backticks: \`code\`
@@ -23656,6 +23695,11 @@ Instructions:
 - For complex topics, break down explanations step-by-step
 - If you're unsure about something, acknowledge limitations rather than providing incorrect information
 - When asked about weather, use the weather tool to get real-time information and format it nicely
+- When asked about Earth Engine datasets, use the earthEngineDataset tool to get up-to-date documentation
+- For ANY map or geospatial visualization request, FIRST use earthEngineDataset tool before providing code
+- When a user wants to implement your code suggestion, use the appropriate tool based on their intent
+- Use the screenshot tool judiciously when visual context is needed for debugging or understanding results.
+- When users ask you to "make a screenshot and tell me about what's going on", use the screenshot tool and analyze the image in your response
 
 Common Earth Engine patterns:
 - Image and collection loading: ee.Image(), ee.ImageCollection()
@@ -23664,6 +23708,19 @@ Common Earth Engine patterns:
 - Visualization: Map.addLayer(), ui.Map(), ui.Chart()
 - Classification: .classify(), ee.Classifier.randomForest()
 - Exporting: Export.image.toDrive(), Export.table.toAsset()
+
+Dataset-Driven Code Examples:
+- After retrieving dataset information using the earthEngineDataset tool, include the exact dataset ID/path in your code
+- Match your code examples to the specific bands, properties, and structure of the dataset
+- Include appropriate visualization parameters based on the dataset type
+- Reference key metadata like resolution, time range, and units when available
+
+Code Implementation:
+- When a user asks to implement a code example, offer to insert it directly using the earthEngineScript tool
+- When a user asks to run or execute code immediately, use the earthEngineRunCode tool
+- Before inserting or running, ensure the code is complete, properly formatted and includes all necessary imports
+- Always offer to help troubleshoot any errors that may occur when running the inserted code
+- If a user is asked to "try this code", automatically offer to insert or run it for them
 
 Speak in a helpful, educational tone while providing practical guidance for Earth Engine tasks.`;
 /**
@@ -23690,11 +23747,11 @@ async function handleChatRequest(messages, apiKey, provider, model) {
         let llmProvider;
         let effectiveModel;
         if (provider === 'openai') {
-            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_0__.createOpenAI)({ apiKey });
+            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__.createOpenAI)({ apiKey });
             effectiveModel = model || DEFAULT_MODELS.openai;
         }
         else if (provider === 'anthropic') {
-            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_1__.createAnthropic)({ apiKey });
+            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)({ apiKey });
             effectiveModel = model || DEFAULT_MODELS.anthropic;
         }
         else {
@@ -23716,10 +23773,10 @@ async function handleChatRequest(messages, apiKey, provider, model) {
         })
             .filter((msg) => msg !== null);
         // Define the weather tool using the AI SDK tool format
-        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_2__.tool)({
+        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
             description: 'Get the weather in a location',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
-                location: zod__WEBPACK_IMPORTED_MODULE_3__.z.string().describe('The location to get the weather for'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({
+                location: zod__WEBPACK_IMPORTED_MODULE_4__.z.string().describe('The location to get the weather for'),
             }),
             execute: async ({ location }) => {
                 // Simulate weather data
@@ -23732,17 +23789,451 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 };
             },
         });
+        // Define Earth Engine dataset documentation tool
+        const earthEngineDatasetTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
+            description: 'Get information about Earth Engine datasets including documentation and code examples',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({
+                datasetQuery: zod__WEBPACK_IMPORTED_MODULE_4__.z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
+            }),
+            execute: async ({ datasetQuery }) => {
+                try {
+                    console.log(`🌍 [EarthEngineDatasetTool] Tool called with query: "${datasetQuery}"`);
+                    console.time('EarthEngineDatasetTool execution');
+                    // Use the Context7 getDocumentation function to fetch dataset information
+                    // The Earth Engine dataset catalog is stored in wybert/earthengine-dataset-catalog-md
+                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_0__.getDocumentation)('wybert/earthengine-dataset-catalog-md', datasetQuery, { tokens: 15000 } // Get a good amount of content
+                    );
+                    console.timeEnd('EarthEngineDatasetTool execution');
+                    if (!result.success || !result.content) {
+                        console.warn(`❌ [EarthEngineDatasetTool] No results found for "${datasetQuery}". Error: ${result.message}`);
+                        return {
+                            found: false,
+                            message: result.message || `Could not find documentation for "${datasetQuery}"`,
+                            suggestion: "Try a more general search term or check the spelling of the dataset name."
+                        };
+                    }
+                    console.log(`✅ [EarthEngineDatasetTool] Found documentation for "${datasetQuery}". Content length: ${result.content.length} chars`);
+                    return {
+                        found: true,
+                        query: datasetQuery,
+                        documentation: result.content,
+                        message: `Documentation found for Earth Engine dataset related to "${datasetQuery}"`
+                    };
+                }
+                catch (error) {
+                    console.error(`❌ [EarthEngineDatasetTool] Error fetching Earth Engine dataset info:`, error);
+                    return {
+                        found: false,
+                        message: `Error retrieving Earth Engine dataset information: ${error instanceof Error ? error.message : String(error)}`,
+                        suggestion: "Try again with a different dataset name or more specific query."
+                    };
+                }
+            },
+        });
+        // Define Earth Engine script editor tool
+        const earthEngineScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
+            description: 'Insert JavaScript code into the Google Earth Engine code editor',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({
+                scriptId: zod__WEBPACK_IMPORTED_MODULE_4__.z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
+                code: zod__WEBPACK_IMPORTED_MODULE_4__.z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
+            }),
+            execute: async ({ scriptId, code }) => {
+                try {
+                    console.log(`🔧 [EarthEngineScriptTool] Tool called to edit script "${scriptId}"`);
+                    console.time('EarthEngineScriptTool execution');
+                    const targetScriptId = scriptId === 'current' ? 'current_editor' : scriptId;
+                    // Check if Chrome tabs API is available
+                    if (typeof chrome === 'undefined' || !chrome.tabs) {
+                        console.warn('❌ [EarthEngineScriptTool] Chrome tabs API not available');
+                        return {
+                            success: false,
+                            error: 'Cannot edit Earth Engine scripts: Extension context not available',
+                            suggestion: "This operation requires running in a Chrome extension environment"
+                        };
+                    }
+                    // Find the Earth Engine tab
+                    const earthEngineTabs = await new Promise((resolve) => {
+                        chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                            resolve(tabs || []);
+                        });
+                    });
+                    if (earthEngineTabs.length === 0) {
+                        console.warn('❌ [EarthEngineScriptTool] No Earth Engine tab found');
+                        return {
+                            success: false,
+                            error: 'No Earth Engine tab found',
+                            suggestion: "Please open Google Earth Engine in a browser tab first"
+                        };
+                    }
+                    const tabId = earthEngineTabs[0].id;
+                    if (!tabId) {
+                        console.warn('❌ [EarthEngineScriptTool] Invalid Earth Engine tab');
+                        return {
+                            success: false,
+                            error: 'Invalid Earth Engine tab',
+                            suggestion: "Please reload your Earth Engine tab and try again"
+                        };
+                    }
+                    console.log(`🔧 [EarthEngineScriptTool] Found Earth Engine tab: ${tabId}`);
+                    // Check/inject content script
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Content script ping timed out')), 300);
+                            chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                                clearTimeout(timeout);
+                                if (chrome.runtime.lastError) {
+                                    reject(new Error(chrome.runtime.lastError.message || 'Error pinging content script'));
+                                }
+                                else {
+                                    resolve();
+                                }
+                            });
+                        });
+                        console.log(`🔧 [EarthEngineScriptTool] Content script ready`);
+                    }
+                    catch (pingError) {
+                        const errorMessage = pingError instanceof Error ? pingError.message : String(pingError);
+                        console.log(`🔧 [EarthEngineScriptTool] Content script not ready: ${errorMessage}, injecting...`);
+                        try {
+                            await new Promise((resolve, reject) => {
+                                chrome.scripting.executeScript({
+                                    target: { tabId },
+                                    files: ['content.js']
+                                }, (results) => {
+                                    if (chrome.runtime.lastError) {
+                                        reject(new Error(chrome.runtime.lastError.message || 'Failed to inject content script'));
+                                    }
+                                    else {
+                                        setTimeout(resolve, 500); // Wait for script init
+                                    }
+                                });
+                            });
+                            console.log(`🔧 [EarthEngineScriptTool] Content script injected successfully`);
+                        }
+                        catch (injectError) {
+                            const injectErrorMessage = injectError instanceof Error ? injectError.message : String(injectError);
+                            console.warn(`❌ [EarthEngineScriptTool] Failed to inject content script: ${injectErrorMessage}`);
+                            return {
+                                success: false,
+                                error: `Content script not available: ${injectErrorMessage}`,
+                                suggestion: "Try refreshing the Earth Engine tab and ensure the extension has permission"
+                            };
+                        }
+                    }
+                    // Send message to content script
+                    const result = await new Promise((resolve) => {
+                        chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: targetScriptId, content: code }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
+                            }
+                            else {
+                                resolve(response || { success: false, error: 'No response from content script' });
+                            }
+                        });
+                    });
+                    console.timeEnd('EarthEngineScriptTool execution');
+                    if (!result.success) {
+                        console.warn(`❌ [EarthEngineScriptTool] Failed to edit script via content script: ${result.error}`);
+                        return {
+                            success: false,
+                            error: result.error || 'Unknown error editing script',
+                            suggestion: "Check content script logs or ensure EE tab is active."
+                        };
+                    }
+                    console.log(`✅ [EarthEngineScriptTool] Successfully edited script "${targetScriptId}"`);
+                    return {
+                        success: true,
+                        scriptId: targetScriptId,
+                        message: result.message || `Successfully inserted code into Earth Engine script "${targetScriptId}"`,
+                        nextSteps: "You can now run the script in Earth Engine by clicking the 'Run' button"
+                    };
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`❌ [EarthEngineScriptTool] Unexpected error:`, error);
+                    return {
+                        success: false,
+                        error: `Unexpected error in EarthEngineScriptTool: ${errorMessage}`,
+                        suggestion: "Check background script logs for more details"
+                    };
+                }
+            },
+        });
+        // Define Earth Engine code runner tool
+        const earthEngineRunCodeTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
+            description: 'Run JavaScript code in the Google Earth Engine code editor',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({
+                code: zod__WEBPACK_IMPORTED_MODULE_4__.z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
+            }),
+            execute: async ({ code }) => {
+                try {
+                    console.log(`🏃 [EarthEngineRunCodeTool] Tool called to run code`);
+                    console.time('EarthEngineRunCodeTool execution');
+                    // Check if Chrome tabs API is available
+                    if (typeof chrome === 'undefined' || !chrome.tabs) {
+                        console.warn('❌ [EarthEngineRunCodeTool] Chrome tabs API not available');
+                        return {
+                            success: false,
+                            error: 'Cannot run Earth Engine code: Extension context not available',
+                            suggestion: "This operation requires running in a Chrome extension environment"
+                        };
+                    }
+                    // Find the Earth Engine tab
+                    const earthEngineTabs = await new Promise((resolve) => {
+                        chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                            resolve(tabs || []);
+                        });
+                    });
+                    if (earthEngineTabs.length === 0) {
+                        console.warn('❌ [EarthEngineRunCodeTool] No Earth Engine tab found');
+                        return {
+                            success: false,
+                            error: 'No Earth Engine tab found',
+                            suggestion: "Please open Google Earth Engine in a browser tab first"
+                        };
+                    }
+                    const tabId = earthEngineTabs[0].id;
+                    if (!tabId) {
+                        console.warn('❌ [EarthEngineRunCodeTool] Invalid Earth Engine tab');
+                        return {
+                            success: false,
+                            error: 'Invalid Earth Engine tab',
+                            suggestion: "Please reload your Earth Engine tab and try again"
+                        };
+                    }
+                    console.log(`🏃 [EarthEngineRunCodeTool] Found Earth Engine tab: ${tabId}`);
+                    // Check/inject content script
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Content script ping timed out')), 300);
+                            chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                                clearTimeout(timeout);
+                                if (chrome.runtime.lastError) {
+                                    reject(new Error(chrome.runtime.lastError.message || 'Error pinging content script'));
+                                }
+                                else {
+                                    resolve();
+                                }
+                            });
+                        });
+                        console.log(`🏃 [EarthEngineRunCodeTool] Content script ready`);
+                    }
+                    catch (pingError) {
+                        const errorMessage = pingError instanceof Error ? pingError.message : String(pingError);
+                        console.log(`🏃 [EarthEngineRunCodeTool] Content script not ready: ${errorMessage}, injecting...`);
+                        try {
+                            await new Promise((resolve, reject) => {
+                                chrome.scripting.executeScript({
+                                    target: { tabId },
+                                    files: ['content.js']
+                                }, (results) => {
+                                    if (chrome.runtime.lastError) {
+                                        reject(new Error(chrome.runtime.lastError.message || 'Failed to inject content script'));
+                                    }
+                                    else {
+                                        setTimeout(resolve, 500); // Wait for script init
+                                    }
+                                });
+                            });
+                            console.log(`🏃 [EarthEngineRunCodeTool] Content script injected successfully`);
+                        }
+                        catch (injectError) {
+                            const injectErrorMessage = injectError instanceof Error ? injectError.message : String(injectError);
+                            console.warn(`❌ [EarthEngineRunCodeTool] Failed to inject content script: ${injectErrorMessage}`);
+                            return {
+                                success: false,
+                                error: `Content script not available: ${injectErrorMessage}`,
+                                suggestion: "Try refreshing the Earth Engine tab and ensure the extension has permission"
+                            };
+                        }
+                    }
+                    // Send message to content script
+                    const result = await new Promise((resolve) => {
+                        chrome.tabs.sendMessage(tabId, { type: 'RUN_CODE', code }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
+                            }
+                            else {
+                                resolve(response || { success: false, error: 'No response from content script' });
+                            }
+                        });
+                    });
+                    console.timeEnd('EarthEngineRunCodeTool execution');
+                    if (!result.success) {
+                        console.warn(`❌ [EarthEngineRunCodeTool] Failed to run code via content script: ${result.error}`);
+                        return {
+                            success: false,
+                            error: result.error || 'Unknown error running code',
+                            suggestion: "Check content script logs or ensure EE tab is active."
+                        };
+                    }
+                    console.log(`✅ [EarthEngineRunCodeTool] Successfully ran code with result: ${result.result || 'No result returned'}`);
+                    return {
+                        success: true,
+                        result: result.result || 'Code executed successfully',
+                        message: 'Earth Engine code executed successfully',
+                        nextSteps: "Check the Earth Engine console for any output or results"
+                    };
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`❌ [EarthEngineRunCodeTool] Unexpected error:`, error);
+                    return {
+                        success: false,
+                        error: `Unexpected error in EarthEngineRunCodeTool: ${errorMessage}`,
+                        suggestion: "Check background script logs for more details"
+                    };
+                }
+            },
+        });
+        // Define Screenshot tool
+        const screenshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
+            description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({}), // No parameters needed
+            execute: async () => {
+                try {
+                    console.log(`📸 [ScreenshotTool] Tool called`);
+                    console.time('ScreenshotTool execution');
+                    // Check if Chrome tabs API is available
+                    if (typeof chrome === 'undefined' || !chrome.tabs) {
+                        console.warn('❌ [ScreenshotTool] Chrome tabs API not available');
+                        return {
+                            success: false,
+                            error: 'Cannot take screenshots: Extension context not available',
+                        };
+                    }
+                    // Get the active tab in the current window
+                    const tabs = await new Promise((resolve) => {
+                        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                            resolve(tabs || []);
+                        });
+                    });
+                    if (!tabs || tabs.length === 0) {
+                        console.warn('❌ [ScreenshotTool] No active tab found');
+                        return {
+                            success: false,
+                            error: 'No active tab found',
+                        };
+                    }
+                    const activeTab = tabs[0];
+                    if (!activeTab.id || !activeTab.windowId) {
+                        console.warn('❌ [ScreenshotTool] Invalid active tab information');
+                        return {
+                            success: false,
+                            error: 'Could not get active tab information',
+                        };
+                    }
+                    console.log(`📸 [ScreenshotTool] Capturing visible area of tab ${activeTab.id}`);
+                    // Capture the visible tab area with reduced quality
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        chrome.tabs.captureVisibleTab(activeTab.windowId, { format: 'jpeg', quality: 50 }, (dataUrl) => {
+                            if (chrome.runtime.lastError) {
+                                reject(new Error(chrome.runtime.lastError.message || 'Unknown error capturing tab'));
+                            }
+                            else if (!dataUrl) {
+                                reject(new Error('captureVisibleTab returned empty data URL'));
+                            }
+                            else {
+                                resolve(dataUrl);
+                            }
+                        });
+                    });
+                    // Resize the image in the active tab's content script
+                    let resizedDataUrl = dataUrl;
+                    try {
+                        if (activeTab.id) {
+                            // Inject and execute the resizing script in the active tab
+                            const results = await chrome.scripting.executeScript({
+                                target: { tabId: activeTab.id },
+                                func: (imgSrc, maxWidth) => {
+                                    return new Promise((resolve, reject) => {
+                                        const img = new Image();
+                                        img.onload = () => {
+                                            const canvas = document.createElement('canvas');
+                                            let width = img.width;
+                                            let height = img.height;
+                                            // Calculate new dimensions while maintaining aspect ratio
+                                            if (width > maxWidth) {
+                                                const ratio = maxWidth / width;
+                                                width = maxWidth;
+                                                height = Math.floor(height * ratio);
+                                            }
+                                            canvas.width = width;
+                                            canvas.height = height;
+                                            const ctx = canvas.getContext('2d');
+                                            if (!ctx) {
+                                                reject('Could not get canvas context');
+                                                return;
+                                            }
+                                            // Draw and compress
+                                            ctx.drawImage(img, 0, 0, width, height);
+                                            // Return as JPEG with reduced quality
+                                            const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
+                                            resolve(resizedDataUrl);
+                                        };
+                                        img.onerror = () => reject('Error loading image for resizing');
+                                        img.src = imgSrc;
+                                    });
+                                },
+                                args: [dataUrl, 640] // Limit width to 640px max
+                            });
+                            if (results && results[0] && results[0].result) {
+                                resizedDataUrl = results[0].result;
+                                console.log(`📸 [ScreenshotTool] Successfully resized image: ${resizedDataUrl.length} bytes`);
+                            }
+                        }
+                    }
+                    catch (resizeError) {
+                        console.warn(`📸 [ScreenshotTool] Error resizing image:`, resizeError);
+                        // Continue with original image if resize fails
+                    }
+                    console.timeEnd('ScreenshotTool execution');
+                    console.log(`✅ [ScreenshotTool] Screenshot captured (data URL length: ${resizedDataUrl.length})`);
+                    // Return multi-modal response with both text and image
+                    return {
+                        success: true,
+                        message: 'Screenshot captured successfully.',
+                        screenshotDataUrl: resizedDataUrl,
+                        content: [
+                            {
+                                type: 'text',
+                                text: 'Here is the screenshot of the current browser tab:'
+                            },
+                            {
+                                type: 'image',
+                                data: resizedDataUrl
+                            }
+                        ]
+                    };
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`❌ [ScreenshotTool] Error capturing screenshot:`, error);
+                    console.timeEnd('ScreenshotTool execution'); // Ensure timeEnd is called on error
+                    return {
+                        success: false,
+                        error: `Error taking screenshot: ${errorMessage}`,
+                    };
+                }
+            },
+        });
         // Use streamText for AI generation with tools
-        const result = await (0,ai__WEBPACK_IMPORTED_MODULE_2__.streamText)({
+        const result = await (0,ai__WEBPACK_IMPORTED_MODULE_3__.streamText)({
             model: llmProvider(effectiveModel),
             system: GEE_SYSTEM_PROMPT,
             messages: formattedMessages,
             tools: {
-                weather: weatherTool
+                weather: weatherTool,
+                earthEngineDataset: earthEngineDatasetTool,
+                earthEngineScript: earthEngineScriptTool,
+                earthEngineRunCode: earthEngineRunCodeTool,
+                screenshot: screenshotTool
             },
             maxSteps: 5, // Allow up to 5 steps
-            temperature: 0.2
-        });
+            temperature: 0.2,
+            // Enable experimental content for multi-modal tool responses (supported by Anthropic)
+            experimental_enableToolContentInResult: true
+        }); // Type assertion to avoid compile errors with experimental parameters
         // Convert to text stream response
         return result.toTextStreamResponse();
     }
@@ -24188,6 +24679,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
 
 
+// Store active port connections
+let port = null;
+// Store connections from side panel ports with type safety
+const sidePanelPorts = new Map();
 // Store information about loaded content scripts
 const contentScriptTabs = new Map();
 // Timing constants
@@ -24195,7 +24690,9 @@ const CONTENT_SCRIPT_PING_TIMEOUT = 5000; // 5 seconds
 const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
 const MAX_TAB_ACTION_RETRIES = 3;
 // API configuration storage keys
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Handle extension icon click
@@ -24378,7 +24875,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'INIT':
             // Handle initialization
             sendResponse({ status: 'initialized' });
-            break;
+            return false; // Synchronous response
+        case 'CONTENT_SCRIPT_LOADED':
+            // Mark content script as loaded for the specific tab
+            if (sender.tab && sender.tab.id) {
+                console.log(`Content script loaded and registered for tab ${sender.tab.id}`);
+                contentScriptTabs.set(sender.tab.id, true);
+                sendResponse({ success: true, message: 'Content script registered' });
+            }
+            else {
+                console.warn('Received CONTENT_SCRIPT_LOADED without tab info');
+                sendResponse({ success: false, error: 'Missing tab information' });
+            }
+            return false; // Synchronous response
+        case 'CONTENT_SCRIPT_HEARTBEAT':
+            // Acknowledge heartbeat from content script
+            console.log('Received heartbeat from content script', sender.tab?.id);
+            sendResponse({ success: true, message: 'Heartbeat acknowledged' });
+            return false; // Synchronous response
         case 'VALIDATE_SERVER':
             if (message.payload && message.payload.host && message.payload.port) {
                 validateServerIdentity(message.payload.host, message.payload.port)
@@ -24390,28 +24904,195 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 });
                 return true; // Will respond asynchronously
             }
-            break;
+            sendResponse({ isValid: false, error: 'Invalid payload for VALIDATE_SERVER' });
+            return false; // Synchronous response
         case 'API_REQUEST':
-            // Handle API requests directly
+            // Handle API requests directly (e.g., proxied chat requests if needed)
             if (message.payload && message.payload.endpoint === '/api/chat') {
                 (async () => {
                     try {
-                        const body = await (new Request(message.payload.url, {
-                            method: 'POST',
-                            headers: message.payload.headers || {},
-                            body: message.payload.body ? JSON.stringify(message.payload.body) : undefined
-                        })).json();
-                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(body.messages, body.apiKey, body.provider, body.model);
-                        const responseData = await response.json();
+                        // Get API key/provider from storage
+                        const config = await chrome.storage.local.get([
+                            API_KEY_STORAGE_KEY,
+                            API_PROVIDER_STORAGE_KEY,
+                            DEFAULT_MODEL_STORAGE_KEY
+                        ]);
+                        const apiKey = config[API_KEY_STORAGE_KEY];
+                        const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
+                        const model = config[DEFAULT_MODEL_STORAGE_KEY];
+                        if (!apiKey) {
+                            throw new Error('API key not found in storage');
+                        }
+                        const body = message.payload.body || {};
+                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(body.messages, apiKey, provider, model);
+                        // Stream the response back? Requires careful handling
+                        // For simplicity, let's assume non-streaming for direct API calls for now
+                        const responseData = await response.json(); // Or handle stream appropriately
                         sendResponse({ success: true, data: responseData });
                     }
                     catch (error) {
-                        sendResponse({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        console.error('Error handling proxied API request:', error);
+                        sendResponse({ success: false, error: `API request failed: ${errorMessage}` });
                     }
                 })();
                 return true; // Will respond asynchronously
             }
-            break;
+            sendResponse({ success: false, error: 'Invalid API_REQUEST payload' });
+            return false; // Synchronous response
+        // --- Handlers for Direct Earth Engine Tool Calls --- 
+        case 'EDIT_SCRIPT':
+            // Forward to Earth Engine tab
+            (async () => {
+                try {
+                    const response = await sendMessageToEarthEngineTab(message);
+                    sendResponse(response);
+                }
+                catch (error) {
+                    sendResponse({
+                        success: false,
+                        error: error instanceof Error ? error.message : String(error)
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'CHAT_MESSAGE':
+            // Handle chat messages from the sidepanel
+            (async () => {
+                try {
+                    console.log('Processing chat message');
+                    // Get API key/provider from storage
+                    const config = await chrome.storage.local.get([
+                        API_KEY_STORAGE_KEY,
+                        OPENAI_API_KEY_STORAGE_KEY,
+                        ANTHROPIC_API_KEY_STORAGE_KEY,
+                        API_PROVIDER_STORAGE_KEY,
+                        DEFAULT_MODEL_STORAGE_KEY
+                    ]);
+                    // Determine provider and API key to use
+                    const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
+                    let apiKey = '';
+                    if (provider === 'openai') {
+                        apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+                    }
+                    else if (provider === 'anthropic') {
+                        apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+                    }
+                    const model = config[DEFAULT_MODEL_STORAGE_KEY];
+                    if (!apiKey) {
+                        sendResponse({
+                            type: 'ERROR',
+                            error: 'API key not configured. Please set your API key in the extension settings.'
+                        });
+                        return;
+                    }
+                    // Create a unique request ID for tracking
+                    const requestId = Date.now().toString();
+                    // Process the chat messages
+                    const chatMessages = message.messages || [];
+                    // Handle image attachments if present
+                    if (message.attachments && message.attachments.length > 0) {
+                        // Find the last user message and ensure it has parts
+                        const lastUserMessageIndex = chatMessages.length - 1;
+                        if (lastUserMessageIndex >= 0 && chatMessages[lastUserMessageIndex].role === 'user') {
+                            // Convert the message to use parts if it doesn't have them already
+                            if (!chatMessages[lastUserMessageIndex].parts) {
+                                chatMessages[lastUserMessageIndex].parts = [
+                                    { type: 'text', text: chatMessages[lastUserMessageIndex].content || '' }
+                                ];
+                            }
+                            // Add image parts
+                            message.attachments.forEach((attachment) => {
+                                if (attachment.type === 'image' && chatMessages[lastUserMessageIndex].parts) {
+                                    chatMessages[lastUserMessageIndex].parts.push(attachment);
+                                }
+                            });
+                        }
+                    }
+                    try {
+                        // Handle the chat request through the appropriate handler
+                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(chatMessages, apiKey, provider, model);
+                        // Get response body as a readable stream
+                        const reader = response.body?.getReader();
+                        if (!reader) {
+                            throw new Error('No readable stream available from response');
+                        }
+                        // Stream the response back to the sender
+                        let accumulatedResponse = '';
+                        // Use a loop to read all chunks from the stream
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done)
+                                break;
+                            // Convert the chunk to text
+                            const chunkText = new TextDecoder().decode(value);
+                            accumulatedResponse += chunkText;
+                            // Forward the chunk to the sender - using proper API
+                            if (sender.tab && sender.tab.id) {
+                                chrome.tabs.sendMessage(sender.tab.id, {
+                                    type: 'CHAT_STREAM_CHUNK',
+                                    requestId,
+                                    chunk: chunkText
+                                });
+                            }
+                            else if (port) {
+                                // If this is from a port connection like sidebar
+                                port.postMessage({
+                                    type: 'CHAT_STREAM_CHUNK',
+                                    requestId,
+                                    chunk: chunkText
+                                });
+                            }
+                        }
+                        // Send the end of stream notification
+                        if (sender.tab && sender.tab.id) {
+                            chrome.tabs.sendMessage(sender.tab.id, {
+                                type: 'CHAT_STREAM_END',
+                                requestId,
+                                fullText: accumulatedResponse
+                            });
+                        }
+                        else if (port) {
+                            // If this is from a port connection like sidebar
+                            port.postMessage({
+                                type: 'CHAT_STREAM_END',
+                                requestId,
+                                fullText: accumulatedResponse
+                            });
+                        }
+                    }
+                    catch (error) {
+                        console.error('Error processing chat request:', error);
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        // Send error response using proper API
+                        if (sender.tab && sender.tab.id) {
+                            chrome.tabs.sendMessage(sender.tab.id, {
+                                type: 'ERROR',
+                                requestId,
+                                error: `Chat request failed: ${errorMessage}`
+                            });
+                        }
+                        else if (port) {
+                            // If this is from a port connection like sidebar
+                            port.postMessage({
+                                type: 'ERROR',
+                                requestId,
+                                error: `Chat request failed: ${errorMessage}`
+                            });
+                        }
+                    }
+                }
+                catch (error) {
+                    console.error('Error handling chat message:', error);
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    // Send error response
+                    sendResponse({
+                        type: 'ERROR',
+                        error: `Error handling chat message: ${errorMessage}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
         // Handle Context7 API requests
         case 'CONTEXT7_RESOLVE_LIBRARY_ID':
             (async () => {
@@ -24487,114 +25168,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
             })();
             return true; // Will respond asynchronously
-        // Earth Engine Tool Handlers
-        case 'RUN_CODE':
-            (async () => {
-                try {
-                    console.log('Running Earth Engine code, length:', message.code?.length || 0);
-                    console.log('Code snippet:', message.code?.substring(0, 50) + '...');
-                    const response = await sendMessageToEarthEngineTab(message);
-                    console.log('Code execution response:', response);
-                    sendResponse(response);
-                }
-                catch (error) {
-                    console.error('Error running Earth Engine code:', error);
-                    sendResponse({
-                        success: false,
-                        error: `Error running Earth Engine code: ${error instanceof Error ? error.message : String(error)}`
-                    });
-                }
-            })();
-            return true; // Will respond asynchronously
-        case 'INSPECT_MAP':
-            (async () => {
-                try {
-                    console.log('Inspecting Earth Engine map at coordinates:', message.coordinates);
-                    const response = await sendMessageToEarthEngineTab(message);
-                    console.log('Map inspection response:', response);
-                    sendResponse(response);
-                }
-                catch (error) {
-                    console.error('Error inspecting Earth Engine map:', error);
-                    sendResponse({
-                        success: false,
-                        error: `Error inspecting Earth Engine map: ${error instanceof Error ? error.message : String(error)}`
-                    });
-                }
-            })();
-            return true; // Will respond asynchronously
-        case 'CHECK_CONSOLE':
-            (async () => {
-                try {
-                    console.log('Checking Earth Engine console for errors');
-                    const response = await sendMessageToEarthEngineTab(message);
-                    console.log('Console check response:', response);
-                    sendResponse(response);
-                }
-                catch (error) {
-                    console.error('Error checking Earth Engine console:', error);
-                    sendResponse({
-                        success: false,
-                        error: `Error checking Earth Engine console: ${error instanceof Error ? error.message : String(error)}`
-                    });
-                }
-            })();
-            return true; // Will respond asynchronously
-        case 'GET_TASKS':
-            (async () => {
-                try {
-                    console.log('Getting Earth Engine tasks');
-                    const response = await sendMessageToEarthEngineTab(message);
-                    console.log('Get tasks response:', response);
-                    sendResponse(response);
-                }
-                catch (error) {
-                    console.error('Error getting Earth Engine tasks:', error);
-                    sendResponse({
-                        success: false,
-                        error: `Error getting Earth Engine tasks: ${error instanceof Error ? error.message : String(error)}`
-                    });
-                }
-            })();
-            return true; // Will respond asynchronously
-        case 'EDIT_SCRIPT':
-            (async () => {
-                try {
-                    console.log('Editing Earth Engine script:', message.scriptId, 'content length:', message.content?.length || 0);
-                    const response = await sendMessageToEarthEngineTab(message);
-                    console.log('Script edit response:', response);
-                    sendResponse(response);
-                }
-                catch (error) {
-                    console.error('Error editing Earth Engine script:', error);
-                    sendResponse({
-                        success: false,
-                        error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
-                    });
-                }
-            })();
-            return true; // Will respond asynchronously
-        case 'CONTENT_SCRIPT_LOADED':
-            if (sender.tab && sender.tab.id) {
-                console.log(`Content script loaded in tab ${sender.tab.id}:`, message.url);
-                contentScriptTabs.set(sender.tab.id, true);
-            }
-            else {
-                console.log('Content script loaded but sender tab info is missing');
-            }
-            sendResponse({ success: true, message: 'Background script acknowledged content script loading' });
-            break;
-        case 'CONTENT_SCRIPT_HEARTBEAT':
-            if (sender.tab && sender.tab.id) {
-                console.log(`Content script heartbeat received from tab ${sender.tab.id}:`, message.url);
-                // Update the map to ensure we know this content script is active
-                contentScriptTabs.set(sender.tab.id, true);
-            }
-            else {
-                console.log('Content script heartbeat received but sender tab info is missing');
-            }
-            sendResponse({ success: true, message: 'Background script acknowledged heartbeat' });
-            break;
         // Browser Automation Tools
         case 'SCREENSHOT':
             (async () => {
@@ -25008,38 +25581,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             })();
             return true; // Will respond asynchronously
         default:
-            console.log('Unhandled message type:', message.type);
-            sendResponse({ success: false, error: `Unhandled message type: ${message.type}` });
-            break;
+            console.warn(`Unknown message type received in background: ${message.type}`);
+            sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
+            return false; // Synchronous response
     }
 });
 // Listen for side panel connections
-chrome.runtime.onConnect.addListener((port) => {
-    if (port.name === 'sidepanel') {
+chrome.runtime.onConnect.addListener((newPort) => {
+    if (newPort.name === 'sidepanel') {
         console.log('Side panel connected');
-        port.onMessage.addListener(async (message) => {
+        // Store the port globally so it can be used by other message handlers
+        port = newPort;
+        newPort.onMessage.addListener(async (message) => {
             console.log('Received message from side panel:', message);
             // Handle side panel specific messages
             switch (message.type) {
                 case 'INIT':
-                    port.postMessage({ type: 'INIT_RESPONSE', status: 'initialized' });
+                    newPort.postMessage({ type: 'INIT_RESPONSE', status: 'initialized' });
                     break;
                 case 'CHAT_MESSAGE':
                     // Handle chat messages from side panel
-                    handleChatMessage(message, port);
+                    handleChatMessage(message, newPort);
                     break;
                 case 'PING':
                     // Handle ping messages from side panel
                     console.log('Received PING from side panel, responding with PONG');
-                    port.postMessage({ type: 'PONG', timestamp: Date.now() });
+                    newPort.postMessage({ type: 'PONG', timestamp: Date.now() });
                     break;
                 default:
                     console.warn('Unknown side panel message type:', message.type);
-                    port.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+                    newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
             }
         });
-        port.onDisconnect.addListener(() => {
+        newPort.onDisconnect.addListener(() => {
             console.log('Side panel disconnected');
+            if (port === newPort) {
+                // Clear the global port reference when this port disconnects
+                port = null;
+            }
         });
     }
 });
@@ -25055,14 +25634,25 @@ async function handleChatMessage(message, port) {
         console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
         // Get API key and provider from storage
         const apiConfig = await new Promise((resolve, reject) => {
-            chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], (result) => {
+            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], (result) => {
                 if (chrome.runtime.lastError) {
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
                 }
                 const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+                // Choose the appropriate API key based on provider
+                let apiKey = '';
+                if (provider === 'openai') {
+                    apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                }
+                else if (provider === 'anthropic') {
+                    apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                }
+                else {
+                    apiKey = result[API_KEY_STORAGE_KEY] || '';
+                }
                 resolve({
-                    apiKey: result[API_KEY_STORAGE_KEY] || '',
+                    apiKey,
                     provider,
                     model: result[DEFAULT_MODEL_STORAGE_KEY] || ''
                 });

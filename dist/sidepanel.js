@@ -2845,6 +2845,9 @@ body {
 .ml-6 {
   margin-left: 1.5rem;
 }
+.ml-auto {
+  margin-left: auto;
+}
 .mr-1 {
   margin-right: 0.25rem;
 }
@@ -2853,6 +2856,9 @@ body {
 }
 .mr-2\\.5 {
   margin-right: 0.625rem;
+}
+.mr-auto {
+  margin-right: auto;
 }
 .mt-1 {
   margin-top: 0.25rem;
@@ -2948,6 +2954,9 @@ body {
 .max-h-96 {
   max-height: 24rem;
 }
+.max-h-\\[400px\\] {
+  max-height: 400px;
+}
 .max-h-\\[90vh\\] {
   max-height: 90vh;
 }
@@ -2998,6 +3007,9 @@ body {
 }
 .max-w-\\[200px\\] {
   max-width: 200px;
+}
+.max-w-\\[500px\\] {
+  max-width: 500px;
 }
 .max-w-\\[98\\%\\] {
   max-width: 98%;
@@ -3078,6 +3090,9 @@ body {
 }
 .resize-none {
   resize: none;
+}
+.resize {
+  resize: both;
 }
 .scroll-m-20 {
   scroll-margin: 5rem;
@@ -3407,6 +3422,10 @@ body {
 }
 .bg-opacity-50 {
   --tw-bg-opacity: 0.5;
+}
+.object-contain {
+  -o-object-fit: contain;
+     object-fit: contain;
 }
 .object-cover {
   -o-object-fit: cover;
@@ -4142,7 +4161,7 @@ body {
 
 .\\[\\&_svg\\]\\:shrink-0 svg {
   flex-shrink: 0;
-} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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AAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,oBAAmB;KAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,qBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,mBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,iBAAmB;EAAnB;AAAmB;AAAnB;EAAA,mBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,iBAAmB;EAAnB;AAAmB;AAAnB;EAAA,mBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,eAAmB;EAAnB;AAAmB;AAAnB;EAAA,mBAAmB;EAAnB;AAAmB;AAAnB;EAAA,mBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,oBAAmB;EAAnB;AAAmB;AAAnB;E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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
+} `, "",{"version":3,"sources":["webpack://./src/assets/styles/globals.css"],"names":[],"mappings":"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AnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA,sBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA,kBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,sBAAmB;KAAnB;AAAmB;AAAnB;EAAA,oBAAmB;KAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AA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","sourcesContent":["@tailwind base;\n@tailwind components;\n@tailwind utilities;\n\n@layer base {\n  :root {\n    /* Modern color palette with HSL values for better control */\n    --background: 0 0% 100%;\n    --foreground: 240 10% 3.9%;\n    \n    --card: 0 0% 100%;\n    --card-foreground: 240 10% 3.9%;\n    \n    --popover: 0 0% 100%;\n    --popover-foreground: 240 10% 3.9%;\n    \n    /* Modern primary color - a vibrant blue */\n    --primary: 221.2 83.2% 53.3%;\n    --primary-foreground: 210 40% 98%;\n    \n    --secondary: 210 40% 96.1%;\n    --secondary-foreground: 222.2 47.4% 11.2%;\n    \n    --muted: 240 4.8% 95.9%;\n    --muted-foreground: 240 3.8% 46.1%;\n    \n    /* Accent color for subtle highlights */\n    --accent: 240 4.8% 95.9%;\n    --accent-foreground: 240 5.9% 10%;\n    \n    /* Success, warning, and destructive colors */\n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 84.2% 60.2%;\n    --destructive-foreground: 0 0% 98%;\n    \n    /* Input and border styles */\n    --border: 240 5.9% 90%;\n    --input: 240 5.9% 90%;\n    --ring: 221.2 83.2% 53.3%;\n    \n    /* Border radius for consistent component styling */\n    --radius: 0.5rem;\n  }\n\n  .dark {\n    --background: 240 10% 3.9%;\n    --foreground: 0 0% 98%;\n    \n    --card: 240 10% 3.9%;\n    --card-foreground: 0 0% 98%;\n    \n    --popover: 240 10% 3.9%;\n    --popover-foreground: 0 0% 98%;\n    \n    --primary: 217.2 91.2% 59.8%;\n    --primary-foreground: 222.2 47.4% 11.2%;\n    \n    --secondary: 240 3.7% 15.9%;\n    --secondary-foreground: 0 0% 98%;\n    \n    --muted: 240 3.7% 15.9%;\n    --muted-foreground: 240 5% 64.9%;\n    \n    --accent: 240 3.7% 15.9%;\n    --accent-foreground: 0 0% 98%;\n    \n    --success: 142.1 70.6% 45.3%;\n    --success-foreground: 144.9 80.4% 10%;\n    \n    --warning: 38 92% 50%;\n    --warning-foreground: 48 96% 8.9%;\n    \n    --destructive: 0 62.8% 30.6%;\n    --destructive-foreground: 0 85.7% 97.3%;\n    \n    --border: 240 3.7% 15.9%;\n    --input: 240 3.7% 15.9%;\n    --ring: 217.2 91.2% 59.8%;\n  }\n}\n\n@layer base {\n  * {\n    @apply border-border;\n  }\n  \n  body {\n    @apply bg-background text-foreground;\n    font-feature-settings: \"rlig\" 1, \"calt\" 1;\n  }\n  \n  /* Improve default focus styles */\n  :focus-visible {\n    @apply outline-none ring-2 ring-ring ring-offset-2;\n  }\n  \n  /* Smooth scrolling for better UX */\n  html {\n    scroll-behavior: smooth;\n  }\n}\n\n/* Global component styles */\n@layer components {\n  .container {\n    @apply mx-auto w-full max-w-7xl px-4 md:px-6 lg:px-8;\n  }\n}\n\n/* Utility classes */\n@layer utilities {\n  .text-balance {\n    text-wrap: balance;\n  }\n} "],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -25361,6 +25380,41 @@ const File = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"])("f
 
 
 //# sourceMappingURL=file.js.map
+
+
+/***/ }),
+
+/***/ "./node_modules/lucide-react/dist/esm/icons/image.js":
+/*!***********************************************************!*\
+  !*** ./node_modules/lucide-react/dist/esm/icons/image.js ***!
+  \***********************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   __iconNode: () => (/* binding */ __iconNode),
+/* harmony export */   "default": () => (/* binding */ Image)
+/* harmony export */ });
+/* harmony import */ var _createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../createLucideIcon.js */ "./node_modules/lucide-react/dist/esm/createLucideIcon.js");
+/**
+ * @license lucide-react v0.503.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+
+
+
+const __iconNode = [
+  ["rect", { width: "18", height: "18", x: "3", y: "3", rx: "2", ry: "2", key: "1m3agn" }],
+  ["circle", { cx: "9", cy: "9", r: "2", key: "af1f0g" }],
+  ["path", { d: "m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21", key: "1xmnt7" }]
+];
+const Image = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"])("image", __iconNode);
+
+
+//# sourceMappingURL=image.js.map
 
 
 /***/ }),
@@ -106399,7 +106453,9 @@ const ChatResponseSchema = zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
 // Chrome storage keys (Keep)
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
 const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 // Default welcome message (Restore)
 const createWelcomeMessage = () => ({
@@ -106407,6 +106463,22 @@ const createWelcomeMessage = () => ({
     role: 'assistant',
     content: 'Hello! I\'m your Earth Engine Assistant. How can I help you with Earth Engine today?'
 });
+// Helper function to handle image files
+const processImageFile = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if (e.target?.result) {
+                resolve(e.target.result.toString());
+            }
+            else {
+                reject(new Error('Failed to read image file'));
+            }
+        };
+        reader.onerror = () => reject(new Error('Error reading file'));
+        reader.readAsDataURL(file);
+    });
+};
 // Restore original component name and structure
 function ChatUI() {
     const [showSettings, setShowSettings] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
@@ -106428,12 +106500,29 @@ function ChatUI() {
     const MAX_CONNECTION_ATTEMPTS = 3;
     // Restore API config check useEffect
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-        chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-            const hasApiKey = !!result[API_KEY_STORAGE_KEY];
+        chrome.storage.sync.get([
+            API_KEY_STORAGE_KEY,
+            OPENAI_API_KEY_STORAGE_KEY,
+            ANTHROPIC_API_KEY_STORAGE_KEY,
+            API_PROVIDER_STORAGE_KEY
+        ], (result) => {
+            const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+            // Determine if an API key is configured for the selected provider
+            let hasKey = false;
+            let currentKey = '';
+            if (provider === 'openai') {
+                currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                hasKey = !!currentKey;
+            }
+            else if (provider === 'anthropic') {
+                currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                hasKey = !!currentKey;
+            }
+            const hasApiKey = hasKey;
             setApiConfigured(hasApiKey);
-            setApiKey(result[API_KEY_STORAGE_KEY] || '');
-            setApiProvider(result[API_PROVIDER_STORAGE_KEY] || 'openai');
-            if (!hasApiKey) {
+            setApiKey(currentKey);
+            setApiProvider(provider);
+            if (!hasKey) {
                 setShowSettings(true);
             }
         });
@@ -106560,11 +106649,15 @@ function ChatUI() {
         setIsLocalLoading(false);
         setError(null);
         setFallbackMode(false);
-        console.log('Received message from background:', response);
-        try {
-            console.log('Full response object:', JSON.stringify(response, null, 2));
+        // Remove verbose logging of every chunk message
+        // Only log non-stream chunks for debugging
+        if (response.type !== 'CHAT_STREAM_CHUNK') {
+            console.log('Received message from background:', response);
+            try {
+                console.log('Full response object:', JSON.stringify(response, null, 2));
+            }
+            catch (e) { /* ignore */ }
         }
-        catch (e) { /* ignore */ }
         switch (response.type) {
             case 'CHAT_RESPONSE':
                 try {
@@ -106684,15 +106777,69 @@ function ChatUI() {
         setInput(e.target.value);
     };
     // Restore original submit handler using port
-    const handleChatSubmit = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(async (e) => {
+    const handleChatSubmit = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(async (e, options) => {
         e?.preventDefault();
-        if (!input.trim() || isLocalLoading || !port || !activeSessionId) {
+        if ((!input.trim() && !options?.experimental_attachments?.length) || isLocalLoading || !port || !activeSessionId) {
             if (!port)
                 setError(new Error("Connection error: Cannot reach background service."));
             return;
         }
-        const userMessageContent = input.trim();
-        const newUserMessage = { id: 'user-' + Date.now(), role: 'user', content: userMessageContent };
+        // Process any attached files
+        let messageParts = [];
+        let imageAttachments = [];
+        // Handle file attachments if present
+        if (options?.experimental_attachments && options.experimental_attachments.length > 0) {
+            try {
+                const files = Array.from(options.experimental_attachments);
+                // Process each file
+                for (const file of files) {
+                    // Check if it's an image
+                    if (file.type.startsWith('image/')) {
+                        const dataUrl = await processImageFile(file);
+                        imageAttachments.push({
+                            type: 'image',
+                            data: dataUrl
+                        });
+                    }
+                    else {
+                        console.warn('Non-image file attachment not supported:', file.name);
+                    }
+                }
+            }
+            catch (error) {
+                console.error('Error processing file attachments:', error);
+                setError(new Error(`Error processing attachments: ${error instanceof Error ? error.message : String(error)}`));
+            }
+        }
+        // Create appropriate message structures
+        const userMessageId = 'user-' + Date.now();
+        let newUserMessage;
+        if (imageAttachments.length > 0) {
+            // If there are image attachments, create a message with parts
+            newUserMessage = {
+                id: userMessageId,
+                role: 'user',
+                content: input.trim() || "Here's an image:",
+                parts: [
+                    { type: 'text', text: input.trim() || "Here's an image:" },
+                    ...imageAttachments.map(img => ({
+                        type: 'file',
+                        mimeType: 'image/png',
+                        name: 'image.png',
+                        data: img.data,
+                        size: img.data.length
+                    }))
+                ]
+            };
+        }
+        else {
+            // Text-only message
+            newUserMessage = {
+                id: userMessageId,
+                role: 'user',
+                content: input.trim()
+            };
+        }
         const assistantPlaceholder = { id: 'assistant-placeholder-' + Date.now(), role: 'assistant', content: '' };
         setMessages(prev => [...prev, newUserMessage, assistantPlaceholder]);
         setInput('');
@@ -106703,8 +106850,9 @@ function ChatUI() {
             .concat(newUserMessage) || [newUserMessage];
         const messagePayload = {
             type: 'CHAT_MESSAGE',
-            message: userMessageContent,
-            messages: messagesForApi
+            message: input.trim(),
+            messages: messagesForApi,
+            attachments: imageAttachments.length > 0 ? imageAttachments : undefined
         };
         port.postMessage(messagePayload);
     }, [input, isLocalLoading, port, activeSessionId, sessions]);
@@ -106741,7 +106889,7 @@ function ChatUI() {
             return;
         port.postMessage({ type: 'CANCEL_STREAM' });
         setIsLocalLoading(false);
-        setMessages(prev => prev.filter(m => !m.id.startsWith('assistant-placeholder-')));
+        setMessages(prev => prev.filter((m) => !m.id.startsWith('assistant-placeholder-')));
     }, [port]);
     // Restore append (if needed, though likely unused with port logic)
     const append = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)((message) => {
@@ -106794,15 +106942,31 @@ function ChatUI() {
     if (showSettings) {
         return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_Settings__WEBPACK_IMPORTED_MODULE_3__.Settings, { onClose: () => {
                 setShowSettings(false);
-                chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-                    const hasApiKey = !!result[API_KEY_STORAGE_KEY];
-                    setApiConfigured(hasApiKey);
-                    setApiKey(result[API_KEY_STORAGE_KEY] || '');
-                    setApiProvider(result[API_PROVIDER_STORAGE_KEY] || 'openai');
-                    if (hasApiKey && fallbackMode) {
+                chrome.storage.sync.get([
+                    API_KEY_STORAGE_KEY,
+                    OPENAI_API_KEY_STORAGE_KEY,
+                    ANTHROPIC_API_KEY_STORAGE_KEY,
+                    API_PROVIDER_STORAGE_KEY
+                ], (result) => {
+                    const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+                    // Determine if an API key is configured for the selected provider
+                    let hasKey = false;
+                    let currentKey = '';
+                    if (provider === 'openai') {
+                        currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                        hasKey = !!currentKey;
+                    }
+                    else if (provider === 'anthropic') {
+                        currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                        hasKey = !!currentKey;
+                    }
+                    setApiConfigured(hasKey);
+                    setApiKey(currentKey);
+                    setApiProvider(provider);
+                    if (hasKey && fallbackMode) {
                         handleRetryAPI();
                     }
-                    else if (!hasApiKey) {
+                    else if (!hasKey) {
                         setError(new Error("API Key not configured."));
                         setFallbackMode(true);
                     }
@@ -106873,7 +107037,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Key for storing API key in Chrome Storage
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 function Settings({ onClose }) {
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
@@ -106884,22 +107050,57 @@ function Settings({ onClose }) {
     const [connectionStatus, setConnectionStatus] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('idle');
     // Load saved API key on component mount
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-        chrome.storage.sync.get([API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY], (result) => {
-            if (result[API_KEY_STORAGE_KEY]) {
-                setApiKey(result[API_KEY_STORAGE_KEY]);
+        chrome.storage.sync.get([
+            API_KEY_STORAGE_KEY,
+            OPENAI_API_KEY_STORAGE_KEY,
+            ANTHROPIC_API_KEY_STORAGE_KEY,
+            API_PROVIDER_STORAGE_KEY
+        ], (result) => {
+            const savedProvider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+            setProvider(savedProvider);
+            // Load the appropriate API key based on provider
+            if (savedProvider === 'openai') {
+                const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(openaiKey);
             }
-            if (result[API_PROVIDER_STORAGE_KEY]) {
-                setProvider(result[API_PROVIDER_STORAGE_KEY]);
+            else if (savedProvider === 'anthropic') {
+                const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(anthropicKey);
             }
         });
     }, []);
+    // Load the provider-specific API key when provider changes
+    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        chrome.storage.sync.get([
+            API_KEY_STORAGE_KEY,
+            OPENAI_API_KEY_STORAGE_KEY,
+            ANTHROPIC_API_KEY_STORAGE_KEY
+        ], (result) => {
+            if (provider === 'openai') {
+                const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(openaiKey);
+            }
+            else if (provider === 'anthropic') {
+                const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(anthropicKey);
+            }
+        });
+    }, [provider]);
     const handleSave = () => {
         setIsSaving(true);
         // Store in Chrome sync storage for sync across devices
-        chrome.storage.sync.set({
-            [API_KEY_STORAGE_KEY]: apiKey,
+        const storageData = {
             [API_PROVIDER_STORAGE_KEY]: provider
-        }, () => {
+        };
+        // Store API key in the provider-specific key and the legacy key for backward compatibility
+        if (provider === 'openai') {
+            storageData[OPENAI_API_KEY_STORAGE_KEY] = apiKey;
+        }
+        else if (provider === 'anthropic') {
+            storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
+        }
+        storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
+        chrome.storage.sync.set(storageData, () => {
             if (chrome.runtime.lastError) {
                 console.error('Error saving API key:', chrome.runtime.lastError);
                 setSaveStatus('error');
@@ -107633,10 +107834,18 @@ function ChatMessage({ message, isLoading, actions }) {
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow", isUser ? "bg-background" : "bg-primary text-primary-foreground") },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(Icon, { className: "h-5 w-5" })),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex flex-col gap-2", isUser ? "items-end" : "items-start") },
-            content ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(BubbleMessage, { content: content, isUser: isUser, actions: actions })) : null,
+            content && !message.parts?.length ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(BubbleMessage, { content: content, isUser: isUser, actions: actions })) : null,
             message.parts?.map((part, index) => {
                 if (part.type === "text") {
-                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(BubbleMessage, { key: index, content: part.text, isUser: isUser, actions: actions }));
+                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(BubbleMessage, { key: index, content: part.text, isUser: isUser, actions: index === 0 ? actions : undefined }));
+                }
+                else if (part.type === "file") {
+                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_file_preview__WEBPACK_IMPORTED_MODULE_3__.FilePreview, { key: index, file: part }));
+                }
+                else if (part.type === "image") {
+                    // Direct rendering for image parts
+                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: index, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("rounded-lg overflow-hidden max-w-[500px]", isUser ? "ml-auto" : "mr-auto") },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: part.data, alt: "Uploaded image", className: "w-full h-auto object-contain max-h-[400px]", loading: "lazy" })));
                 }
                 else if (part.type === "tool-invocation") {
                     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: index, className: "rounded-lg border bg-zinc-100 p-3 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100" },
@@ -107647,10 +107856,16 @@ function ChatMessage({ message, isLoading, actions }) {
                         part.result && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("hr", { className: "my-2 border-zinc-200 dark:border-zinc-700" }),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm font-semibold" }, "Tool Result:"),
-                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(part.result, null, 2))))));
-                }
-                else if (part.type === "file") {
-                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_file_preview__WEBPACK_IMPORTED_MODULE_3__.FilePreview, { key: index, file: part.file }));
+                            part.result.content ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-1" }, Array.isArray(part.result.content) ? part.result.content.map((contentPart, i) => {
+                                if (contentPart.type === 'text') {
+                                    return react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: i, className: "mb-2" }, contentPart.text);
+                                }
+                                else if (contentPart.type === 'image') {
+                                    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: i, className: "rounded overflow-hidden mt-2" },
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: contentPart.data, alt: "Tool result image", className: "max-w-full h-auto max-h-[400px]", loading: "lazy" })));
+                                }
+                                return null;
+                            }) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(part.result, null, 2))))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(part.result, null, 2)))))));
                 }
                 // Handle other part types as needed
             }),
@@ -107662,7 +107877,16 @@ function ChatMessage({ message, isLoading, actions }) {
                 toolInvocation.state === "result" && toolInvocation.result && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("hr", { className: "my-2 border-zinc-200 dark:border-zinc-700" }),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm font-semibold" }, "Tool Result:"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2))))))),
+                    toolInvocation.result.content ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-1" }, Array.isArray(toolInvocation.result.content) ? toolInvocation.result.content.map((contentPart, i) => {
+                        if (contentPart.type === 'text') {
+                            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: i, className: "mb-2" }, contentPart.text);
+                        }
+                        else if (contentPart.type === 'image') {
+                            return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { key: i, className: "rounded overflow-hidden mt-2" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: contentPart.data, alt: "Tool result image", className: "max-w-full h-auto max-h-[400px]", loading: "lazy" })));
+                        }
+                        return null;
+                    }) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2))))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2)))))))),
             isLoading ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)(chatBubbleVariants({ isUser: false })) },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 animate-spin text-muted-foreground" }))) : null)));
 }
@@ -107892,60 +108116,119 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var framer_motion__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! framer-motion */ "./node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/image.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file.js");
 "use client";
 
 
 
 const FilePreview = react__WEBPACK_IMPORTED_MODULE_0___default().forwardRef((props, ref) => {
-    if (props.file.type.startsWith("image/")) {
-        return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ImageFilePreview, { ...props, ref: ref });
+    // Handle case where file is a standard File object
+    if (props.file instanceof File) {
+        if (props.file.type.startsWith("image/")) {
+            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ImageFilePreview, { ...props, ref: ref });
+        }
+        if (props.file.type.startsWith("text/") ||
+            props.file.name.endsWith(".txt") ||
+            props.file.name.endsWith(".md")) {
+            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TextFilePreview, { ...props, ref: ref });
+        }
+        return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(GenericFilePreview, { ...props, ref: ref });
     }
-    if (props.file.type.startsWith("text/") ||
-        props.file.name.endsWith(".txt") ||
-        props.file.name.endsWith(".md")) {
-        return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TextFilePreview, { ...props, ref: ref });
+    // Handle our custom image data format from chat messages
+    else {
+        const fileType = props.file.type || props.file.mimeType || '';
+        // For images with data URL
+        if (fileType === 'image' || fileType.startsWith('image/') || (props.file.data && props.file.data.startsWith('data:image/'))) {
+            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(CustomImagePreview, { ...props, ref: ref });
+        }
+        // For text files
+        if (fileType.startsWith('text/') || (props.file.name &&
+            (props.file.name.endsWith('.txt') || props.file.name.endsWith('.md')))) {
+            return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(GenericFilePreview, { ...props, ref: ref });
+        }
+        // Default fallback
+        return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(GenericFilePreview, { ...props, ref: ref });
     }
-    return react__WEBPACK_IMPORTED_MODULE_0___default().createElement(GenericFilePreview, { ...props, ref: ref });
 });
 FilePreview.displayName = "FilePreview";
-const ImageFilePreview = react__WEBPACK_IMPORTED_MODULE_0___default().forwardRef(({ file, onRemove }, ref) => {
+// New component for handling custom image format from chat
+const CustomImagePreview = react__WEBPACK_IMPORTED_MODULE_0___default().forwardRef(({ file, onRemove }, ref) => {
+    // Extract data from our custom format
+    const imageData = 'data' in file ? file.data : '';
+    const fileName = 'name' in file ? file.name : 'Image';
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_1__.motion.div, { ref: ref, className: "relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs", layout: true, initial: { opacity: 0, y: "100%" }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: "100%" } },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex w-full items-center space-x-2" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { alt: `Attachment ${file.name}`, className: "grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted object-cover", src: URL.createObjectURL(file) }),
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "w-full truncate text-muted-foreground" }, file.name)),
+            imageData ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { alt: `Attachment ${fileName}`, className: "grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted object-cover", src: imageData })) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], { className: "h-6 w-6 text-foreground" }))),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "w-full truncate text-muted-foreground" }, fileName || 'Image attachment')),
         onRemove ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { className: "absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full border bg-background", type: "button", onClick: onRemove, "aria-label": "Remove attachment" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], { className: "h-2.5 w-2.5" }))) : null));
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], { className: "h-2.5 w-2.5" }))) : null));
+});
+CustomImagePreview.displayName = "CustomImagePreview";
+const ImageFilePreview = react__WEBPACK_IMPORTED_MODULE_0___default().forwardRef(({ file, onRemove }, ref) => {
+    const [imageUrl, setImageUrl] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)("");
+    (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
+        // Only use URL.createObjectURL for actual File objects
+        if (file instanceof File) {
+            const url = URL.createObjectURL(file);
+            setImageUrl(url);
+            return () => {
+                URL.revokeObjectURL(url);
+            };
+        }
+        // For custom file-like objects that might have data URL
+        else if ('data' in file && typeof file.data === 'string') {
+            setImageUrl(file.data);
+        }
+    }, [file]);
+    const fileName = file instanceof File ? file.name : ('name' in file ? file.name : 'image.png');
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_1__.motion.div, { ref: ref, className: "relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs", layout: true, initial: { opacity: 0, y: "100%" }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: "100%" } },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex w-full items-center space-x-2" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { alt: `Attachment ${fileName}`, className: "grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted object-cover", src: imageUrl }),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "w-full truncate text-muted-foreground" }, fileName)),
+        onRemove ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { className: "absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full border bg-background", type: "button", onClick: onRemove, "aria-label": "Remove attachment" },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], { className: "h-2.5 w-2.5" }))) : null));
 });
 ImageFilePreview.displayName = "ImageFilePreview";
 const TextFilePreview = react__WEBPACK_IMPORTED_MODULE_0___default().forwardRef(({ file, onRemove }, ref) => {
     const [preview, setPreview] = react__WEBPACK_IMPORTED_MODULE_0___default().useState("");
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target?.result;
-            setPreview(text.slice(0, 50) + (text.length > 50 ? "..." : ""));
-        };
-        reader.readAsText(file);
+        // Handle standard File objects
+        if (file instanceof File) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target?.result;
+                setPreview(text.slice(0, 50) + (text.length > 50 ? "..." : ""));
+            };
+            reader.readAsText(file);
+        }
+        // Handle custom data objects
+        else if ('data' in file && typeof file.data === 'string') {
+            // For text data, just show the first 50 chars
+            setPreview(file.data.slice(0, 50) + (file.data.length > 50 ? "..." : ""));
+        }
     }, [file]);
+    // Get file name from either standard File or custom object
+    const fileName = file instanceof File ? file.name : (file.name || 'text.txt');
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_1__.motion.div, { ref: ref, className: "relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs", layout: true, initial: { opacity: 0, y: "100%" }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: "100%" } },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex w-full items-center space-x-2" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted p-0.5" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "h-full w-full overflow-hidden text-[6px] leading-none text-muted-foreground" }, preview || "Loading...")),
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "w-full truncate text-muted-foreground" }, file.name)),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "w-full truncate text-muted-foreground" }, fileName)),
         onRemove ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { className: "absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full border bg-background", type: "button", onClick: onRemove, "aria-label": "Remove attachment" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], { className: "h-2.5 w-2.5" }))) : null));
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], { className: "h-2.5 w-2.5" }))) : null));
 });
 TextFilePreview.displayName = "TextFilePreview";
 const GenericFilePreview = react__WEBPACK_IMPORTED_MODULE_0___default().forwardRef(({ file, onRemove }, ref) => {
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_1__.motion.div, { ref: ref, className: "relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs", layout: true, initial: { opacity: 0, y: "100%" }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: "100%" } },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex w-full items-center space-x-2" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], { className: "h-6 w-6 text-foreground" })),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_4__["default"], { className: "h-6 w-6 text-foreground" })),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "w-full truncate text-muted-foreground" }, file.name)),
         onRemove ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { className: "absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full border bg-background", type: "button", onClick: onRemove, "aria-label": "Remove attachment" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], { className: "h-2.5 w-2.5" }))) : null));
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], { className: "h-2.5 w-2.5" }))) : null));
 });
 GenericFilePreview.displayName = "GenericFilePreview";
 
