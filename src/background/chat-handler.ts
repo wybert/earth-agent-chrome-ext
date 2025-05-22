@@ -15,7 +15,29 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
 
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  // Get the URL as a string
+  let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  
+  // Fix the Anthropic API path if needed
+  // If the URL is to Anthropic but missing the /v1 path segment, add it
+  if (url.startsWith('https://api.anthropic.com/') && !url.includes('/v1/')) {
+    url = url.replace('https://api.anthropic.com/', 'https://api.anthropic.com/v1/');
+    console.log(`🔄 [CORS Proxy] Fixed API path: ${url}`);
+    
+    // If input is a string, replace it directly
+    if (typeof input === 'string') {
+      input = url;
+    } 
+    // If input is a URL object, create a new URL
+    else if (input instanceof URL) {
+      input = new URL(url);
+    }
+    // If input is a Request, create a new Request with the corrected URL
+    else {
+      input = new Request(url, input);
+    }
+  }
+  
   console.log(`🔄 [CORS Proxy] Fetching from ${url}`);
   
   try {
@@ -211,7 +233,9 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       // Create the Anthropic provider
       llmProvider = createAnthropic({ 
         apiKey,
-        // We'll handle CORS through our headers configuration instead of direct API calls
+        // Set the correct baseURL for the Anthropic API, without the version path
+        baseURL: 'https://api.anthropic.com',
+        // Use our custom fetch to handle CORS issues
         fetch: corsProxyFetch,
       });
       
