@@ -24232,6 +24232,10 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                     }
                     console.timeEnd('ScreenshotTool execution');
                     console.log(`✅ [ScreenshotTool] Screenshot captured (data URL length: ${resizedDataUrl.length})`);
+                    // Log the full screenshot data URL for viewing in a new tab
+                    console.log('🖼️ [ScreenshotTool] SCREENSHOT DATA URL FOR VIEWING:');
+                    console.log(resizedDataUrl);
+                    console.log('🖼️ [ScreenshotTool] END OF SCREENSHOT DATA URL');
                     // Return multi-modal response with both text and image
                     return {
                         success: true,
@@ -24262,6 +24266,16 @@ async function handleChatRequest(messages, apiKey, provider, model) {
         });
         // Log the final messages being sent to AI provider
         console.log(`[Chat Handler] Sending ${formattedMessages.length} messages to AI provider ${provider} (${effectiveModel})`);
+        // Log detailed information about formatted messages
+        console.log('📝 [Chat Handler] FORMATTED MESSAGES DETAILED LOG:');
+        console.log(JSON.stringify(formattedMessages, (key, value) => {
+            // For image data, truncate the string to avoid console flooding
+            if (key === 'image' && typeof value === 'string' && value.length > 100) {
+                return value.substring(0, 100) + '... [truncated]';
+            }
+            return value;
+        }, 2));
+        console.log('📝 [Chat Handler] END OF FORMATTED MESSAGES LOG');
         // Log details of messages with image parts for debugging
         formattedMessages.forEach((msg, idx) => {
             if (Array.isArray(msg.content)) {
@@ -24273,11 +24287,18 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                     console.log(`[Chat Handler] Message ${idx} contains ${imageParts.length} image parts`);
                     imageParts.forEach((p, i) => {
                         console.log(`[Chat Handler] Image ${i + 1} data type: ${typeof p.image}, length: ${typeof p.image === 'string' ? p.image.substring(0, 50) + '...' : 'non-string'}`);
+                        // Log full image data for viewing in a new tab
+                        if (typeof p.image === 'string') {
+                            console.log(`🖼️ [Chat Handler] IMAGE ${i + 1} DATA URL FOR VIEWING:`);
+                            console.log(p.image);
+                            console.log(`🖼️ [Chat Handler] END OF IMAGE ${i + 1} DATA URL`);
+                        }
                     });
                 }
             }
             else {
                 console.log(`[Chat Handler] Message ${idx} (${msg.role}): Simple string content`);
+                console.log(`Content: ${typeof msg.content === 'string' ? msg.content : 'non-string content'}`);
             }
         });
         // Use streamText for AI generation with tools
@@ -24758,7 +24779,7 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
     // Only open side panel if we're on the Earth Engine Code Editor
@@ -24979,11 +25000,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         const config = await chrome.storage.local.get([
                             API_KEY_STORAGE_KEY,
                             API_PROVIDER_STORAGE_KEY,
-                            DEFAULT_MODEL_STORAGE_KEY
+                            MODEL_STORAGE_KEY
                         ]);
                         const apiKey = config[API_KEY_STORAGE_KEY];
                         const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
-                        const model = config[DEFAULT_MODEL_STORAGE_KEY];
+                        const model = config[MODEL_STORAGE_KEY];
                         if (!apiKey) {
                             throw new Error('API key not found in storage');
                         }
@@ -25031,7 +25052,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         OPENAI_API_KEY_STORAGE_KEY,
                         ANTHROPIC_API_KEY_STORAGE_KEY,
                         API_PROVIDER_STORAGE_KEY,
-                        DEFAULT_MODEL_STORAGE_KEY
+                        MODEL_STORAGE_KEY
                     ]);
                     // Determine provider and API key to use
                     const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -25042,7 +25063,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     else if (provider === 'anthropic') {
                         apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
                     }
-                    const model = config[DEFAULT_MODEL_STORAGE_KEY];
+                    const model = config[MODEL_STORAGE_KEY];
                     if (!apiKey) {
                         sendResponse({
                             type: 'ERROR',
@@ -25754,7 +25775,7 @@ async function handleChatMessage(message, port) {
         console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
         // Get API key and provider from storage
         const apiConfig = await new Promise((resolve, reject) => {
-            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], (result) => {
+            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
                 if (chrome.runtime.lastError) {
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
@@ -25771,10 +25792,13 @@ async function handleChatMessage(message, port) {
                 else {
                     apiKey = result[API_KEY_STORAGE_KEY] || '';
                 }
+                // Get the user-selected model or fall back to empty string (which will use the default in chat-handler.ts)
+                const model = result[MODEL_STORAGE_KEY] || '';
+                console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
                 resolve({
                     apiKey,
                     provider,
-                    model: result[DEFAULT_MODEL_STORAGE_KEY] || ''
+                    model: model
                 });
             });
         });

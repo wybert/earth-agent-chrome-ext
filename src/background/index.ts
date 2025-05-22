@@ -31,7 +31,7 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const DEFAULT_MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -283,11 +283,11 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             const config = await chrome.storage.local.get([
               API_KEY_STORAGE_KEY,
               API_PROVIDER_STORAGE_KEY,
-              DEFAULT_MODEL_STORAGE_KEY
+              MODEL_STORAGE_KEY
             ]);
             const apiKey = config[API_KEY_STORAGE_KEY];
             const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
-            const model = config[DEFAULT_MODEL_STORAGE_KEY];
+            const model = config[MODEL_STORAGE_KEY];
 
             if (!apiKey) {
               throw new Error('API key not found in storage');
@@ -345,7 +345,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
-            DEFAULT_MODEL_STORAGE_KEY
+            MODEL_STORAGE_KEY
           ]);
           
           // Determine provider and API key to use
@@ -358,7 +358,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
           }
           
-          const model = config[DEFAULT_MODEL_STORAGE_KEY];
+          const model = config[MODEL_STORAGE_KEY];
           
           if (!apiKey) {
             sendResponse({
@@ -1159,7 +1159,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
       (resolve, reject) => {
         chrome.storage.sync.get(
-          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, DEFAULT_MODEL_STORAGE_KEY], 
+          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
           (result) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -1178,10 +1178,14 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               apiKey = result[API_KEY_STORAGE_KEY] || '';
             }
             
+            // Get the user-selected model or fall back to empty string (which will use the default in chat-handler.ts)
+            const model = result[MODEL_STORAGE_KEY] || '';
+            console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
+            
             resolve({
               apiKey,
               provider,
-              model: result[DEFAULT_MODEL_STORAGE_KEY] || ''
+              model: model
             });
           }
         );
