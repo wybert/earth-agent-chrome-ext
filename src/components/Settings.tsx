@@ -9,8 +9,63 @@ const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
 type ApiProvider = 'openai' | 'anthropic';
+
+// Available models for each provider
+const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
+  openai: [
+    'gpt-4o', 
+    'gpt-4o-2024-05-13',
+    'gpt-4o-2024-08-06',
+    'gpt-4o-2024-11-20',
+    'gpt-4o-mini',
+    'gpt-4o-mini-2024-07-18',
+    'o4-mini',
+    'o4-mini-2025-04-16',
+    'gpt-4.5-preview',
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-4-turbo',
+    'gpt-4-turbo-2024-04-09',
+    'gpt-4-0125-preview',
+    'gpt-4-1106-preview',
+    'gpt-4',
+    'gpt-3.5-turbo',
+    'gpt-3.5-turbo-0125',
+    'gpt-3.5-turbo-1106'
+  ],
+  anthropic: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3.5-sonnet-20240620', 'claude-3.7-sonnet-20240808']
+};
+
+// Human-readable model names
+const MODEL_DISPLAY_NAMES: Record<string, string> = {
+  'gpt-4o': 'GPT-4o (Recommended)',
+  'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
+  'gpt-4o-2024-08-06': 'GPT-4o (August 2024)',
+  'gpt-4o-2024-11-20': 'GPT-4o (November 2024)',
+  'gpt-4o-mini': 'GPT-4o Mini (Fast)',
+  'gpt-4o-mini-2024-07-18': 'GPT-4o Mini (July 2024)',
+  'o4-mini': 'O4 Mini (Latest)',
+  'o4-mini-2025-04-16': 'O4 Mini (April 2025)',
+  'gpt-4.5-preview': 'GPT-4.5 Preview (Latest)',
+  'gpt-4.1': 'GPT-4.1',
+  'gpt-4.1-mini': 'GPT-4.1 Mini',
+  'gpt-4-turbo': 'GPT-4 Turbo',
+  'gpt-4-turbo-2024-04-09': 'GPT-4 Turbo (April 2024)',
+  'gpt-4-0125-preview': 'GPT-4 Turbo (January 2024)',
+  'gpt-4-1106-preview': 'GPT-4 Turbo Preview',
+  'gpt-4': 'GPT-4',
+  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
+  'gpt-3.5-turbo-0125': 'GPT-3.5 Turbo (January 2024)',
+  'gpt-3.5-turbo-1106': 'GPT-3.5 Turbo (November 2023)',
+  'claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
+  'claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
+  'claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
+  'claude-3.5-sonnet-20240620': 'Claude 3.5 Sonnet',
+  'claude-3.7-sonnet-20240808': 'Claude 3.7 Sonnet (Latest)'
+};
 
 interface SettingsProps {
   onClose: () => void;
@@ -19,6 +74,7 @@ interface SettingsProps {
 export function Settings({ onClose }: SettingsProps) {
   const [apiKey, setApiKey] = useState('');
   const [provider, setProvider] = useState<ApiProvider>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -30,7 +86,8 @@ export function Settings({ onClose }: SettingsProps) {
       API_KEY_STORAGE_KEY, 
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
-      API_PROVIDER_STORAGE_KEY
+      API_PROVIDER_STORAGE_KEY,
+      MODEL_STORAGE_KEY
     ], (result) => {
       const savedProvider = result[API_PROVIDER_STORAGE_KEY] as ApiProvider || 'openai';
       setProvider(savedProvider);
@@ -43,6 +100,14 @@ export function Settings({ onClose }: SettingsProps) {
         const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(anthropicKey);
       }
+
+      // Load saved model or default to first model for the provider
+      const savedModel = result[MODEL_STORAGE_KEY] as string || '';
+      if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
+        setSelectedModel(savedModel);
+      } else {
+        setSelectedModel(AVAILABLE_MODELS[savedProvider][0]);
+      }
     });
   }, []);
 
@@ -51,7 +116,8 @@ export function Settings({ onClose }: SettingsProps) {
     chrome.storage.sync.get([
       API_KEY_STORAGE_KEY, 
       OPENAI_API_KEY_STORAGE_KEY,
-      ANTHROPIC_API_KEY_STORAGE_KEY
+      ANTHROPIC_API_KEY_STORAGE_KEY,
+      MODEL_STORAGE_KEY
     ], (result) => {
       if (provider === 'openai') {
         const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
@@ -60,6 +126,17 @@ export function Settings({ onClose }: SettingsProps) {
         const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(anthropicKey);
       }
+
+      // When provider changes, check if current model is valid for new provider
+      const currentSavedModel = result[MODEL_STORAGE_KEY] as string || '';
+      
+      if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
+        // Keep current model if it's valid for the new provider (rare case)
+        setSelectedModel(currentSavedModel);
+      } else {
+        // Otherwise default to first model for the new provider
+        setSelectedModel(AVAILABLE_MODELS[provider][0]);
+      }
     });
   }, [provider]);
 
@@ -67,7 +144,8 @@ export function Settings({ onClose }: SettingsProps) {
     setIsSaving(true);
     // Store in Chrome sync storage for sync across devices
     const storageData: { [key: string]: any } = {
-      [API_PROVIDER_STORAGE_KEY]: provider
+      [API_PROVIDER_STORAGE_KEY]: provider,
+      [MODEL_STORAGE_KEY]: selectedModel
     };
     
     // Store API key in the provider-specific key and the legacy key for backward compatibility
@@ -87,7 +165,7 @@ export function Settings({ onClose }: SettingsProps) {
         } else {
           setSaveStatus('success');
           // Test the API connection
-          testApiConnection(provider, apiKey);
+          testApiConnection(provider, apiKey, selectedModel);
         }
         setIsSaving(false);
         
@@ -99,12 +177,13 @@ export function Settings({ onClose }: SettingsProps) {
     );
   };
 
-  const testApiConnection = async (provider: ApiProvider, key: string) => {
+  const testApiConnection = async (provider: ApiProvider, key: string, model: string) => {
     try {
       setConnectionStatus('idle');
       
       // For OpenAI, we'll test with a simple models.list call
       if (provider === 'openai') {
+        // First check if the API key is valid by listing models
         const response = await fetch('https://api.openai.com/v1/models', {
           method: 'GET',
           headers: {
@@ -116,7 +195,38 @@ export function Settings({ onClose }: SettingsProps) {
         if (response.ok) {
           const result = await response.json();
           console.log('OpenAI Connection test result:', result);
-          setConnectionStatus('success');
+          
+          // Then test if the selected model is valid with a simple completion
+          if (model) {
+            try {
+              const modelTestResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${key}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: model,
+                  messages: [{ role: 'user', content: 'Hello, please respond with "Model test successful"' }],
+                  max_tokens: 20
+                })
+              });
+              
+              if (modelTestResponse.ok) {
+                console.log(`Model test successful for ${model}`);
+                setConnectionStatus('success');
+              } else {
+                const errorData = await modelTestResponse.json();
+                console.error(`Model ${model} test failed:`, errorData);
+                setConnectionStatus('error');
+              }
+            } catch (modelError) {
+              console.error(`Error testing model ${model}:`, modelError);
+              setConnectionStatus('error');
+            }
+          } else {
+            setConnectionStatus('success');
+          }
         } else {
           console.error('OpenAI API connection failed:', response.statusText);
           setConnectionStatus('error');
@@ -127,6 +237,43 @@ export function Settings({ onClose }: SettingsProps) {
         // Validate Anthropic API key format (usually starts with 'sk-ant-')
         if (key.startsWith('sk-ant-') && key.length > 20) {
           console.log('Anthropic API key format looks valid');
+          
+          // If a model was selected, we could test it with a minimal API call
+          // Note: This is commented out to avoid unnecessary API charges
+          // Uncomment this for production if desired
+          /*
+          if (model) {
+            try {
+              const modelTestResponse = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                  'x-api-key': key,
+                  'anthropic-version': '2023-06-01',
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  model: model,
+                  messages: [{ role: 'user', content: 'Hello, please respond with "Model test successful"' }],
+                  max_tokens: 20
+                })
+              });
+              
+              if (modelTestResponse.ok) {
+                console.log(`Model test successful for ${model}`);
+                setConnectionStatus('success');
+              } else {
+                const errorData = await modelTestResponse.json();
+                console.error(`Model ${model} test failed:`, errorData);
+                setConnectionStatus('error');
+              }
+            } catch (modelError) {
+              console.error(`Error testing model ${model}:`, modelError);
+              setConnectionStatus('error');
+            }
+          } else {
+            setConnectionStatus('success');
+          }
+          */
           setConnectionStatus('success');
         } else {
           console.error('Anthropic API key format looks invalid');
@@ -150,6 +297,13 @@ export function Settings({ onClose }: SettingsProps) {
       </div>
 
       <div className="space-y-4">
+        {connectionStatus === 'success' && (
+          <div className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-2 text-green-800 dark:text-green-300">
+            <p><strong>Active Configuration:</strong></p>
+            <p>Provider: <strong>{provider}</strong></p>
+            <p>Model: <strong>{selectedModel}</strong></p>
+          </div>
+        )}
         <div>
           <label className="text-sm mb-1 block">Select API Provider</label>
           <div className="flex gap-2">
@@ -166,6 +320,21 @@ export function Settings({ onClose }: SettingsProps) {
               Anthropic
             </Button>
           </div>
+        </div>
+
+        <div>
+          <label className="text-sm mb-1 block">Select Model</label>
+          <select 
+            className="w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+          >
+            {AVAILABLE_MODELS[provider].map((modelId) => (
+              <option key={modelId} value={modelId}>
+                {MODEL_DISPLAY_NAMES[modelId] || modelId}
+              </option>
+            ))}
+          </select>
         </div>
         
         <div>
@@ -223,6 +392,13 @@ export function Settings({ onClose }: SettingsProps) {
             {provider === 'openai' 
               ? 'You can create an OpenAI API key in your OpenAI dashboard.' 
               : 'You can create an Anthropic API key in your Anthropic console.'}
+          </p>
+          <p className="mt-1">
+            <strong>Model selection:</strong> Different models have varying capabilities, speeds, and costs.
+            More powerful models may offer better results but could be slower or more expensive to use.
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Selected model: <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{selectedModel}</code>
           </p>
         </div>
       </div>
