@@ -30,3 +30,14 @@ Learn, where should this call loacated?
 It's located in chat.ts and routes.ts;
 looks like there are many duclicates functions?
 
+multi-modal support for tools:
+https://ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling#multi-modal-tool-results
+
+Multi-modal tool results are experimental and only supported by Anthropic.
+
+It is mentioned here that only Anthropic is supported. In fact, multimodal model support may be possible with gpt4o, but if the tool returns the result in the form of an image, these results are returned to llm in the form of an image, which only supports Anthropic. This is actually difficult to develop.
+The latest AI SDK seems to have better multimodal support.
+
+Maybe that's it. Maybe next step should deploy the extension to chrome store.
+
+ai installed as version 4.3.13. create a new branch as the new version of the ai-sdk-core as 5.0.0
