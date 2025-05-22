@@ -652,6 +652,11 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
           
           console.timeEnd('ScreenshotTool execution');
           console.log(`✅ [ScreenshotTool] Screenshot captured (data URL length: ${resizedDataUrl.length})`);
+          
+          // Log the full screenshot data URL for viewing in a new tab
+          console.log('🖼️ [ScreenshotTool] SCREENSHOT DATA URL FOR VIEWING:');
+          console.log(resizedDataUrl);
+          console.log('🖼️ [ScreenshotTool] END OF SCREENSHOT DATA URL');
 
           // Return multi-modal response with both text and image
           return {
@@ -685,6 +690,17 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     // Log the final messages being sent to AI provider
     console.log(`[Chat Handler] Sending ${formattedMessages.length} messages to AI provider ${provider} (${effectiveModel})`);
     
+    // Log detailed information about formatted messages
+    console.log('📝 [Chat Handler] FORMATTED MESSAGES DETAILED LOG:');
+    console.log(JSON.stringify(formattedMessages, (key, value) => {
+      // For image data, truncate the string to avoid console flooding
+      if (key === 'image' && typeof value === 'string' && value.length > 100) {
+        return value.substring(0, 100) + '... [truncated]';
+      }
+      return value;
+    }, 2));
+    console.log('📝 [Chat Handler] END OF FORMATTED MESSAGES LOG');
+    
     // Log details of messages with image parts for debugging
     formattedMessages.forEach((msg, idx) => {
       if (Array.isArray(msg.content)) {
@@ -699,10 +715,18 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
             console.log(`[Chat Handler] Image ${i+1} data type: ${typeof p.image}, length: ${
               typeof p.image === 'string' ? p.image.substring(0, 50) + '...' : 'non-string'
             }`);
+            
+            // Log full image data for viewing in a new tab
+            if (typeof p.image === 'string') {
+              console.log(`🖼️ [Chat Handler] IMAGE ${i+1} DATA URL FOR VIEWING:`);
+              console.log(p.image);
+              console.log(`🖼️ [Chat Handler] END OF IMAGE ${i+1} DATA URL`);
+            }
           });
         }
       } else {
         console.log(`[Chat Handler] Message ${idx} (${msg.role}): Simple string content`);
+        console.log(`Content: ${typeof msg.content === 'string' ? msg.content : 'non-string content'}`);
       }
     });
     
