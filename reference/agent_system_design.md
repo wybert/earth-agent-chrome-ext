@@ -40,4 +40,7 @@ The latest AI SDK seems to have better multimodal support.
 
 Maybe that's it. Maybe next step should deploy the extension to chrome store.
 
-ai installed as version 4.3.13. create a new branch as the new version of the ai-sdk-core as 5.0.0
+ai installed as version 4.3.13. create a new branch as the new version of the ai-sdk-core as 5.0.0.
+
+Now, it support the screenshot.
+Next step should focus on how to get the more tools. As the tools are the pieses of the agent to become more agentic.
