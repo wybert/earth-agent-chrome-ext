@@ -1,9 +1,9 @@
 # Project Progress: Google Earth Engine Agent
 
-## Project Status (Updated August 6, 2024)
+## Project Status (Updated May 22, 2025)
 
 **Current Phase:** MVP Foundation
-**Overall Completion:** ~45% (Increased due to tool implementation and fixes)
+**Overall Completion:** ~48% (Increased due to multi-modal tool implementation)
 
 ## Milestone Progress
 
@@ -12,10 +12,10 @@
 | Basic Extension Structure | Completed   | 100%       |
 | UI Components             | In Progress | 80%        |
 | Messaging System          | Completed   | 100%       |
-| AI Integration            | In Progress | 60%        |
-| Agent System Implementation | Planning    | 15%        |
-| GEE Tools                 | In Progress | 40%        |
-| Advanced Features         | Not Started | 0%         |
+| AI Integration            | In Progress | 65%        |
+| Agent System Implementation | Planning    | 20%        |
+| GEE Tools                 | In Progress | 45%        |
+| Advanced Features         | In Progress | 10%        |
 
 ## What Works
 
@@ -40,17 +40,20 @@
 - ✅ Streaming response handling.
 - ✅ Basic system prompt (`GEE_SYSTEM_PROMPT`).
 - ✅ Tool definition framework using `tool()`.
+- ✅ Multi-modal response support for Anthropic models via `experimental_toToolResultContent`.
 
 ### Implemented Tools
 - ✅ **Weather Tool**: Basic simulation.
 - ✅ **Context7 Dataset Tool**: Fetches EE dataset docs via Context7 API.
 - ✅ **Earth Engine Script Tool (`earthEngineScriptTool`)**: AI can insert code into the EE editor via background->content script messaging.
 - ✅ **Earth Engine Run Code Tool (`earthEngineRunCodeTool`)**: AI can execute code in the EE environment via background->content script messaging.
+- ✅ **Screenshot Tool**: Captures the current browser tab and displays the image directly in the chat (multi-modal response).
 - ✅ **Browser Tools (Click, Type, Snapshot, GetElement)**: Functional via background->content script messaging.
 
 ### Fixes
 - ✅ Resolved `window is not defined` errors for AI tools (`editScript`, `runCode`) by implementing direct message passing in `chat-handler.ts` tool definitions.
 - ✅ Optimized background listener (`index.ts`) for direct UI/CS tool calls.
+- ✅ Fixed multi-modal response formatting by correctly extracting base64 data from data URLs for Anthropic API.
 
 ## In Progress
 
@@ -66,6 +69,12 @@
 
 ### UI Components
 - 🔄 Designing UI feedback for tool execution status (loading, success, error).
+
+### Multi-Modal Capabilities
+- 🔄 Optimizing screenshot capture quality and performance.
+- 🔄 Planning additional rich visualization outputs for Earth Engine data.
+- 🔄 Testing multi-modal responses with various Anthropic models (Claude 3.5 Haiku, Sonnet, etc.).
+- 🔄 Exploring potential for Earth Engine-specific visualizations (e.g., spectral charts, time series) as multi-modal outputs.
 
 ## Not Started Yet
 
@@ -136,7 +145,12 @@
 - Task Master Development Workflow
 
 ## Recent Wins
-- Successfully implemented side panel activation
+- Successfully implemented screenshot tool with multi-modal response support
+- Fixed Anthropic API integration for image display in chat
+- Established pattern for future multi-modal tools
+- Optimized image capture and processing for performance
+- Fixed data URL handling for proper base64 extraction
+- Completed side panel activation
 - Completed basic message passing architecture
 - Created clean UI design for chat interface with TailwindCSS
 - Established proper project structure and build system
@@ -238,6 +252,14 @@
 
 ## Recent Changes
 
+#### Multi-Modal Response Support (May 22, 2025)
+- Added screenshot tool with direct image display in chat responses:
+  - Implemented proper `experimental_toToolResultContent` for Anthropic models
+  - Fixed base64 data extraction from data URLs
+  - Added support for image MIME type specification
+  - Optimized image capture and resizing for better performance
+  - Created foundation for future multi-modal Earth Engine visualizations
+
 #### Architecture Refinement (August 5, 2024)
 - Consolidated architecture to pure Chrome extension by:
   - Moving API logic to the background script
@@ -258,60 +280,3 @@
   - Then generate code examples based on retrieved data
   - Improved system prompt with detailed instructions
   - Added specific guidance for dataset-driven code examples
-
-# Progress Tracking
-
-## Project Status (Updated August 5, 2024)
-
-### What Works
-
-- ✅ Basic Chrome extension structure and build process
-- ✅ Core communication between UI, background script, and content script
-- ✅ Chat component with message history and user input handling
-- ✅ AI SDK integration with Vercel AI for chat completions
-- ✅ System prompt with Earth Engine expertise
-- ✅ Provider selection (OpenAI/Anthropic) with configuration
-- ✅ Weather information tool for simulated weather data
-- ✅ Earth Engine dataset documentation tool with Context7 integration
-- ✅ Background-centric architecture with proper separation of concerns
-- ✅ Streaming responses with progressive rendering
-- ✅ Automated fallback mechanisms for tool communication
-- ✅ Agent workflow for map/visualization requests
-
-### What's In Progress
-
-- 🔄 Testing and validation of the Earth Engine dataset tool
-- 🔄 Refinement of the code generation quality
-- 🔄 Performance optimization for tool calls
-
-### What's Still Needed
-
-- 🔲 User documentation and examples
-- 🔲 Additional Earth Engine-specific tools
-- 🔲 Enhanced error handling and reporting
-- 🔲 Comprehensive testing across different Earth Engine scenarios
-- 🔲 User feedback collection mechanism
-- 🔲 Settings management UI for customizing agent behavior
-
-### Recent Changes
-
-#### Architecture Refinement (August 5, 2024)
-- Consolidated architecture to pure Chrome extension by:
-  - Moving API logic to the background script
-  - Removing hybrid Next.js components
-  - Establishing clear communication patterns
-  - Documenting the architectural approach
-
-#### Tool Improvements (August 5, 2024)
-- Added Earth Engine dataset documentation tool with:
-  - Context7 integration for documentation retrieval
-  - Fallback mechanisms for communication failures
-  - Detailed logging for troubleshooting
-  - Performance timing
-
-#### AI Agent Workflow Enhancements (August 5, 2024)
-- Implemented chaining workflow for map visualization:
-  - First retrieve dataset information
-  - Then generate code examples based on retrieved data
-  - Improved system prompt with detailed instructions
-  - Added specific guidance for dataset-driven code examples 
