@@ -24324,21 +24324,11 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                     console.log('🖼️ [ScreenshotTool] SCREENSHOT DATA URL FOR VIEWING:');
                     console.log(resizedDataUrl);
                     console.log('🖼️ [ScreenshotTool] END OF SCREENSHOT DATA URL');
-                    // Return multi-modal response with both text and image
+                    // Return result with screenshot data
                     return {
                         success: true,
                         message: 'Screenshot captured successfully.',
-                        screenshotDataUrl: resizedDataUrl,
-                        content: [
-                            {
-                                type: 'text',
-                                text: 'Here is the screenshot of the current browser tab:'
-                            },
-                            {
-                                type: 'image',
-                                data: resizedDataUrl
-                            }
-                        ]
+                        screenshotDataUrl: resizedDataUrl
                     };
                 }
                 catch (error) {
@@ -24350,6 +24340,26 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                         error: `Error taking screenshot: ${errorMessage}`,
                     };
                 }
+            },
+            // Fix experimental_toToolResultContent to match expected type signature
+            experimental_toToolResultContent: (result) => {
+                console.log('📸 [ScreenshotTool] Converting result to tool content');
+                if (!result.success) {
+                    // Return error as text
+                    return [{ type: 'text', text: `Error taking screenshot: ${result.error || 'Unknown error'}` }];
+                }
+                // Extract the base64 content from the data URL
+                let base64Data = result.screenshotDataUrl;
+                // Remove the data URL prefix if it exists (e.g., "data:image/jpeg;base64,")
+                if (base64Data.includes(';base64,')) {
+                    base64Data = base64Data.split(';base64,')[1];
+                    console.log('📸 [ScreenshotTool] Extracted base64 data from data URL');
+                }
+                // Return both text and image for successful screenshots
+                return [
+                    { type: 'text', text: 'Here is the screenshot of the current browser tab:' },
+                    { type: 'image', data: base64Data, mimeType: 'image/jpeg' }
+                ];
             },
         });
         // Log the final messages being sent to AI provider
