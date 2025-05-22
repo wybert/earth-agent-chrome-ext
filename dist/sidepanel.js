@@ -107154,7 +107154,12 @@ const AVAILABLE_MODELS = {
         'gpt-3.5-turbo-0125',
         'gpt-3.5-turbo-1106'
     ],
-    anthropic: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3.5-sonnet-20240620', 'claude-3.7-sonnet-20240808']
+    anthropic: [
+        'claude-3-7-sonnet-20250219',
+        'claude-3-5-sonnet-20241022',
+        'claude-3-5-haiku-20241022',
+        'claude-3-5-sonnet-20240620'
+    ]
 };
 // Human-readable model names
 const MODEL_DISPLAY_NAMES = {
@@ -107177,11 +107182,10 @@ const MODEL_DISPLAY_NAMES = {
     'gpt-3.5-turbo': 'GPT-3.5 Turbo',
     'gpt-3.5-turbo-0125': 'GPT-3.5 Turbo (January 2024)',
     'gpt-3.5-turbo-1106': 'GPT-3.5 Turbo (November 2023)',
-    'claude-3-opus-20240229': 'Claude 3 Opus (Most Capable)',
-    'claude-3-sonnet-20240229': 'Claude 3 Sonnet (Balanced)',
-    'claude-3-haiku-20240307': 'Claude 3 Haiku (Fast)',
-    'claude-3.5-sonnet-20240620': 'Claude 3.5 Sonnet',
-    'claude-3.7-sonnet-20240808': 'Claude 3.7 Sonnet (Latest)'
+    'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
+    'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (New)',
+    'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
+    'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)'
 };
 function Settings({ onClose }) {
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
