@@ -1089,6 +1089,15 @@ chrome.runtime.onConnect.addListener((newPort) => {
 async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   const requestId = `req_${Date.now()}`;
   console.log(`[${requestId}] Handling chat message...`);
+  console.log(`[${requestId}] Message type: ${message.type}`);
+  
+  // Debug log provider/model information from message if available
+  if (message.provider) {
+    console.log(`[${requestId}] Requested provider: ${message.provider}`);
+  }
+  if (message.model) {
+    console.log(`[${requestId}] Requested model: ${message.model}`);
+  }
   
   // Log attachment information
   if (message.attachments && message.attachments.length > 0) {

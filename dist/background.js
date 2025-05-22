@@ -23615,7 +23615,6 @@ var z = /*#__PURE__*/Object.freeze({
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   API_VERSIONS: () => (/* binding */ API_VERSIONS),
 /* harmony export */   DEFAULT_MODELS: () => (/* binding */ DEFAULT_MODELS),
 /* harmony export */   GEE_SYSTEM_PROMPT: () => (/* binding */ GEE_SYSTEM_PROMPT),
 /* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest)
@@ -23633,12 +23632,60 @@ __webpack_require__.r(__webpack_exports__);
 // Default models configuration
 const DEFAULT_MODELS = {
     openai: 'gpt-4o',
-    anthropic: 'claude-3-haiku-20240307'
+    anthropic: 'claude-3-5-haiku-20241022'
 };
-// API versions
-const API_VERSIONS = {
-    openai: '2023-01-01',
-    anthropic: '2023-06-01'
+// Custom fetch function for Anthropic to handle CORS
+const corsProxyFetch = async (input, options = {}) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    console.log(`🔄 [CORS Proxy] Fetching from ${url}`);
+    try {
+        // Add the required headers for browser requests to Anthropic
+        const headers = new Headers(options.headers || {});
+        headers.set('anthropic-version', '2023-06-01');
+        headers.set('anthropic-dangerous-direct-browser-access', 'true');
+        // Create new options with enhanced headers
+        const enhancedOptions = {
+            ...options,
+            headers,
+            // Add credentials to ensure cookies are sent with the request
+            credentials: 'include',
+            // Add mode to handle CORS preflight
+            mode: 'cors'
+        };
+        console.log(`🔄 [CORS Proxy] Headers set: ${JSON.stringify(Object.fromEntries(headers.entries()))}`);
+        // Make the fetch request with enhanced options
+        const response = await fetch(input, enhancedOptions);
+        // Log success or error
+        if (response.ok) {
+            console.log(`✅ [CORS Proxy] Request succeeded: ${response.status} ${response.statusText}`);
+        }
+        else {
+            console.error(`❌ [CORS Proxy] Request failed: ${response.status} ${response.statusText}`);
+            // Try to get error details
+            try {
+                const errorData = await response.clone().text();
+                console.error(`❌ [CORS Proxy] Error details: ${errorData}`);
+            }
+            catch (e) {
+                console.error(`❌ [CORS Proxy] Could not read error details`);
+            }
+        }
+        return response;
+    }
+    catch (error) {
+        console.error(`❌ [CORS Proxy] Fetch error:`, error);
+        // Create a synthetic error response
+        return new Response(JSON.stringify({
+            error: {
+                type: 'fetch_error',
+                message: error instanceof Error ? error.message : String(error),
+                details: 'Error occurred during custom fetch operation'
+            }
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
 };
 // Earth Engine system prompt with domain expertise
 const GEE_SYSTEM_PROMPT = `You are Earth Engine Assistant, an AI specialized in Google Earth Engine (GEE) geospatial analysis.
@@ -23728,6 +23775,8 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
  */
 async function handleChatRequest(messages, apiKey, provider, model) {
     try {
+        // Debug log at start of request
+        console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}`);
         if (!apiKey) {
             return new Response(JSON.stringify({
                 error: 'API key not configured',
@@ -23752,9 +23801,27 @@ async function handleChatRequest(messages, apiKey, provider, model) {
             console.log(`Using OpenAI provider with model: ${effectiveModel}`);
         }
         else if (provider === 'anthropic') {
-            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)({ apiKey });
-            effectiveModel = model || DEFAULT_MODELS.anthropic;
-            console.log(`Using Anthropic provider with model: ${effectiveModel}`);
+            // Check if the requested model exists in our available model list
+            const anthropicModels = [
+                'claude-3-7-sonnet-20250219',
+                'claude-3-5-sonnet-20241022',
+                'claude-3-5-haiku-20241022',
+                'claude-3-5-sonnet-20240620'
+            ];
+            // Use the requested model if it's in our list, otherwise use the default
+            let selectedModel = model;
+            if (!selectedModel || !anthropicModels.includes(selectedModel)) {
+                console.log(`⚠️ [Chat Handler] Requested Claude model "${model}" not found in available models. Using default.`);
+                selectedModel = DEFAULT_MODELS.anthropic;
+            }
+            effectiveModel = selectedModel;
+            // Create the Anthropic provider
+            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)({
+                apiKey,
+                // We'll handle CORS through our headers configuration instead of direct API calls
+                fetch: corsProxyFetch,
+            });
+            console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})`);
         }
         else {
             return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
@@ -24298,11 +24365,13 @@ async function handleChatRequest(messages, apiKey, provider, model) {
             }
             else {
                 console.log(`[Chat Handler] Message ${idx} (${msg.role}): Simple string content`);
-                console.log(`Content: ${typeof msg.content === 'string' ? msg.content : 'non-string content'}`);
+                console.log(`Content: ${typeof msg.content === 'string' ? msg.content.substring(0, 100) + '...' : 'non-string content'}`);
             }
         });
-        // Use streamText for AI generation with tools
-        const result = await (0,ai__WEBPACK_IMPORTED_MODULE_3__.streamText)({
+        console.log(`🚀 [Chat Handler] Starting AI stream with provider: ${provider}, model: ${effectiveModel}`);
+        console.time('streamText execution');
+        // Configure stream options based on provider
+        let streamOptions = {
             model: llmProvider(effectiveModel),
             system: GEE_SYSTEM_PROMPT,
             messages: formattedMessages,
@@ -24314,11 +24383,39 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 screenshot: screenshotTool
             },
             maxSteps: 5, // Allow up to 5 steps
-            // Set high temperature for more creative responses with images
             temperature: 0.7,
+        };
+        // For Anthropic models, add special headers for browser usage
+        if (provider === 'anthropic') {
+            console.log(`🔧 [Chat Handler] Adding special headers for Anthropic browser usage`);
+            streamOptions.headers = {
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true'
+            };
             // Enable experimental content for multi-modal tool responses (supported by Anthropic)
-            experimental_enableToolContentInResult: true
-        }); // Type assertion to avoid compile errors with experimental parameters
+            streamOptions.experimental_enableToolContentInResult = true;
+        }
+        console.log(`📊 [Chat Handler] Final stream configuration:`, JSON.stringify(streamOptions, (k, v) => k === 'messages' ? '[Messages array]' : (k === 'tools' ? '[Tools object]' : v), 2));
+        // Use streamText for AI generation with tools
+        const result = await (0,ai__WEBPACK_IMPORTED_MODULE_3__.streamText)(streamOptions);
+        console.timeEnd('streamText execution');
+        console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
+        // Debug the result object to see what we got back
+        console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
+        console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
+        // If there were tool calls, log them
+        if (result.toolCalls && Array.isArray(result.toolCalls)) {
+            console.log(`🛠️ [Chat Handler] Tool calls made: ${result.toolCalls.length}`);
+            result.toolCalls.forEach((call, idx) => {
+                console.log(`🛠️ [Chat Handler] Tool call ${idx + 1}: ${call.name || 'unnamed'}`);
+                if (call.args) {
+                    console.log(`🛠️ [Chat Handler] Tool call args: ${JSON.stringify(call.args)}`);
+                }
+                if (call.result) {
+                    console.log(`🛠️ [Chat Handler] Tool call result status: ${call.result.success ? 'success' : 'failure'}`);
+                }
+            });
+        }
         // Convert to text stream response
         return result.toTextStreamResponse();
     }
@@ -25711,6 +25808,14 @@ chrome.runtime.onConnect.addListener((newPort) => {
 async function handleChatMessage(message, port) {
     const requestId = `req_${Date.now()}`;
     console.log(`[${requestId}] Handling chat message...`);
+    console.log(`[${requestId}] Message type: ${message.type}`);
+    // Debug log provider/model information from message if available
+    if (message.provider) {
+        console.log(`[${requestId}] Requested provider: ${message.provider}`);
+    }
+    if (message.model) {
+        console.log(`[${requestId}] Requested model: ${message.model}`);
+    }
     // Log attachment information
     if (message.attachments && message.attachments.length > 0) {
         console.log(`[${requestId}] Message contains ${message.attachments.length} attachment(s)`);
