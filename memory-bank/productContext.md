@@ -1,4 +1,4 @@
-# Product Context: Google Earth Engine Agent
+# Product Context: Google Earth Engine Agent (Updated May 23, 2025)
 
 ## Problem Space
 

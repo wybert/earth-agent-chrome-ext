@@ -1,4 +1,4 @@
-# System Patterns: Google Earth Engine Agent
+# System Patterns: Google Earth Engine Agent (Updated May 23, 2025)
 
 ## Architecture Overview
 

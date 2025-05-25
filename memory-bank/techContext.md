@@ -1,4 +1,4 @@
-# Technical Context: Google Earth Engine Agent
+# Technical Context: Google Earth Engine Agent (Updated May 23, 2025)
 
 ## Development Environment
 

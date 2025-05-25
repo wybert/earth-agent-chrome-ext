@@ -1,4 +1,4 @@
-# Project Brief: Google Earth Engine Agent
+# Project Brief: Google Earth Engine Agent (Updated May 23, 2025)
 
 ## Project Overview
 
