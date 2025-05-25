@@ -27545,6 +27545,7 @@ async function handleChatRequest(messages, apiKey, provider, model) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   click: () => (/* binding */ click),
+/* harmony export */   clickByCoordinates: () => (/* binding */ clickByCoordinates),
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
@@ -28128,6 +28129,140 @@ async function handleBackgroundScriptClick(params) {
         });
         console.log('[Click Tool - Background] After calling chrome.tabs.query (async).');
     });
+}
+/**
+ * Perform click on a web page using X and Y coordinates.
+ *
+ * @param params.x The X coordinate for the click.
+ * @param params.y The Y coordinate for the click.
+ * @param params.elementDescription Optional description for logging.
+ * @returns Promise with success status and result message/error.
+ */
+async function clickByCoordinates(params) {
+    const { x, y, elementDescription } = params;
+    if (typeof x !== 'number' || typeof y !== 'number') {
+        return {
+            success: false,
+            error: 'Both x and y coordinates are required and must be numbers'
+        };
+    }
+    console.log(`[Click Tool - Coordinates] Attempting to click at coordinates: (${x}, ${y}). Description: ${elementDescription || 'N/A'}`);
+    // Environment detection logic similar to the main click function
+    const isWindowUndefined = typeof window === 'undefined';
+    const isSelfDefined = typeof self !== 'undefined';
+    const isChromeDefined = typeof chrome !== 'undefined';
+    const hasChromeRuntimeId = isChromeDefined && chrome.runtime?.id;
+    const hasChromeTabs = isChromeDefined && !!chrome.tabs;
+    const hasChromeScripting = isChromeDefined && !!chrome.scripting;
+    if (isWindowUndefined && isSelfDefined && isChromeDefined && hasChromeRuntimeId && hasChromeTabs && hasChromeScripting) {
+        console.log('[Click Tool - Coordinates] Detected direct execution in background service worker. Routing to handleBackgroundScriptClickByCoordinates.');
+        // This function will need to be created in background/index.ts or similar
+        return sendClickByCoordinatesToBackground({ x, y, elementDescription });
+    }
+    try {
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        console.log('[Click Tool - Coordinates] detectEnvironment() call. Result:', env);
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            console.log('[Click Tool - Coordinates] Running in background script context (identified by detectEnvironment).');
+            return sendClickByCoordinatesToBackground({ x, y, elementDescription });
+        }
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            console.log('[Click Tool - Coordinates] Using background script proxy for click by coordinates operation');
+            return sendClickByCoordinatesToBackground({ x, y, elementDescription });
+        }
+        if (env.isContentScript && typeof document !== 'undefined') {
+            console.log('[Click Tool - Coordinates] Running directly in content script context. This should ideally be handled by background script sending to content script.');
+            // Direct execution in content script (should be called from background for security/permissions)
+            return executeClickByCoordinatesInPage(x, y);
+        }
+        return {
+            success: false,
+            error: 'Click by coordinates could not be performed in the current environment.'
+        };
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[Click Tool - Coordinates] Error during environment detection or execution:', errorMessage);
+        return {
+            success: false,
+            error: `Error in clickByCoordinates: ${errorMessage}`
+        };
+    }
+}
+// Helper to send message to background script for coordinate click
+// This function would live in click.ts and be called by clickByCoordinates
+async function sendClickByCoordinatesToBackground(params) {
+    return new Promise((resolve) => {
+        const timeoutId = setTimeout(() => {
+            console.warn('[Click Tool - Coordinates] Background script CLICK_BY_COORDINATES connection timed out.');
+            resolve({
+                success: false,
+                error: 'Background script CLICK_BY_COORDINATES connection timed out'
+            });
+        }, 5000); // 5 second timeout
+        try {
+            chrome.runtime.sendMessage({
+                type: 'CLICK_BY_COORDINATES', // New message type
+                payload: params
+            }, (response) => {
+                clearTimeout(timeoutId);
+                if (chrome.runtime.lastError) {
+                    resolve({
+                        success: false,
+                        error: chrome.runtime.lastError.message || 'Error communicating with background script for CLICK_BY_COORDINATES'
+                    });
+                    return;
+                }
+                resolve(response);
+            });
+        }
+        catch (err) {
+            clearTimeout(timeoutId);
+            resolve({
+                success: false,
+                error: err instanceof Error ? err.message : String(err)
+            });
+        }
+    });
+}
+// This function would be injected or called in the content script
+// For now, let's define its structure here. It will be moved/adapted to content.ts later.
+async function executeClickByCoordinatesInPage(x, y) {
+    try {
+        // Find the element at the coordinates
+        const elementAtPoint = document.elementFromPoint(x, y);
+        if (!elementAtPoint) {
+            return {
+                success: false,
+                error: `No element found at coordinates (${x}, ${y})`
+            };
+        }
+        console.log(`[Content Script - Click Coordinates] Element at (${x},${y}):`, elementAtPoint);
+        // Create and dispatch mouse events to simulate a click
+        const events = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+        events.forEach(eventType => {
+            const event = new MouseEvent(eventType, {
+                bubbles: true,
+                cancelable: true,
+                clientX: x,
+                clientY: y,
+                view: window
+            });
+            elementAtPoint.dispatchEvent(event);
+        });
+        return {
+            success: true,
+            message: `Successfully simulated click at (${x}, ${y}) on element: ${elementAtPoint.tagName}`
+        };
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[Content Script - Click Coordinates] Error executing click:', errorMessage);
+        return {
+            success: false,
+            error: `Error clicking by coordinates in page: ${errorMessage}`
+        };
+    }
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (click);
 
@@ -29770,6 +29905,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     sendResponse({
                         success: false,
                         error: `Error forwarding GET_ELEMENT_BY_REF_ID: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'CLICK_BY_COORDINATES': // New case for clicking by coordinates
+            (async () => {
+                try {
+                    console.log('Forwarding CLICK_BY_COORDINATES to content script with payload:', message.payload);
+                    if (message.payload && typeof message.payload.x === 'number' && typeof message.payload.y === 'number') {
+                        const response = await sendMessageToEarthEngineTab(message); // Forward the whole message
+                        sendResponse(response);
+                    }
+                    else {
+                        sendResponse({
+                            success: false,
+                            error: 'Invalid payload for CLICK_BY_COORDINATES: x and y coordinates are required.'
+                        });
+                    }
+                }
+                catch (error) {
+                    console.error('Error forwarding CLICK_BY_COORDINATES to content script:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error forwarding CLICK_BY_COORDINATES: ${error instanceof Error ? error.message : String(error)}`
                     });
                 }
             })();

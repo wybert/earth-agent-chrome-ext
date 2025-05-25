@@ -3,7 +3,7 @@
  * Exports all browser automation tools
  */
 
-import { click, type ClickParams, type ClickResponse } from './click';
+import { click, clickByCoordinates, type ClickParams, type ClickResponse, type ClickByCoordinatesParams, type ClickByCoordinatesResponse } from './click';
 import { getElement, getElementByRefId, type GetElementParams, type GetElementResponse, type ElementInfo, type GetElementByRefIdParams } from './getElement';
 import { snapshot, type SnapshotResponse } from './snapshot';
 import { type as typeText, type TypeParams, type TypeResponse } from './type';
@@ -14,6 +14,7 @@ import { clickByRef, type ClickByRefParams } from './clickByRef';
 // Export all tools
 export {
   click,
+  clickByCoordinates,
   getElement,
   getElementByRefId,
   snapshot,
@@ -26,6 +27,8 @@ export {
 export type {
   ClickParams,
   ClickResponse,
+  ClickByCoordinatesParams,
+  ClickByCoordinatesResponse,
   GetElementParams,
   GetElementResponse,
   ElementInfo,

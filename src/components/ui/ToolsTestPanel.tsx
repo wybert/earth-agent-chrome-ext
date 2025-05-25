@@ -21,7 +21,15 @@ import {
   getEarthEngineMapLayers
 } from '@/lib/tools/earth-engine/agentTools';
 import { detectEnvironment } from '@/lib/utils';
-import { click, typeText, getElement, screenshot, clickByRef, getElementByRefId } from '@/lib/tools/browser';
+import { 
+  click, 
+  clickByCoordinates,
+  typeText, 
+  getElement, 
+  screenshot, 
+  clickByRef, 
+  getElementByRefId 
+} from '@/lib/tools/browser';
 import { hover } from '@/lib/tools/browser/hover';
 import { snapshot } from '@/lib/tools/browser/snapshot';
 
@@ -129,16 +137,18 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
             // Note: This is for testing purposes. In real usage, you would first take a snapshot
             // to get proper element references, then use those references for clicking.
             if (clickMethod === 'coordinates') {
-              // For coordinates, we'll create a mock element description and ref
-              result = await click({
-                element: `Element at coordinates (${clickX}, ${clickY})`,
-                ref: 'click-by-coordinates-test-only' // This won't work in practice - just for testing
+              // For coordinates, use the new clickByCoordinates function
+              result = await clickByCoordinates({
+                x: clickX,
+                y: clickY,
+                elementDescription: `Clicked at coordinates (${clickX}, ${clickY})`
               });
             } else if (clickMethod === 'selector') {
               if (!elementSelector) {
                 throw new Error('Please enter a CSS selector');
               }
-              // For selector-based clicking, we'll create a mock element description and ref
+              // For selector-based clicking, this still uses the old ref-based click for testing.
+              // This part might need a different tool or approach if you want to click by selector without a ref.
               result = await click({
                 element: `Element with selector: ${elementSelector}`,
                 ref: 'click-by-selector-test-only' // This won't work in practice - just for testing

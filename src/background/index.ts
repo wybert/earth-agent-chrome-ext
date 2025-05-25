@@ -1359,6 +1359,29 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
+
+    case 'CLICK_BY_COORDINATES': // New case for clicking by coordinates
+      (async () => {
+        try {
+          console.log('Forwarding CLICK_BY_COORDINATES to content script with payload:', message.payload);
+          if (message.payload && typeof message.payload.x === 'number' && typeof message.payload.y === 'number') {
+            const response = await sendMessageToEarthEngineTab(message); // Forward the whole message
+            sendResponse(response);
+          } else {
+            sendResponse({
+              success: false,
+              error: 'Invalid payload for CLICK_BY_COORDINATES: x and y coordinates are required.'
+            });
+          }
+        } catch (error) {
+          console.error('Error forwarding CLICK_BY_COORDINATES to content script:', error);
+          sendResponse({
+            success: false,
+            error: `Error forwarding CLICK_BY_COORDINATES: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
     
     default:
       console.warn(`Unknown message type received in background: ${message.type}`);

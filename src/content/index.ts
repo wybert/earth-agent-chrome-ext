@@ -129,6 +129,14 @@ function setupPingResponse() {
         }
         return true; // Will respond asynchronously
 
+      case 'CLICK_BY_COORDINATES':
+        if (message.payload && typeof message.payload.x === 'number' && typeof message.payload.y === 'number') {
+          handleExecuteClickByCoordinates(message.payload.x, message.payload.y, sendResponse);
+        } else {
+          sendResponse({ success: false, error: 'Invalid payload for CLICK_BY_COORDINATES: x and y are required.' });
+        }
+        return true; // Will respond asynchronously
+
       default:
         console.warn(`Unknown message type: ${message.type}`);
         sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -833,6 +841,56 @@ function handleGetElementByRefId(refId: string, sendResponse: (response: any) =>
     sendResponse({
       success: false,
       error: `Error getting element by refId: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Handles executing a click at specific coordinates on the page.
+ */
+async function handleExecuteClickByCoordinates(x: number, y: number, sendResponse: (response: any) => void) {
+  try {
+    console.log(`[Content Script] Attempting to click at coordinates: (${x}, ${y})`);
+    const elementAtPoint = document.elementFromPoint(x, y);
+
+    if (!elementAtPoint) {
+      sendResponse({
+        success: false,
+        error: `No element found at coordinates (${x}, ${y})`
+      });
+      return;
+    }
+
+    console.log(`[Content Script] Element at (${x},${y}):`, elementAtPoint);
+
+    // Create and dispatch mouse events to simulate a click
+    // Standard sequence: pointerdown, mousedown, pointerup, mouseup, click
+    const eventSequence = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+
+    for (const eventType of eventSequence) {
+      const event = new MouseEvent(eventType, {
+        bubbles: true,
+        cancelable: true,
+        clientX: x,
+        clientY: y,
+        view: window,
+        composed: true // Important for events to cross shadow DOM boundaries if needed
+      });
+      console.log(`[Content Script] Dispatching ${eventType} on`, elementAtPoint);
+      elementAtPoint.dispatchEvent(event);
+    }
+
+    sendResponse({
+      success: true,
+      message: `Successfully simulated click at (${x}, ${y}) on element: ${elementAtPoint.tagName}`
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[Content Script] Error executing click by coordinates:', errorMessage);
+    sendResponse({
+      success: false,
+      error: `Error clicking by coordinates in page: ${errorMessage}`
     });
   }
 }
