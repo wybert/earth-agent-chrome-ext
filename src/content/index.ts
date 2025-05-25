@@ -12,8 +12,54 @@ interface Message {
 import { GetMapLayersResponse, MapLayer } from '@/lib/tools/earth-engine/getMapLayers';
 import { snapshot, SnapshotResponse } from '@/lib/tools/browser/snapshot';
 
+// Singleton pattern to prevent multiple content script instances
+const CONTENT_SCRIPT_ID = 'earth-engine-ai-assistant-content-script';
+const INSTANCE_TIMESTAMP = Date.now();
+
+// Immediately mark context as potentially invalid if we can't access chrome APIs
+let isContextInvalidated = false;
+try {
+  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+    console.warn('Chrome extension APIs not available, marking context as invalid');
+    isContextInvalidated = true;
+  }
+} catch (error) {
+  console.warn('Error checking chrome APIs on startup:', error);
+  isContextInvalidated = true;
+}
+
+// Exit immediately if context is invalid
+if (isContextInvalidated) {
+  console.log('Content script exiting due to invalid context');
+  throw new Error('Extension context invalid on startup');
+}
+
+// Check if another instance is already running
+if ((window as any)[CONTENT_SCRIPT_ID]) {
+  const existingTimestamp = (window as any)[CONTENT_SCRIPT_ID];
+  console.log(`Content script already running (timestamp: ${existingTimestamp}). Current timestamp: ${INSTANCE_TIMESTAMP}. Exiting this instance.`);
+  
+  // If this instance is newer, take over
+  if (INSTANCE_TIMESTAMP > existingTimestamp) {
+    console.log('This instance is newer, taking over...');
+    // Clean up the old instance
+    const oldPeriodicCheckId = (window as any)[CONTENT_SCRIPT_ID + '_intervalId'];
+    if (oldPeriodicCheckId) {
+      clearInterval(oldPeriodicCheckId);
+      console.log('Cleared old periodic check interval');
+    }
+  } else {
+    // Exit if an older or same instance is already running
+    console.log('Exiting older/duplicate content script instance');
+    throw new Error('Content script instance already running with same or newer timestamp');
+  }
+}
+
+// Mark this instance as the active one
+(window as any)[CONTENT_SCRIPT_ID] = INSTANCE_TIMESTAMP;
+
 // Initialize content script immediately to catch messages early
-console.log('Earth Engine AI Assistant content script loading at:', new Date().toISOString());
+console.log('Earth Engine AI Assistant content script loading at:', new Date().toISOString(), 'with timestamp:', INSTANCE_TIMESTAMP);
 
 // Track connection status with background script
 let backgroundConnectionVerified = false;
@@ -27,34 +73,65 @@ const MAX_CONNECTION_RETRIES = 5;
 const CONNECTION_RETRY_DELAYS = [500, 1000, 2000, 4000, 8000]; // Exponential backoff
 
 let periodicCheckIntervalId: number | undefined;
-let isContextInvalidated = false; // Global flag for context validity
 
 // Notify background script that content script is loaded
 function notifyBackgroundScript() {
-  console.log('Notifying background script that content script is loaded...');
-  
-  chrome.runtime.sendMessage({ 
-    type: 'CONTENT_SCRIPT_LOADED', 
-    url: window.location.href,
-    timestamp: Date.now() 
-  }, (response) => {
-    if (chrome.runtime.lastError) {
-      console.warn('Error notifying background script:', chrome.runtime.lastError);
-      
-      // Retry with exponential backoff if we haven't reached max retries
-      if (notificationRetries < MAX_NOTIFICATION_RETRIES) {
-        notificationRetries++;
-        const delay = Math.pow(2, notificationRetries) * 500; // Exponential backoff
-        console.log(`Retrying notification in ${delay}ms (attempt ${notificationRetries}/${MAX_NOTIFICATION_RETRIES})...`);
-        setTimeout(notifyBackgroundScript, delay);
-      }
+  // Check if extension context is valid before attempting communication
+  try {
+    if (typeof chrome === 'undefined' || 
+        typeof chrome.runtime === 'undefined' || 
+        typeof chrome.runtime.id === 'undefined') {
+      console.warn('Extension context invalidated, cannot notify background script');
+      isContextInvalidated = true;
       return;
     }
-    
-    backgroundConnectionVerified = true;
-    notificationRetries = 0;
-    console.log('Content script loaded notification response:', response);
-  });
+  } catch (error) {
+    console.warn('Error checking extension context in notifyBackgroundScript:', error);
+    isContextInvalidated = true;
+    return;
+  }
+
+  if (isContextInvalidated) {
+    console.log('Context already marked as invalidated, skipping background notification');
+    return;
+  }
+
+  console.log('Notifying background script that content script is loaded...');
+  
+  try {
+    chrome.runtime.sendMessage({ 
+      type: 'CONTENT_SCRIPT_LOADED', 
+      url: window.location.href,
+      timestamp: Date.now() 
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.warn('Error notifying background script:', chrome.runtime.lastError);
+        
+        // Check for context invalidation
+        if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
+          console.error('Extension context invalidated during notification');
+          isContextInvalidated = true;
+          return;
+        }
+        
+        // Retry with exponential backoff if we haven't reached max retries
+        if (notificationRetries < MAX_NOTIFICATION_RETRIES) {
+          notificationRetries++;
+          const delay = Math.pow(2, notificationRetries) * 500; // Exponential backoff
+          console.log(`Retrying notification in ${delay}ms (attempt ${notificationRetries}/${MAX_NOTIFICATION_RETRIES})...`);
+          setTimeout(notifyBackgroundScript, delay);
+        }
+        return;
+      }
+      
+      backgroundConnectionVerified = true;
+      notificationRetries = 0;
+      console.log('Content script loaded notification response:', response);
+    });
+  } catch (error) {
+    console.error('Error sending notification message:', error);
+    isContextInvalidated = true;
+  }
 }
 
 // Track ping attempts to avoid infinite loops
@@ -189,52 +266,97 @@ if (document.readyState === 'loading') {
 
 // Also set up a periodic self-check to ensure registration
 function periodicSelfCheck() {
-    if (pingAttempts < MAX_PING_ATTEMPTS || !backgroundConnectionVerified) {
-        pingAttempts++;
-        // Send a self-ping to the background script
-        chrome.runtime.sendMessage({
-            type: 'CONTENT_SCRIPT_HEARTBEAT',
-            url: window.location.href,
-            timestamp: Date.now()
-        }, (response) => {
-            // CRITICAL: Check chrome.runtime.lastError immediately.
-            if (chrome.runtime.lastError) {
-                console.warn('Error in periodicSelfCheck (heartbeat) response:', chrome.runtime.lastError.message);
-                // If context is invalidated, further actions are futile and will cause errors.
-                // Stop the periodic check or other dependent operations.
-                if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
-                    console.error("Content script context invalidated during heartbeat. Halting further operations dependent on this context.");
-                    isContextInvalidated = true; // Set the global flag
-                    if (periodicCheckIntervalId !== undefined) {
-                        clearInterval(periodicCheckIntervalId);
-                        periodicCheckIntervalId = undefined; // Clear the ID
-                        console.log("Cleared periodicSelfCheck interval due to invalidated context.");
-                    }
-                    backgroundConnectionVerified = false; // Mark as not verified
-                }
-                return; // Exit early if there's an error
+    // First check if the extension context is still valid
+    try {
+        if (typeof chrome === 'undefined' ||
+            typeof chrome.runtime === 'undefined' ||
+            typeof chrome.runtime.id === 'undefined') {
+            console.log('Extension context appears to be invalidated. Stopping periodic checks.');
+            isContextInvalidated = true;
+            if (periodicCheckIntervalId !== undefined) {
+                clearInterval(periodicCheckIntervalId);
+                periodicCheckIntervalId = undefined;
             }
+            return;
+        }
+    } catch (error) {
+        console.log('Error checking extension context, stopping periodic checks:', error instanceof Error ? error.message : String(error));
+        isContextInvalidated = true;
+        if (periodicCheckIntervalId !== undefined) {
+            clearInterval(periodicCheckIntervalId);
+            periodicCheckIntervalId = undefined;
+        }
+        return;
+    }
 
-            // If no error, proceed with response handling
-            backgroundConnectionVerified = true;
-            // Reset pingAttempts on successful heartbeat response as connection is alive
-            pingAttempts = 0; 
-            console.log('Periodic self-check (heartbeat) response:', response);
-        });
-    } else if (backgroundConnectionVerified && pingAttempts >= MAX_PING_ATTEMPTS) {
-      // This case implies the connection was verified, but self-check stopped due to MAX_PING_ATTEMPTS.
-      // It's good to log this or decide if pingAttempts should be reset to allow future re-verification.
-      // For now, we can reset pingAttempts to allow the check to resume if the background becomes responsive again.
-      console.log('Max ping attempts reached for self-check, but background was previously verified. Resetting attempts for future checks.');
-      pingAttempts = 0;
+    // Don't proceed if context was previously marked as invalidated
+    if (isContextInvalidated) {
+        console.log('Context already marked as invalidated, stopping periodic check');
+        if (periodicCheckIntervalId !== undefined) {
+            clearInterval(periodicCheckIntervalId);
+            periodicCheckIntervalId = undefined;
+        }
+        return;
+    }
+
+    // Only send heartbeat if we haven't exceeded max attempts OR if background was previously verified
+    if (pingAttempts < MAX_PING_ATTEMPTS || backgroundConnectionVerified) {
+        pingAttempts++;
+        
+        try {
+            // Send a self-ping to the background script
+            chrome.runtime.sendMessage({
+                type: 'CONTENT_SCRIPT_HEARTBEAT',
+                url: window.location.href,
+                timestamp: Date.now()
+            }, (response) => {
+                // CRITICAL: Check chrome.runtime.lastError immediately.
+                if (chrome.runtime.lastError) {
+                    // If context is invalidated, stop all further operations
+                    if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
+                        console.log("Content script context invalidated during heartbeat. Stopping further operations.");
+                        isContextInvalidated = true;
+                        if (periodicCheckIntervalId !== undefined) {
+                            clearInterval(periodicCheckIntervalId);
+                            periodicCheckIntervalId = undefined;
+                        }
+                        backgroundConnectionVerified = false;
+                        return;
+                    }
+                    
+                    // For other errors, just continue silently
+                    return;
+                }
+
+                // If no error, proceed with response handling
+                backgroundConnectionVerified = true;
+                pingAttempts = 0; 
+                console.log('Periodic self-check (heartbeat) response:', response);
+            });
+        } catch (error) {
+            console.log('Error sending heartbeat message, stopping periodic checks:', error instanceof Error ? error.message : String(error));
+            // If we can't even send a message, the context is likely invalidated
+            isContextInvalidated = true;
+            if (periodicCheckIntervalId !== undefined) {
+                clearInterval(periodicCheckIntervalId);
+                periodicCheckIntervalId = undefined;
+            }
+            return;
+        }
     } else if (!backgroundConnectionVerified && pingAttempts >= MAX_PING_ATTEMPTS) {
-        console.warn(`Max ping attempts (${MAX_PING_ATTEMPTS}) reached for self-check and background connection still not verified.`);
+        console.log(`Background connection could not be verified after ${MAX_PING_ATTEMPTS} attempts. Stopping heartbeat checks.`);
+        if (periodicCheckIntervalId !== undefined) {
+            clearInterval(periodicCheckIntervalId);
+            periodicCheckIntervalId = undefined;
+        }
     }
 }
 
-// Run self-checks periodically
+// Run self-checks less frequently (every 30 seconds instead of 10) to reduce context invalidation chances
 if (periodicCheckIntervalId === undefined) { // Ensure it's not set multiple times if script re-runs somehow
-    periodicCheckIntervalId = window.setInterval(periodicSelfCheck, 10000);
+    periodicCheckIntervalId = window.setInterval(periodicSelfCheck, 30000); // Changed from 10000 to 30000
+    // Store the interval ID globally so other instances can clean it up
+    (window as any)[CONTENT_SCRIPT_ID + '_intervalId'] = periodicCheckIntervalId;
 }
 
 /**
@@ -374,11 +496,38 @@ function handleGetTasks(sendResponse: (response: any) => void) {
 
 // Notify the background script that the content script is loaded
 function notifyBackgroundScriptLoaded() {
+  // Check if extension context is valid before attempting communication
+  try {
+    if (typeof chrome === 'undefined' || 
+        typeof chrome.runtime === 'undefined' || 
+        typeof chrome.runtime.id === 'undefined') {
+      console.warn('Extension context invalidated, cannot notify background script in notifyBackgroundScriptLoaded');
+      isContextInvalidated = true;
+      return;
+    }
+  } catch (error) {
+    console.warn('Error checking extension context in notifyBackgroundScriptLoaded:', error);
+    isContextInvalidated = true;
+    return;
+  }
+
+  if (isContextInvalidated) {
+    console.log('Context already marked as invalidated, skipping background script notification');
+    return;
+  }
+
   try {
     console.log('Earth Engine Agent content script loaded, notifying background script...');
     chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_LOADED' }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('Error notifying background script:', chrome.runtime.lastError);
+        
+        // Check for context invalidation
+        if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
+          console.error('Extension context invalidated during background script notification');
+          isContextInvalidated = true;
+          return;
+        }
         
         // Retry with exponential backoff if we haven't exceeded max retries
         if (connectionRetries < MAX_CONNECTION_RETRIES) {
@@ -398,6 +547,7 @@ function notifyBackgroundScriptLoaded() {
     });
   } catch (error) {
     console.error('Failed to notify background script:', error);
+    isContextInvalidated = true;
   }
 }
 
@@ -671,7 +821,7 @@ async function handleEditScript(message: any, sendResponse: (response: any) => v
     console.error('Error editing Earth Engine script:', error);
     sendResponse({ 
       success: false, 
-      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}` 
     });
   }
 }
@@ -964,4 +1114,57 @@ async function handleTakeAccessibilitySnapshot(sendResponse: (response: Snapshot
   }
 }
 
-console.log('Earth Engine AI Assistant content script fully loaded and listeners attached.'); 
+console.log('Earth Engine AI Assistant content script fully loaded and listeners attached.');
+
+// Add a global error handler to catch any remaining uncaught errors
+window.addEventListener('error', (event) => {
+  if (event.error && event.error.message && event.error.message.includes('Extension context invalidated')) {
+    console.warn('Global error handler caught extension context invalidation, marking context as invalid');
+    isContextInvalidated = true;
+    
+    // Clear the periodic check if it's still running
+    if (periodicCheckIntervalId !== undefined) {
+      clearInterval(periodicCheckIntervalId);
+      periodicCheckIntervalId = undefined;
+    }
+    
+    // Prevent the error from bubbling up
+    event.preventDefault();
+    return false;
+  }
+});
+
+// Add unhandled promise rejection handler for extension context errors
+window.addEventListener('unhandledrejection', (event) => {
+  if (event.reason && event.reason.message && event.reason.message.includes('Extension context invalidated')) {
+    console.warn('Global promise rejection handler caught extension context invalidation');
+    isContextInvalidated = true;
+    
+    // Clear the periodic check if it's still running
+    if (periodicCheckIntervalId !== undefined) {
+      clearInterval(periodicCheckIntervalId);
+      periodicCheckIntervalId = undefined;
+    }
+    
+    // Prevent the error from causing console spam
+    event.preventDefault();
+  }
+});
+
+// Clean up when the page is about to unload
+window.addEventListener('beforeunload', () => {
+  console.log('Content script cleaning up before page unload...');
+  
+  // Clear the periodic check interval
+  if (periodicCheckIntervalId !== undefined) {
+    clearInterval(periodicCheckIntervalId);
+    periodicCheckIntervalId = undefined;
+  }
+  
+  // Remove our singleton marker
+  delete (window as any)[CONTENT_SCRIPT_ID];
+  delete (window as any)[CONTENT_SCRIPT_ID + '_intervalId'];
+  
+  // Mark context as invalidated to prevent any further operations
+  isContextInvalidated = true;
+});
