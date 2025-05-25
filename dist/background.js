@@ -25783,7 +25783,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'CLICK':
             (async () => {
                 try {
-                    console.log('Click request for selector:', message.payload?.selector);
+                    console.log('Click request with payload:', message.payload);
                     // Get the active tab
                     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
                     if (!tabs || tabs.length === 0 || !tabs[0].id) {
@@ -25796,10 +25796,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     const tabId = tabs[0].id;
                     const selector = message.payload?.selector;
                     const position = message.payload?.position;
-                    if (!selector && !position) {
+                    const ref = message.payload?.ref;
+                    if (!selector && !position && !ref) {
                         sendResponse({
                             success: false,
-                            error: 'No selector or position provided'
+                            error: 'No selector, position, or ref provided'
                         });
                         return;
                     }

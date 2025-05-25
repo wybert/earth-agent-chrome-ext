@@ -107503,9 +107503,10 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [appendText, setAppendText] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [elementLimit, setElementLimit] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(5);
     const [screenshotImage, setScreenshotImage] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
-    const [clickMethod, setClickMethod] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('selector');
+    const [clickMethod, setClickMethod] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('selector'); // Added 'refId'
     const [clickX, setClickX] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     const [clickY, setClickY] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
+    const [clickRefId, setClickRefId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(''); // Added state for clickRefId
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_4__.detectEnvironment)());
     }, []);
@@ -107584,18 +107585,24 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                             // For coordinates, we'll create a mock element description and ref
                             result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({
                                 element: `Element at coordinates (${clickX}, ${clickY})`,
-                                ref: 'click-by-coordinates' // This won't work in practice - just for testing
+                                ref: 'click-by-coordinates-test-only' // This won't work in practice - just for testing
                             });
                         }
-                        else {
+                        else if (clickMethod === 'selector') {
                             if (!elementSelector) {
                                 throw new Error('Please enter a CSS selector');
                             }
                             // For selector-based clicking, we'll create a mock element description and ref
                             result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({
                                 element: `Element with selector: ${elementSelector}`,
-                                ref: 'click-by-selector' // This won't work in practice - just for testing
+                                ref: 'click-by-selector-test-only' // This won't work in practice - just for testing
                             });
+                        }
+                        else if (clickMethod === 'refId') {
+                            if (!clickRefId) {
+                                throw new Error('Please enter an Element Ref ID');
+                            }
+                            result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.clickByRef)({ ref: clickRefId });
                         }
                         break;
                     case 'hover':
@@ -107769,20 +107776,30 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Click Method"),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", { className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickMethod, onChange: (e) => setClickMethod(e.target.value) },
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { value: "selector" }, "By Selector"),
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { value: "coordinates" }, "By Coordinates")))),
-                        clickMethod === 'selector' ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { value: "coordinates" }, "By Coordinates"),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { value: "refId" }, "By Ref ID")))),
+                        clickMethod === 'selector' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementSelector, onChange: (e) => setElementSelector(e.target.value), placeholder: "e.g., button.run-button, #submit-button" })),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
                                 "Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: ",
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "button.goog-button.run-button[title=\"Run script (Ctrl+Enter)\"]")))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid grid-cols-2 gap-4" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "button.goog-button.run-button[title=\"Run script (Ctrl+Enter)\"]")))),
+                        clickMethod === 'coordinates' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid grid-cols-2 gap-4" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "X Coordinate"),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickX, onChange: (e) => setClickX(parseFloat(e.target.value)), step: "0.01", placeholder: "e.g., 442.015625" })),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Y Coordinate"),
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickY, onChange: (e) => setClickY(parseFloat(e.target.value)), step: "0.01", placeholder: "e.g., 74.5" })))))),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickY, onChange: (e) => setClickY(parseFloat(e.target.value)), step: "0.01", placeholder: "e.g., 74.5" })))),
+                        clickMethod === 'refId' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Ref ID"),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: clickRefId, onChange: (e) => setClickRefId(e.target.value), placeholder: "e.g., e1, e23 (from snapshot)" })),
+                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" },
+                                "Enter the exact element reference (e.g., ",
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("code", null, "e12"),
+                                ") obtained from the Snapshot tool."))))),
                     activeTab === 'type' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Element Selector"),
@@ -109350,12 +109367,40 @@ async function click(params) {
                         target: { tabId },
                         func: (elementDescription, ref) => {
                             try {
+                                // Function to find element recursively in document and shadow DOMs
+                                const findElementInShadowDom = (currentRoot, refValue) => {
+                                    const foundElement = currentRoot.querySelector(`[aria-ref="${refValue}"]`);
+                                    if (foundElement) {
+                                        return foundElement;
+                                    }
+                                    // Search in all open shadow roots within the current root
+                                    const shadowHosts = currentRoot.querySelectorAll('*');
+                                    for (const host of Array.from(shadowHosts)) {
+                                        if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+                                            const elementInShadow = findElementInShadowDom(host.shadowRoot, refValue);
+                                            if (elementInShadow) {
+                                                return elementInShadow;
+                                            }
+                                        }
+                                    }
+                                    return null;
+                                };
                                 // Find element by aria-ref attribute (matches playwright-mcp locator pattern)
-                                const element = document.querySelector(`[aria-ref="${ref}"]`);
+                                console.log(`[Content Script - Click] Attempting to find element with ref: "${ref}"`);
+                                const element = findElementInShadowDom(document, ref);
                                 if (!element) {
+                                    console.error(`[Content Script - Click] Element not found with ref: "${ref}" in document or any shadow DOMs.`);
                                     return {
                                         success: false,
                                         error: `Element not found with ref: ${ref}`
+                                    };
+                                }
+                                console.log(`[Content Script - Click] Found element for ref "${ref}":`, element);
+                                // Ensure element is still connected to the DOM
+                                if (!element.isConnected) {
+                                    return {
+                                        success: false,
+                                        error: `Element with ref: ${ref} is detached from the DOM`
                                     };
                                 }
                                 // Scroll element into view
@@ -109397,12 +109442,14 @@ async function click(params) {
                                 if (element instanceof HTMLElement) {
                                     element.click();
                                 }
+                                console.log(`[Content Script - Click] Click dispatched for element with ref: "${ref}"`);
                                 return {
                                     success: true,
                                     message: `Click executed successfully on ${elementDescription}`
                                 };
                             }
                             catch (error) {
+                                console.error(`[Content Script - Click] Error clicking element with ref "${ref}":`, error);
                                 return {
                                     success: false,
                                     error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
@@ -109432,12 +109479,40 @@ async function click(params) {
         // If running directly in page context (content script)
         if (env.isContentScript && typeof document !== 'undefined') {
             try {
+                // Function to find element recursively in document and shadow DOMs
+                const findElementInShadowDomDirect = (currentRoot, refValue) => {
+                    const foundElement = currentRoot.querySelector(`[aria-ref="${refValue}"]`);
+                    if (foundElement) {
+                        return foundElement;
+                    }
+                    // Search in all open shadow roots within the current root
+                    const shadowHosts = currentRoot.querySelectorAll('*');
+                    for (const host of Array.from(shadowHosts)) {
+                        if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+                            const elementInShadow = findElementInShadowDomDirect(host.shadowRoot, refValue);
+                            if (elementInShadow) {
+                                return elementInShadow;
+                            }
+                        }
+                    }
+                    return null;
+                };
                 // Find element by aria-ref attribute (matches playwright-mcp locator pattern)
-                const targetElement = document.querySelector(`[aria-ref="${ref}"]`);
+                console.log(`[Content Script - Click Direct] Attempting to find element with ref: "${ref}"`);
+                const targetElement = findElementInShadowDomDirect(document, ref);
                 if (!targetElement) {
+                    console.error(`[Content Script - Click Direct] Element not found with ref: "${ref}" in document or any shadow DOMs.`);
                     return {
                         success: false,
                         error: `Element not found with ref: ${ref}`
+                    };
+                }
+                console.log(`[Content Script - Click Direct] Found element for ref "${ref}":`, targetElement);
+                // Ensure element is still connected to the DOM
+                if (!targetElement.isConnected) {
+                    return {
+                        success: false,
+                        error: `Element with ref: ${ref} is detached from the DOM`
                     };
                 }
                 // Scroll element into view
@@ -109479,12 +109554,14 @@ async function click(params) {
                 if (targetElement instanceof HTMLElement) {
                     targetElement.click();
                 }
+                console.log(`[Content Script - Click Direct] Click dispatched for element with ref: "${ref}"`);
                 return {
                     success: true,
                     message: `Click executed successfully on ${element}`
                 };
             }
             catch (error) {
+                console.error(`[Content Script - Click Direct] Error clicking element with ref "${ref}":`, error);
                 return {
                     success: false,
                     error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
@@ -109505,6 +109582,54 @@ async function click(params) {
     }
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (click);
+
+
+/***/ }),
+
+/***/ "./src/lib/tools/browser/clickByRef.ts":
+/*!*********************************************!*\
+  !*** ./src/lib/tools/browser/clickByRef.ts ***!
+  \*********************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   clickByRef: () => (/* binding */ clickByRef),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _click__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./click */ "./src/lib/tools/browser/click.ts");
+/**
+ * ClickByRef tool for browser automation
+ * This tool clicks an element on the page using only the element reference
+ * from an accessibility snapshot. It's a convenience wrapper around the main click tool.
+ * Matches the playwright-mcp interaction pattern.
+ *
+ * @returns Promise with success status and result message
+ */
+
+/**
+ * Perform click on a web page using only the element reference from an accessibility snapshot.
+ *
+ * @param params.ref Exact target element reference from the page snapshot
+ * @returns Promise with success status and result message/error
+ */
+async function clickByRef(params) {
+    const { ref } = params;
+    if (!ref) {
+        return {
+            success: false,
+            error: 'Element ref is required',
+        };
+    }
+    // Call the original click tool with a generic element description
+    const clickParams = {
+        element: `Element with ref ${ref}`, // Generic description
+        ref: ref,
+    };
+    return (0,_click__WEBPACK_IMPORTED_MODULE_0__.click)(clickParams);
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (clickByRef);
 
 
 /***/ }),
@@ -109960,22 +110085,25 @@ async function hover(params) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   click: () => (/* reexport safe */ _click__WEBPACK_IMPORTED_MODULE_0__["default"]),
+/* harmony export */   clickByRef: () => (/* reexport safe */ _clickByRef__WEBPACK_IMPORTED_MODULE_1__["default"]),
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
-/* harmony export */   getElement: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_1__["default"]),
-/* harmony export */   screenshot: () => (/* reexport safe */ _screenshot__WEBPACK_IMPORTED_MODULE_2__["default"]),
-/* harmony export */   snapshot: () => (/* reexport safe */ _snapshot__WEBPACK_IMPORTED_MODULE_3__.snapshot),
-/* harmony export */   typeText: () => (/* reexport safe */ _type__WEBPACK_IMPORTED_MODULE_4__["default"])
+/* harmony export */   getElement: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_2__["default"]),
+/* harmony export */   screenshot: () => (/* reexport safe */ _screenshot__WEBPACK_IMPORTED_MODULE_3__["default"]),
+/* harmony export */   snapshot: () => (/* reexport safe */ _snapshot__WEBPACK_IMPORTED_MODULE_4__.snapshot),
+/* harmony export */   typeText: () => (/* reexport safe */ _type__WEBPACK_IMPORTED_MODULE_5__["default"])
 /* harmony export */ });
 /* harmony import */ var _click__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./click */ "./src/lib/tools/browser/click.ts");
-/* harmony import */ var _getElement__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./getElement */ "./src/lib/tools/browser/getElement.ts");
-/* harmony import */ var _screenshot__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./screenshot */ "./src/lib/tools/browser/screenshot.ts");
-/* harmony import */ var _snapshot__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./snapshot */ "./src/lib/tools/browser/snapshot.ts");
-/* harmony import */ var _type__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./type */ "./src/lib/tools/browser/type.ts");
+/* harmony import */ var _clickByRef__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./clickByRef */ "./src/lib/tools/browser/clickByRef.ts");
+/* harmony import */ var _getElement__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./getElement */ "./src/lib/tools/browser/getElement.ts");
+/* harmony import */ var _screenshot__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./screenshot */ "./src/lib/tools/browser/screenshot.ts");
+/* harmony import */ var _snapshot__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./snapshot */ "./src/lib/tools/browser/snapshot.ts");
+/* harmony import */ var _type__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./type */ "./src/lib/tools/browser/type.ts");
 /**
  * Browser Tools Index
  * Exports all browser automation tools
  */
 
+ // Added import for clickByRef
 
 
 
@@ -109985,10 +110113,11 @@ __webpack_require__.r(__webpack_exports__);
 // Main export of all browser tools
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
     click: _click__WEBPACK_IMPORTED_MODULE_0__["default"],
-    getElement: _getElement__WEBPACK_IMPORTED_MODULE_1__["default"],
-    screenshot: _screenshot__WEBPACK_IMPORTED_MODULE_2__["default"],
-    snapshot: _snapshot__WEBPACK_IMPORTED_MODULE_3__.snapshot,
-    typeText: _type__WEBPACK_IMPORTED_MODULE_4__["default"]
+    clickByRef: _clickByRef__WEBPACK_IMPORTED_MODULE_1__["default"], // Added clickByRef
+    getElement: _getElement__WEBPACK_IMPORTED_MODULE_2__["default"],
+    screenshot: _screenshot__WEBPACK_IMPORTED_MODULE_3__["default"],
+    snapshot: _snapshot__WEBPACK_IMPORTED_MODULE_4__.snapshot,
+    typeText: _type__WEBPACK_IMPORTED_MODULE_5__["default"]
 });
 
 

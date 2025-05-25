@@ -21,7 +21,7 @@ import {
   getEarthEngineMapLayers
 } from '@/lib/tools/earth-engine/agentTools';
 import { detectEnvironment } from '@/lib/utils';
-import { click, typeText, getElement, screenshot } from '@/lib/tools/browser';
+import { click, typeText, getElement, screenshot, clickByRef } from '@/lib/tools/browser';
 import { hover } from '@/lib/tools/browser/hover';
 import { snapshot } from '@/lib/tools/browser/snapshot';
 
@@ -55,9 +55,10 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const [appendText, setAppendText] = useState<boolean>(false);
   const [elementLimit, setElementLimit] = useState<number>(5);
   const [screenshotImage, setScreenshotImage] = useState<string | null>(null);
-  const [clickMethod, setClickMethod] = useState<'selector' | 'coordinates'>('selector');
+  const [clickMethod, setClickMethod] = useState<'selector' | 'coordinates' | 'refId'>('selector'); // Added 'refId'
   const [clickX, setClickX] = useState<number>(0);
   const [clickY, setClickY] = useState<number>(0);
+  const [clickRefId, setClickRefId] = useState<string>(''); // Added state for clickRefId
 
   useEffect(() => {
     setEnvironment(detectEnvironment());
@@ -128,19 +129,24 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
             // to get proper element references, then use those references for clicking.
             if (clickMethod === 'coordinates') {
               // For coordinates, we'll create a mock element description and ref
-              result = await click({ 
+              result = await click({
                 element: `Element at coordinates (${clickX}, ${clickY})`,
-                ref: 'click-by-coordinates' // This won't work in practice - just for testing
+                ref: 'click-by-coordinates-test-only' // This won't work in practice - just for testing
               });
-            } else {
+            } else if (clickMethod === 'selector') {
               if (!elementSelector) {
                 throw new Error('Please enter a CSS selector');
               }
               // For selector-based clicking, we'll create a mock element description and ref
-              result = await click({ 
+              result = await click({
                 element: `Element with selector: ${elementSelector}`,
-                ref: 'click-by-selector' // This won't work in practice - just for testing
+                ref: 'click-by-selector-test-only' // This won't work in practice - just for testing
               });
+            } else if (clickMethod === 'refId') {
+              if (!clickRefId) {
+                throw new Error('Please enter an Element Ref ID');
+              }
+              result = await clickByRef({ ref: clickRefId });
             }
             break;
           case 'hover':
@@ -646,15 +652,16 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                       <select 
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                         value={clickMethod}
-                        onChange={(e) => setClickMethod(e.target.value as 'selector' | 'coordinates')}
+                        onChange={(e) => setClickMethod(e.target.value as 'selector' | 'coordinates' | 'refId')}
                       >
                         <option value="selector">By Selector</option>
                         <option value="coordinates">By Coordinates</option>
+                        <option value="refId">By Ref ID</option>
                       </select>
                     </label>
                   </div>
                   
-                  {clickMethod === 'selector' ? (
+                  {clickMethod === 'selector' && (
                     <>
                       <label className="block">
                         <span className="text-gray-700">Element Selector</span>
@@ -670,7 +677,8 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                         Enter a CSS selector for the element you want to click. For the Earth Engine run button, use: <code>button.goog-button.run-button[title="Run script (Ctrl+Enter)"]</code>
                       </p>
                     </>
-                  ) : (
+                  )}
+                  {clickMethod === 'coordinates' && (
                     <div className="grid grid-cols-2 gap-4">
                       <label className="block">
                         <span className="text-gray-700">X Coordinate</span>
@@ -695,6 +703,23 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                         />
                       </label>
                     </div>
+                  )}
+                  {clickMethod === 'refId' && (
+                    <>
+                      <label className="block">
+                        <span className="text-gray-700">Element Ref ID</span>
+                        <input 
+                          type="text" 
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          value={clickRefId}
+                          onChange={(e) => setClickRefId(e.target.value)}
+                          placeholder="e.g., e1, e23 (from snapshot)"
+                        />
+                      </label>
+                      <p className="text-sm text-gray-600">
+                        Enter the exact element reference (e.g., <code>e12</code>) obtained from the Snapshot tool.
+                      </p>
+                    </>
                   )}
                 </div>
               )}

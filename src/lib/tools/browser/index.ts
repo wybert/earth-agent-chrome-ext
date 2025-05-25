@@ -4,6 +4,7 @@
  */
 
 import click, { ClickParams, ClickResponse } from './click';
+import clickByRef, { ClickByRefParams } from './clickByRef'; // Added import for clickByRef
 import getElement, { GetElementParams, GetElementResponse, ElementInfo } from './getElement';
 import screenshot, { ScreenshotResponse } from './screenshot';
 import { snapshot, SnapshotResponse } from './snapshot';
@@ -12,6 +13,7 @@ import typeFunc, { TypeParams, TypeResponse } from './type';
 // Export all tools
 export {
   click,
+  clickByRef, // Added clickByRef
   getElement,
   screenshot,
   snapshot,
@@ -19,6 +21,7 @@ export {
   // Types
   ClickParams,
   ClickResponse,
+  ClickByRefParams, // Added ClickByRefParams
   GetElementParams,
   GetElementResponse,
   ElementInfo,
@@ -31,6 +34,7 @@ export {
 // Main export of all browser tools
 export default {
   click,
+  clickByRef, // Added clickByRef
   getElement,
   screenshot,
   snapshot,

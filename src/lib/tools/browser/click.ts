@@ -114,13 +114,44 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             target: { tabId },
             func: (elementDescription: string, ref: string) => {
               try {
+                // Function to find element recursively in document and shadow DOMs
+                const findElementInShadowDom = (currentRoot: Document | ShadowRoot, refValue: string): Element | null => {
+                  const foundElement = currentRoot.querySelector(`[aria-ref="${refValue}"]`);
+                  if (foundElement) {
+                    return foundElement;
+                  }
+
+                  // Search in all open shadow roots within the current root
+                  const shadowHosts = currentRoot.querySelectorAll('*');
+                  for (const host of Array.from(shadowHosts)) {
+                    if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+                      const elementInShadow = findElementInShadowDom(host.shadowRoot, refValue);
+                      if (elementInShadow) {
+                        return elementInShadow;
+                      }
+                    }
+                  }
+                  return null;
+                };
+
                 // Find element by aria-ref attribute (matches playwright-mcp locator pattern)
-                const element = document.querySelector(`[aria-ref="${ref}"]`);
+                console.log(`[Content Script - Click] Attempting to find element with ref: "${ref}"`);
+                const element = findElementInShadowDom(document, ref);
                 
                 if (!element) {
+                  console.error(`[Content Script - Click] Element not found with ref: "${ref}" in document or any shadow DOMs.`);
                   return { 
                     success: false, 
                     error: `Element not found with ref: ${ref}` 
+                  };
+                }
+                console.log(`[Content Script - Click] Found element for ref "${ref}":`, element);
+
+                // Ensure element is still connected to the DOM
+                if (!element.isConnected) {
+                  return {
+                    success: false,
+                    error: `Element with ref: ${ref} is detached from the DOM`
                   };
                 }
                 
@@ -169,12 +200,13 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
                 if (element instanceof HTMLElement) {
                   element.click();
                 }
-                
+                console.log(`[Content Script - Click] Click dispatched for element with ref: "${ref}"`);
                 return { 
                   success: true, 
                   message: `Click executed successfully on ${elementDescription}` 
                 };
               } catch (error) {
+                console.error(`[Content Script - Click] Error clicking element with ref "${ref}":`, error);
                 return { 
                   success: false, 
                   error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
@@ -206,13 +238,44 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
     // If running directly in page context (content script)
     if (env.isContentScript && typeof document !== 'undefined') {
       try {
+        // Function to find element recursively in document and shadow DOMs
+        const findElementInShadowDomDirect = (currentRoot: Document | ShadowRoot, refValue: string): Element | null => {
+          const foundElement = currentRoot.querySelector(`[aria-ref="${refValue}"]`);
+          if (foundElement) {
+            return foundElement;
+          }
+
+          // Search in all open shadow roots within the current root
+          const shadowHosts = currentRoot.querySelectorAll('*');
+          for (const host of Array.from(shadowHosts)) {
+            if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+              const elementInShadow = findElementInShadowDomDirect(host.shadowRoot, refValue);
+              if (elementInShadow) {
+                return elementInShadow;
+              }
+            }
+          }
+          return null;
+        };
+
         // Find element by aria-ref attribute (matches playwright-mcp locator pattern)
-        const targetElement = document.querySelector(`[aria-ref="${ref}"]`);
+        console.log(`[Content Script - Click Direct] Attempting to find element with ref: "${ref}"`);
+        const targetElement = findElementInShadowDomDirect(document, ref);
         
         if (!targetElement) {
+          console.error(`[Content Script - Click Direct] Element not found with ref: "${ref}" in document or any shadow DOMs.`);
           return {
             success: false,
             error: `Element not found with ref: ${ref}`
+          };
+        }
+        console.log(`[Content Script - Click Direct] Found element for ref "${ref}":`, targetElement);
+
+        // Ensure element is still connected to the DOM
+        if (!targetElement.isConnected) {
+          return {
+            success: false,
+            error: `Element with ref: ${ref} is detached from the DOM`
           };
         }
         
@@ -261,12 +324,13 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
         if (targetElement instanceof HTMLElement) {
           targetElement.click();
         }
-        
+        console.log(`[Content Script - Click Direct] Click dispatched for element with ref: "${ref}"`);
         return {
           success: true,
           message: `Click executed successfully on ${element}`
         };
       } catch (error) {
+        console.error(`[Content Script - Click Direct] Error clicking element with ref "${ref}":`, error);
         return {
           success: false,
           error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
