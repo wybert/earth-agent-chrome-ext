@@ -940,6 +940,145 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       },
     });
 
+    // Define Click by Reference ID tool
+    const clickByRefIdTool = tool({
+      description: 'Clicks an element on the page identified by its aria-ref ID.',
+      parameters: z.object({
+        refId: z.string().describe('The aria-ref ID of the element to click.'),
+      }),
+      execute: async ({ refId }) => {
+        try {
+          console.log(`🖱️ [ClickByRefIdTool] Tool called for refId: ${refId}`);
+          console.time('ClickByRefIdTool execution - background part');
+
+          if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.scripting) {
+            console.warn('❌ [ClickByRefIdTool] Chrome API not available.');
+            return { success: false, error: 'Chrome API not available for click tool' };
+          }
+
+          const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => resolve(tabs || []));
+          });
+
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            console.warn('❌ [ClickByRefIdTool] No active tab found or tab has no ID.');
+            return { success: false, error: 'No active tab found or tab has no ID' };
+          }
+          const tabId = tabs[0].id;
+
+          // Ensure content script is ready (simplified check for brevity)
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Content script ping timed out for ClickByRefIdTool')), 500);
+              chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                clearTimeout(timeout);
+                if (chrome.runtime.lastError || !(response && response.type === 'PONG')) {
+                  chrome.scripting.executeScript(
+                    { target: { tabId }, files: ['content.js'] },
+                    () => chrome.runtime.lastError ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`)) : setTimeout(resolve, 500)
+                  );
+                } else {
+                  resolve();
+                }
+              });
+            });
+          } catch (err) {
+            console.error('❌ [ClickByRefIdTool] Content script check/injection failed:', err);
+            return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
+          }
+
+          const resultFromContentScript: { success: boolean; message?: string; error?: string } = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { type: 'CLICK_BY_REF_ID', payload: { refId } }, (response) => {
+              resolve(response || { success: false, error: 'No response from content script for click by refId' });
+            });
+          });
+
+          console.timeEnd('ClickByRefIdTool execution - background part');
+          console.log(`✅ [ClickByRefIdTool] Result for refId ${refId}: ${JSON.stringify(resultFromContentScript)}`);
+          return resultFromContentScript;
+
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ [ClickByRefIdTool] Error:`, error);
+          console.timeEnd('ClickByRefIdTool execution - background part');
+          return { success: false, error: `Error clicking by refId: ${errorMessage}` };
+        }
+      },
+      experimental_toToolResultContent: (result: any) => {
+        return [{ type: 'text', text: result.success ? (result.message || `Successfully clicked element with refId ${result.refId}.`) : `Error clicking element: ${result.error}` }];
+      },
+    });
+
+    // Define Click by Coordinates tool
+    const clickByCoordinatesTool = tool({
+      description: 'Clicks an element on the page at the specified (x, y) coordinates.',
+      parameters: z.object({
+        x: z.number().describe('The x-coordinate to click.'),
+        y: z.number().describe('The y-coordinate to click.'),
+      }),
+      execute: async ({ x, y }) => {
+        try {
+          console.log(`🖱️ [ClickByCoordinatesTool] Tool called for coordinates: (${x}, ${y})`);
+          console.time('ClickByCoordinatesTool execution - background part');
+
+          if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.scripting) {
+            console.warn('❌ [ClickByCoordinatesTool] Chrome API not available.');
+            return { success: false, error: 'Chrome API not available for click tool' };
+          }
+
+          const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => resolve(tabs || []));
+          });
+
+          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+            console.warn('❌ [ClickByCoordinatesTool] No active tab found or tab has no ID.');
+            return { success: false, error: 'No active tab found or tab has no ID' };
+          }
+          const tabId = tabs[0].id;
+
+          // Ensure content script is ready (simplified check for brevity)
+           try {
+            await new Promise<void>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Content script ping timed out for ClickByCoordinatesTool')), 500);
+              chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                clearTimeout(timeout);
+                if (chrome.runtime.lastError || !(response && response.type === 'PONG')) {
+                  chrome.scripting.executeScript(
+                    { target: { tabId }, files: ['content.js'] },
+                    () => chrome.runtime.lastError ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`)) : setTimeout(resolve, 500)
+                  );
+                } else {
+                  resolve();
+                }
+              });
+            });
+          } catch (err) {
+            console.error('❌ [ClickByCoordinatesTool] Content script check/injection failed:', err);
+            return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
+          }
+
+          const resultFromContentScript: { success: boolean; message?: string; error?: string } = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { type: 'CLICK_BY_COORDINATES', payload: { x, y } }, (response) => {
+              resolve(response || { success: false, error: 'No response from content script for click by coordinates' });
+            });
+          });
+
+          console.timeEnd('ClickByCoordinatesTool execution - background part');
+          console.log(`✅ [ClickByCoordinatesTool] Result for coords (${x},${y}): ${JSON.stringify(resultFromContentScript)}`);
+          return resultFromContentScript;
+
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ [ClickByCoordinatesTool] Error:`, error);
+          console.timeEnd('ClickByCoordinatesTool execution - background part');
+          return { success: false, error: `Error clicking by coordinates: ${errorMessage}` };
+        }
+      },
+      experimental_toToolResultContent: (result: any) => {
+        return [{ type: 'text', text: result.success ? (result.message || `Successfully clicked at coordinates (${result.x}, ${result.y}).`) : `Error clicking by coordinates: ${result.error}` }];
+      },
+    });
+
     // Log the final messages being sent to AI provider
     console.log(`[Chat Handler] Sending ${formattedMessages.length} messages to AI provider ${provider} (${effectiveModel})`);
     
@@ -997,7 +1136,9 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
         earthEngineScript: earthEngineScriptTool,
         earthEngineRunCode: earthEngineRunCodeTool,
         screenshot: screenshotTool,
-        snapshot: snapshotTool
+        snapshot: snapshotTool,
+        clickByRefId: clickByRefIdTool,
+        clickByCoordinates: clickByCoordinatesTool
       },
       maxSteps: 5, // Allow up to 5 steps
       temperature: 0.7,

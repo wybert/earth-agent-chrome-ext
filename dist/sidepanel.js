@@ -111025,6 +111025,14 @@ async function snapshot() {
  */
 async function captureDirectSnapshot() {
     try {
+        // Check if the extension context is still valid early on
+        if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined' || typeof chrome.runtime.id === 'undefined') {
+            console.warn('[SnapshotTool] Extension context appears to be invalidated. Aborting direct snapshot.');
+            return {
+                success: false,
+                error: 'Extension context invalidated during snapshot capture.'
+            };
+        }
         // Get page information
         const pageUrl = window.location.href;
         const pageTitle = document.title;
@@ -111285,73 +111293,108 @@ function getInputRole(input) {
  * Get accessible name for element
  */
 function getAccessibleName(element) {
-    // Check aria-label
-    const ariaLabel = element.getAttribute('aria-label');
-    if (ariaLabel) {
-        return ariaLabel.trim();
-    }
-    // Check aria-labelledby
-    const labelledBy = element.getAttribute('aria-labelledby');
-    if (labelledBy) {
-        const referencedElement = document.getElementById(labelledBy);
-        if (referencedElement) {
-            return getTextContent(referencedElement).trim();
+    try {
+        // Check aria-label
+        const ariaLabel = element.getAttribute('aria-label');
+        if (ariaLabel) {
+            return ariaLabel.trim();
         }
-    }
-    // For form controls, check associated label
-    if (element instanceof HTMLInputElement ||
-        element instanceof HTMLTextAreaElement ||
-        element instanceof HTMLSelectElement) {
-        // Check for label element
-        const labels = document.querySelectorAll(`label[for="${element.id}"]`);
-        if (labels.length > 0) {
-            return getTextContent(labels[0]).trim();
+        // Check aria-labelledby
+        const labelledBy = element.getAttribute('aria-labelledby');
+        if (labelledBy) {
+            const referencedElement = document.getElementById(labelledBy);
+            if (referencedElement) {
+                return getTextContent(referencedElement).trim();
+            }
         }
-        // Check for wrapping label
-        const wrappingLabel = element.closest('label');
-        if (wrappingLabel) {
-            return getTextContent(wrappingLabel).trim();
+        // For form controls, check associated label
+        if (element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLSelectElement) {
+            // Check for label element
+            const labels = document.querySelectorAll(`label[for="${element.id}"]`);
+            if (labels.length > 0) {
+                return getTextContent(labels[0]).trim();
+            }
+            // Check for wrapping label
+            const wrappingLabel = element.closest('label');
+            if (wrappingLabel) {
+                return getTextContent(wrappingLabel).trim();
+            }
+            // Check placeholder
+            const placeholder = element.getAttribute('placeholder');
+            if (placeholder) {
+                return placeholder.trim();
+            }
         }
-        // Check placeholder
-        const placeholder = element.getAttribute('placeholder');
-        if (placeholder) {
-            return placeholder.trim();
+        // Check title attribute
+        const title = element.getAttribute('title');
+        if (title) {
+            return title.trim();
         }
-    }
-    // Check title attribute
-    const title = element.getAttribute('title');
-    if (title) {
-        return title.trim();
-    }
-    // For images, check alt attribute
-    if (element instanceof HTMLImageElement) {
-        const alt = element.getAttribute('alt');
-        if (alt) {
-            return alt.trim();
+        // For images, check alt attribute
+        if (element instanceof HTMLImageElement) {
+            const alt = element.getAttribute('alt');
+            if (alt) {
+                return alt.trim();
+            }
         }
+        // Get text content for other elements
+        const textContent = getTextContent(element).trim();
+        if (textContent && textContent.length < 100) { // Reasonable length limit
+            return textContent;
+        }
+        return '';
     }
-    // Get text content for other elements
-    const textContent = getTextContent(element).trim();
-    if (textContent && textContent.length < 100) { // Reasonable length limit
-        return textContent;
+    catch (error) {
+        if (error instanceof Error && error.message.includes('Extension context invalidated')) {
+            console.warn('[SnapshotTool] Context invalidated while getting accessible name for element:', element, error.message);
+        }
+        else {
+            console.warn('[SnapshotTool] Error getting accessible name for element:', element, error);
+        }
+        return ''; // Return empty string on error
     }
-    return '';
 }
 /**
  * Get text content, excluding text from child interactive elements
  */
 function getTextContent(element) {
-    const clone = element.cloneNode(true);
-    // Remove child interactive elements to avoid nested labels
-    const interactiveSelectors = [
-        'button', 'a', 'input', 'textarea', 'select',
-        '[role="button"]', '[role="link"]', '[role="textbox"]'
-    ];
-    for (const selector of interactiveSelectors) {
-        const interactiveElements = clone.querySelectorAll(selector);
-        interactiveElements.forEach(el => el.remove());
+    try {
+        const clone = element.cloneNode(true);
+        // Remove child interactive elements to avoid nested labels
+        const interactiveSelectors = [
+            'button', 'a', 'input', 'textarea', 'select',
+            '[role="button"]', '[role="link"]', '[role="textbox"]'
+        ];
+        for (const selector of interactiveSelectors) {
+            const interactiveElements = clone.querySelectorAll(selector);
+            interactiveElements.forEach(el => {
+                try {
+                    el.remove();
+                }
+                catch (removeError) {
+                    // Log if a specific removal fails, possibly due to context issues with the cloned node
+                    if (removeError instanceof Error && removeError.message.includes('Extension context invalidated')) {
+                        console.warn('[SnapshotTool] Context invalidated while removing child from cloned node during getTextContent:', el, removeError.message);
+                    }
+                    else {
+                        console.warn('[SnapshotTool] Error removing child from cloned node during getTextContent:', el, removeError);
+                    }
+                }
+            });
+        }
+        return clone.textContent || '';
     }
-    return clone.textContent || '';
+    catch (error) {
+        if (error instanceof Error && error.message.includes('Extension context invalidated')) {
+            console.warn('[SnapshotTool] Context invalidated during getTextContent for element:', element, error.message);
+        }
+        else {
+            console.warn('[SnapshotTool] Error in getTextContent for element:', element, error);
+        }
+        return ''; // Return empty string on error
+    }
 }
 /**
  * Format accessibility tree as YAML similar to playwright-mcp

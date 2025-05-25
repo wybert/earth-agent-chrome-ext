@@ -26,6 +26,9 @@ let connectionRetries = 0;
 const MAX_CONNECTION_RETRIES = 5;
 const CONNECTION_RETRY_DELAYS = [500, 1000, 2000, 4000, 8000]; // Exponential backoff
 
+let periodicCheckIntervalId: number | undefined;
+let isContextInvalidated = false; // Global flag for context validity
+
 // Notify background script that content script is loaded
 function notifyBackgroundScript() {
   console.log('Notifying background script that content script is loaded...');
@@ -80,6 +83,14 @@ function setupPingResponse() {
 
 // Update the message listener to handle the new message type
   chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+  if (isContextInvalidated) {
+    console.error('Content script context is invalidated. Aborting message handling for:', message.type);
+    // It's tricky to know if we should return true or false here without knowing if sendResponse was originally going to be async.
+    // Returning false is safer, but might leave some sendMessage calls in background hanging.
+    // However, if context is invalidated, the background might not be there to receive a response anyway.
+    return false;
+  }
+
   if (!message || !message.type) {
     console.warn('Received invalid message:', message);
     sendResponse({ success: false, error: 'Invalid message format' });
@@ -142,6 +153,14 @@ function setupPingResponse() {
         }
         return true; // Will respond asynchronously
 
+      case 'CLICK_BY_REF_ID':
+        if (message.payload && message.payload.refId) {
+          handleClickByRefId(message.payload.refId, sendResponse);
+        } else {
+          sendResponse({ success: false, error: 'refId not provided in payload for CLICK_BY_REF_ID' });
+        }
+        return true; // Will respond asynchronously
+
       default:
         console.warn(`Unknown message type: ${message.type}`);
         sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -185,9 +204,12 @@ function periodicSelfCheck() {
                 // Stop the periodic check or other dependent operations.
                 if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
                     console.error("Content script context invalidated during heartbeat. Halting further operations dependent on this context.");
-                    // If periodicSelfCheck is called by setInterval, clear it here.
-                    // For instance, if an intervalId is stored: clearInterval(intervalId);
-                    // For now, we'll just prevent further processing in this callback.
+                    isContextInvalidated = true; // Set the global flag
+                    if (periodicCheckIntervalId !== undefined) {
+                        clearInterval(periodicCheckIntervalId);
+                        periodicCheckIntervalId = undefined; // Clear the ID
+                        console.log("Cleared periodicSelfCheck interval due to invalidated context.");
+                    }
                     backgroundConnectionVerified = false; // Mark as not verified
                 }
                 return; // Exit early if there's an error
@@ -211,7 +233,9 @@ function periodicSelfCheck() {
 }
 
 // Run self-checks periodically
-setInterval(periodicSelfCheck, 10000);
+if (periodicCheckIntervalId === undefined) { // Ensure it's not set multiple times if script re-runs somehow
+    periodicCheckIntervalId = window.setInterval(periodicSelfCheck, 10000);
+}
 
 /**
  * Handles the RUN_CODE message by clicking the run button in the Earth Engine editor
@@ -897,6 +921,32 @@ async function handleExecuteClickByCoordinates(x: number, y: number, sendRespons
       success: false,
       error: `Error clicking by coordinates in page: ${errorMessage}`
     });
+  }
+}
+
+async function handleClickByRefId(refId: string, sendResponse: (response: any) => void) {
+  console.log(`Content script: Handling CLICK_BY_REF_ID for refId: ${refId}`);
+  try {
+    if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined' || typeof chrome.runtime.id === 'undefined') {
+      console.warn('[ClickByRefIdTool - CS] Extension context appears to be invalidated. Aborting.');
+      sendResponse({ success: false, error: 'Extension context invalidated' });
+      return;
+    }
+
+    const element = findElementInNodeRecursive(document, refId);
+
+    if (element && typeof (element as HTMLElement).click === 'function') {
+      (element as HTMLElement).click();
+      console.log(`Successfully clicked element with refId: ${refId}`);
+      sendResponse({ success: true, message: `Successfully clicked element with refId: ${refId}`, refId });
+    } else {
+      console.warn(`Element with refId '${refId}' not found or not clickable.`);
+      sendResponse({ success: false, error: `Element with refId '${refId}' not found or not clickable.`, refId });
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`Error clicking element with refId '${refId}':`, error);
+    sendResponse({ success: false, error: `Error clicking element: ${errorMessage}`, refId });
   }
 }
 

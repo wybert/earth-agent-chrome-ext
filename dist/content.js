@@ -3148,6 +3148,14 @@ async function snapshot() {
  */
 async function captureDirectSnapshot() {
     try {
+        // Check if the extension context is still valid early on
+        if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined' || typeof chrome.runtime.id === 'undefined') {
+            console.warn('[SnapshotTool] Extension context appears to be invalidated. Aborting direct snapshot.');
+            return {
+                success: false,
+                error: 'Extension context invalidated during snapshot capture.'
+            };
+        }
         // Get page information
         const pageUrl = window.location.href;
         const pageTitle = document.title;
@@ -3408,73 +3416,108 @@ function getInputRole(input) {
  * Get accessible name for element
  */
 function getAccessibleName(element) {
-    // Check aria-label
-    const ariaLabel = element.getAttribute('aria-label');
-    if (ariaLabel) {
-        return ariaLabel.trim();
-    }
-    // Check aria-labelledby
-    const labelledBy = element.getAttribute('aria-labelledby');
-    if (labelledBy) {
-        const referencedElement = document.getElementById(labelledBy);
-        if (referencedElement) {
-            return getTextContent(referencedElement).trim();
+    try {
+        // Check aria-label
+        const ariaLabel = element.getAttribute('aria-label');
+        if (ariaLabel) {
+            return ariaLabel.trim();
         }
-    }
-    // For form controls, check associated label
-    if (element instanceof HTMLInputElement ||
-        element instanceof HTMLTextAreaElement ||
-        element instanceof HTMLSelectElement) {
-        // Check for label element
-        const labels = document.querySelectorAll(`label[for="${element.id}"]`);
-        if (labels.length > 0) {
-            return getTextContent(labels[0]).trim();
+        // Check aria-labelledby
+        const labelledBy = element.getAttribute('aria-labelledby');
+        if (labelledBy) {
+            const referencedElement = document.getElementById(labelledBy);
+            if (referencedElement) {
+                return getTextContent(referencedElement).trim();
+            }
         }
-        // Check for wrapping label
-        const wrappingLabel = element.closest('label');
-        if (wrappingLabel) {
-            return getTextContent(wrappingLabel).trim();
+        // For form controls, check associated label
+        if (element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLSelectElement) {
+            // Check for label element
+            const labels = document.querySelectorAll(`label[for="${element.id}"]`);
+            if (labels.length > 0) {
+                return getTextContent(labels[0]).trim();
+            }
+            // Check for wrapping label
+            const wrappingLabel = element.closest('label');
+            if (wrappingLabel) {
+                return getTextContent(wrappingLabel).trim();
+            }
+            // Check placeholder
+            const placeholder = element.getAttribute('placeholder');
+            if (placeholder) {
+                return placeholder.trim();
+            }
         }
-        // Check placeholder
-        const placeholder = element.getAttribute('placeholder');
-        if (placeholder) {
-            return placeholder.trim();
+        // Check title attribute
+        const title = element.getAttribute('title');
+        if (title) {
+            return title.trim();
         }
-    }
-    // Check title attribute
-    const title = element.getAttribute('title');
-    if (title) {
-        return title.trim();
-    }
-    // For images, check alt attribute
-    if (element instanceof HTMLImageElement) {
-        const alt = element.getAttribute('alt');
-        if (alt) {
-            return alt.trim();
+        // For images, check alt attribute
+        if (element instanceof HTMLImageElement) {
+            const alt = element.getAttribute('alt');
+            if (alt) {
+                return alt.trim();
+            }
         }
+        // Get text content for other elements
+        const textContent = getTextContent(element).trim();
+        if (textContent && textContent.length < 100) { // Reasonable length limit
+            return textContent;
+        }
+        return '';
     }
-    // Get text content for other elements
-    const textContent = getTextContent(element).trim();
-    if (textContent && textContent.length < 100) { // Reasonable length limit
-        return textContent;
+    catch (error) {
+        if (error instanceof Error && error.message.includes('Extension context invalidated')) {
+            console.warn('[SnapshotTool] Context invalidated while getting accessible name for element:', element, error.message);
+        }
+        else {
+            console.warn('[SnapshotTool] Error getting accessible name for element:', element, error);
+        }
+        return ''; // Return empty string on error
     }
-    return '';
 }
 /**
  * Get text content, excluding text from child interactive elements
  */
 function getTextContent(element) {
-    const clone = element.cloneNode(true);
-    // Remove child interactive elements to avoid nested labels
-    const interactiveSelectors = [
-        'button', 'a', 'input', 'textarea', 'select',
-        '[role="button"]', '[role="link"]', '[role="textbox"]'
-    ];
-    for (const selector of interactiveSelectors) {
-        const interactiveElements = clone.querySelectorAll(selector);
-        interactiveElements.forEach(el => el.remove());
+    try {
+        const clone = element.cloneNode(true);
+        // Remove child interactive elements to avoid nested labels
+        const interactiveSelectors = [
+            'button', 'a', 'input', 'textarea', 'select',
+            '[role="button"]', '[role="link"]', '[role="textbox"]'
+        ];
+        for (const selector of interactiveSelectors) {
+            const interactiveElements = clone.querySelectorAll(selector);
+            interactiveElements.forEach(el => {
+                try {
+                    el.remove();
+                }
+                catch (removeError) {
+                    // Log if a specific removal fails, possibly due to context issues with the cloned node
+                    if (removeError instanceof Error && removeError.message.includes('Extension context invalidated')) {
+                        console.warn('[SnapshotTool] Context invalidated while removing child from cloned node during getTextContent:', el, removeError.message);
+                    }
+                    else {
+                        console.warn('[SnapshotTool] Error removing child from cloned node during getTextContent:', el, removeError);
+                    }
+                }
+            });
+        }
+        return clone.textContent || '';
     }
-    return clone.textContent || '';
+    catch (error) {
+        if (error instanceof Error && error.message.includes('Extension context invalidated')) {
+            console.warn('[SnapshotTool] Context invalidated during getTextContent for element:', element, error.message);
+        }
+        else {
+            console.warn('[SnapshotTool] Error in getTextContent for element:', element, error);
+        }
+        return ''; // Return empty string on error
+    }
 }
 /**
  * Format accessibility tree as YAML similar to playwright-mcp
@@ -3634,6 +3677,8 @@ let backgroundConnected = false;
 let connectionRetries = 0;
 const MAX_CONNECTION_RETRIES = 5;
 const CONNECTION_RETRY_DELAYS = [500, 1000, 2000, 4000, 8000]; // Exponential backoff
+let periodicCheckIntervalId;
+let isContextInvalidated = false; // Global flag for context validity
 // Notify background script that content script is loaded
 function notifyBackgroundScript() {
     console.log('Notifying background script that content script is loaded...');
@@ -3682,6 +3727,13 @@ function setupPingResponse() {
 }
 // Update the message listener to handle the new message type
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isContextInvalidated) {
+        console.error('Content script context is invalidated. Aborting message handling for:', message.type);
+        // It's tricky to know if we should return true or false here without knowing if sendResponse was originally going to be async.
+        // Returning false is safer, but might leave some sendMessage calls in background hanging.
+        // However, if context is invalidated, the background might not be there to receive a response anyway.
+        return false;
+    }
     if (!message || !message.type) {
         console.warn('Received invalid message:', message);
         sendResponse({ success: false, error: 'Invalid message format' });
@@ -3733,6 +3785,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     sendResponse({ success: false, error: 'Invalid payload for CLICK_BY_COORDINATES: x and y are required.' });
                 }
                 return true; // Will respond asynchronously
+            case 'CLICK_BY_REF_ID':
+                if (message.payload && message.payload.refId) {
+                    handleClickByRefId(message.payload.refId, sendResponse);
+                }
+                else {
+                    sendResponse({ success: false, error: 'refId not provided in payload for CLICK_BY_REF_ID' });
+                }
+                return true; // Will respond asynchronously
             default:
                 console.warn(`Unknown message type: ${message.type}`);
                 sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -3776,9 +3836,12 @@ function periodicSelfCheck() {
                 // Stop the periodic check or other dependent operations.
                 if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
                     console.error("Content script context invalidated during heartbeat. Halting further operations dependent on this context.");
-                    // If periodicSelfCheck is called by setInterval, clear it here.
-                    // For instance, if an intervalId is stored: clearInterval(intervalId);
-                    // For now, we'll just prevent further processing in this callback.
+                    isContextInvalidated = true; // Set the global flag
+                    if (periodicCheckIntervalId !== undefined) {
+                        clearInterval(periodicCheckIntervalId);
+                        periodicCheckIntervalId = undefined; // Clear the ID
+                        console.log("Cleared periodicSelfCheck interval due to invalidated context.");
+                    }
                     backgroundConnectionVerified = false; // Mark as not verified
                 }
                 return; // Exit early if there's an error
@@ -3802,7 +3865,9 @@ function periodicSelfCheck() {
     }
 }
 // Run self-checks periodically
-setInterval(periodicSelfCheck, 10000);
+if (periodicCheckIntervalId === undefined) { // Ensure it's not set multiple times if script re-runs somehow
+    periodicCheckIntervalId = window.setInterval(periodicSelfCheck, 10000);
+}
 /**
  * Handles the RUN_CODE message by clicking the run button in the Earth Engine editor
  */
@@ -4420,6 +4485,31 @@ async function handleExecuteClickByCoordinates(x, y, sendResponse) {
             success: false,
             error: `Error clicking by coordinates in page: ${errorMessage}`
         });
+    }
+}
+async function handleClickByRefId(refId, sendResponse) {
+    console.log(`Content script: Handling CLICK_BY_REF_ID for refId: ${refId}`);
+    try {
+        if (typeof chrome === 'undefined' || typeof chrome.runtime === 'undefined' || typeof chrome.runtime.id === 'undefined') {
+            console.warn('[ClickByRefIdTool - CS] Extension context appears to be invalidated. Aborting.');
+            sendResponse({ success: false, error: 'Extension context invalidated' });
+            return;
+        }
+        const element = findElementInNodeRecursive(document, refId);
+        if (element && typeof element.click === 'function') {
+            element.click();
+            console.log(`Successfully clicked element with refId: ${refId}`);
+            sendResponse({ success: true, message: `Successfully clicked element with refId: ${refId}`, refId });
+        }
+        else {
+            console.warn(`Element with refId '${refId}' not found or not clickable.`);
+            sendResponse({ success: false, error: `Element with refId '${refId}' not found or not clickable.`, refId });
+        }
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`Error clicking element with refId '${refId}':`, error);
+        sendResponse({ success: false, error: `Error clicking element: ${errorMessage}`, refId });
     }
 }
 async function handleTakeAccessibilitySnapshot(sendResponse) {
