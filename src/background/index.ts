@@ -1,6 +1,7 @@
 import { handleChatRequest } from './chat-handler';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
+import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
 
 // Types for messages between components
 interface MessageBase {
@@ -1064,112 +1065,34 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
     case 'CLICK':
       (async () => {
         try {
-          console.log('Click request with payload:', message.payload);
-          
-          // Get the active tab
-          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          
-          if (!tabs || tabs.length === 0 || !tabs[0].id) {
+          console.log('[Background Index] Received CLICK message with payload:', message.payload);
+
+          if (!message.payload || !message.payload.ref || !message.payload.element) {
+            console.error('[Background Index] Invalid payload for CLICK message:', message.payload);
             sendResponse({
               success: false,
-              error: 'No active tab found'
+              error: 'Invalid payload for CLICK message. "ref" and "element" description are required.'
             });
             return;
           }
-          
-          const tabId = tabs[0].id;
-          const selector = message.payload?.selector;
-          const position = message.payload?.position;
-          const ref = message.payload?.ref;
-          
-          if (!selector && !position && !ref) {
-            sendResponse({
-              success: false,
-              error: 'No selector, position, or ref provided'
-            });
-            return;
-          }
-          
-          const results = await chrome.scripting.executeScript({
-            target: { tabId },
-            func: (selector: string | null, position: { x: number; y: number } | null, ref: string | null) => {
-              try {
-                let element: Element | null = null;
-                
-                if (ref) {
-                  // Try to find element by ref attribute (playwright-mcp style)
-                  element = document.querySelector(`[aria-ref="${ref}"]`);
-                  if (!element) {
-                    return { success: false, error: `Element not found with ref: ${ref}` };
-                  }
-                } else if (selector) {
-                  // Try to find element by selector
-                  element = document.querySelector(selector);
-                  if (!element) {
-                    return { success: false, error: `Element not found with selector: ${selector}` };
-                  }
-                  
-                  // Scroll element into view
-                  element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                } else if (position) {
-                  // Find element at position
-                  element = document.elementFromPoint(position.x, position.y);
-                  if (!element) {
-                    return { success: false, error: `No element found at position (${position.x}, ${position.y})` };
-                  }
-                }
-                
-                if (!element) {
-                  return { success: false, error: 'No element to click' };
-                }
-                
-                // Scroll element into view if we found it by ref
-                if (ref) {
-                  element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                }
-                
-                // Get element position for click coordinates
-                const rect = element.getBoundingClientRect();
-                const clickX = position?.x || rect.left + rect.width / 2;
-                const clickY = position?.y || rect.top + rect.height / 2;
-                
-                // Create and dispatch click events
-                const clickEvent = new MouseEvent('click', {
-                  view: window,
-                  bubbles: true,
-                  cancelable: true,
-                  clientX: clickX,
-                  clientY: clickY
-                });
-                
-                element.dispatchEvent(clickEvent);
-                
-                return { success: true, message: 'Click executed successfully' };
-              } catch (error) {
-                return { 
-                  success: false, 
-                  error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
-                };
-              }
-            },
-            args: [selector || null, position || null, message.payload?.ref || null]
-          });
-          
-          if (!results || results.length === 0) {
-            sendResponse({
-              success: false,
-              error: 'No result from script execution'
-            });
-            return;
-          }
-          
-          // Return the result
-          sendResponse(results[0].result);
+
+          const clickParams: ClickParams = {
+            element: message.payload.element, // The human-readable description
+            ref: message.payload.ref          // The ref string (e.g., "e50")
+          };
+
+          console.log('[Background Index] Calling executeToolClick from lib/tools/browser/click.ts with params:', clickParams);
+          // Now, actually call the click function from your click.ts tool
+          const toolResponse: ClickResponse = await executeToolClick(clickParams);
+
+          console.log('[Background Index] Response from executeToolClick:', toolResponse);
+          sendResponse(toolResponse);
+
         } catch (error) {
-          console.error('Error processing click request:', error);
+          console.error('[Background Index] Error processing CLICK message:', error);
           sendResponse({
             success: false,
-            error: `Error processing click request: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error processing CLICK message in background/index.ts: ${error instanceof Error ? error.message : String(error)}`
           });
         }
       })();
