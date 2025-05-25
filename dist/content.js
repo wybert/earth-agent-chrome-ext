@@ -112,6 +112,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             case 'GET_MAP_LAYERS':
                 handleGetMapLayers(sendResponse);
                 return true; // Will respond asynchronously
+            case 'GET_ELEMENT_BY_REF_ID':
+                if (message.payload && message.payload.refId) {
+                    handleGetElementByRefId(message.payload.refId, sendResponse);
+                }
+                else {
+                    sendResponse({ success: false, error: 'refId not provided in payload for GET_ELEMENT_BY_REF_ID' });
+                }
+                return true; // Will respond asynchronously
             default:
                 console.warn(`Unknown message type: ${message.type}`);
                 sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -148,20 +156,36 @@ function periodicSelfCheck() {
             url: window.location.href,
             timestamp: Date.now()
         }, (response) => {
+            // CRITICAL: Check chrome.runtime.lastError immediately.
             if (chrome.runtime.lastError) {
-                console.warn('Background connection error during self-check:', chrome.runtime.lastError);
-                backgroundConnectionVerified = false;
+                console.warn('Error in periodicSelfCheck (heartbeat) response:', chrome.runtime.lastError.message);
+                // If context is invalidated, further actions are futile and will cause errors.
+                // Stop the periodic check or other dependent operations.
+                if (chrome.runtime.lastError.message?.includes("Extension context invalidated")) {
+                    console.error("Content script context invalidated during heartbeat. Halting further operations dependent on this context.");
+                    // If periodicSelfCheck is called by setInterval, clear it here.
+                    // For instance, if an intervalId is stored: clearInterval(intervalId);
+                    // For now, we'll just prevent further processing in this callback.
+                    backgroundConnectionVerified = false; // Mark as not verified
+                }
+                return; // Exit early if there's an error
             }
-            else if (response && response.success) {
-                console.log('Self-check successful, background script acknowledged content script');
-                pingAttempts = 0;
-                backgroundConnectionVerified = true;
-            }
-            else {
-                console.warn('Self-check received unexpected response:', response);
-                backgroundConnectionVerified = false;
-            }
+            // If no error, proceed with response handling
+            backgroundConnectionVerified = true;
+            // Reset pingAttempts on successful heartbeat response as connection is alive
+            pingAttempts = 0;
+            console.log('Periodic self-check (heartbeat) response:', response);
         });
+    }
+    else if (backgroundConnectionVerified && pingAttempts >= MAX_PING_ATTEMPTS) {
+        // This case implies the connection was verified, but self-check stopped due to MAX_PING_ATTEMPTS.
+        // It's good to log this or decide if pingAttempts should be reset to allow future re-verification.
+        // For now, we can reset pingAttempts to allow the check to resume if the background becomes responsive again.
+        console.log('Max ping attempts reached for self-check, but background was previously verified. Resetting attempts for future checks.');
+        pingAttempts = 0;
+    }
+    else if (!backgroundConnectionVerified && pingAttempts >= MAX_PING_ATTEMPTS) {
+        console.warn(`Max ping attempts (${MAX_PING_ATTEMPTS}) reached for self-check and background connection still not verified.`);
     }
 }
 // Run self-checks periodically
@@ -642,6 +666,106 @@ async function handleGetMapLayers(sendResponse) {
         });
     }
 }
+/**
+ * Recursively searches for an element with a given aria-ref ID,
+ * traversing through open shadow DOMs.
+ */
+function findElementInNodeRecursive(node, refId) {
+    const selector = `[aria-ref="${refId}"]`;
+    let foundElement = node.querySelector(selector);
+    if (foundElement) {
+        return foundElement;
+    }
+    // If not found in the current node, search in shadow roots of its children
+    const elements = node.querySelectorAll('*');
+    for (const element of Array.from(elements)) {
+        if (element.shadowRoot && element.shadowRoot.mode === 'open') {
+            foundElement = findElementInNodeRecursive(element.shadowRoot, refId);
+            if (foundElement) {
+                return foundElement;
+            }
+        }
+    }
+    return null;
+}
+/**
+ * Handles getting element information by its aria-ref ID
+ */
+function handleGetElementByRefId(refId, sendResponse) {
+    try {
+        if (!refId) {
+            sendResponse({
+                success: false,
+                error: 'refId is required'
+            });
+            return;
+        }
+        const element = findElementInNodeRecursive(document, refId);
+        if (!element) {
+            sendResponse({
+                success: false,
+                error: `No element found with refId: ${refId}`
+            });
+            return;
+        }
+        // Logic to extract element details (similar to getElement.ts content script part)
+        const attributesObj = {};
+        for (const attr of Array.from(element.attributes)) {
+            attributesObj[attr.name] = attr.value;
+        }
+        const style = window.getComputedStyle(element);
+        const isVisible = style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0';
+        let isEnabled = true;
+        if (element instanceof HTMLButtonElement ||
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLSelectElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLOptionElement) {
+            isEnabled = !element.disabled;
+        }
+        const rect = element.getBoundingClientRect();
+        const boundingRect = {
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height
+        };
+        let value = undefined;
+        if (element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLSelectElement) {
+            value = element.value;
+        }
+        const elementInfo = {
+            tagName: element.tagName.toLowerCase(),
+            id: element.id || undefined,
+            className: element.className || undefined,
+            textContent: element.textContent ? element.textContent.trim() : undefined,
+            value,
+            attributes: attributesObj,
+            isVisible,
+            isEnabled,
+            boundingRect
+        };
+        sendResponse({
+            success: true,
+            elements: [elementInfo], // Return as an array for consistency with getElement
+            count: 1
+        });
+    }
+    catch (error) {
+        console.error(`Error in handleGetElementByRefId for refId '${refId}':`, error);
+        sendResponse({
+            success: false,
+            error: `Error getting element by refId: ${error instanceof Error ? error.message : String(error)}`
+        });
+    }
+}
+console.log('Earth Engine AI Assistant content script fully loaded and listeners attached.');
 
 
 /******/ })()

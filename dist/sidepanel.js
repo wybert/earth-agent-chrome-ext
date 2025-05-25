@@ -107507,6 +107507,7 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
     const [clickX, setClickX] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     const [clickY, setClickY] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     const [clickRefId, setClickRefId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(''); // Added state for clickRefId
+    const [elementRefId, setElementRefId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('e1'); // New state for getElementByRefId
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         setEnvironment((0,_lib_utils__WEBPACK_IMPORTED_MODULE_4__.detectEnvironment)());
     }, []);
@@ -107623,6 +107624,14 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                             limit: elementLimit
                         });
                         break;
+                    case 'getElementByRefId':
+                        if (!elementRefId) {
+                            throw new Error('Please enter an Element Ref ID for getElementByRefId');
+                        }
+                        result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.getElementByRefId)({
+                            refId: elementRefId
+                        });
+                        break;
                     default:
                         result = { error: 'Unknown browser tool test type' };
                 }
@@ -107692,7 +107701,8 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'click', onClick: () => setActiveTab('click') }, "Click"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'hover', onClick: () => setActiveTab('hover') }, "Hover"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'type', onClick: () => setActiveTab('type') }, "Type"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getElement', onClick: () => setActiveTab('getElement') }, "Get Element"))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getElement', onClick: () => setActiveTab('getElement') }, "Get Element"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(TabButton, { active: activeTab === 'getElementByRefId', onClick: () => setActiveTab('getElementByRefId') }, "Get Element By Ref ID"))),
                 activeSection === 'context7' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-4" },
                     activeTab === 'resolveLibraryId' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-3" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
@@ -107822,7 +107832,10 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-gray-700" }, "Result Limit"),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "number", min: "1", max: "20", className: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50", value: elementLimit, onChange: (e) => setElementLimit(parseInt(e.target.value)) })),
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "This tool will return information about the elements matching the selector, including attributes, visibility status, and position."))))),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-gray-600" }, "This tool will return information about the elements matching the selector, including attributes, visibility status, and position."))),
+                    activeTab === 'getElementByRefId' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mb-3" },
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "block text-sm font-medium text-gray-700 mb-1" }, "Element Ref ID:"),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { type: "text", value: elementRefId, onChange: (e) => setElementRefId(e.target.value), className: "w-full p-2 border rounded-md text-sm", placeholder: "e.g., e1, e23" }))))),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: runTest, disabled: loading, className: `mt-4 px-4 py-2 rounded-md text-white font-medium ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}` }, loading ? 'Running...' : 'Run Test'),
                 error && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-4 p-3 bg-red-50 border border-red-200 rounded-md" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-red-500" }, error))),
@@ -109919,7 +109932,8 @@ async function clickByRef(params) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
-/* harmony export */   getElement: () => (/* binding */ getElement)
+/* harmony export */   getElement: () => (/* binding */ getElement),
+/* harmony export */   getElementByRefId: () => (/* binding */ getElementByRefId)
 /* harmony export */ });
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
 /**
@@ -110205,6 +110219,269 @@ async function getElement(params) {
     }
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (getElement);
+/**
+ * Get information about an element on the page using its aria-ref ID
+ *
+ * @param params Object containing the refId
+ * @returns Promise with success status and element information
+ */
+async function getElementByRefId(params) {
+    try {
+        const { refId } = params;
+        if (!refId) {
+            return {
+                success: false,
+                error: 'refId is required'
+            };
+        }
+        const selector = `[aria-ref="${refId}"]`;
+        // If running in a content script or sidepanel context, use the background script
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
+            return new Promise((resolve) => {
+                // Add a timeout to handle cases where background script doesn't respond
+                const timeoutId = setTimeout(() => {
+                    console.warn('Background script connection timed out.');
+                    resolve({
+                        success: false,
+                        error: 'Background script connection timed out'
+                    });
+                }, 5000); // 5 second timeout
+                try {
+                    chrome.runtime.sendMessage({
+                        type: 'GET_ELEMENT_BY_REF_ID', // New message type
+                        payload: { refId }
+                    }, (response) => {
+                        // Clear the timeout since we got a response
+                        clearTimeout(timeoutId);
+                        if (chrome.runtime.lastError) {
+                            console.warn('Chrome runtime error:', chrome.runtime.lastError);
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                            });
+                            return;
+                        }
+                        // We got a valid response from the background
+                        resolve(response);
+                    });
+                }
+                catch (err) {
+                    // Clear the timeout
+                    clearTimeout(timeoutId);
+                    console.error('Error sending message to background script:', err);
+                    resolve({
+                        success: false,
+                        error: err instanceof Error ? err.message : String(err)
+                    });
+                }
+            });
+        }
+        // If running in the background script
+        if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
+            return new Promise((resolve) => {
+                // Get the active tab
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                    if (!tabs || tabs.length === 0) {
+                        resolve({
+                            success: false,
+                            error: 'No active tab found'
+                        });
+                        return;
+                    }
+                    const tabId = tabs[0].id;
+                    if (!tabId) {
+                        resolve({
+                            success: false,
+                            error: 'Invalid tab'
+                        });
+                        return;
+                    }
+                    // Execute script in the tab to get element information
+                    chrome.tabs.executeScript(tabId, {
+                        code: `
+                (function() {
+                  try {
+                    const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+                    if (!element) {
+                      return { 
+                        success: false, 
+                        error: 'No element found with refId: ${refId.replace(/'/g, "\\'")}' 
+                      };
+                    }
+                    
+                    // Get all attributes as key-value pairs
+                    const attributesObj = {};
+                    for (const attr of element.attributes) {
+                      attributesObj[attr.name] = attr.value;
+                    }
+                    
+                    // Check if element is visible
+                    const style = window.getComputedStyle(element);
+                    const isVisible = style.display !== 'none' && 
+                                     style.visibility !== 'hidden' && 
+                                     style.opacity !== '0';
+                    
+                    // Check if element is enabled (for form controls)
+                    let isEnabled = true;
+                    if (element instanceof HTMLButtonElement || 
+                        element instanceof HTMLInputElement || 
+                        element instanceof HTMLSelectElement || 
+                        element instanceof HTMLTextAreaElement || 
+                        element instanceof HTMLOptionElement) {
+                      isEnabled = !element.disabled;
+                    }
+                    
+                    // Get bounding client rect
+                    const rect = element.getBoundingClientRect();
+                    const boundingRect = {
+                      top: rect.top,
+                      right: rect.right,
+                      bottom: rect.bottom,
+                      left: rect.left,
+                      width: rect.width,
+                      height: rect.height
+                    };
+                    
+                    // Get element value if applicable
+                    let value = undefined;
+                    if (element instanceof HTMLInputElement || 
+                        element instanceof HTMLTextAreaElement || 
+                        element instanceof HTMLSelectElement) {
+                      value = element.value;
+                    }
+                    
+                    const elementInfo = {
+                      tagName: element.tagName.toLowerCase(),
+                      id: element.id || undefined,
+                      className: element.className || undefined,
+                      textContent: element.textContent ? element.textContent.trim() : undefined,
+                      value,
+                      attributes: attributesObj,
+                      isVisible,
+                      isEnabled,
+                      boundingRect
+                    };
+                    
+                    return { 
+                      success: true, 
+                      elements: [elementInfo], // Return as an array for consistency
+                      count: 1
+                    };
+                  } catch (error) {
+                    return { 
+                      success: false, 
+                      error: 'Error getting element information by refId: ' + (error.message || String(error))
+                    };
+                  }
+                })();
+              `
+                    }, (results) => {
+                        if (chrome.runtime.lastError) {
+                            resolve({
+                                success: false,
+                                error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                            });
+                            return;
+                        }
+                        if (!results || results.length === 0) {
+                            resolve({
+                                success: false,
+                                error: 'No result from tab script execution'
+                            });
+                            return;
+                        }
+                        // Return the result from the executed script
+                        resolve(results[0]);
+                    });
+                });
+            });
+        }
+        // If running directly in page context (content script)
+        if (env.isContentScript && typeof document !== 'undefined') {
+            try {
+                const element = document.querySelector(selector);
+                if (!element) {
+                    return {
+                        success: false,
+                        error: `No element found with refId: ${refId}`
+                    };
+                }
+                const attributesObj = {};
+                for (const attr of Array.from(element.attributes)) {
+                    attributesObj[attr.name] = attr.value;
+                }
+                const style = window.getComputedStyle(element);
+                const isVisible = style.display !== 'none' &&
+                    style.visibility !== 'hidden' &&
+                    style.opacity !== '0';
+                let isEnabled = true;
+                if (element instanceof HTMLButtonElement ||
+                    element instanceof HTMLInputElement ||
+                    element instanceof HTMLSelectElement ||
+                    element instanceof HTMLTextAreaElement ||
+                    element instanceof HTMLOptionElement) {
+                    isEnabled = !element.disabled;
+                }
+                const rect = element.getBoundingClientRect();
+                const boundingRect = {
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                };
+                let value = undefined;
+                if (element instanceof HTMLInputElement ||
+                    element instanceof HTMLTextAreaElement ||
+                    element instanceof HTMLSelectElement) {
+                    value = element.value;
+                }
+                const elementInfo = {
+                    tagName: element.tagName.toLowerCase(),
+                    id: element.id || undefined,
+                    className: element.className || undefined,
+                    textContent: element.textContent ? element.textContent.trim() : undefined,
+                    value,
+                    attributes: attributesObj,
+                    isVisible,
+                    isEnabled,
+                    boundingRect
+                };
+                return {
+                    success: true,
+                    elements: [elementInfo], // Return as an array
+                    count: 1
+                };
+            }
+            catch (error) {
+                return {
+                    success: false,
+                    error: `Error getting element information by refId: ${error instanceof Error ? error.message : String(error)}`
+                };
+            }
+        }
+        // If not in a browser environment, we can't get elements
+        if (env.isNodeJs) {
+            return {
+                success: false,
+                error: 'Cannot get element information by refId in Node.js environment'
+            };
+        }
+        // Default error if environment detection doesn't work as expected
+        return {
+            success: false,
+            error: 'Unsupported environment for getting element information by refId'
+        };
+    }
+    catch (error) {
+        return {
+            success: false,
+            error: `Error getting element information by refId: ${error instanceof Error ? error.message : String(error)}`
+        };
+    }
+}
 
 
 /***/ }),
@@ -110359,26 +110636,30 @@ async function hover(params) {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   click: () => (/* reexport safe */ _click__WEBPACK_IMPORTED_MODULE_0__["default"]),
-/* harmony export */   clickByRef: () => (/* reexport safe */ _clickByRef__WEBPACK_IMPORTED_MODULE_1__["default"]),
+/* harmony export */   click: () => (/* reexport safe */ _click__WEBPACK_IMPORTED_MODULE_0__.click),
+/* harmony export */   clickByRef: () => (/* reexport safe */ _clickByRef__WEBPACK_IMPORTED_MODULE_6__.clickByRef),
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
-/* harmony export */   getElement: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_2__["default"]),
-/* harmony export */   screenshot: () => (/* reexport safe */ _screenshot__WEBPACK_IMPORTED_MODULE_3__["default"]),
-/* harmony export */   snapshot: () => (/* reexport safe */ _snapshot__WEBPACK_IMPORTED_MODULE_4__.snapshot),
-/* harmony export */   typeText: () => (/* reexport safe */ _type__WEBPACK_IMPORTED_MODULE_5__["default"])
+/* harmony export */   getElement: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_1__.getElement),
+/* harmony export */   getElementByRefId: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_1__.getElementByRefId),
+/* harmony export */   hover: () => (/* reexport safe */ _hover__WEBPACK_IMPORTED_MODULE_4__.hover),
+/* harmony export */   screenshot: () => (/* reexport safe */ _screenshot__WEBPACK_IMPORTED_MODULE_5__.screenshot),
+/* harmony export */   snapshot: () => (/* reexport safe */ _snapshot__WEBPACK_IMPORTED_MODULE_2__.snapshot),
+/* harmony export */   typeText: () => (/* reexport safe */ _type__WEBPACK_IMPORTED_MODULE_3__.type)
 /* harmony export */ });
 /* harmony import */ var _click__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./click */ "./src/lib/tools/browser/click.ts");
-/* harmony import */ var _clickByRef__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./clickByRef */ "./src/lib/tools/browser/clickByRef.ts");
-/* harmony import */ var _getElement__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./getElement */ "./src/lib/tools/browser/getElement.ts");
-/* harmony import */ var _screenshot__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./screenshot */ "./src/lib/tools/browser/screenshot.ts");
-/* harmony import */ var _snapshot__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./snapshot */ "./src/lib/tools/browser/snapshot.ts");
-/* harmony import */ var _type__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./type */ "./src/lib/tools/browser/type.ts");
+/* harmony import */ var _getElement__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./getElement */ "./src/lib/tools/browser/getElement.ts");
+/* harmony import */ var _snapshot__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./snapshot */ "./src/lib/tools/browser/snapshot.ts");
+/* harmony import */ var _type__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./type */ "./src/lib/tools/browser/type.ts");
+/* harmony import */ var _hover__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./hover */ "./src/lib/tools/browser/hover.ts");
+/* harmony import */ var _screenshot__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./screenshot */ "./src/lib/tools/browser/screenshot.ts");
+/* harmony import */ var _clickByRef__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./clickByRef */ "./src/lib/tools/browser/clickByRef.ts");
 /**
  * Browser Tools Index
  * Exports all browser automation tools
  */
 
- // Added import for clickByRef
+
+
 
 
 
@@ -110387,12 +110668,14 @@ __webpack_require__.r(__webpack_exports__);
 
 // Main export of all browser tools
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
-    click: _click__WEBPACK_IMPORTED_MODULE_0__["default"],
-    clickByRef: _clickByRef__WEBPACK_IMPORTED_MODULE_1__["default"], // Added clickByRef
-    getElement: _getElement__WEBPACK_IMPORTED_MODULE_2__["default"],
-    screenshot: _screenshot__WEBPACK_IMPORTED_MODULE_3__["default"],
-    snapshot: _snapshot__WEBPACK_IMPORTED_MODULE_4__.snapshot,
-    typeText: _type__WEBPACK_IMPORTED_MODULE_5__["default"]
+    click: _click__WEBPACK_IMPORTED_MODULE_0__.click,
+    getElement: _getElement__WEBPACK_IMPORTED_MODULE_1__.getElement,
+    getElementByRefId: _getElement__WEBPACK_IMPORTED_MODULE_1__.getElementByRefId,
+    snapshot: _snapshot__WEBPACK_IMPORTED_MODULE_2__.snapshot,
+    typeText: _type__WEBPACK_IMPORTED_MODULE_3__.type,
+    hover: _hover__WEBPACK_IMPORTED_MODULE_4__.hover,
+    screenshot: _screenshot__WEBPACK_IMPORTED_MODULE_5__.screenshot,
+    clickByRef: _clickByRef__WEBPACK_IMPORTED_MODULE_6__.clickByRef
 });
 
 

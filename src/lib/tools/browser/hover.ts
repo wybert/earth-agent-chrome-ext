@@ -5,13 +5,13 @@
 
 import { detectEnvironment } from '@/lib/utils';
 
-interface HoverResponse {
+export interface HoverResponse {
   success: boolean;
   message?: string;
   error?: string;
 }
 
-interface HoverParams {
+export interface HoverParams {
   selector: string;
 }
 

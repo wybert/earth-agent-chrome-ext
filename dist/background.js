@@ -29748,6 +29748,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 }
             })();
             return true; // Will respond asynchronously
+        case 'GET_ELEMENT_BY_REF_ID':
+            // Forward to content script, similar to GET_ELEMENT
+            (async () => {
+                try {
+                    console.log('Forwarding GET_ELEMENT_BY_REF_ID to content script with payload:', message.payload);
+                    // Ensure payload exists and contains refId
+                    if (message.payload && message.payload.refId) {
+                        const response = await sendMessageToEarthEngineTab(message);
+                        sendResponse(response);
+                    }
+                    else {
+                        sendResponse({
+                            success: false,
+                            error: 'Invalid payload for GET_ELEMENT_BY_REF_ID: refId is missing.'
+                        });
+                    }
+                }
+                catch (error) {
+                    console.error('Error forwarding GET_ELEMENT_BY_REF_ID to content script:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error forwarding GET_ELEMENT_BY_REF_ID: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
         default:
             console.warn(`Unknown message type received in background: ${message.type}`);
             sendResponse({ success: false, error: `Unknown message type: ${message.type}` });

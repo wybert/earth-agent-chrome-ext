@@ -3,40 +3,50 @@
  * Exports all browser automation tools
  */
 
-import click, { ClickParams, ClickResponse } from './click';
-import clickByRef, { ClickByRefParams } from './clickByRef'; // Added import for clickByRef
-import getElement, { GetElementParams, GetElementResponse, ElementInfo } from './getElement';
-import screenshot, { ScreenshotResponse } from './screenshot';
-import { snapshot, SnapshotResponse } from './snapshot';
-import typeFunc, { TypeParams, TypeResponse } from './type';
+import { click, type ClickParams, type ClickResponse } from './click';
+import { getElement, getElementByRefId, type GetElementParams, type GetElementResponse, type ElementInfo, type GetElementByRefIdParams } from './getElement';
+import { snapshot, type SnapshotResponse } from './snapshot';
+import { type as typeText, type TypeParams, type TypeResponse } from './type';
+import { hover, type HoverParams, type HoverResponse } from './hover';
+import { screenshot, type ScreenshotResponse } from './screenshot';
+import { clickByRef, type ClickByRefParams } from './clickByRef';
 
 // Export all tools
 export {
   click,
-  clickByRef, // Added clickByRef
   getElement,
-  screenshot,
+  getElementByRefId,
   snapshot,
-  typeFunc as typeText,
-  // Types
+  typeText,
+  hover,
+  screenshot,
+  clickByRef
+};
+
+export type {
   ClickParams,
   ClickResponse,
-  ClickByRefParams, // Added ClickByRefParams
   GetElementParams,
   GetElementResponse,
   ElementInfo,
-  ScreenshotResponse,
+  GetElementByRefIdParams,
   SnapshotResponse,
   TypeParams,
-  TypeResponse
+  TypeResponse,
+  HoverParams,
+  HoverResponse,
+  ScreenshotResponse,
+  ClickByRefParams
 };
 
 // Main export of all browser tools
 export default {
   click,
-  clickByRef, // Added clickByRef
   getElement,
-  screenshot,
+  getElementByRefId,
   snapshot,
-  typeText: typeFunc
+  typeText,
+  hover,
+  screenshot,
+  clickByRef
 };

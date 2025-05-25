@@ -21,7 +21,7 @@ import {
   getEarthEngineMapLayers
 } from '@/lib/tools/earth-engine/agentTools';
 import { detectEnvironment } from '@/lib/utils';
-import { click, typeText, getElement, screenshot, clickByRef } from '@/lib/tools/browser';
+import { click, typeText, getElement, screenshot, clickByRef, getElementByRefId } from '@/lib/tools/browser';
 import { hover } from '@/lib/tools/browser/hover';
 import { snapshot } from '@/lib/tools/browser/snapshot';
 
@@ -59,6 +59,7 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
   const [clickX, setClickX] = useState<number>(0);
   const [clickY, setClickY] = useState<number>(0);
   const [clickRefId, setClickRefId] = useState<string>(''); // Added state for clickRefId
+  const [elementRefId, setElementRefId] = useState<string>('e1'); // New state for getElementByRefId
 
   useEffect(() => {
     setEnvironment(detectEnvironment());
@@ -165,6 +166,14 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
             result = await getElement({ 
               selector: elementSelector, 
               limit: elementLimit 
+            });
+          break;
+          case 'getElementByRefId':
+            if (!elementRefId) {
+              throw new Error('Please enter an Element Ref ID for getElementByRefId');
+            }
+            result = await getElementByRefId({ 
+              refId: elementRefId 
             });
           break;
         default:
@@ -364,6 +373,12 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                 onClick={() => setActiveTab('getElement')}
               >
                 Get Element
+              </TabButton>
+              <TabButton 
+                active={activeTab === 'getElementByRefId'} 
+                onClick={() => setActiveTab('getElementByRefId')}
+              >
+                Get Element By Ref ID
               </TabButton>
             </div>
           )}
@@ -791,6 +806,19 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
                   <p className="text-sm text-gray-600">
                     This tool will return information about the elements matching the selector, including attributes, visibility status, and position.
                   </p>
+                </div>
+              )}
+
+              {activeTab === 'getElementByRefId' && (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Element Ref ID:</label>
+                  <input 
+                    type="text" 
+                    value={elementRefId} 
+                    onChange={(e) => setElementRefId(e.target.value)} 
+                    className="w-full p-2 border rounded-md text-sm"
+                    placeholder="e.g., e1, e23"
+                  />
                 </div>
               )}
               </div>
