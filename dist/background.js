@@ -29356,8 +29356,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             const { done, value } = await reader.read();
                             if (done)
                                 break;
-                            // Convert the chunk to text
-                            const chunkText = new TextDecoder().decode(value);
+                            // Convert the chunk to text with proper streaming handling
+                            const chunkText = new TextDecoder('utf-8', { fatal: false }).decode(value, { stream: true });
                             accumulatedResponse += chunkText;
                             // Forward the chunk to the sender - using proper API
                             if (sender.tab && sender.tab.id) {
@@ -30384,7 +30384,7 @@ async function handleChatMessage(message, port) {
         }
         // Process the simple text stream from response
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder('utf-8', { fatal: false });
         console.log(`[${requestId}] Reading text stream...`);
         try {
             while (true) {
@@ -30397,8 +30397,8 @@ async function handleChatMessage(message, port) {
                     });
                     break; // Exit loop when stream is done
                 }
-                // Decode the chunk and send it directly
-                const chunk = decoder.decode(value, { stream: true });
+                // Decode the chunk with streaming flag to handle partial UTF-8 sequences
+                const chunk = decoder.decode(value, { stream: !done });
                 if (chunk) { // Avoid sending empty chunks if decoder yields them
                     port.postMessage({
                         type: 'CHAT_STREAM_CHUNK',
