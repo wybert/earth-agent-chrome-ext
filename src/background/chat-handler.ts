@@ -3,6 +3,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
+import { snapshot as browserSnapshot, SnapshotResponse } from '../lib/tools/browser/snapshot';
 
 // Available providers
 export type Provider = 'openai' | 'anthropic';
@@ -803,6 +804,142 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       },
     });
 
+    // Define Browser Snapshot tool
+    const snapshotTool = tool({
+      description: 'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
+      parameters: z.object({}), // No parameters needed
+      execute: async () => {
+        try {
+          console.log('🔎 [SnapshotTool] Tool called in background');
+          console.time('SnapshotTool execution - background part');
+
+          if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.scripting) {
+            console.warn('❌ [SnapshotTool] Chrome API not available in this context');
+            return {
+              success: false,
+              error: 'Chrome API not available for snapshot tool',
+            };
+          }
+
+          // Get the active tab
+          const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+              resolve(tabs || []);
+            });
+          });
+
+          if (!tabs || tabs.length === 0) {
+            console.warn('❌ [SnapshotTool] No active tab found');
+            return { success: false, error: 'No active tab found' };
+          }
+          const activeTab = tabs[0];
+          if (!activeTab.id) {
+            console.warn('❌ [SnapshotTool] Active tab has no ID');
+            return { success: false, error: 'Active tab has no ID' };
+          }
+          const tabId = activeTab.id;
+
+          // Check/inject content script (simplified, assumes content script is generally available or injected by other means)
+          // A more robust implementation would ping/inject like earthEngineScriptTool
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Content script ping timed out for SnapshotTool')), 500);
+              chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                clearTimeout(timeout);
+                if (chrome.runtime.lastError) {
+                  console.warn(`[SnapshotTool] Ping failed: ${chrome.runtime.lastError.message}, attempting to inject.`);
+                  // Attempt to inject if ping fails
+                  chrome.scripting.executeScript({
+                    target: { tabId },
+                    files: ['content.js'],
+                  }, (injectionResults) => {
+                    if (chrome.runtime.lastError) {
+                      reject(new Error(`Failed to inject content script: ${chrome.runtime.lastError.message}`));
+                    } else {
+                      console.log('[SnapshotTool] Content script injected, assuming ready.');
+                      setTimeout(resolve, 500); // Give script time to load
+                    }
+                  });
+                } else if (response && response.type === 'PONG') {
+                  console.log('[SnapshotTool] Content script responded to PING.');
+                  resolve();
+                } else {
+                  // Ping successful but no PONG, or unexpected response, try injecting
+                  console.warn('[SnapshotTool] Ping response not as expected, attempting to inject.');
+                   chrome.scripting.executeScript({
+                    target: { tabId },
+                    files: ['content.js'],
+                  }, (injectionResults) => {
+                    if (chrome.runtime.lastError) {
+                      reject(new Error(`Failed to inject content script: ${chrome.runtime.lastError.message}`));
+                    } else {
+                      console.log('[SnapshotTool] Content script injected after failed ping logic, assuming ready.');
+                      setTimeout(resolve, 500); // Give script time to load
+                    }
+                  });
+                }
+              });
+            });
+          } catch (err) {
+            console.error('❌ [SnapshotTool] Content script check/injection failed:', err);
+            return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
+          }
+
+          // Send message to content script to perform the snapshot
+          const resultFromContentScript: SnapshotResponse = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { type: 'TAKE_ACCESSIBILITY_SNAPSHOT' }, (response) => {
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script for snapshot' });
+              } else {
+                resolve(response || { success: false, error: 'No response from content script for snapshot' });
+              }
+            });
+          });
+
+          console.timeEnd('SnapshotTool execution - background part');
+          console.log(`✅ [SnapshotTool] Snapshot result from content script. Success: ${resultFromContentScript.success}`);
+          if (resultFromContentScript.success && resultFromContentScript.snapshot) {
+            console.log('🔎 [SnapshotTool] Full snapshot data in execute (copy from here):');
+            console.log(resultFromContentScript.snapshot);
+          } else if (!resultFromContentScript.success) {
+            console.error('❌ [SnapshotTool] Snapshot failed in content script:', resultFromContentScript.error);
+          }
+          
+          return resultFromContentScript; // This should be SnapshotResponse { success: boolean, snapshot?: string, error?: string }
+
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ [SnapshotTool] Error in execute block:`, error);
+          console.timeEnd('SnapshotTool execution - background part');
+          return {
+            success: false,
+            error: `Error taking snapshot: ${errorMessage}`,
+          };
+        }
+      },
+      experimental_toToolResultContent: (result: any) => {
+        console.log('🔎 [SnapshotTool] Converting result to tool content');
+        
+        if (!result.success) {
+          console.error('❌ [SnapshotTool] Error in toToolResultContent - result not successful:', result.error);
+          return [{ type: 'text', text: `Error taking snapshot: ${result.error || 'Unknown error'}` }];
+        }
+
+        if (result.snapshot) {
+          console.log('🔎 [SnapshotTool] Full snapshot data for UI conversion (copy from here):');
+          console.log(result.snapshot);
+        } else {
+          console.warn('⚠️ [SnapshotTool] No snapshot data found in result for UI conversion, though success was true.');
+           return [{ type: 'text', text: 'Snapshot tool succeeded but no snapshot data was returned.' }];
+        }
+        
+        // Return the snapshot data as text
+        return [
+          { type: 'text', text: 'Here is the accessibility snapshot of the current browser tab:\n' + result.snapshot }
+        ];
+      },
+    });
+
     // Log the final messages being sent to AI provider
     console.log(`[Chat Handler] Sending ${formattedMessages.length} messages to AI provider ${provider} (${effectiveModel})`);
     
@@ -859,7 +996,8 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
         earthEngineDataset: earthEngineDatasetTool,
         earthEngineScript: earthEngineScriptTool,
         earthEngineRunCode: earthEngineRunCodeTool,
-        screenshot: screenshotTool
+        screenshot: screenshotTool,
+        snapshot: snapshotTool
       },
       maxSteps: 5, // Allow up to 5 steps
       temperature: 0.7,

@@ -10,6 +10,7 @@ interface Message {
 
 // Add import for interfaces if needed
 import { GetMapLayersResponse, MapLayer } from '@/lib/tools/earth-engine/getMapLayers';
+import { snapshot, SnapshotResponse } from '@/lib/tools/browser/snapshot';
 
 // Initialize content script immediately to catch messages early
 console.log('Earth Engine AI Assistant content script loading at:', new Date().toISOString());
@@ -119,6 +120,10 @@ function setupPingResponse() {
         
       case 'GET_MAP_LAYERS':
         handleGetMapLayers(sendResponse);
+        return true; // Will respond asynchronously
+
+      case 'TAKE_ACCESSIBILITY_SNAPSHOT':
+        handleTakeAccessibilitySnapshot(sendResponse);
         return true; // Will respond asynchronously
 
       case 'GET_ELEMENT_BY_REF_ID':
@@ -891,6 +896,20 @@ async function handleExecuteClickByCoordinates(x: number, y: number, sendRespons
     sendResponse({
       success: false,
       error: `Error clicking by coordinates in page: ${errorMessage}`
+    });
+  }
+}
+
+async function handleTakeAccessibilitySnapshot(sendResponse: (response: SnapshotResponse) => void) {
+  console.log('Content script: Handling TAKE_ACCESSIBILITY_SNAPSHOT');
+  try {
+    const result = await snapshot(); // This will call captureDirectSnapshot
+    sendResponse(result);
+  } catch (error) {
+    console.error('Error taking accessibility snapshot in content script:', error);
+    sendResponse({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error in handleTakeAccessibilitySnapshot'
     });
   }
 }
