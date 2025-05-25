@@ -1,6 +1,8 @@
 # Browser Automation Tools
 
-This module provides a collection of tools for browser automation that can be used in Chrome extensions. These tools allow for common browser interaction tasks like taking screenshots, clicking elements, typing text, and inspecting elements on a page.
+This module provides a collection of tools for browser automation that can be used in Chrome extensions. These tools allow for common browser interaction tasks like taking screenshots, capturing accessibility snapshots, clicking elements, typing text, and inspecting elements on a page.
+
+**Note**: The click tool now uses element references from accessibility snapshots (matching playwright-mcp implementation) instead of CSS selectors for more reliable automation.
 
 ## Features
 
@@ -8,8 +10,49 @@ This module provides a collection of tools for browser automation that can be us
 - Automatic message passing between extension contexts
 - Error handling and timeout management
 - Support for standard browser automation tasks
+- Accessibility-based element targeting for reliable automation
 
 ## Tools
+
+### Snapshot
+
+Captures an accessibility snapshot of the current page, which is better than screenshot as it provides structured data about page elements and their references for automation.
+
+```typescript
+import { snapshot } from '@/lib/tools/browser';
+
+const result = await snapshot();
+if (result.success) {
+  const snapshotData = result.snapshot; // YAML-formatted accessibility data
+  // Use the snapshot data to identify elements for automation...
+}
+```
+
+The snapshot returns structured YAML data containing:
+- Page title and URL
+- All interactive elements with their accessibility information
+- Element references (`ref-1`, `ref-2`, etc.) for use with other tools
+- Element roles, names, attributes, and bounding boxes
+
+### Click
+
+Clicks an element on the page using element reference from accessibility snapshot.
+
+```typescript
+import { click } from '@/lib/tools/browser';
+
+const result = await click({ 
+  element: 'Submit button', // Human-readable description
+  ref: 'ref-15' // Element reference from snapshot
+});
+if (result.success) {
+  console.log('Button clicked successfully');
+}
+```
+
+**Important**: The click tool now requires:
+- `element`: Human-readable description of the element
+- `ref`: Exact element reference from the page snapshot (e.g., 'ref-15')
 
 ### Screenshot
 
@@ -22,21 +65,6 @@ const result = await screenshot();
 if (result.success) {
   const imageData = result.screenshotData; // Base64-encoded PNG
   // Use the image data...
-}
-```
-
-### Click
-
-Clicks an element on the page based on a CSS selector.
-
-```typescript
-import { click } from '@/lib/tools/browser';
-
-const result = await click({ 
-  selector: 'button.submit-button' 
-});
-if (result.success) {
-  console.log('Button clicked successfully');
 }
 ```
 
@@ -76,6 +104,28 @@ if (result.success && result.elements) {
 }
 ```
 
+## Recommended Workflow
+
+For reliable browser automation, follow this pattern:
+
+1. **Take a snapshot** to get the current page structure and element references
+2. **Identify target elements** from the snapshot data using their descriptions and references
+3. **Perform actions** (click, type, etc.) using the element references from the snapshot
+
+```typescript
+// 1. Capture page snapshot
+const snapshotResult = await snapshot();
+if (snapshotResult.success) {
+  console.log('Page snapshot:', snapshotResult.snapshot);
+  
+  // 2. Use element references from snapshot for actions
+  const clickResult = await click({
+    element: 'Login button',
+    ref: 'ref-23' // Reference from snapshot
+  });
+}
+```
+
 ## Implementation Details
 
 These tools work by detecting the environment they're running in and choosing the appropriate implementation:
@@ -83,6 +133,12 @@ These tools work by detecting the environment they're running in and choosing th
 1. **Content Script Context**: Interacts directly with the page DOM
 2. **Background Script Context**: Uses Chrome's tabs API to execute scripts in the active tab
 3. **Sidepanel/Popup Context**: Sends messages to the background script to perform actions
+
+The snapshot tool creates accessibility data by:
+- Finding all interactive and meaningful elements on the page
+- Assigning unique references (`aria-ref` attributes) to each element
+- Collecting accessibility information (roles, names, bounds, attributes)
+- Formatting the data as structured YAML for easy parsing
 
 ## Requirements
 
@@ -96,4 +152,4 @@ These tools work by detecting the environment they're running in and choosing th
 All tools return a response object with:
 - `success`: Boolean indicating if the operation succeeded
 - Error information when `success` is false (`error` field)
-- Tool-specific result data when `success` is true 
+- Tool-specific result data when `success` is true

@@ -42,10 +42,10 @@ async function captureScreenshot(): Promise<void> {
 }
 
 // Example: Click a button on the page
-async function clickButton(selector: string): Promise<void> {
-  console.log(`Clicking element with selector: ${selector}`);
+async function clickButton(elementDescription: string, ref: string): Promise<void> {
+  console.log(`Clicking element: ${elementDescription} with ref: ${ref}`);
   
-  const result = await click({ selector });
+  const result = await click({ element: elementDescription, ref });
   
   if (result.success) {
     console.log('Element clicked successfully!');
@@ -119,7 +119,7 @@ async function runAutomation(): Promise<void> {
     await enterText('input[type="search"], input[name="q"]', 'Earth Engine satellite imagery');
     
     // 3. Click the search button
-    await clickButton('button[type="submit"], input[type="submit"]');
+    await clickButton('Submit button', 'submit-button-ref');
     
     // 4. Wait for the results page to load
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -140,4 +140,4 @@ export {
   enterText,
   inspectElements,
   runAutomation
-}; 
+};
