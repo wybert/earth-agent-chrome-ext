@@ -25428,8 +25428,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         case 'SNAPSHOT':
             (async () => {
                 try {
-                    const maxDepth = message.payload?.maxDepth;
-                    console.log('Taking page snapshot', maxDepth !== undefined ? `with max depth: ${maxDepth}` : 'with full tree');
+                    console.log('Taking accessibility snapshot of active tab');
                     // Get the active tab
                     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
                     if (!tabs || tabs.length === 0 || !tabs[0].id) {
@@ -25440,40 +25439,326 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         return;
                     }
                     const tabId = tabs[0].id;
-                    // Execute script to get page information
+                    // Execute the snapshot script in the tab using the same logic as our snapshot tool
                     const results = await chrome.scripting.executeScript({
                         target: { tabId },
-                        func: (maxDepthParam) => {
-                            // Get accessibility tree
-                            const getAccessibilityTree = (element, depth = 0) => {
-                                const role = element.getAttribute('role');
-                                const ariaLabel = element.getAttribute('aria-label');
-                                const ariaDescription = element.getAttribute('aria-description');
-                                const node = {
-                                    tag: element.tagName.toLowerCase(),
-                                    role: role || undefined,
-                                    ariaLabel: ariaLabel || undefined,
-                                    ariaDescription: ariaDescription || undefined,
-                                    children: []
+                        func: () => {
+                            const refCounter = { value: 1 };
+                            const processedElements = new WeakSet();
+                            function shouldIncludeElement(element) {
+                                const tagName = element.tagName.toLowerCase();
+                                // Always include interactive elements
+                                const interactiveElements = [
+                                    'a', 'button', 'input', 'textarea', 'select', 'option',
+                                    'details', 'summary', 'label', 'fieldset', 'legend'
+                                ];
+                                if (interactiveElements.includes(tagName)) {
+                                    return true;
+                                }
+                                // Include elements with explicit roles
+                                if (element.hasAttribute('role')) {
+                                    return true;
+                                }
+                                // Include elements with click handlers
+                                if (element.hasAttribute('onclick') || element.hasAttribute('ng-click')) {
+                                    return true;
+                                }
+                                // Include headings
+                                if (/^h[1-6]$/.test(tagName)) {
+                                    return true;
+                                }
+                                // Include structural elements with meaningful content
+                                const structuralElements = ['main', 'nav', 'aside', 'section', 'article', 'header', 'footer'];
+                                if (structuralElements.includes(tagName)) {
+                                    return true;
+                                }
+                                // Include generic containers that might be clickable
+                                if (['div', 'span'].includes(tagName)) {
+                                    const style = window.getComputedStyle(element);
+                                    if (style.cursor === 'pointer' || element.hasAttribute('tabindex')) {
+                                        return true;
+                                    }
+                                }
+                                // Include images with alt text
+                                if (tagName === 'img' && element.hasAttribute('alt')) {
+                                    return true;
+                                }
+                                return false;
+                            }
+                            function getElementRole(element) {
+                                // Check explicit role
+                                const explicitRole = element.getAttribute('role');
+                                if (explicitRole) {
+                                    return explicitRole;
+                                }
+                                // Determine implicit role based on tag
+                                const tagName = element.tagName.toLowerCase();
+                                const roleMap = {
+                                    'a': 'link',
+                                    'button': 'button',
+                                    'input': getInputRole(element),
+                                    'textarea': 'textbox',
+                                    'select': 'combobox',
+                                    'option': 'option',
+                                    'img': 'img',
+                                    'h1': 'heading',
+                                    'h2': 'heading',
+                                    'h3': 'heading',
+                                    'h4': 'heading',
+                                    'h5': 'heading',
+                                    'h6': 'heading',
+                                    'main': 'main',
+                                    'nav': 'navigation',
+                                    'aside': 'complementary',
+                                    'section': 'region',
+                                    'article': 'article',
+                                    'header': 'banner',
+                                    'footer': 'contentinfo',
+                                    'fieldset': 'group',
+                                    'legend': 'legend',
+                                    'label': 'label'
                                 };
-                                // Continue traversing if maxDepth is null (full tree) or we haven't reached it yet
-                                if (maxDepthParam === null || depth < maxDepthParam) {
-                                    Array.from(element.children).forEach(child => {
-                                        node.children.push(getAccessibilityTree(child, depth + 1));
-                                    });
+                                return roleMap[tagName] || 'generic';
+                            }
+                            function getInputRole(input) {
+                                const type = (input.type || 'text').toLowerCase();
+                                const inputRoleMap = {
+                                    'text': 'textbox',
+                                    'email': 'textbox',
+                                    'password': 'textbox',
+                                    'search': 'searchbox',
+                                    'tel': 'textbox',
+                                    'url': 'textbox',
+                                    'number': 'spinbutton',
+                                    'range': 'slider',
+                                    'checkbox': 'checkbox',
+                                    'radio': 'radio',
+                                    'button': 'button',
+                                    'submit': 'button',
+                                    'reset': 'button',
+                                    'file': 'button'
+                                };
+                                return inputRoleMap[type] || 'textbox';
+                            }
+                            function getAccessibleName(element) {
+                                // Check aria-label
+                                const ariaLabel = element.getAttribute('aria-label');
+                                if (ariaLabel) {
+                                    return ariaLabel.trim();
+                                }
+                                // Check aria-labelledby
+                                const labelledBy = element.getAttribute('aria-labelledby');
+                                if (labelledBy) {
+                                    const referencedElement = document.getElementById(labelledBy);
+                                    if (referencedElement) {
+                                        return getTextContent(referencedElement).trim();
+                                    }
+                                }
+                                // For form controls, check associated label
+                                if (element instanceof HTMLInputElement ||
+                                    element instanceof HTMLTextAreaElement ||
+                                    element instanceof HTMLSelectElement) {
+                                    // Check for label element
+                                    const labels = document.querySelectorAll(`label[for="${element.id}"]`);
+                                    if (labels.length > 0) {
+                                        return getTextContent(labels[0]).trim();
+                                    }
+                                    // Check for wrapping label
+                                    const wrappingLabel = element.closest('label');
+                                    if (wrappingLabel) {
+                                        return getTextContent(wrappingLabel).trim();
+                                    }
+                                    // Check placeholder
+                                    const placeholder = element.getAttribute('placeholder');
+                                    if (placeholder) {
+                                        return placeholder.trim();
+                                    }
+                                }
+                                // Check title attribute
+                                const title = element.getAttribute('title');
+                                if (title) {
+                                    return title.trim();
+                                }
+                                // For images, check alt attribute
+                                if (element instanceof HTMLImageElement) {
+                                    const alt = element.getAttribute('alt');
+                                    if (alt) {
+                                        return alt.trim();
+                                    }
+                                }
+                                // Get text content for other elements
+                                const textContent = getTextContent(element).trim();
+                                if (textContent && textContent.length < 100) { // Reasonable length limit
+                                    return textContent;
+                                }
+                                return '';
+                            }
+                            function getTextContent(element) {
+                                const clone = element.cloneNode(true);
+                                // Remove child interactive elements to avoid nested labels
+                                const interactiveSelectors = [
+                                    'button', 'a', 'input', 'textarea', 'select',
+                                    '[role="button"]', '[role="link"]', '[role="textbox"]'
+                                ];
+                                for (const selector of interactiveSelectors) {
+                                    const interactiveElements = clone.querySelectorAll(selector);
+                                    interactiveElements.forEach(el => el.remove());
+                                }
+                                return clone.textContent || '';
+                            }
+                            function createAccessibilityNode(element) {
+                                const computedStyle = window.getComputedStyle(element);
+                                // Skip hidden elements
+                                if (computedStyle.display === 'none' ||
+                                    computedStyle.visibility === 'hidden' ||
+                                    computedStyle.opacity === '0') {
+                                    return null;
+                                }
+                                // Skip very small elements (likely not interactive)
+                                const rect = element.getBoundingClientRect();
+                                if (rect.width < 1 || rect.height < 1) {
+                                    return null;
+                                }
+                                // Determine if this element should be included
+                                if (!shouldIncludeElement(element)) {
+                                    return null;
+                                }
+                                // Get role (explicit or implicit)
+                                const role = getElementRole(element);
+                                // Get accessible name
+                                const name = getAccessibleName(element);
+                                // Create ref and assign to element (matching playwright-mcp format)
+                                const ref = `e${refCounter.value++}`;
+                                element.setAttribute('aria-ref', ref);
+                                // Get cursor style
+                                const cursor = computedStyle.cursor;
+                                const node = {
+                                    role
+                                };
+                                if (name) {
+                                    node.name = name;
+                                }
+                                node.ref = ref;
+                                if (cursor && cursor !== 'auto' && cursor !== 'default') {
+                                    node.cursor = cursor;
                                 }
                                 return node;
-                            };
-                            return {
-                                success: true,
-                                url: window.location.href,
-                                title: document.title,
-                                accessibilityTree: getAccessibilityTree(document.body),
-                                timestamp: Date.now(),
-                                maxDepth: maxDepthParam
-                            };
-                        },
-                        args: [maxDepth ?? null] // Convert undefined to null for serialization
+                            }
+                            function shouldProcessChildren(element) {
+                                const tagName = element.tagName.toLowerCase();
+                                // Don't process children of leaf elements
+                                const leafElements = ['input', 'textarea', 'img', 'br', 'hr'];
+                                if (leafElements.includes(tagName)) {
+                                    return false;
+                                }
+                                // Process children of structural elements
+                                return true;
+                            }
+                            function buildAccessibilityTree(element, maxDepth = 10, currentDepth = 0) {
+                                if (currentDepth > maxDepth || processedElements.has(element)) {
+                                    return [];
+                                }
+                                processedElements.add(element);
+                                const nodes = [];
+                                // Process current element if it's meaningful
+                                const node = createAccessibilityNode(element);
+                                if (node) {
+                                    nodes.push(node);
+                                    // Process children for interactive/structural elements
+                                    if (shouldProcessChildren(element)) {
+                                        const children = [];
+                                        // Process regular DOM children
+                                        for (const child of Array.from(element.children)) {
+                                            const childNodes = buildAccessibilityTree(child, maxDepth, currentDepth + 1);
+                                            children.push(...childNodes);
+                                        }
+                                        // Process shadow DOM children if element has open shadow root
+                                        if (element.shadowRoot && element.shadowRoot.mode === 'open') {
+                                            for (const shadowChild of Array.from(element.shadowRoot.children)) {
+                                                const shadowNodes = buildAccessibilityTree(shadowChild, maxDepth, currentDepth + 1);
+                                                children.push(...shadowNodes);
+                                            }
+                                        }
+                                        if (children.length > 0) {
+                                            node.children = children;
+                                        }
+                                    }
+                                }
+                                else {
+                                    // If current element isn't meaningful, process its children directly
+                                    for (const child of Array.from(element.children)) {
+                                        const childNodes = buildAccessibilityTree(child, maxDepth, currentDepth);
+                                        nodes.push(...childNodes);
+                                    }
+                                    // Also process shadow DOM children if element has open shadow root
+                                    if (element.shadowRoot && element.shadowRoot.mode === 'open') {
+                                        for (const shadowChild of Array.from(element.shadowRoot.children)) {
+                                            const shadowNodes = buildAccessibilityTree(shadowChild, maxDepth, currentDepth);
+                                            nodes.push(...shadowNodes);
+                                        }
+                                    }
+                                }
+                                return nodes;
+                            }
+                            function formatAsYaml(nodes, indent = '') {
+                                const lines = [];
+                                for (const node of nodes) {
+                                    let line = `${indent}- ${node.role}`;
+                                    if (node.name) {
+                                        line += ` "${node.name}"`;
+                                    }
+                                    if (node.ref) {
+                                        line += ` [ref=${node.ref}]`;
+                                    }
+                                    if (node.cursor) {
+                                        line += ` [cursor=${node.cursor}]`;
+                                    }
+                                    lines.push(line + ':');
+                                    if (node.children && node.children.length > 0) {
+                                        const childYaml = formatAsYaml(node.children, indent + '  ');
+                                        lines.push(childYaml);
+                                    }
+                                }
+                                return lines.join('\n');
+                            }
+                            try {
+                                // Get page information
+                                const pageUrl = window.location.href;
+                                const pageTitle = document.title;
+                                // Generate the accessibility tree
+                                const rootElement = document.body || document.documentElement;
+                                if (!rootElement) {
+                                    throw new Error('No root element found');
+                                }
+                                const accessibilityTree = buildAccessibilityTree(rootElement);
+                                // Format as YAML similar to playwright-mcp
+                                const yamlContent = formatAsYaml(accessibilityTree);
+                                // Create the complete markdown response matching playwright-mcp format exactly
+                                const snapshot = [
+                                    '- Ran Playwright code:',
+                                    '```js',
+                                    '// <internal code to capture accessibility snapshot>',
+                                    '```',
+                                    '',
+                                    `- Page URL: ${pageUrl}`,
+                                    `- Page Title: ${pageTitle}`,
+                                    '- Page Snapshot',
+                                    '```yaml',
+                                    yamlContent,
+                                    '```'
+                                ].join('\n');
+                                return {
+                                    success: true,
+                                    snapshot
+                                };
+                            }
+                            catch (error) {
+                                return {
+                                    success: false,
+                                    error: error instanceof Error ? error.message : 'Failed to capture snapshot'
+                                };
+                            }
+                        }
                     });
                     if (!results || results.length === 0) {
                         sendResponse({
@@ -25483,14 +25768,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         return;
                     }
                     const result = results[0].result;
-                    console.log('Snapshot captured successfully');
+                    console.log('Accessibility snapshot captured successfully');
                     sendResponse(result);
                 }
                 catch (error) {
-                    console.error('Error taking page snapshot:', error);
+                    console.error('Error taking accessibility snapshot:', error);
                     sendResponse({
                         success: false,
-                        error: `Error taking page snapshot: ${error instanceof Error ? error.message : String(error)}`
+                        error: `Error taking accessibility snapshot: ${error instanceof Error ? error.message : String(error)}`
                     });
                 }
             })();
@@ -25520,10 +25805,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     }
                     const results = await chrome.scripting.executeScript({
                         target: { tabId },
-                        func: (selector, position) => {
+                        func: (selector, position, ref) => {
                             try {
                                 let element = null;
-                                if (selector) {
+                                if (ref) {
+                                    // Try to find element by ref attribute (playwright-mcp style)
+                                    element = document.querySelector(`[aria-ref="${ref}"]`);
+                                    if (!element) {
+                                        return { success: false, error: `Element not found with ref: ${ref}` };
+                                    }
+                                }
+                                else if (selector) {
                                     // Try to find element by selector
                                     element = document.querySelector(selector);
                                     if (!element) {
@@ -25542,13 +25834,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 if (!element) {
                                     return { success: false, error: 'No element to click' };
                                 }
+                                // Scroll element into view if we found it by ref
+                                if (ref) {
+                                    element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                                }
+                                // Get element position for click coordinates
+                                const rect = element.getBoundingClientRect();
+                                const clickX = position?.x || rect.left + rect.width / 2;
+                                const clickY = position?.y || rect.top + rect.height / 2;
                                 // Create and dispatch click events
                                 const clickEvent = new MouseEvent('click', {
                                     view: window,
                                     bubbles: true,
                                     cancelable: true,
-                                    clientX: position?.x || 0,
-                                    clientY: position?.y || 0
+                                    clientX: clickX,
+                                    clientY: clickY
                                 });
                                 element.dispatchEvent(clickEvent);
                                 return { success: true, message: 'Click executed successfully' };
@@ -25560,7 +25860,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 };
                             }
                         },
-                        args: [selector || null, position || null]
+                        args: [selector || null, position || null, message.payload?.ref || null]
                     });
                     if (!results || results.length === 0) {
                         sendResponse({

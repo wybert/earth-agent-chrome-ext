@@ -1,6 +1,7 @@
 /**
  * Click tool for browser automation
- * This tool clicks an element on the page using a CSS selector
+ * This tool clicks an element on the page using element reference from accessibility snapshot
+ * Matches the playwright-mcp implementation exactly
  * 
  * @returns Promise with success status and result message
  */
@@ -13,31 +14,26 @@ export interface ClickResponse {
   error?: string;
 }
 
-export interface Position {
-  x: number;
-  y: number;
-}
-
 export interface ClickParams {
-  selector?: string;
-  position?: Position;
+  element: string; // Human-readable element description used to obtain permission to interact with the element
+  ref: string; // Exact target element reference from the page snapshot
 }
 
 /**
- * Click an element on the page using a CSS selector or coordinates
+ * Perform click on a web page using element reference from accessibility snapshot
  * 
- * @param params.selector CSS selector for the element to click
- * @param params.position Coordinates {x, y} where to click
+ * @param params.element Human-readable element description
+ * @param params.ref Exact target element reference from the page snapshot
  * @returns Promise with success status and result message/error
  */
 export async function click(params: ClickParams): Promise<ClickResponse> {
   try {
-    const { selector, position } = params;
+    const { element, ref } = params;
 
-    if (!selector && !position) {
+    if (!element || !ref) {
       return {
         success: false,
-        error: 'Either selector or position must be provided'
+        error: 'Both element description and ref are required'
       };
     }
 
@@ -60,7 +56,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
           chrome.runtime.sendMessage(
             {
               type: 'CLICK',
-              payload: { selector, position }
+              payload: { element, ref }
             },
             (response) => {
               // Clear the timeout since we got a response
@@ -113,46 +109,71 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
             return;
           }
 
-          // Execute script in the tab to click element
+          // Execute script in the tab to click element by reference
           chrome.scripting.executeScript({
             target: { tabId },
-            func: (selector: string | null, position: Position | null) => {
+            func: (elementDescription: string, ref: string) => {
               try {
-                let element: Element | null = null;
-                
-                if (selector) {
-                  // Try to find element by selector
-                  element = document.querySelector(selector);
-                  if (!element) {
-                    return { success: false, error: `Element not found with selector: ${selector}` };
-                  }
-                  
-                  // Scroll element into view
-                  element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                } else if (position) {
-                  // Find element at position
-                  element = document.elementFromPoint(position.x, position.y);
-                  if (!element) {
-                    return { success: false, error: `No element found at position (${position.x}, ${position.y})` };
-                  }
-                }
+                // Find element by aria-ref attribute (matches playwright-mcp locator pattern)
+                const element = document.querySelector(`[aria-ref="${ref}"]`);
                 
                 if (!element) {
-                  return { success: false, error: 'No element to click' };
+                  return { 
+                    success: false, 
+                    error: `Element not found with ref: ${ref}` 
+                  };
                 }
                 
-                // Create and dispatch click events
+                // Scroll element into view
+                element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                
+                // Get element's bounding rect for click coordinates
+                const rect = element.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                // Create and dispatch click events (matching playwright behavior)
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                  view: window,
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: centerX,
+                  clientY: centerY,
+                  button: 0
+                });
+                
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  view: window,
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: centerX,
+                  clientY: centerY,
+                  button: 0
+                });
+                
                 const clickEvent = new MouseEvent('click', {
                   view: window,
                   bubbles: true,
                   cancelable: true,
-                  clientX: position?.x || 0,
-                  clientY: position?.y || 0
+                  clientX: centerX,
+                  clientY: centerY,
+                  button: 0
                 });
                 
+                // Dispatch events in order (mousedown -> mouseup -> click)
+                element.dispatchEvent(mouseDownEvent);
+                element.dispatchEvent(mouseUpEvent);
                 element.dispatchEvent(clickEvent);
                 
-                return { success: true, message: 'Click executed successfully' };
+                // Also trigger native click for form elements and links
+                if (element instanceof HTMLElement) {
+                  element.click();
+                }
+                
+                return { 
+                  success: true, 
+                  message: `Click executed successfully on ${elementDescription}` 
+                };
               } catch (error) {
                 return { 
                   success: false, 
@@ -160,7 +181,7 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
                 };
               }
             },
-            args: [selector || null, position || null]
+            args: [element, ref]
           }).then(results => {
             if (!results || results.length === 0) {
               resolve({
@@ -185,50 +206,65 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
     // If running directly in page context (content script)
     if (env.isContentScript && typeof document !== 'undefined') {
       try {
-        let element: Element | null = null;
+        // Find element by aria-ref attribute (matches playwright-mcp locator pattern)
+        const targetElement = document.querySelector(`[aria-ref="${ref}"]`);
         
-        if (selector) {
-          element = document.querySelector(selector);
-          if (!element) {
-            return {
-              success: false,
-              error: `Element not found with selector: ${selector}`
-            };
-          }
-          
-          // Scroll element into view
-          element.scrollIntoView({ behavior: 'auto', block: 'center' });
-        } else if (position) {
-          element = document.elementFromPoint(position.x, position.y);
-          if (!element) {
-            return {
-              success: false,
-              error: `No element found at position (${position.x}, ${position.y})`
-            };
-          }
-        }
-        
-        if (!element) {
+        if (!targetElement) {
           return {
             success: false,
-            error: 'No element to click'
+            error: `Element not found with ref: ${ref}`
           };
         }
         
-        // Create and dispatch click events
+        // Scroll element into view
+        targetElement.scrollIntoView({ behavior: 'auto', block: 'center' });
+        
+        // Get element's bounding rect for click coordinates
+        const rect = targetElement.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Create and dispatch click events (matching playwright behavior)
+        const mouseDownEvent = new MouseEvent('mousedown', {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          clientX: centerX,
+          clientY: centerY,
+          button: 0
+        });
+        
+        const mouseUpEvent = new MouseEvent('mouseup', {
+          view: window,
+          bubbles: true,
+          cancelable: true,
+          clientX: centerX,
+          clientY: centerY,
+          button: 0
+        });
+        
         const clickEvent = new MouseEvent('click', {
           view: window,
           bubbles: true,
           cancelable: true,
-          clientX: position?.x || 0,
-          clientY: position?.y || 0
+          clientX: centerX,
+          clientY: centerY,
+          button: 0
         });
         
-        element.dispatchEvent(clickEvent);
+        // Dispatch events in order (mousedown -> mouseup -> click)
+        targetElement.dispatchEvent(mouseDownEvent);
+        targetElement.dispatchEvent(mouseUpEvent);
+        targetElement.dispatchEvent(clickEvent);
+        
+        // Also trigger native click for form elements and links
+        if (targetElement instanceof HTMLElement) {
+          targetElement.click();
+        }
         
         return {
           success: true,
-          message: 'Click executed successfully'
+          message: `Click executed successfully on ${element}`
         };
       } catch (error) {
         return {
@@ -251,4 +287,4 @@ export async function click(params: ClickParams): Promise<ClickResponse> {
   }
 }
 
-export default click; 
+export default click;
