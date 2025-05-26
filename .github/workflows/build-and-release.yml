@@ -1,0 +1,121 @@
+name: Build and Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run type check
+      run: npm run type-check
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Build extension for production
+      run: |
+        # Create production webpack config
+        cp webpack.config.js webpack.prod.config.js
+        sed -i "s/mode: 'development'/mode: 'production'/" webpack.prod.config.js
+        sed -i "/devtool: 'source-map',/d" webpack.prod.config.js
+        
+        # Build with production config
+        npx webpack --config webpack.prod.config.js
+        
+    - name: Update manifest version
+      run: |
+        # Extract version from git tag (remove 'v' prefix)
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        # Update manifest.json version
+        sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" dist/manifest.json
+        
+        # Also update package.json version for consistency
+        sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+        
+    - name: Create extension package
+      run: |
+        cd dist
+        zip -r ../earth-agent-extension.zip .
+        cd ..
+        
+    - name: Create source package
+      run: |
+        # Create source zip excluding node_modules, dist, and other build artifacts
+        zip -r earth-agent-source.zip . \
+          -x "node_modules/*" \
+          -x "dist/*" \
+          -x ".git/*" \
+          -x "*.log" \
+          -x ".DS_Store" \
+          -x "coverage/*" \
+          -x "*.tgz" \
+          -x "*.zip"
+          
+    - name: Get tag name
+      id: tag_name
+      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
+        release_name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+        body: |
+          ## Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+          
+          ### Installation
+          1. Download `earth-agent-extension.zip`
+          2. Extract the zip file
+          3. Open Chrome and go to `chrome://extensions/`
+          4. Enable "Developer mode"
+          5. Click "Load unpacked" and select the extracted folder
+          
+          ### Changes
+          - See commit history for detailed changes
+          
+          ### Files
+          - `earth-agent-extension.zip` - Ready-to-install Chrome extension
+          - `earth-agent-source.zip` - Source code package
+        draft: false
+        prerelease: false
+        
+    - name: Upload Extension Package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./earth-agent-extension.zip
+        asset_name: earth-agent-extension.zip
+        asset_content_type: application/zip
+        
+    - name: Upload Source Package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./earth-agent-source.zip
+        asset_name: earth-agent-source.zip
+        asset_content_type: application/zip

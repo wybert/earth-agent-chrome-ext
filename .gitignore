@@ -32,3 +32,7 @@ cline-main
 dist
 package-lock.json
 playwright-mcp
+
+# Build artifacts
+webpack.prod.config.js
+*.zip
