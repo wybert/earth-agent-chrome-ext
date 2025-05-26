@@ -106550,6 +106550,20 @@ function ChatUI() {
     const [apiProvider, setApiProvider] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('openai');
     const [fallbackMode, setFallbackMode] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false); // Restore fallback state
     const [isLocalLoading, setIsLocalLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false); // Restore loading state
+    // Add session counter state for better display
+    const [sessionCounter, setSessionCounter] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(1);
+    // Calculate session display name
+    const getSessionDisplayName = (sessionId) => {
+        if (!sessionId)
+            return 'Chat';
+        // Extract timestamp from session ID
+        const timestamp = sessionId.split('_')[1];
+        if (!timestamp)
+            return 'Chat';
+        // Use last 6 characters of timestamp for better uniqueness
+        const shortId = timestamp.slice(-6);
+        return `Chat ${shortId}`;
+    };
     // Restore local state management
     const [sessions, setSessions] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)({});
     const [activeSessionId, setActiveSessionId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
@@ -107070,7 +107084,7 @@ function ChatUI() {
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center gap-2" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "icon", onClick: handleNewChat, "aria-label": "New Chat", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0", title: "New Chat" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_7__["default"], { className: "h-5 w-5 text-gray-600" })),
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-base font-medium truncate", title: activeSessionId || 'Chat' }, activeSessionId ? `Session: ${activeSessionId.substring(0, 8)}...` : 'Chat')),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h2", { className: "text-base font-medium truncate", title: activeSessionId || 'Chat' }, getSessionDisplayName(activeSessionId))),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "icon", onClick: () => setShowToolsTest(true), "aria-label": "Test Tools", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0", disabled: fallbackMode || !port, title: "Test Tools" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 text-gray-600" })),
@@ -113471,8 +113485,6 @@ const App = () => {
         document.body.removeChild(styleCheck);
     }, []);
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "container px-2 py-4 flex flex-col h-full max-w-[98%] mx-auto" },
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "header mb-2" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", { className: "text-xl font-bold" }, "Earth Engine AI Assistant")),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "content flex-1 w-full" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ChatErrorBoundary, null,
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_Chat__WEBPACK_IMPORTED_MODULE_2__.ChatUI, null)))));

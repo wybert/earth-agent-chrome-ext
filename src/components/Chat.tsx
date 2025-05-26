@@ -93,6 +93,22 @@ export function ChatUI() {
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
+  // Add session counter state for better display
+  const [sessionCounter, setSessionCounter] = useState(1);
+
+  // Calculate session display name
+  const getSessionDisplayName = (sessionId: string | null) => {
+    if (!sessionId) return 'Chat';
+    
+    // Extract timestamp from session ID
+    const timestamp = sessionId.split('_')[1];
+    if (!timestamp) return 'Chat';
+    
+    // Use last 6 characters of timestamp for better uniqueness
+    const shortId = timestamp.slice(-6);
+    return `Chat ${shortId}`;
+  };
+
   // Restore local state management
   const [sessions, setSessions] = useState<ChatSessions>({});
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -628,7 +644,7 @@ export function ChatUI() {
               <Plus className="h-5 w-5 text-gray-600" />
             </Button>
             <h2 className="text-base font-medium truncate" title={activeSessionId || 'Chat'}>
-              {activeSessionId ? `Session: ${activeSessionId.substring(0,8)}...` : 'Chat'}
+              {getSessionDisplayName(activeSessionId)}
             </h2>
          </div>
         <div className="flex gap-2">
