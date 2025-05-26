@@ -6,6 +6,13 @@ on:
       - 'v*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
   workflow_dispatch:  # Allows manual triggering
 
+# Add permissions for the workflow
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+  issues: write
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
@@ -103,13 +110,10 @@ jobs:
       run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
       
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
-        release_name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+        name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
         body: |
           ## Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
           
@@ -143,25 +147,8 @@ jobs:
           
           ### ⚠️ Important
           Make sure to download `earth-agent-extension.zip` for installation, not the source code package.
+        files: |
+          earth-agent-extension.zip
+          earth-agent-source.zip
         draft: false
         prerelease: false
-        
-    - name: Upload Extension Package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./earth-agent-extension.zip
-        asset_name: earth-agent-extension.zip
-        asset_content_type: application/zip
-        
-    - name: Upload Source Package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./earth-agent-source.zip
-        asset_name: earth-agent-source.zip
-        asset_content_type: application/zip
