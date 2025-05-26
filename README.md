@@ -19,7 +19,7 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 
 ### Option 1: Download from GitHub Releases (Recommended)
 
-1. Go to the [Releases page](https://github.com/[your-username]/earth-agent-ai-sdk/releases)
+1. Go to the [Releases page](https://github.com/wybert/earth-agent-chrome-ext/releases)
 2. Download the latest `earth-agent-extension.zip`
 3. Extract the zip file to a folder on your computer
 4. Open Chrome and navigate to `chrome://extensions/`
