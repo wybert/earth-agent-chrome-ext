@@ -36,3 +36,4 @@ playwright-mcp
 # Build artifacts
 webpack.prod.config.js
 *.zip
+dist.zip

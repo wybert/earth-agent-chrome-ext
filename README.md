@@ -6,7 +6,6 @@
 
 Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome extension. It helps you do anything related to Google Earth Engine automatically through chatting. Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
 
-
 ## Features
 
 - Chat interface for Earth Engine assistance
@@ -18,12 +17,47 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 
 ## Installation
 
-Current only support install from local
+### Option 1: Download from GitHub Releases (Recommended)
+
+1. Go to the [Releases page](https://github.com/[your-username]/earth-agent-ai-sdk/releases)
+2. Download the latest `earth-agent-extension.zip`
+3. Extract the zip file to a folder on your computer
+4. Open Chrome and navigate to `chrome://extensions/`
+5. Enable "Developer mode" (toggle in the top right)
+6. Click "Load unpacked" and select the extracted folder
+7. The extension will appear in your Chrome toolbar
+
+### Option 2: Install from Source
 
 1. Clone the repository
 2. Install dependencies with `npm install`
 3. Build the extension with `npm run build`
 4. Load the unpacked extension from the `dist` directory in Chrome
+
+## Configuration
+
+After installation, you'll need to configure your API keys:
+
+1. Click the Earth Agent extension icon in Chrome
+2. Go to Settings
+3. Add your OpenAI or Anthropic API key
+4. Select your preferred AI provider and model
+5. Start chatting with Earth Engine!
+
+## Creating a New Release
+
+For developers who want to create releases:
+
+```bash
+# Create and push a version tag
+git tag v1.0.0
+git push origin v1.0.0
+
+# GitHub Actions will automatically:
+# - Build the extension
+# - Run tests
+# - Create a release with installation files
+```
 
 ## Development
 

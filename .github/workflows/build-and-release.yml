@@ -31,13 +31,20 @@ jobs:
       
     - name: Build extension for production
       run: |
-        # Create production webpack config
-        cp webpack.config.js webpack.prod.config.js
-        sed -i "s/mode: 'development'/mode: 'production'/" webpack.prod.config.js
-        sed -i "/devtool: 'source-map',/d" webpack.prod.config.js
+        # Clean any existing dist folder
+        rm -rf dist
         
-        # Build with production config
-        npx webpack --config webpack.prod.config.js
+        # Build the extension
+        npm run build
+        
+        # Verify build was successful
+        if [ ! -f "dist/manifest.json" ]; then
+          echo "Build failed - manifest.json not found in dist folder"
+          exit 1
+        fi
+        
+        echo "Build completed successfully. Dist folder contents:"
+        ls -la dist/
         
     - name: Update manifest version
       run: |
@@ -47,18 +54,41 @@ jobs:
         # Update manifest.json version
         sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" dist/manifest.json
         
-        # Also update package.json version for consistency
-        sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+        # Verify version was updated
+        echo "Updated manifest.json version to: $VERSION"
+        grep "version" dist/manifest.json
+        
+    - name: Verify extension files
+      run: |
+        echo "Verifying required extension files are present:"
+        required_files=("manifest.json" "background.js" "content.js" "sidepanel.html" "sidepanel.js")
+        
+        for file in "${required_files[@]}"; do
+          if [ -f "dist/$file" ]; then
+            echo "✓ $file exists ($(du -h dist/$file | cut -f1))"
+          else
+            echo "✗ $file missing!"
+            exit 1
+          fi
+        done
         
     - name: Create extension package
       run: |
+        # Create the extension zip from dist folder
         cd dist
-        zip -r ../earth-agent-extension.zip .
+        zip -r ../earth-agent-extension.zip . -x "*.DS_Store" "*.map"
         cd ..
+        
+        # Verify the zip was created and show its contents
+        echo "Extension package created. Contents:"
+        unzip -l earth-agent-extension.zip | head -20
+        
+        # Show package size
+        echo "Package size: $(du -h earth-agent-extension.zip | cut -f1)"
         
     - name: Create source package
       run: |
-        # Create source zip excluding node_modules, dist, and other build artifacts
+        # Create source zip excluding build artifacts and dependencies
         zip -r earth-agent-source.zip . \
           -x "node_modules/*" \
           -x "dist/*" \
@@ -84,19 +114,36 @@ jobs:
         body: |
           ## Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
           
-          ### Installation
-          1. Download `earth-agent-extension.zip`
-          2. Extract the zip file
-          3. Open Chrome and go to `chrome://extensions/`
-          4. Enable "Developer mode"
+          ### 📦 Installation Instructions
+          
+          **For Users (Recommended):**
+          1. Download `earth-agent-extension.zip` below
+          2. Extract the zip file to a folder on your computer
+          3. Open Chrome and navigate to `chrome://extensions/`
+          4. Enable "Developer mode" (toggle in top right)
           5. Click "Load unpacked" and select the extracted folder
+          6. The extension will appear in your Chrome toolbar
           
-          ### Changes
-          - See commit history for detailed changes
+          **For Developers:**
+          - Download `earth-agent-source.zip` for the source code
           
-          ### Files
-          - `earth-agent-extension.zip` - Ready-to-install Chrome extension
-          - `earth-agent-source.zip` - Source code package
+          ### 🔧 Configuration
+          After installation:
+          1. Click the Earth Agent extension icon
+          2. Go to Settings
+          3. Add your OpenAI or Anthropic API key
+          4. Select your preferred AI provider and model
+          5. Start chatting with Earth Engine!
+          
+          ### 📋 What's Included
+          - `earth-agent-extension.zip` - **Ready-to-install Chrome extension** (built files)
+          - `earth-agent-source.zip` - Source code package for developers
+          
+          ### 🔒 Privacy
+          This extension stores data locally and communicates directly with AI providers. See our [Privacy Policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY_POLICY.md) for details.
+          
+          ### ⚠️ Important
+          Make sure to download `earth-agent-extension.zip` for installation, not the source code package.
         draft: false
         prerelease: false
         
