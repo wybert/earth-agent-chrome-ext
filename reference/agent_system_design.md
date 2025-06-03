@@ -44,3 +44,7 @@ ai installed as version 4.3.13. create a new branch as the new version of the ai
 
 Now, it support the screenshot.
 Next step should focus on how to get the more tools. As the tools are the pieses of the agent to become more agentic.
+
+How is the pattern of the agent looks like?
+
+the https://github.com/huggingface/smolagents?tab=readme-ov-file mentioned the classical ReAct agents. Maybe our agent should be like this.
