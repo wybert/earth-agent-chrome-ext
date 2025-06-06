@@ -18268,21 +18268,21 @@ const getDefaultConfig = () => {
        * @see https://tailwindcss.com/docs/height
        */
       h: [{
-        h: ['screen', ...scaleSizing()]
+        h: ['screen', 'lh', ...scaleSizing()]
       }],
       /**
        * Min-Height
        * @see https://tailwindcss.com/docs/min-height
        */
       'min-h': [{
-        'min-h': ['screen', 'none', ...scaleSizing()]
+        'min-h': ['screen', 'lh', 'none', ...scaleSizing()]
       }],
       /**
        * Max-Height
        * @see https://tailwindcss.com/docs/max-height
        */
       'max-h': [{
-        'max-h': ['screen', ...scaleSizing()]
+        'max-h': ['screen', 'lh', ...scaleSizing()]
       }],
       // ------------------
       // --- Typography ---
@@ -26863,7 +26863,7 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
 /**
  * Handle chat messages from the UI
  */
-async function handleChatRequest(messages, apiKey, provider, model) {
+async function handleChatRequest(messages, apiKey, provider, model, heliconeHeaders) {
     try {
         // Debug log at start of request
         console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}`);
@@ -26886,9 +26886,16 @@ async function handleChatRequest(messages, apiKey, provider, model) {
         let llmProvider;
         let effectiveModel;
         if (provider === 'openai') {
-            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__.createOpenAI)({ apiKey });
+            // Configure OpenAI with Helicone proxy if headers are provided
+            const openaiConfig = { apiKey };
+            if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+                console.log('🔍 [Chat Handler] Configuring OpenAI with Helicone observability');
+                openaiConfig.baseURL = 'https://oai.helicone.ai/v1';
+                openaiConfig.headers = heliconeHeaders;
+            }
+            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__.createOpenAI)(openaiConfig);
             effectiveModel = model || DEFAULT_MODELS.openai;
-            console.log(`Using OpenAI provider with model: ${effectiveModel}`);
+            console.log(`Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
         else if (provider === 'anthropic') {
             // Check if the requested model exists in our available model list
@@ -26905,15 +26912,23 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 selectedModel = DEFAULT_MODELS.anthropic;
             }
             effectiveModel = selectedModel;
-            // Create the Anthropic provider
-            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)({
+            // Create the Anthropic provider with optional Helicone configuration
+            const anthropicConfig = {
                 apiKey,
-                // Set the correct baseURL for the Anthropic API, without the version path
-                baseURL: 'https://api.anthropic.com',
                 // Use our custom fetch to handle CORS issues
                 fetch: corsProxyFetch,
-            });
-            console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})`);
+            };
+            if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+                console.log('🔍 [Chat Handler] Configuring Anthropic with Helicone observability');
+                anthropicConfig.baseURL = 'https://anthropic.helicone.ai';
+                anthropicConfig.headers = heliconeHeaders;
+            }
+            else {
+                // Set the correct baseURL for the Anthropic API, without the version path
+                anthropicConfig.baseURL = 'https://api.anthropic.com';
+            }
+            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)(anthropicConfig);
+            console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
         else {
             return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
@@ -27743,8 +27758,12 @@ async function handleChatRequest(messages, apiKey, provider, model) {
                 clickByRefId: clickByRefIdTool,
                 clickByCoordinates: clickByCoordinatesTool
             },
-            maxSteps: 5, // Allow up to 5 steps
+            toolChoice: 'auto',
+            maxSteps: 12, // Allow up to 5 steps
             temperature: 0.7,
+            maxRetries: 3,
+            toolCallStreaming: false,
+            experimental_continueSteps: true,
         };
         // For Anthropic models, add special headers for browser usage
         if (provider === 'anthropic') {
@@ -27764,6 +27783,16 @@ async function handleChatRequest(messages, apiKey, provider, model) {
         // Debug the result object to see what we got back
         console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
         console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
+        // log the result headers
+        // console.log(`📊 [Chat Handler] Result headers: ${JSON.stringify((await result.response))}`);
+        // console.log(JSON.stringify(result.response.headers, null, 2));
+        // Expose result to global scope for interactive investigation
+        globalThis.lastStreamTextResult = result;
+        console.log(`🔍 [Chat Handler] Result object exposed as 'globalThis.lastStreamTextResult' for interactive investigation`);
+        console.log(`🔍 [Chat Handler] Try: globalThis.lastStreamTextResult.textPromise, globalThis.lastStreamTextResult.toolCallsPromise, etc.`);
+        // Verify it was set correctly
+        console.log(`🔍 [Chat Handler] Verification - globalThis.lastStreamTextResult exists:`, typeof globalThis.lastStreamTextResult);
+        console.log(`🔍 [Chat Handler] Verification - Object keys:`, Object.keys(globalThis.lastStreamTextResult || {}));
         // If there were tool calls, log them
         if (result.toolCalls && Array.isArray(result.toolCalls)) {
             console.log(`🛠️ [Chat Handler] Tool calls made: ${result.toolCalls.length}`);
@@ -29256,7 +29285,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             throw new Error('API key not found in storage');
                         }
                         const body = message.payload.body || {};
-                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(body.messages, apiKey, provider, model);
+                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(body.messages, apiKey, provider, model, undefined // No Helicone headers for direct API requests
+                        );
                         // Stream the response back? Requires careful handling
                         // For simplicity, let's assume non-streaming for direct API calls for now
                         const responseData = await response.json(); // Or handle stream appropriately
@@ -29343,7 +29373,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     }
                     try {
                         // Handle the chat request through the appropriate handler
-                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(chatMessages, apiKey, provider, model);
+                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(chatMessages, apiKey, provider, model, message.heliconeHeaders // Include Helicone headers if provided
+                        );
                         // Get response body as a readable stream
                         const reader = response.body?.getReader();
                         if (!reader) {
@@ -30233,6 +30264,25 @@ chrome.runtime.onConnect.addListener((newPort) => {
             }
         });
     }
+    else if (newPort.name === 'agent-test') {
+        console.log('Agent test connection established');
+        newPort.onMessage.addListener(async (message) => {
+            console.log('Received message from agent test panel:', message);
+            // Handle agent test specific messages
+            switch (message.type) {
+                case 'CHAT_MESSAGE':
+                    // Handle chat messages from agent test panel
+                    handleChatMessage(message, newPort);
+                    break;
+                default:
+                    console.warn('Unknown agent test message type:', message.type);
+                    newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+            }
+        });
+        newPort.onDisconnect.addListener(() => {
+            console.log('Agent test connection disconnected');
+        });
+    }
 });
 // Helper function to handle chat messages
 async function handleChatMessage(message, port) {
@@ -30352,8 +30402,9 @@ async function handleChatMessage(message, port) {
             console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
         }
         // Call the new handler which directly processes messages
+        // Include Helicone headers if provided in the message
         const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(conversationMessages, apiConfig.apiKey, apiConfig.provider, // Cast to Provider type
-        apiConfig.model);
+        apiConfig.model, message.heliconeHeaders);
         console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
         if (!response.ok) {
             // Handle potential errors from the handler

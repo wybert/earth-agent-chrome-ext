@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, RefreshCw, Wrench, Plus } from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical } from 'lucide-react';
 import type { Message } from 'ai'; // Keep this type
 import { Settings } from './Settings';
 import { ExtensionMessage } from '../types/extension'; // Restore this type
 import ToolsTestPanel from './ui/ToolsTestPanel';
+import AgentTestPanel from './ui/AgentTestPanel';
 import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
 
@@ -87,6 +88,7 @@ interface ChatSessions {
 export function ChatUI() {
   const [showSettings, setShowSettings] = useState(false);
   const [showToolsTest, setShowToolsTest] = useState(false);
+  const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic'>('openai');
@@ -651,6 +653,9 @@ export function ChatUI() {
           <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
             <Wrench className="h-5 w-5 text-gray-600" />
           </Button>
+          <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
+            <FlaskConical className="h-5 w-5 text-gray-600" />
+          </Button>
           <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="Settings">
             <SettingsIcon className="h-5 w-5 text-gray-600" />
           </Button>
@@ -711,6 +716,7 @@ export function ChatUI() {
        )}
 
       <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
+      <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
     </Card>
   );
 }

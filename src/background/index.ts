@@ -299,7 +299,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               body.messages,
               apiKey,
               provider,
-              model
+              model,
+              undefined // No Helicone headers for direct API requests
             );
             
             // Stream the response back? Requires careful handling
@@ -402,7 +403,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               chatMessages,
               apiKey,
               provider as Provider,
-              model
+              model,
+              message.heliconeHeaders // Include Helicone headers if provided
             );
             
             // Get response body as a readable stream
@@ -1430,6 +1432,28 @@ chrome.runtime.onConnect.addListener((newPort) => {
         port = null;
       }
     });
+  } else if (newPort.name === 'agent-test') {
+    console.log('Agent test connection established');
+    
+    newPort.onMessage.addListener(async (message: any) => {
+      console.log('Received message from agent test panel:', message);
+      
+      // Handle agent test specific messages
+      switch (message.type) {
+        case 'CHAT_MESSAGE':
+          // Handle chat messages from agent test panel
+          handleChatMessage(message, newPort);
+          break;
+          
+        default:
+          console.warn('Unknown agent test message type:', message.type);
+          newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+      }
+    });
+
+    newPort.onDisconnect.addListener(() => {
+      console.log('Agent test connection disconnected');
+    });
   }
 });
 
@@ -1566,11 +1590,13 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     }
     
     // Call the new handler which directly processes messages
+    // Include Helicone headers if provided in the message
     const response = await handleChatRequest(
       conversationMessages,
       apiConfig.apiKey,
       apiConfig.provider as any, // Cast to Provider type
-      apiConfig.model
+      apiConfig.model,
+      message.heliconeHeaders
     );
       
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);

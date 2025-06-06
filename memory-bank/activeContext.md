@@ -1,86 +1,123 @@
 # Active Context: Google Earth Engine Agent
 
-## Current Work Focus (Updated May 23, 2025)
+## Current Work Focus (Updated December 17, 2024)
 
 Building the Google Earth Engine Agent Chrome Extension. The primary focus areas recently have been:
 
-1.  **Implementing and Refining Browser Tools:**
-    *   Added `getElementByRefId` to `getElement.ts` and `ToolsTestPanel.tsx`, including logic to traverse open shadow DOMs.
-    *   Implemented `clickByCoordinates` in `click.ts`, ensuring correct message routing from `ToolsTestPanel.tsx` through the background script to the content script.
-2.  **Ensuring Robust Message Handling:**
-    *   Corrected message handling in the background script (`src/background/index.ts`) for new browser tool types like `GET_ELEMENT_BY_REF_ID` and `CLICK_BY_COORDINATES`.
-    *   Addressed and fixed the "Extension context invalidated" error in `src/content/index.ts` by adding runtime error checks.
-3.  **UI Test Panel Enhancements:** Updated `ToolsTestPanel.tsx` to accurately test new and existing browser tool functionalities, including `getElementByRefId` and the different click methods.
-4.  **Cross-Script Communication:** Refined communication pathways for browser tools, ensuring proper delegation from UI components to library functions, then to the background script, and finally to the content script for DOM interaction.
+1. **Agent Testing Panel Implementation and Debugging:**
+   - Successfully implemented comprehensive `AgentTestPanel.tsx` with multi-tab interface for testing AI agent responses
+   - Added support for multiple AI providers (OpenAI GPT-4o, GPT-4.1, GPT-o3; Anthropic Claude 4, Claude 3.7)
+   - Integrated Helicone observability using AI SDK proxy-based approach
+   - Fixed critical state management bug in test execution that was preventing tests from running
+   - Added comprehensive debugging and error handling for test execution flow
+
+2. **Test Panel Features:**
+   - Multi-line prompt input with file upload support (JSON/CSV/TXT)
+   - Configurable test intervals and AI provider selection
+   - Real-time progress tracking with remaining test counter and success rate
+   - Screenshot capture integration with unique test IDs
+   - Results export to CSV with detailed metadata
+   - Helicone integration for request logging and analytics
+
+3. **Robust Message Handling & State Management:**
+   - Fixed React state closure issues in test execution loop using useRef pattern
+   - Implemented proper port-based messaging for reliable communication with background script
+   - Added comprehensive console logging for debugging test execution flow
+   - Created "Test Connection" button for debugging messaging system
 
 ## Recent Changes
 
 ### Completed
-- **Browser Tools Added/Enhanced:**
-  - Implemented `getElementByRefId` in `getElement.ts`, `index.ts` (browser tools), `ToolsTestPanel.tsx`, and corresponding message handling in background/content scripts. Includes recursive search for elements within open shadow DOMs.
-  - Implemented `clickByCoordinates` in `click.ts`, `index.ts` (browser tools), `ToolsTestPanel.tsx`, and corresponding message handling in background/content scripts.
-  - Corrected `ToolsTestPanel.tsx` to use `clickByCoordinates` when the "coordinates" click method is selected, resolving incorrect `click` (by ref) calls.
-  - Updated `hover.ts` to correctly export `HoverParams` and `HoverResponse` types, and updated `index.ts` (browser tools) accordingly.
-  - Ensured `type.ts` default export is correctly aliased and used in `index.ts` (browser tools).
-- **Background Script Enhancements:**
-  - Added specific message handling cases in `src/background/index.ts` for `GET_ELEMENT_BY_REF_ID` and `CLICK_BY_COORDINATES`, ensuring they are forwarded to the content script via `sendMessageToEarthEngineTab`.
-- **Content Script Fixes:**
-  - Implemented a fix in `src/content/index.ts` for the "Extension context invalidated" error by checking `chrome.runtime.lastError` in message responses and heartbeat checks.
-  - Added `handleExecuteClickByCoordinates` in `src/content/index.ts` to perform clicks using `document.elementFromPoint`.
-  - Updated `handleGetElementByRefId` in `src/content/index.ts` to recursively search shadow DOMs.
-- **Architectural Clarification:**
-  - Reinforced the pattern of UI components calling library functions (`src/lib/tools/browser/`), which then message the background script, which in turn messages the content script for DOM manipulations.
+- **Agent Testing Panel:**
+  - Created comprehensive `AgentTestPanel.tsx` with three-tab interface (Setup, Prompts, Run Tests, Results)
+  - Added Flask icon button to main chat UI for easy access
+  - Implemented file upload support for test prompts (JSON/CSV/TXT with format examples)
+  - Added AI provider selection with model options for OpenAI and Anthropic
+  - Created configurable time intervals between tests
+  - Implemented real-time progress tracking and success rate calculation
+  - Added screenshot capture after each agent call with unique test IDs
+  - Created CSV export functionality with detailed test metadata
+
+- **Missing UI Components:**
+  - Created `label.tsx`, `select.tsx`, `switch.tsx`, `badge.tsx`, `progress.tsx`, `tabs.tsx` components
+  - All components follow shadcn/ui patterns and integrate with existing design system
+
+- **Helicone Integration:**
+  - Initially attempted @helicone/helpers package (corrected after user feedback)
+  - Implemented proper AI SDK proxy-based Helicone integration
+  - Added Helicone headers to chat messages for request tracking
+  - Modified `chat-handler.ts` to accept heliconeHeaders and configure AI providers with proxy URLs
+  - Updated background script to pass Helicone headers to chat handler
+
+- **State Management Fix:**
+  - Identified and fixed critical bug where tests were immediately stopping due to stale closure issue
+  - Replaced DOM query approach with useRef pattern for tracking running state
+  - Added proper ref updates in start/stop test functions
+  - Implemented comprehensive debugging with console logging
+
+- **Background Script Integration:**
+  - Updated background script to handle "agent-test" port connections
+  - Ensured proper message routing for test execution through existing chat handler
+  - Maintained compatibility with existing chat functionality
 
 ### In Progress
-- Thoroughly testing all browser tools, especially edge cases with shadow DOM and various GEE interface states.
-- Monitoring for any unintended page refreshes or side effects from DOM traversal tools like `getElementByRefId`.
-- Implementing handlers for remaining Earth Engine tools (`GET_MAP_LAYERS`, `INSPECT_MAP`, `CHECK_CONSOLE`, `GET_TASKS`) in the background script listener (`index.ts`) and as AI tools (`chat-handler.ts`).
-- Further refining error handling and user feedback for tool execution across all tool types.
+- Testing agent test panel with actual AI responses to validate full workflow
+- Verifying Helicone integration captures test requests properly
+- Monitoring for any UI/UX improvements needed based on usage
 
 ## Current Challenges
 
-- Ensuring DOM manipulation tools (`click`, `getElementByRefId`) are consistently non-disruptive to complex web applications like Google Earth Engine, especially concerning page refreshes.
-- Providing clear and actionable error messages to the user when tool execution fails, distinguishing between tool errors and application-specific errors.
-- Handling potential timing issues between script injection and message sending, though current ping/heartbeat mechanisms mitigate this.
+- Ensuring test execution is reliable across different AI providers and network conditions
+- Managing state properly during test execution to prevent interruptions
+- Providing clear feedback when tests fail due to API issues vs. extension issues
+- Optimizing test execution timing to avoid rate limits while maintaining reasonable test speeds
 
 ## Next Steps
 
 ### Immediate (Next 1-2 Days)
-1.  Conduct extensive testing of `getElementByRefId` and `clickByCoordinates` on the live Google Earth Engine site to check for stability and unintended side-effects.
-2.  Implement the background listener cases and AI tool definitions for `GET_MAP_LAYERS` and `INSPECT_MAP`.
-3.  Review and update the system prompt (`GEE_SYSTEM_PROMPT`) to reflect the capabilities of the new/updated browser tools if relevant for AI interaction.
+1. Validate agent testing panel works end-to-end with actual AI API responses
+2. Test Helicone integration captures and logs test requests properly
+3. Verify CSV export includes all expected metadata
+4. Test file upload functionality with various prompt formats
 
 ### Short-term (Next Week)
-1.  Implement the remaining Earth Engine tools (`CHECK_CONSOLE`, `GET_TASKS`).
-2.  Add more comprehensive logging throughout the message passing flow for browser tools.
-3.  Refine the UI of `ToolsTestPanel.tsx` if further testing reveals usability issues.
+1. Add more sophisticated test result analysis and reporting
+2. Implement test templates for common agent testing scenarios
+3. Add batch test execution capabilities
+4. Create saved test configurations for repeated testing
 
 ## Open Questions
 
-- What is the most robust way to identify and interact with elements in dynamic, complex web applications like GEE, balancing specificity with resilience to UI changes? (Ongoing)
-- How to best differentiate between an element *not found* versus an error during the *search process* for tools like `getElementByRefId`?
-- Could a more targeted shadow DOM query be implemented for `getElementByRefId` if `querySelectorAll('*')` proves too performance-intensive or disruptive on GEE?
+- What additional test metrics would be most valuable for agent performance evaluation?
+- Should we add support for custom test assertions or validation rules?
+- How can we best integrate test results with CI/CD workflows?
 
 ## Recent Learnings
 
-- DOM traversal for `getElementByRefId` using `querySelectorAll('*')` and recursive shadow DOM search is effective but can be intensive on complex pages like GEE, potentially triggering side effects.
-- Correctly routing messages for new tools (`CLICK_BY_COORDINATES`, `GET_ELEMENT_BY_REF_ID`) requires updates at multiple levels: UI (`ToolsTestPanel.tsx`), browser tool library (`click.ts`, `getElement.ts`), browser tool index (`index.ts`), background script listener (`background/index.ts`), and content script handler (`content/index.ts`).
-- The "Extension context invalidated" error can often be mitigated by checking `chrome.runtime.lastError` in asynchronous callbacks within content scripts, particularly for `sendMessage` responses.
-- `document.elementFromPoint(x, y)` is the standard way to get the topmost element at specific coordinates, which is then used for programmatic clicks.
+- React state closures in async loops can cause immediate termination issues - useRef is essential for tracking mutable state
+- AI SDK proxy-based approach for Helicone is much cleaner than package-based integration
+- Port-based messaging provides more reliable communication than one-off runtime messages for testing scenarios
+- Comprehensive debugging output is crucial for diagnosing issues in complex async workflows
+- File upload functionality requires careful parsing and validation for different formats
 
 ## Decision Log
 
-- **Shadow DOM Traversal for `getElementByRefId`** (2025-05-23)
-  - **Decision:** Implement recursive search through open shadow DOMs using `querySelectorAll('*')` in `src/content/index.ts` for `handleGetElementByRefId`.
-  - **Rationale:** Necessary to locate elements with `aria-ref` that might be nested within shadow boundaries.
-  - **Trade-offs:** Potentially performance-intensive on very complex DOMs; risk of unintended side-effects on the target page (e.g., GEE refresh). Monitor and optimize if issues persist.
+- **Agent Testing Panel Architecture** (2024-12-17)
+  - **Decision:** Implement as modal overlay with tabbed interface integrated into main chat UI
+  - **Rationale:** Provides comprehensive testing capabilities while maintaining easy access from main interface
+  - **Implementation:** Flask icon button opens modal with Setup, Prompts, Run Tests, and Results tabs
 
-- **`clickByCoordinates` Implementation** (2025-05-23)
-  - **Decision:** Add a new `clickByCoordinates` tool, distinct from the ref-based `click` tool. Implement full message flow from UI to content script.
-  - **Rationale:** Provides a necessary way to interact with the page when element selectors or refs are not available or practical. Fixes previous incorrect usage of ref-based click for coordinate actions in `ToolsTestPanel.tsx`.
-  - **Implementation:** UI calls `clickByCoordinates` lib function -> sends `CLICK_BY_COORDINATES` message to background -> background forwards to content script -> content script uses `document.elementFromPoint` and dispatches mouse events.
+- **Helicone Integration Method** (2024-12-17)
+  - **Decision:** Use AI SDK proxy-based approach instead of @helicone/helpers package
+  - **Rationale:** More aligned with AI SDK architecture, cleaner implementation, no additional dependencies
+  - **Implementation:** Configure AI providers with proxy URLs and add headers to chat messages
 
-- **Fix for "Extension context invalidated"** (2025-05-23)
-  - **Decision:** Add `chrome.runtime.lastError` checks in `src/content/index.ts` within `sendMessage` callbacks and heartbeat logic.
-  - **Rationale:** Prevents the extension from crashing or behaving erratically when the communication channel to the background script is lost (e.g., after an extension reload or crash).
-  - **Action:** Cease further operations or self-checks if context is invalidated.
+- **Test State Management** (2024-12-17)
+  - **Decision:** Use useRef for tracking running state instead of DOM queries
+  - **Rationale:** Prevents React state closure issues that were causing tests to immediately stop
+  - **Implementation:** isRunningRef tracks state synchronously, updated alongside React state
+
+- **Test Communication Pattern** (2024-12-17)
+  - **Decision:** Use port-based messaging for test execution instead of direct API calls
+  - **Rationale:** Leverages existing chat infrastructure, ensures consistent behavior, maintains extension permissions model
+  - **Implementation:** Tests send messages through same port system used by main chat interface

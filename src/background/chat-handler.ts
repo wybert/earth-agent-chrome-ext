@@ -183,7 +183,13 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
 /**
  * Handle chat messages from the UI
  */
-export async function handleChatRequest(messages: Message[], apiKey: string, provider: Provider, model?: string): Promise<Response> {
+export async function handleChatRequest(
+  messages: Message[], 
+  apiKey: string, 
+  provider: Provider, 
+  model?: string, 
+  heliconeHeaders?: Record<string, string>
+): Promise<Response> {
   try {
     // Debug log at start of request
     console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}`);
@@ -210,9 +216,18 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     let effectiveModel: string;
     
     if (provider === 'openai') {
-      llmProvider = createOpenAI({ apiKey });
+      // Configure OpenAI with Helicone proxy if headers are provided
+      const openaiConfig: any = { apiKey };
+      
+      if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+        console.log('🔍 [Chat Handler] Configuring OpenAI with Helicone observability');
+        openaiConfig.baseURL = 'https://oai.helicone.ai/v1';
+        openaiConfig.headers = heliconeHeaders;
+      }
+      
+      llmProvider = createOpenAI(openaiConfig);
       effectiveModel = model || DEFAULT_MODELS.openai;
-      console.log(`Using OpenAI provider with model: ${effectiveModel}`);
+      console.log(`Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'anthropic') {
       // Check if the requested model exists in our available model list
       const anthropicModels = [
@@ -231,16 +246,25 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
       
       effectiveModel = selectedModel;
       
-      // Create the Anthropic provider
-      llmProvider = createAnthropic({ 
+      // Create the Anthropic provider with optional Helicone configuration
+      const anthropicConfig: any = {
         apiKey,
-        // Set the correct baseURL for the Anthropic API, without the version path
-        baseURL: 'https://api.anthropic.com',
         // Use our custom fetch to handle CORS issues
         fetch: corsProxyFetch,
-      });
+      };
       
-      console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})`);
+      if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+        console.log('🔍 [Chat Handler] Configuring Anthropic with Helicone observability');
+        anthropicConfig.baseURL = 'https://anthropic.helicone.ai';
+        anthropicConfig.headers = heliconeHeaders;
+      } else {
+        // Set the correct baseURL for the Anthropic API, without the version path
+        anthropicConfig.baseURL = 'https://api.anthropic.com';
+      }
+      
+      llmProvider = createAnthropic(anthropicConfig);
+      
+      console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
