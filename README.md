@@ -17,7 +17,13 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 
 ## Installation
 
-### Option 1: Download from GitHub Releases (Recommended)
+### Option 1: Install from Chrome Web Store (Easiest & Recommended)
+
+1.  Visit the [Earth Agent page on the Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple).
+2.  Click "Add to Chrome".
+3.  The extension will be added to your browser and will appear in your Chrome toolbar.
+
+### Option 2: Download from GitHub Releases
 
 1. Go to the [Releases page](https://github.com/wybert/earth-agent-chrome-ext/releases)
 2. Download the latest `earth-agent-extension.zip`
@@ -27,7 +33,7 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 6. Click "Load unpacked" and select the extracted folder
 7. The extension will appear in your Chrome toolbar
 
-### Option 2: Install from Source
+### Option 3: Install from Source
 
 1. Clone the repository
 2. Install dependencies with `npm install`
