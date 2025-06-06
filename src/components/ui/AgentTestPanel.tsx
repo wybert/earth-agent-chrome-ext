@@ -112,6 +112,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [promptText, setPromptText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [screenshotPreviews, setScreenshotPreviews] = useState<Record<string, string>>({});
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const testTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -440,7 +441,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
   const exportResults = () => {
     const csvContent = [
-      ['Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error'],
+      ['Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error', 'Screenshot ID'],
       ...results.map(result => [
         result.timestamp.toISOString(),
         `"${result.prompt.replace(/"/g, '""')}"`,
@@ -449,7 +450,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         result.model,
         result.duration.toString(),
         result.success.toString(),
-        result.error || ''
+        result.error || '',
+        result.screenshotId || ''
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -460,6 +462,70 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     link.download = `agent-test-results-${config.sessionId}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadScreenshot = async (screenshotId: string, promptText: string) => {
+    try {
+      const storageKey = `screenshot_${screenshotId}`;
+      const result = await chrome.storage.local.get([storageKey]);
+      const screenshotData = result[storageKey];
+      
+      if (!screenshotData) {
+        console.error('Screenshot not found in storage');
+        return;
+      }
+      
+      // Convert data URL to blob and download
+      const link = document.createElement('a');
+      link.href = screenshotData;
+      // Create a safe filename from the prompt text
+      const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+      link.download = `screenshot_${safePromptText}_${screenshotId}.png`;
+      link.click();
+    } catch (error) {
+      console.error('Error downloading screenshot:', error);
+    }
+  };
+
+  const downloadAllScreenshots = async () => {
+    const screenshotResults = results.filter(r => r.screenshotId);
+    if (screenshotResults.length === 0) {
+      console.log('No screenshots to download');
+      return;
+    }
+
+    for (const result of screenshotResults) {
+      if (result.screenshotId) {
+        await downloadScreenshot(result.screenshotId, result.prompt);
+        // Small delay between downloads to avoid overwhelming the browser
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+  };
+
+  const toggleScreenshotPreview = async (screenshotId: string) => {
+    if (screenshotPreviews[screenshotId]) {
+      // Remove from previews
+      const newPreviews = { ...screenshotPreviews };
+      delete newPreviews[screenshotId];
+      setScreenshotPreviews(newPreviews);
+    } else {
+      // Load and show preview
+      try {
+        const storageKey = `screenshot_${screenshotId}`;
+        const result = await chrome.storage.local.get([storageKey]);
+        const screenshotData = result[storageKey];
+        
+        if (screenshotData) {
+          setScreenshotPreviews(prev => ({
+            ...prev,
+            [screenshotId]: screenshotData
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading screenshot preview:', error);
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -870,10 +936,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             <TabsContent value="results" className="flex-1 overflow-hidden flex flex-col space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
-                <Button onClick={exportResults} disabled={results.length === 0} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
+                <div className="flex gap-2">
+                  {results.some(r => r.screenshotId) && (
+                    <Button onClick={downloadAllScreenshots} variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download All Screenshots
+                    </Button>
+                  )}
+                  <Button onClick={exportResults} disabled={results.length === 0} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
               
               <div className="flex-1 overflow-auto">
@@ -895,10 +969,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             <Badge variant="outline">{result.provider} {result.model}</Badge>
                           </div>
                           {result.screenshotId && (
-                            <Badge variant="outline">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Screenshot
-                            </Badge>
+                            <button
+                              onClick={() => toggleScreenshotPreview(result.screenshotId!)}
+                              className="inline-flex items-center"
+                            >
+                              <Badge variant="outline" className="cursor-pointer hover:bg-blue-50 transition-colors">
+                                <FileText className="h-3 w-3 mr-1" />
+                                {screenshotPreviews[result.screenshotId!] ? 'Hide Preview' : 'Show Preview'}
+                              </Badge>
+                            </button>
                           )}
                         </div>
                         
@@ -916,6 +995,30 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           <div>
                             <h4 className="font-medium text-sm mb-1">Error:</h4>
                             <p className="text-sm bg-red-50 p-2 rounded text-red-600">{result.error}</p>
+                          </div>
+                        )}
+                        
+                        {result.screenshotId && screenshotPreviews[result.screenshotId] && (
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-sm">Screenshot:</h4>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadScreenshot(result.screenshotId!, result.prompt)}
+                              >
+                                <Download className="h-3 w-3 mr-1" />
+                                Download
+                              </Button>
+                            </div>
+                            <div className="bg-gray-50 p-2 rounded">
+                              <img
+                                src={screenshotPreviews[result.screenshotId]}
+                                alt={`Screenshot for test ${index + 1}`}
+                                className="max-w-full h-auto rounded border"
+                                style={{ maxHeight: '300px' }}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
