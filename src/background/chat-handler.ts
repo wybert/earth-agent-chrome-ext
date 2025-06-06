@@ -1140,8 +1140,12 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
         clickByRefId: clickByRefIdTool,
         clickByCoordinates: clickByCoordinatesTool
       },
-      maxSteps: 5, // Allow up to 5 steps
+      toolChoice: 'auto',
+      maxSteps: 12, // Allow up to 5 steps
       temperature: 0.7,
+      maxRetries: 3,
+      toolCallStreaming: false,
+      experimental_continueSteps: true,
     };
     
     // For Anthropic models, add special headers for browser usage
@@ -1167,7 +1171,19 @@ export async function handleChatRequest(messages: Message[], apiKey: string, pro
     // Debug the result object to see what we got back
     console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
     console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
+    // log the result headers
+    // console.log(`📊 [Chat Handler] Result headers: ${JSON.stringify((await result.response))}`);
+    // console.log(JSON.stringify(result.response.headers, null, 2));
     
+    // Expose result to global scope for interactive investigation
+    (globalThis as any).lastStreamTextResult = result;
+    console.log(`🔍 [Chat Handler] Result object exposed as 'globalThis.lastStreamTextResult' for interactive investigation`);
+    console.log(`🔍 [Chat Handler] Try: globalThis.lastStreamTextResult.textPromise, globalThis.lastStreamTextResult.toolCallsPromise, etc.`);
+    
+    // Verify it was set correctly
+    console.log(`🔍 [Chat Handler] Verification - globalThis.lastStreamTextResult exists:`, typeof (globalThis as any).lastStreamTextResult);
+    console.log(`🔍 [Chat Handler] Verification - Object keys:`, Object.keys((globalThis as any).lastStreamTextResult || {}));
+
     // If there were tool calls, log them
     if (result.toolCalls && Array.isArray(result.toolCalls)) {
       console.log(`🛠️ [Chat Handler] Tool calls made: ${result.toolCalls.length}`);
