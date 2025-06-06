@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle } from 'lucide-react';
+import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { screenshot } from '@/lib/tools/browser';
@@ -111,6 +111,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [testProgress, setTestProgress] = useState(0);
   const [promptText, setPromptText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const testTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -123,25 +124,35 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
   // Load stored configuration
   useEffect(() => {
-    chrome.storage.local.get(['agentTestConfig'], (result) => {
-      if (result.agentTestConfig) {
-        setConfig(prev => ({ ...prev, ...result.agentTestConfig }));
-      }
-    });
-  }, []);
+    if (isOpen) {
+      chrome.storage.local.get(['agentTestConfig'], (result) => {
+        if (result.agentTestConfig) {
+          console.log('Loading stored config:', result.agentTestConfig);
+          setConfig(prev => ({ 
+            ...prev, 
+            ...result.agentTestConfig,
+            // Always generate a new session ID but keep other settings
+            sessionId: `test-session-${Date.now()}`
+          }));
+        }
+      });
+    }
+  }, [isOpen]);
 
-  // Save configuration changes
+  // Save configuration changes (excluding prompts and sessionId which are session-specific)
   useEffect(() => {
-    chrome.storage.local.set({
-      agentTestConfig: {
+    if (isOpen) {
+      const configToSave = {
         provider: config.provider,
         model: config.model,
         heliconeApiKey: config.heliconeApiKey,
         intervalMs: config.intervalMs,
         enableScreenshots: config.enableScreenshots
-      }
-    });
-  }, [config]);
+      };
+      console.log('Saving config to storage:', configToSave);
+      chrome.storage.local.set({ agentTestConfig: configToSave });
+    }
+  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, isOpen]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -524,13 +535,30 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="helicone-key">Helicone API Key</Label>
-                    <Input
-                      id="helicone-key"
-                      type="password"
-                      value={config.heliconeApiKey}
-                      onChange={(e) => updateConfig({ heliconeApiKey: e.target.value })}
-                      placeholder="sk-..."
-                    />
+                    <div className="relative">
+                      <Input
+                        id="helicone-key"
+                        type={showApiKey ? "text" : "password"}
+                        value={config.heliconeApiKey}
+                        onChange={(e) => updateConfig({ heliconeApiKey: e.target.value })}
+                        placeholder="sk-..."
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        title={showApiKey ? "Hide API key" : "Show API key"}
+                      >
+                        {showApiKey ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   
                   <div>
@@ -595,6 +623,31 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       }}
                     >
                       Test Connection
+                    </Button>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        console.log('Clearing stored configuration...');
+                        chrome.storage.local.remove(['agentTestConfig'], () => {
+                          // Reset to default config
+                          setConfig({
+                            prompts: EXAMPLE_PROMPTS,
+                            provider: 'openai',
+                            model: 'gpt-4o',
+                            heliconeApiKey: '',
+                            intervalMs: 5000,
+                            enableScreenshots: true,
+                            sessionId: `test-session-${Date.now()}`
+                          });
+                          console.log('Configuration cleared and reset to defaults');
+                        });
+                      }}
+                    >
+                      Clear Stored Settings
                     </Button>
                   </div>
                 </div>
