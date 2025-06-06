@@ -108297,6 +108297,27 @@ function AgentTestPanel({ isOpen, onClose }) {
         const startTime = Date.now();
         const testScreenshotId = `screenshot-${prompt.id}-${Date.now()}`;
         try {
+            // First, take screenshot if enabled (before AI call so we can include actual status)
+            let screenshotId;
+            let screenshotSuccess = false;
+            if (config.enableScreenshots) {
+                try {
+                    console.log('Taking screenshot...');
+                    const screenshotResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_11__.screenshot)();
+                    if (screenshotResult.success && screenshotResult.screenshotData) {
+                        screenshotId = testScreenshotId;
+                        screenshotSuccess = true;
+                        // Store screenshot data
+                        chrome.storage.local.set({
+                            [`screenshot_${screenshotId}`]: screenshotResult.screenshotData
+                        });
+                        console.log('Screenshot saved with ID:', screenshotId);
+                    }
+                }
+                catch (error) {
+                    console.error('Screenshot failed:', error);
+                }
+            }
             // Send message to the agent through the extension's messaging system
             console.log('Creating test promise...');
             const response = await new Promise((resolve, reject) => {
@@ -108310,11 +108331,14 @@ function AgentTestPanel({ isOpen, onClose }) {
                     'Helicone-Auth': `Bearer ${config.heliconeApiKey}`,
                     'Helicone-Property-Test-Id': prompt.id,
                     'Helicone-Property-Test-Description': prompt.description || '',
-                    'Helicone-Property-Screenshot-Id': testScreenshotId,
-                    'Helicone-Session-Id': config.sessionId,
+                    'Helicone-Property-Screenshot-Enabled': config.enableScreenshots.toString(),
+                    'Helicone-Property-Screenshot-Success': screenshotSuccess.toString(),
+                    'Helicone-Property-Screenshot-Id': screenshotId || '',
+                    'Helicone-Property-Screenshot-Filename': screenshotId ? `screenshot_${prompt.text.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)}_${screenshotId}.png` : '',
                     'Helicone-User-Id': 'agent-test-user',
                     'Helicone-Property-App': 'earth-engine-agent-testing',
-                    'Helicone-Property-Environment': 'testing'
+                    'Helicone-Property-Environment': 'testing',
+                    'Helicone-Property-Session': config.sessionId
                 } : {};
                 const chatMessage = {
                     type: 'CHAT_MESSAGE',
@@ -108364,25 +108388,6 @@ function AgentTestPanel({ isOpen, onClose }) {
             });
             const duration = Date.now() - startTime;
             console.log('Test completed successfully, duration:', duration);
-            // Take screenshot if enabled
-            let screenshotId;
-            if (config.enableScreenshots) {
-                try {
-                    console.log('Taking screenshot...');
-                    const screenshotResult = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_11__.screenshot)();
-                    if (screenshotResult.success && screenshotResult.screenshotData) {
-                        screenshotId = testScreenshotId;
-                        // Store screenshot data (you might want to save this to storage or upload to a service)
-                        chrome.storage.local.set({
-                            [`screenshot_${screenshotId}`]: screenshotResult.screenshotData
-                        });
-                        console.log('Screenshot saved with ID:', screenshotId);
-                    }
-                }
-                catch (error) {
-                    console.error('Screenshot failed:', error);
-                }
-            }
             // Note: Helicone logging should be configured at the AI provider level in the background script
             // using the proxy approach with baseURL: 'https://oai.helicone.ai/v1' and appropriate headers
             // See: https://ai-sdk.dev/providers/observability/helicone
