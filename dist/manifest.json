@@ -8,13 +8,20 @@
     "storage",
     "activeTab",
     "tabs",
-    "scripting"
+    "scripting",
+    "downloads",
+    "identity"
   ],
   "host_permissions": [
     "https://code.earthengine.google.com/*",
     "https://context7.com/*",
-    "https://api.anthropic.com/*"
+    "https://api.anthropic.com/*",
+    "https://www.googleapis.com/upload/drive/v3/*"
   ],
+  "oauth2": {
+    "client_id": "487533687649-9a111neicvkt668dappa9gdcsjpm42sl.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/drive.file"]
+  },
   "action": {
     "default_icon": {
       "16": "assets/icon16.png",

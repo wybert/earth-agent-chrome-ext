@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { screenshot } from '@/lib/tools/browser';
+import { screenshot } from '@/lib/tools/browser/screenshot';
 
 interface TestPrompt {
   id: string;
@@ -41,6 +41,8 @@ interface TestConfiguration {
   intervalMs: number;
   enableScreenshots: boolean;
   sessionId: string;
+  screenshotStorage: 'local' | 'downloads' | 'google-drive';
+  driveFolderId?: string;
 }
 
 interface AgentTestPanelProps {
@@ -102,7 +104,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     heliconeApiKey: '',
     intervalMs: 5000,
     enableScreenshots: true,
-    sessionId: `test-session-${Date.now()}`
+    sessionId: `test-session-${Date.now()}`,
+    screenshotStorage: 'downloads',
+    driveFolderId: ''
   });
   
   const [isRunning, setIsRunning] = useState(false);
@@ -148,12 +152,14 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         model: config.model,
         heliconeApiKey: config.heliconeApiKey,
         intervalMs: config.intervalMs,
-        enableScreenshots: config.enableScreenshots
+        enableScreenshots: config.enableScreenshots,
+        screenshotStorage: config.screenshotStorage,
+        driveFolderId: config.driveFolderId
       };
       console.log('Saving config to storage:', configToSave);
       chrome.storage.local.set({ agentTestConfig: configToSave });
     }
-  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, isOpen]);
+  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, config.screenshotStorage, config.driveFolderId, isOpen]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -224,34 +230,131 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     setUploadedFile(null);
   };
 
+  // Add new storage functions
+  const saveScreenshotDownloads = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
+    try {
+      // Convert data URL to blob
+      const response = await fetch(screenshotData);
+      const blob = await response.blob();
+      
+      // Create safe filename
+      const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `earth-agent-test-${testId}-${safePromptText}-${timestamp}.png`;
+      
+      // Use Downloads API
+      const downloadId = await new Promise<number>((resolve, reject) => {
+        chrome.downloads.download({
+          url: URL.createObjectURL(blob),
+          filename: `earth-agent-screenshots/${config.sessionId}/${filename}`,
+          saveAs: false
+        }, (downloadId) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve(downloadId);
+          }
+        });
+      });
+      
+      return `download-${downloadId}`;
+    } catch (error) {
+      console.error('Error saving screenshot to downloads:', error);
+      throw error;
+    }
+  };
+
+  const authenticateGoogleDrive = async (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      // Use Chrome Identity API for OAuth2 authentication
+      chrome.identity.getAuthToken({
+        interactive: true,
+        scopes: ['https://www.googleapis.com/auth/drive.file']
+      }, (token) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(`Google Drive authentication failed: ${chrome.runtime.lastError.message}`));
+        } else if (token) {
+          resolve(token);
+        } else {
+          reject(new Error('No access token received'));
+        }
+      });
+    });
+  };
+
+  const saveScreenshotGoogleDrive = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
+    try {
+      // Get OAuth2 access token
+      const accessToken = await authenticateGoogleDrive();
+      
+      // Convert data URL to blob
+      const response = await fetch(screenshotData);
+      const blob = await response.blob();
+      
+      // Create safe filename
+      const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `earth-agent-test-${testId}-${safePromptText}-${timestamp}.png`;
+      
+      // Prepare metadata
+      const metadata = {
+        name: filename,
+        parents: config.driveFolderId ? [config.driveFolderId] : undefined
+      };
+      
+      // Create form data for multipart upload
+      const formData = new FormData();
+      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      formData.append('file', blob);
+      
+      // Upload to Google Drive
+      const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: formData
+      });
+      
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Google Drive upload failed: ${uploadResponse.statusText} - ${errorText}`);
+      }
+      
+      const result = await uploadResponse.json();
+      console.log('Google Drive upload successful:', result);
+      return `drive-${result.id}`;
+    } catch (error) {
+      console.error('Error saving screenshot to Google Drive:', error);
+      throw error;
+    }
+  };
+
+  const saveScreenshot = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
+    switch (config.screenshotStorage) {
+      case 'downloads':
+        return await saveScreenshotDownloads(screenshotData, testId, promptText);
+      
+      case 'google-drive':
+        return await saveScreenshotGoogleDrive(screenshotData, testId, promptText);
+      
+      case 'local':
+      default:
+        // Keep existing local storage for small-scale testing
+        const screenshotId = `screenshot-${testId}-${Date.now()}`;
+        chrome.storage.local.set({
+          [`screenshot_${screenshotId}`]: screenshotData
+        });
+        return screenshotId;
+    }
+  };
+
   const executeTest = async (prompt: TestPrompt): Promise<TestResult> => {
     console.log('executeTest called for prompt:', prompt);
     const startTime = Date.now();
-    const testScreenshotId = `screenshot-${prompt.id}-${Date.now()}`;
     
     try {
-      // First, take screenshot if enabled (before AI call so we can include actual status)
-      let screenshotId: string | undefined;
-      let screenshotSuccess = false;
-      if (config.enableScreenshots) {
-        try {
-          console.log('Taking screenshot...');
-          const screenshotResult = await screenshot();
-          if (screenshotResult.success && screenshotResult.screenshotData) {
-            screenshotId = testScreenshotId;
-            screenshotSuccess = true;
-            // Store screenshot data
-            chrome.storage.local.set({
-              [`screenshot_${screenshotId}`]: screenshotResult.screenshotData
-            });
-            console.log('Screenshot saved with ID:', screenshotId);
-          }
-        } catch (error) {
-          console.error('Screenshot failed:', error);
-        }
-      }
-
-      // Send message to the agent through the extension's messaging system
+      // Send message to the agent through the extension's messaging system first
       console.log('Creating test promise...');
       const response = await new Promise<string>((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -259,30 +362,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           reject(new Error('Test timeout'));
         }, 30000);
         
-        // Create a message in the format expected by the background script
-        // Include Helicone headers for observability (if API key is configured)
-        const heliconeHeaders = config.heliconeApiKey ? {
-          'Helicone-Auth': `Bearer ${config.heliconeApiKey}`,
-          'Helicone-Property-Test-Id': prompt.id,
-          'Helicone-Property-Test-Description': prompt.description || '',
-          'Helicone-Property-Screenshot-Enabled': config.enableScreenshots.toString(),
-          'Helicone-Property-Screenshot-Success': screenshotSuccess.toString(),
-          'Helicone-Property-Screenshot-Id': screenshotId || '',
-          'Helicone-Property-Screenshot-Filename': screenshotId ? `screenshot_${prompt.text.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)}_${screenshotId}.png` : '',
-          'Helicone-User-Id': 'agent-test-user',
-          'Helicone-Property-App': 'earth-engine-agent-testing',
-          'Helicone-Property-Environment': 'testing',
-          'Helicone-Property-Session': config.sessionId
-        } : {};
-
         const chatMessage = {
           type: 'CHAT_MESSAGE',
           message: prompt.text,
           messages: [{ role: 'user', content: prompt.text }],
           provider: config.provider,
           model: config.model,
-          sessionId: config.sessionId,
-          heliconeHeaders
+          sessionId: config.sessionId
         };
 
         console.log('Sending chat message:', chatMessage);
@@ -325,6 +411,29 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         console.log('Posting message to port...');
         port.postMessage(chatMessage);
       });
+
+      console.log('AI response completed, waiting 2 seconds before taking screenshot...');
+      
+      // Wait 2 seconds for any UI changes to complete, then take screenshot
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Now take screenshot AFTER the agent has completed and UI has settled
+      let screenshotId: string | undefined;
+      let screenshotSuccess = false;
+      if (config.enableScreenshots) {
+        try {
+          console.log('Taking screenshot after agent completion...');
+          const screenshotResult = await screenshot();
+          if (screenshotResult.success && screenshotResult.screenshotData) {
+            // Use new storage system
+            screenshotId = await saveScreenshot(screenshotResult.screenshotData, prompt.id, prompt.text);
+            screenshotSuccess = true;
+            console.log('Screenshot saved with ID:', screenshotId);
+          }
+        } catch (error) {
+          console.error('Screenshot failed:', error);
+        }
+      }
 
       const duration = Date.now() - startTime;
       console.log('Test completed successfully, duration:', duration);
@@ -471,22 +580,35 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
   const downloadScreenshot = async (screenshotId: string, promptText: string) => {
     try {
-      const storageKey = `screenshot_${screenshotId}`;
-      const result = await chrome.storage.local.get([storageKey]);
-      const screenshotData = result[storageKey];
-      
-      if (!screenshotData) {
-        console.error('Screenshot not found in storage');
+      // Handle different storage types
+      if (screenshotId.startsWith('download-')) {
+        // Already downloaded to filesystem
+        alert('Screenshot was already saved to your Downloads folder');
         return;
+      } else if (screenshotId.startsWith('drive-')) {
+        // Open Google Drive file
+        const driveFileId = screenshotId.replace('drive-', '');
+        window.open(`https://drive.google.com/file/d/${driveFileId}/view`, '_blank');
+        return;
+      } else {
+        // Local storage
+        const storageKey = `screenshot_${screenshotId}`;
+        const result = await chrome.storage.local.get([storageKey]);
+        const screenshotData = result[storageKey];
+        
+        if (!screenshotData) {
+          console.error('Screenshot not found in storage');
+          return;
+        }
+        
+        // Convert data URL to blob and download
+        const link = document.createElement('a');
+        link.href = screenshotData;
+        // Create a safe filename from the prompt text
+        const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+        link.download = `screenshot_${safePromptText}_${screenshotId}.png`;
+        link.click();
       }
-      
-      // Convert data URL to blob and download
-      const link = document.createElement('a');
-      link.href = screenshotData;
-      // Create a safe filename from the prompt text
-      const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-      link.download = `screenshot_${safePromptText}_${screenshotId}.png`;
-      link.click();
     } catch (error) {
       console.error('Error downloading screenshot:', error);
     }
@@ -508,7 +630,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
   };
 
-  const toggleScreenshotPreview = async (screenshotId: string) => {
+    const toggleScreenshotPreview = async (screenshotId: string) => {
     if (screenshotPreviews[screenshotId]) {
       // Remove from previews
       const newPreviews = { ...screenshotPreviews };
@@ -517,10 +639,17 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     } else {
       // Load and show preview
       try {
+        if (screenshotId.startsWith('download-') || screenshotId.startsWith('drive-')) {
+          // Can't preview files from downloads or drive directly
+          alert('Preview not available for external storage. Use download/view button instead.');
+          return;
+        }
+
+        // Local storage
         const storageKey = `screenshot_${screenshotId}`;
         const result = await chrome.storage.local.get([storageKey]);
         const screenshotData = result[storageKey];
-        
+    
         if (screenshotData) {
           setScreenshotPreviews(prev => ({
             ...prev,
@@ -660,6 +789,74 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     />
                     <Label htmlFor="screenshots">Enable Screenshots</Label>
                   </div>
+
+                  {config.enableScreenshots && (
+                    <>
+                      <div>
+                        <Label htmlFor="screenshotStorage">Screenshot Storage</Label>
+                        <Select value={config.screenshotStorage} onValueChange={(value) => updateConfig({ screenshotStorage: value as 'local' | 'downloads' | 'google-drive' })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="local">Local Storage (Limited)</SelectItem>
+                            <SelectItem value="downloads">Downloads Folder (Recommended)</SelectItem>
+                            <SelectItem value="google-drive">Google Drive (Cloud)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {config.screenshotStorage === 'local' && '⚠️ Limited to ~20 screenshots due to browser storage limits'}
+                          {config.screenshotStorage === 'downloads' && '✅ Unlimited storage - saves to Downloads/earth-agent-screenshots/'}
+                          {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires API key below'}
+                        </p>
+                      </div>
+
+                      {config.screenshotStorage === 'google-drive' && (
+                        <>
+                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                            <h4 className="font-medium text-blue-900 mb-2">Google Drive Setup Required</h4>
+                            <p className="text-sm text-blue-800 mb-3">
+                              To use Google Drive storage, you need to configure OAuth2 authentication:
+                            </p>
+                            <ol className="text-sm text-blue-800 space-y-1 ml-4">
+                              <li>1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
+                              <li>2. Create OAuth2 credentials for Chrome Extension</li>
+                              <li>3. Enable Google Drive API</li>
+                              <li>4. Update manifest.json with your client_id</li>
+                              <li>5. The extension will prompt for authentication when first used</li>
+                            </ol>
+                          </div>
+                          <div>
+                            <Label htmlFor="drive-folder-id">Drive Folder ID (Optional)</Label>
+                            <Input
+                              id="drive-folder-id"
+                              value={config.driveFolderId || ''}
+                              onChange={(e) => updateConfig({ driveFolderId: e.target.value })}
+                              placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                            />
+                            <p className="text-sm text-gray-500 mt-1">
+                              Leave empty to save to Drive root folder. Get folder ID from Drive URL.
+                            </p>
+                          </div>
+                          <div>
+                            <Button
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  await authenticateGoogleDrive();
+                                  alert('Google Drive authentication successful!');
+                                } catch (error) {
+                                  alert(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                }
+                              }}
+                            >
+                              Test Google Drive Authentication
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
                   
                   <div className="pt-4">
                     <Button
@@ -712,7 +909,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             heliconeApiKey: '',
                             intervalMs: 5000,
                             enableScreenshots: true,
-                            sessionId: `test-session-${Date.now()}`
+                            sessionId: `test-session-${Date.now()}`,
+                            screenshotStorage: 'downloads',
+                            driveFolderId: ''
                           });
                           console.log('Configuration cleared and reset to defaults');
                         });
@@ -742,7 +941,12 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   <div className="flex items-start gap-2">
                     <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <div>
-                      <strong>Screenshots:</strong> Automatically captures screenshots after each agent response. Screenshots are named with test IDs and stored locally.
+                      <strong>Screenshots:</strong> Automatically captures screenshots after each agent response. Choose storage method:
+                      <ul className="ml-4 mt-1 text-xs space-y-1">
+                        <li>• <strong>Local Storage:</strong> Browser storage, limited to ~20 screenshots</li>
+                        <li>• <strong>Downloads Folder:</strong> Unlimited storage, best for 1000+ tests</li>
+                        <li>• <strong>Google Drive:</strong> Cloud storage with API access required</li>
+                      </ul>
                     </div>
                   </div>
                 </div>

@@ -30358,14 +30358,16 @@ async function handleChatMessage(message, port) {
                 }];
         }
         console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
-        // Get API key and provider from storage
+        // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
         const apiConfig = await new Promise((resolve, reject) => {
             chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
                 if (chrome.runtime.lastError) {
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
                 }
-                const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+                // Use provider and model from test message if provided, otherwise use stored settings
+                const provider = message.provider || result[API_PROVIDER_STORAGE_KEY] || 'openai';
+                const model = message.model || result[MODEL_STORAGE_KEY] || '';
                 // Choose the appropriate API key based on provider
                 let apiKey = '';
                 if (provider === 'openai') {
@@ -30377,8 +30379,6 @@ async function handleChatMessage(message, port) {
                 else {
                     apiKey = result[API_KEY_STORAGE_KEY] || '';
                 }
-                // Get the user-selected model or fall back to empty string (which will use the default in chat-handler.ts)
-                const model = result[MODEL_STORAGE_KEY] || '';
                 console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
                 resolve({
                     apiKey,
