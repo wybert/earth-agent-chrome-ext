@@ -20,6 +20,8 @@ This document provides a detailed comparison of the various AI models available 
 
 | Model | Release Date | Parameters | Context Length | Strengths | Use Case |
 |-------|-------------|------------|---------------|-----------|----------|
+| **claude-opus-4** | May 2024 | Undisclosed | 200K tokens | Next-gen capabilities, enhanced reasoning | Most complex analysis, cutting-edge tasks |
+| **claude-sonnet-4** | May 2024 | Undisclosed | 200K tokens | Advanced capabilities, balanced performance | Advanced Earth Engine tasks, best overall |
 | **claude-3.7-sonnet** | Aug 2024 | Undisclosed | 200K tokens | Latest capabilities | Complex analysis, best overall |
 | **claude-3.5-sonnet** | Jun 2024 | Undisclosed | 200K tokens | Improved reasoning | Advanced Earth Engine tasks |
 | **claude-3-opus** | Mar 2024 | Undisclosed | 200K tokens | Most powerful Claude 3 | Complex reasoning, detailed explanations |
@@ -32,20 +34,22 @@ This document provides a detailed comparison of the various AI models available 
 
 Rated on a scale of 1-10 for Earth Engine task performance:
 
-1. GPT-4.5-preview: 9.5/10
-2. Claude-3.7-sonnet: 9.3/10
-3. GPT-4.1: 9.2/10
-4. O4-mini: 9.1/10
-5. Claude-3-opus: 9.0/10
-6. GPT-4o: 8.8/10
-7. Claude-3.5-sonnet: 8.7/10
-8. GPT-4-turbo: 8.5/10
-9. GPT-4: 8.3/10
-10. Claude-3-sonnet: 8.2/10
-11. GPT-4.1-mini: 8.0/10
-12. GPT-4o-mini: 7.8/10
-13. Claude-3-haiku: 7.5/10
-14. GPT-3.5-turbo: 6.5/10
+1. Claude-opus-4: 9.8/10
+2. GPT-4.5-preview: 9.5/10
+3. Claude-sonnet-4: 9.4/10
+4. Claude-3.7-sonnet: 9.3/10
+5. GPT-4.1: 9.2/10
+6. O4-mini: 9.1/10
+7. Claude-3-opus: 9.0/10
+8. GPT-4o: 8.8/10
+9. Claude-3.5-sonnet: 8.7/10
+10. GPT-4-turbo: 8.5/10
+11. GPT-4: 8.3/10
+12. Claude-3-sonnet: 8.2/10
+13. GPT-4.1-mini: 8.0/10
+14. GPT-4o-mini: 7.8/10
+15. Claude-3-haiku: 7.5/10
+16. GPT-3.5-turbo: 6.5/10
 
 ### Response Speed
 
@@ -56,15 +60,17 @@ Average response time for typical Earth Engine queries (lower is better):
 3. O4-mini: Very Fast
 4. GPT-4o-mini: Fast
 5. GPT-4.1-mini: Fast
-6. Claude-3-sonnet: Moderate
-7. GPT-4o: Moderate
-8. GPT-4-turbo: Moderate
-9. Claude-3.5-sonnet: Moderate
-10. GPT-4: Moderate-Slow
-11. GPT-4.1: Moderate-Slow
-12. GPT-4.5-preview: Slow
-13. Claude-3.7-sonnet: Slow
-14. Claude-3-opus: Slowest
+6. Claude-sonnet-4: Fast-Moderate
+7. Claude-3-sonnet: Moderate
+8. GPT-4o: Moderate
+9. GPT-4-turbo: Moderate
+10. Claude-3.5-sonnet: Moderate
+11. GPT-4: Moderate-Slow
+12. GPT-4.1: Moderate-Slow
+13. GPT-4.5-preview: Slow
+14. Claude-3.7-sonnet: Slow
+15. Claude-3-opus: Slower
+16. Claude-opus-4: Slowest
 
 ### Cost Efficiency
 
@@ -80,10 +86,12 @@ Relative cost for typical Earth Engine tasks:
 8. GPT-4o: $$$
 9. GPT-4: $$$
 10. Claude-3.5-sonnet: $$$
-11. GPT-4.1: $$$$
-12. GPT-4.5-preview: $$$$
-13. Claude-3.7-sonnet: $$$$$
-14. Claude-3-opus: $$$$$ (Highest)
+11. Claude-sonnet-4: $$$$
+12. GPT-4.1: $$$$
+13. GPT-4.5-preview: $$$$
+14. Claude-3.7-sonnet: $$$$$
+15. Claude-3-opus: $$$$$
+16. Claude-opus-4: $$$$$$ (Highest)
 
 ## Choosing the Right Model
 

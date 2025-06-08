@@ -370,4 +370,34 @@ The extension supports multiple LLM providers:
    - Default model: claude-3-haiku-20240307
    - Created using `createAnthropic` from `@ai-sdk/anthropic`
 
-The specific provider and model are configurable via extension settings and stored in Chrome's storage. 
+The specific provider and model are configurable via extension settings and stored in Chrome's storage.
+
+### Environment Management Tools (Updated December 17, 2024)
+
+The main agent now includes environment management capabilities to help users maintain clean workspace state:
+
+1. **Reset Map/Inspector/Console Tool (`resetMapInspectorConsoleTool`)**
+   - Clears Google Earth Engine map, inspector, and console state
+   - Uses button selector: `button.goog-button.reset-button[title="Clear map, inspector, and console"]`
+   - Automatically finds GEE tabs and handles content script injection
+   - Provides comprehensive error handling with helpful suggestions
+   - Enabled through natural language requests like "reset the map" or "clear the console"
+
+2. **Clear Script Tool (`clearScriptTool`)**
+   - Removes all code from the Google Earth Engine code editor
+   - Uses direct click on `div.goog-menuitem-content` containing "Clear script"
+   - Falls back to dropdown approach with multiple selector strategies if direct click fails
+   - Handles Monaco editor state clearing for complete code removal
+   - Accessible via requests like "clear the code" or "start fresh"
+
+3. **Integration with Main Agent**
+   - Both tools added to streamText tools configuration in `chat-handler.ts`
+   - System prompt updated with environment management workflow guidelines
+   - Users can request workspace cleanup through natural conversation
+   - Tools leverage existing Chrome extension messaging and content script system
+
+4. **Error Handling and Reliability**
+   - Comprehensive error handling for tab finding and content script injection
+   - Multiple fallback strategies for selector changes
+   - Clear user feedback when operations fail
+   - Suggestions for manual alternatives when automated tools fail 

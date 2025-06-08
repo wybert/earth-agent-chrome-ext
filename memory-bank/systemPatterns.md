@@ -37,6 +37,7 @@ Utilizes the Vercel AI SDK within `chat-handler.ts` for agent capabilities:
 - In-context reasoning between steps.
 - Streaming responses.
 - **Tool Execution Pattern (Background -> Content Script):** AI tool definitions in `chat-handler.ts` handle the direct `chrome.tabs.sendMessage` to the content script for page interactions.
+- **Environment Management Tools:** New `resetMapInspectorConsoleTool` and `clearScriptTool` provide workspace cleanup capabilities through natural language interaction.
 
 ### Server-Side Agent (Future Consideration)
 

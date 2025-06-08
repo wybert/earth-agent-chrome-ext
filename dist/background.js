@@ -26703,7 +26703,7 @@ __webpack_require__.r(__webpack_exports__);
 // Default models configuration
 const DEFAULT_MODELS = {
     openai: 'gpt-4o',
-    anthropic: 'claude-3-5-haiku-20241022'
+    anthropic: 'claude-sonnet-4-20250514'
 };
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input, options = {}) => {
@@ -26912,6 +26912,8 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
         else if (provider === 'anthropic') {
             // Check if the requested model exists in our available model list
             const anthropicModels = [
+                'claude-opus-4-20250514',
+                'claude-sonnet-4-20250514',
                 'claude-3-7-sonnet-20250219',
                 'claude-3-5-sonnet-20241022',
                 'claude-3-5-haiku-20241022',

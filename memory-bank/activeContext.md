@@ -66,6 +66,12 @@ Building the Google Earth Engine Agent Chrome Extension. The primary focus areas
   - Implemented warning text explaining the trade-offs of editor reload functionality
   - Integrated configuration persistence with existing settings system
 
+- **Environment Management Tools for Main Agent:**
+  - Added `resetMapInspectorConsoleTool` to main agent for clearing GEE map, inspector, and console state
+  - Added `clearScriptTool` to main agent for removing all code from GEE code editor
+  - Updated system prompt with environment management workflow guidelines
+  - Enabled users to request workspace cleanup through natural language interaction
+
 ### In Progress
 - Testing agent test panel with actual AI responses to validate full workflow
 - Verifying Helicone integration captures test requests properly

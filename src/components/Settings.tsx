@@ -37,6 +37,8 @@ const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
     'gpt-3.5-turbo-1106'
   ],
   anthropic: [
+    'claude-opus-4-20250514',
+    'claude-sonnet-4-20250514',
     'claude-3-7-sonnet-20250219',
     'claude-3-5-sonnet-20241022',
     'claude-3-5-haiku-20241022',
@@ -65,6 +67,8 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'gpt-3.5-turbo': 'GPT-3.5 Turbo',
   'gpt-3.5-turbo-0125': 'GPT-3.5 Turbo (January 2024)',
   'gpt-3.5-turbo-1106': 'GPT-3.5 Turbo (November 2023)',
+  'claude-opus-4-20250514': 'Claude Opus 4 (Latest)',
+  'claude-sonnet-4-20250514': 'Claude Sonnet 4 (Latest)',
   'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (New)',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',

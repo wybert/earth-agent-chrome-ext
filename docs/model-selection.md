@@ -34,19 +34,21 @@ The Earth Engine Agent now supports selecting different AI models for both OpenA
 
 | Model | Description | Best For |
 |-------|-------------|----------|
-| **claude-3-opus-20240229** | Most capable Claude model | Complex geospatial analysis, detailed explanations |
+| **claude-opus-4-20250514** | Next-generation Claude model | Most complex geospatial analysis, cutting-edge research |
+| **claude-sonnet-4-20250514** | Advanced balanced model | Best overall performance for Earth Engine tasks |
+| **claude-3-opus-20240229** | Most capable Claude 3 model | Complex geospatial analysis, detailed explanations |
 | **claude-3-sonnet-20240229** | Balanced capability & speed | General Earth Engine tasks with good performance |
 | **claude-3-haiku-20240307** | Fastest Claude option | Quick responses, basic queries, lower cost |
 | **claude-3.5-sonnet-20240620** | Enhanced Claude 3.5 | Improved capabilities with good performance |
-| **claude-3.7-sonnet-20240808** | Latest Claude model | Best overall Claude performance |
+| **claude-3.7-sonnet-20240808** | Latest Claude 3 model | Best overall Claude 3 performance |
 
 ## Considerations
 
 ### Performance vs. Cost
 
-- Most powerful models (GPT-4.5-preview, GPT-4.1, Claude-3-Opus) provide superior code generation and explanations but at higher cost
+- Most powerful models (Claude-Opus-4, GPT-4.5-preview, Claude-Sonnet-4, GPT-4.1) provide superior code generation and explanations but at higher cost
 - Faster models (O4-mini, GPT-4o-mini, GPT-3.5-Turbo, Claude-3-Haiku) offer quicker responses at lower cost with varying quality levels
-- Balanced models (GPT-4o, GPT-4-turbo, Claude-3-Sonnet) provide a good middle ground between performance and cost
+- Balanced models (Claude-Sonnet-4, GPT-4o, GPT-4-turbo, Claude-3-Sonnet) provide a good middle ground between performance and cost
 
 ### API Pricing
 

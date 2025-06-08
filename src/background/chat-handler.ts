@@ -11,7 +11,7 @@ export type Provider = 'openai' | 'anthropic';
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
-  anthropic: 'claude-3-5-haiku-20241022'
+  anthropic: 'claude-sonnet-4-20250514'
 };
 
 // Custom fetch function for Anthropic to handle CORS
@@ -243,6 +243,8 @@ export async function handleChatRequest(
     } else if (provider === 'anthropic') {
       // Check if the requested model exists in our available model list
       const anthropicModels = [
+        'claude-opus-4-20250514',
+        'claude-sonnet-4-20250514',
         'claude-3-7-sonnet-20250219',
         'claude-3-5-sonnet-20241022',
         'claude-3-5-haiku-20241022',

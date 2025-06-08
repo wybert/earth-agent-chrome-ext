@@ -58,6 +58,7 @@
 - ✅ **State Management**: Fixed React closure issues with useRef pattern for reliable test execution.
 - ✅ **Debugging Tools**: Connection testing, comprehensive console logging, error handling.
 - ✅ **GEE Environment Controls**: Configurable reset/clear functions, optional GEE editor reload (disabled by default).
+- ✅ **Configurable Timeout**: User-adjustable timeout settings to prevent test failures (30-300 seconds).
 
 ### Implemented Tools
 - ✅ **Weather Tool**: Basic simulation.
@@ -65,6 +66,8 @@
 - ✅ **Earth Engine Script Tool (`earthEngineScriptTool`)**: AI can insert code into the EE editor via background->content script messaging.
 - ✅ **Earth Engine Run Code Tool (`earthEngineRunCodeTool`)**: AI can execute code in the EE environment via background->content script messaging.
 - ✅ **Screenshot Tool**: Captures the current browser tab and displays the image directly in the chat (multi-modal response).
+- ✅ **Reset Map/Inspector/Console Tool (`resetMapInspectorConsoleTool`)**: Clears GEE map, inspector, and console state for fresh start.
+- ✅ **Clear Script Tool (`clearScriptTool`)**: Removes all code from GEE code editor, enabling users to start with blank slate.
 - ✅ **Browser Tools (General):**
   - ✅ `click.ts`: 
     - `clickByRef` (original ref-based click).
@@ -86,6 +89,7 @@
 - ✅ **UI Components**: Created missing shadcn/ui components for consistent design system.
 - ✅ **Port-based Messaging**: Reliable communication pattern for agent testing workflow.
 - ✅ **GEE Environment Configuration**: Added reload GEE editor toggle (disabled by default) for advanced testing scenarios.
+- ✅ **Environment Management Tools**: Added reset/clear tools to main agent for user-initiated workspace cleanup.
 
 ## In Progress
 

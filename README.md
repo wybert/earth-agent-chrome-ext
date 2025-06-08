@@ -14,6 +14,7 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 - Help debug the code
 - Help you explian the map
 - Planning and reasoning
+- Environment management tools (reset map/console, clear code)
 - Comprehensive agent testing framework with automated testing capabilities
 
 ## Installation
@@ -50,6 +51,16 @@ After installation, you'll need to configure your API keys:
 3. Add your OpenAI or Anthropic API key
 4. Select your preferred AI provider and model
 5. Start chatting with Earth Engine!
+
+## Environment Management
+
+The agent includes powerful environment management capabilities:
+
+- **Reset Map/Inspector/Console**: Ask the agent to "reset the map" or "clear the console" to clean up your Google Earth Engine workspace
+- **Clear Script**: Request "clear the code" or "start fresh" to remove all code from the Earth Engine editor
+- **Natural Language Control**: Simply describe what you want to clean up, and the agent will handle it automatically
+
+These tools help maintain a clean workspace during development and are particularly useful when switching between different Earth Engine tasks.
 
 ## Agent Testing Panel
 
