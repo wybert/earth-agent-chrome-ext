@@ -26790,6 +26790,8 @@ Your capabilities:
 - You can insert JavaScript code directly into the Earth Engine code editor
 - You can execute JavaScript code in the Earth Engine environment
 - You can take a screenshot of the current browser tab and include it directly in your responses
+- You can reset the Google Earth Engine map, inspector, and console to clear the current state
+- You can clear all code from the Google Earth Engine code editor to start with a blank slate
 
 Workflow for map-related questions:
 1. When a user asks about creating a map, visualizing data, or needs geospatial analysis, ALWAYS use the earthEngineDataset tool FIRST to retrieve relevant dataset information
@@ -26823,6 +26825,16 @@ Debugging Workflow:
 2. Check the code you provided for obvious syntax errors or logical flaws.
 3. If the error isn't clear, consider using the screenshot tool to see the GEE console output or map state.
 4. Based on the error message and potentially the screenshot, suggest corrections or alternative approaches.
+
+Environment Management Workflow:
+1. When a user wants to start fresh or clear their workspace, you can use the resetMapInspectorConsole tool to clear the map, inspector panels, and console
+2. When a user wants to remove all code and start with a blank editor, use the clearScript tool to clear the code editor
+3. These tools are useful when:
+   - Starting a new analysis or project
+   - Clearing previous visualizations that might interfere with new work
+   - Troubleshooting issues by returning to a clean state
+   - User explicitly asks to "clear", "reset", "start fresh", or "clean up"
+4. Always inform the user what you're doing when using these tools (e.g., "Let me clear the workspace for you...")
 
 Instructions:
 - Always provide code within backticks: \`code\`
@@ -27642,6 +27654,289 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 return [{ type: 'text', text: result.success ? (result.message || `Successfully clicked element with refId ${result.refId}.`) : `Error clicking element: ${result.error}` }];
             },
         });
+        // Define Reset Map/Inspector/Console tool
+        const resetMapInspectorConsoleTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
+            description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment.',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({}), // No parameters needed
+            execute: async () => {
+                try {
+                    console.log(`🔄 [ResetMapInspectorConsoleTool] Tool called to reset GEE environment`);
+                    console.time('ResetMapInspectorConsoleTool execution');
+                    if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.scripting) {
+                        console.warn('❌ [ResetMapInspectorConsoleTool] Chrome API not available.');
+                        return {
+                            success: false,
+                            error: 'Chrome API not available for reset tool',
+                            suggestion: 'This tool requires running in a Chrome extension environment'
+                        };
+                    }
+                    // Find the Earth Engine tab
+                    const earthEngineTabs = await new Promise((resolve) => {
+                        chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                            resolve(tabs || []);
+                        });
+                    });
+                    if (earthEngineTabs.length === 0) {
+                        console.warn('❌ [ResetMapInspectorConsoleTool] No Earth Engine tab found');
+                        return {
+                            success: false,
+                            error: 'No Google Earth Engine tab found',
+                            suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
+                        };
+                    }
+                    const tabId = earthEngineTabs[0].id;
+                    if (!tabId) {
+                        console.warn('❌ [ResetMapInspectorConsoleTool] Invalid Earth Engine tab');
+                        return {
+                            success: false,
+                            error: 'Invalid Earth Engine tab',
+                            suggestion: "Please reload your Earth Engine tab and try again"
+                        };
+                    }
+                    // Ensure content script is ready
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Content script ping timed out for ResetMapInspectorConsoleTool')), 500);
+                            chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                                clearTimeout(timeout);
+                                if (chrome.runtime.lastError || !(response && response.type === 'PONG')) {
+                                    chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }, () => chrome.runtime.lastError ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`)) : setTimeout(resolve, 500));
+                                }
+                                else {
+                                    resolve();
+                                }
+                            });
+                        });
+                    }
+                    catch (err) {
+                        console.error('❌ [ResetMapInspectorConsoleTool] Content script check/injection failed:', err);
+                        return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
+                    }
+                    // Click the reset button
+                    const resultFromContentScript = await new Promise((resolve) => {
+                        chrome.tabs.sendMessage(tabId, {
+                            type: 'CLICK_BY_SELECTOR',
+                            payload: {
+                                selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
+                                elementDescription: 'Reset button to clear map, inspector, and console'
+                            }
+                        }, (response) => {
+                            resolve(response || { success: false, error: 'No response from content script for reset' });
+                        });
+                    });
+                    console.timeEnd('ResetMapInspectorConsoleTool execution');
+                    if (resultFromContentScript.success) {
+                        console.log(`✅ [ResetMapInspectorConsoleTool] Successfully reset GEE environment`);
+                        return {
+                            success: true,
+                            message: 'Google Earth Engine map, inspector, and console have been reset successfully. The environment is now in a clean state.',
+                            action: 'reset_completed'
+                        };
+                    }
+                    else {
+                        console.warn(`❌ [ResetMapInspectorConsoleTool] Failed to reset: ${resultFromContentScript.error}`);
+                        return {
+                            success: false,
+                            error: resultFromContentScript.error || 'Failed to click reset button',
+                            suggestion: 'Make sure you are on the Google Earth Engine code editor page and the reset button is visible'
+                        };
+                    }
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`❌ [ResetMapInspectorConsoleTool] Error:`, error);
+                    console.timeEnd('ResetMapInspectorConsoleTool execution');
+                    return {
+                        success: false,
+                        error: `Error resetting GEE environment: ${errorMessage}`,
+                        suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
+                    };
+                }
+            },
+            experimental_toToolResultContent: (result) => {
+                return [{
+                        type: 'text',
+                        text: result.success
+                            ? '✅ Google Earth Engine environment has been reset successfully. The map, inspector, and console are now cleared.'
+                            : `❌ Failed to reset GEE environment: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
+                    }];
+            },
+        });
+        // Define Clear Script tool
+        const clearScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
+            description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state.',
+            parameters: zod__WEBPACK_IMPORTED_MODULE_4__.z.object({}), // No parameters needed
+            execute: async () => {
+                try {
+                    console.log(`🧹 [ClearScriptTool] Tool called to clear GEE code editor`);
+                    console.time('ClearScriptTool execution');
+                    if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.scripting) {
+                        console.warn('❌ [ClearScriptTool] Chrome API not available.');
+                        return {
+                            success: false,
+                            error: 'Chrome API not available for clear script tool',
+                            suggestion: 'This tool requires running in a Chrome extension environment'
+                        };
+                    }
+                    // Find the Earth Engine tab
+                    const earthEngineTabs = await new Promise((resolve) => {
+                        chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+                            resolve(tabs || []);
+                        });
+                    });
+                    if (earthEngineTabs.length === 0) {
+                        console.warn('❌ [ClearScriptTool] No Earth Engine tab found');
+                        return {
+                            success: false,
+                            error: 'No Google Earth Engine tab found',
+                            suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
+                        };
+                    }
+                    const tabId = earthEngineTabs[0].id;
+                    if (!tabId) {
+                        console.warn('❌ [ClearScriptTool] Invalid Earth Engine tab');
+                        return {
+                            success: false,
+                            error: 'Invalid Earth Engine tab',
+                            suggestion: "Please reload your Earth Engine tab and try again"
+                        };
+                    }
+                    // Ensure content script is ready
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => reject(new Error('Content script ping timed out for ClearScriptTool')), 500);
+                            chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
+                                clearTimeout(timeout);
+                                if (chrome.runtime.lastError || !(response && response.type === 'PONG')) {
+                                    chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }, () => chrome.runtime.lastError ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`)) : setTimeout(resolve, 500));
+                                }
+                                else {
+                                    resolve();
+                                }
+                            });
+                        });
+                    }
+                    catch (err) {
+                        console.error('❌ [ClearScriptTool] Content script check/injection failed:', err);
+                        return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
+                    }
+                    // First try clicking the clear script directly (menu might already be accessible)
+                    console.log('🧹 [ClearScriptTool] Attempting direct clear script click...');
+                    let clearResult = await new Promise((resolve) => {
+                        chrome.tabs.sendMessage(tabId, {
+                            type: 'CLICK_BY_SELECTOR',
+                            payload: {
+                                selector: 'div.goog-menuitem-content',
+                                elementDescription: 'Clear script menu option (direct)'
+                            }
+                        }, (response) => {
+                            resolve(response || { success: false, error: 'No response from content script for direct clear' });
+                        });
+                    });
+                    if (clearResult.success) {
+                        console.log('✅ [ClearScriptTool] Direct clear script successful');
+                        console.timeEnd('ClearScriptTool execution');
+                        return {
+                            success: true,
+                            message: 'Google Earth Engine code editor has been cleared successfully. All scripts have been removed.',
+                            action: 'clear_completed'
+                        };
+                    }
+                    console.log('🧹 [ClearScriptTool] Direct click failed, trying dropdown approach...');
+                    // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
+                    const dropdownSelectors = [
+                        'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                        'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                        '.goog-toolbar-menu-button'
+                    ];
+                    let dropdownResult = null;
+                    for (const selector of dropdownSelectors) {
+                        console.log(`🧹 [ClearScriptTool] Trying dropdown selector: ${selector}`);
+                        dropdownResult = await new Promise((resolve) => {
+                            chrome.tabs.sendMessage(tabId, {
+                                type: 'CLICK_BY_SELECTOR',
+                                payload: {
+                                    selector: selector,
+                                    elementDescription: `Reset dropdown arrow (${selector})`
+                                }
+                            }, (response) => {
+                                resolve(response || { success: false, error: `No response for selector: ${selector}` });
+                            });
+                        });
+                        if (dropdownResult.success) {
+                            console.log(`✅ [ClearScriptTool] Dropdown opened with selector: ${selector}`);
+                            break;
+                        }
+                        else {
+                            console.log(`❌ [ClearScriptTool] Selector failed: ${selector} - ${dropdownResult.error}`);
+                        }
+                    }
+                    if (dropdownResult && dropdownResult.success) {
+                        console.log('🧹 [ClearScriptTool] Reset dropdown opened successfully, waiting for menu...');
+                        // Wait for menu to appear
+                        await new Promise(resolve => setTimeout(resolve, 800));
+                        // Step 2: Click "Clear script" option in the dropdown menu
+                        console.log('🧹 [ClearScriptTool] Clicking Clear script option...');
+                        clearResult = await new Promise((resolve) => {
+                            chrome.tabs.sendMessage(tabId, {
+                                type: 'CLICK_BY_SELECTOR',
+                                payload: {
+                                    selector: 'div.goog-menuitem-content',
+                                    elementDescription: 'Clear script menu option'
+                                }
+                            }, (response) => {
+                                resolve(response || { success: false, error: 'No response from content script for clear menu option' });
+                            });
+                        });
+                        if (clearResult.success) {
+                            console.log('✅ [ClearScriptTool] Code cleared successfully');
+                            console.timeEnd('ClearScriptTool execution');
+                            return {
+                                success: true,
+                                message: 'Google Earth Engine code editor has been cleared successfully. All scripts have been removed.',
+                                action: 'clear_completed'
+                            };
+                        }
+                        else {
+                            console.warn('❌ [ClearScriptTool] Failed to click clear script option:', clearResult.error);
+                            console.timeEnd('ClearScriptTool execution');
+                            return {
+                                success: false,
+                                error: clearResult.error || 'Failed to click clear script option',
+                                suggestion: 'Make sure the dropdown menu is visible and the clear script option is available'
+                            };
+                        }
+                    }
+                    else {
+                        console.warn('❌ [ClearScriptTool] Failed to open reset dropdown with any selector');
+                        console.timeEnd('ClearScriptTool execution');
+                        return {
+                            success: false,
+                            error: 'Failed to open reset dropdown menu',
+                            suggestion: 'Make sure you are on the Google Earth Engine code editor page and the reset dropdown is visible'
+                        };
+                    }
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`❌ [ClearScriptTool] Error:`, error);
+                    console.timeEnd('ClearScriptTool execution');
+                    return {
+                        success: false,
+                        error: `Error clearing GEE code editor: ${errorMessage}`,
+                        suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
+                    };
+                }
+            },
+            experimental_toToolResultContent: (result) => {
+                return [{
+                        type: 'text',
+                        text: result.success
+                            ? '✅ Google Earth Engine code editor has been cleared successfully. All scripts have been removed and you now have a blank editor.'
+                            : `❌ Failed to clear GEE code editor: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
+                    }];
+            },
+        });
         // Define Click by Coordinates tool
         const clickByCoordinatesTool = (0,ai__WEBPACK_IMPORTED_MODULE_3__.tool)({
             description: 'Clicks an element on the page at the specified (x, y) coordinates.',
@@ -27756,7 +28051,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 screenshot: screenshotTool,
                 snapshot: snapshotTool,
                 clickByRefId: clickByRefIdTool,
-                clickByCoordinates: clickByCoordinatesTool
+                clickByCoordinates: clickByCoordinatesTool,
+                resetMapInspectorConsole: resetMapInspectorConsoleTool,
+                clearScript: clearScriptTool
             },
             toolChoice: 'auto',
             maxSteps: 12, // Allow up to 5 steps
