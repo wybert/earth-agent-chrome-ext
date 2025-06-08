@@ -1,0 +1,46 @@
+Category,Prompt
+Basic,"Load Landsat 8 for the Amazon basin (2019), clip to a 100 km² polygon, and verify the region matches ground boundaries."
+Basic,"Apply cloud/shadow masking to Sentinel-2 imagery over Cambridge, MA (2024 summer), and compute percent cloud-free coverage."
+Basic,Calculate monthly NDVI for Boston metro in 2023; plot and confirm seasonal trends.
+Basic,Generate annual median NDWI composites for Chesapeake Bay from 2010 to 2020; evaluate inter-annual changes.
+Basic,Compute mean 2023 NDVI per Census Block Group in Suffolk County; cross-validate with local vegetation surveys.
+Basic,Buffer schools in Boston by 500 m; extract NDVI time series within buffers and assess greenness trends.
+Basic,Extract and export monthly land surface temperature (MODIS) for a selected Weather Station; validate against station data.
+Basic,Export a clipped GeoTIFF of 2022 median NDVI of Boston to Google Drive; confirm spatial extent and resolution.
+Basic,Create time-series charts of urban heat island differences in Boston vs suburbs; interpret plotted seasonal anomalies.
+Basic,"Import a local parks GeoJSON, overlay 2023 NDVI, and inspect histogram distributions per park."
+Basic,Reproject Sentinel-2 images to UTM Zone 19N and verify geospatial alignment.
+Basic,Sample NDVI monthly over a known agricultural field; create validation scatter plot using field-measured values.
+Basic,Mosaic Sentinel-2 images for a two-scene AOI; check for seamless edges and no data gaps.
+Basic,Compute annual NDVI standard deviation per Boston neighborhood; map intra-neighborhood variability.
+Basic,Extract a date-synchronized NDVI value from 10 AMSR2 pixels around a field site; compare with field log on that date.
+Intermediate,Run k-means clustering (K=5) on 2022 aerosol-corrected Sentinel-2 for Suffolk County; evaluate clusters against Google Earth baseline.
+Intermediate,Train a Random Forest classifier using known crop fields; create a LULC map of Eastern Massachusetts; validate with USDA statistics.
+Intermediate,Detect forest-to-built-up change from Landsat 8 between 2010 and 2020; quantify area loss per town.
+Intermediate,Identify fire scars in New Mexico post–2022 wildfire using spectral index difference; verify with MODIS Active Fire.
+Intermediate,Extract built-up area by urban index in Boston annually (2015–2024); compute expansion rate.
+Intermediate,Define the shoreline of Lake Cochituate monthly in 2023; map seasonal fluctuations.
+Intermediate,Use Sentinel-1 VV backscatter thresholds to map inundation extent post–Hurricane Ida; validate with ground reports.
+Intermediate,Identify NDVI anomalies in agricultural plots during 2023; flag candidate drought events using z‑scores.
+Intermediate,Apply a Savitzky–Golay smoother to NDVI time series; compare raw vs. smoothed data visually.
+Intermediate,Segment tree cover in Boston using superpixels; assess segmentation accuracy against visual interpretation.
+Intermediate,Create a transition matrix for land-cover change between 2000/2010/2020; calculate net change rates.
+Intermediate,Train classification with multiple bands + index; determine feature importance and discuss results.
+Intermediate,Compare flood mapping using optical NDWI vs Sentinel-1 SAR; quantify the differences.
+Intermediate,Divide NDVI time series into clusters representing phenological segments; interpret each cluster ecologically.
+Intermediate,Use Mann–Kendall test to detect NDVI trends per town; map towns with significant greening or browning.
+Advanced,Use SPEI index to map meteorological drought over the Northeast US (2000–2024); correlate findings with USDA declarations.
+Advanced,Map land surface temperature in July 2024 across Boston; correlate hotspots with impervious surface and NDVI.
+Advanced,Develop a near-real-time tree cover loss alert for Brazil’s Amazon region; validate with Global Forest Watch records.
+Advanced,"Use NDVI, weather, and SAR data to predict corn yield at county scale for Iowa 2023; evaluate RMSE against USDA yield data."
+Advanced,Use MODIS ET data to estimate water use in Central Valley farms; cross-check with groundwater extraction rates.
+Advanced,Map surface water seasonality and permanence 1985–2020; detect long-term drying trends.
+Advanced,"Build a species distribution model for Eastern Brook Trout based on landcover, temperature – evaluate AUC."
+Advanced,"Combine rainfall, temperature, and vegetation to model malaria risk zones in Sub-Saharan Africa; compare with WHO incidence maps."
+Advanced,"Model fire susceptibility in California using historical burn, vegetation, and drought indices; validate with 2023 fire perimeter map."
+Advanced,Calculate population within 500 m of green spaces in Boston (>0.3 NDVI); compare with census socioeconomic indicators.
+Advanced,Use Sentinel-2 to estimate chlorophyll-a in Lake Champlain; validate with in-situ water quality data.
+Advanced,Use Landsat to monitor coastal salinity proxies in Louisiana wetlands; confirm with USGS salinity stations.
+Advanced,Analyze connectivity between forest patches using resistance surfaces; compare corridors to wildlife tracking data.
+Advanced,Overlay daytime LST with nighttime housing density to map exposure hotspots; discuss for public health planning.
+Advanced,Estimate above-ground carbon in upper Amazon using forest cover + allometric equations; compare with published estimates.

@@ -18,6 +18,7 @@ Building the Google Earth Engine Agent Chrome Extension. The primary focus areas
    - Screenshot capture integration with unique test IDs
    - Results export to CSV with detailed metadata
    - Helicone integration for request logging and analytics
+   - GEE environment controls with configurable reset/clear functions and optional editor reload
 
 3. **Robust Message Handling & State Management:**
    - Fixed React state closure issues in test execution loop using useRef pattern
@@ -59,6 +60,11 @@ Building the Google Earth Engine Agent Chrome Extension. The primary focus areas
   - Updated background script to handle "agent-test" port connections
   - Ensured proper message routing for test execution through existing chat handler
   - Maintained compatibility with existing chat functionality
+
+- **GEE Environment Configuration:**
+  - Added toggle for reloading Google Earth Engine editor between tests (disabled by default)
+  - Implemented warning text explaining the trade-offs of editor reload functionality
+  - Integrated configuration persistence with existing settings system
 
 ### In Progress
 - Testing agent test panel with actual AI responses to validate full workflow

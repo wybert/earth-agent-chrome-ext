@@ -14,6 +14,7 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 - Help debug the code
 - Help you explian the map
 - Planning and reasoning
+- Comprehensive agent testing framework with automated testing capabilities
 
 ## Installation
 
@@ -49,6 +50,18 @@ After installation, you'll need to configure your API keys:
 3. Add your OpenAI or Anthropic API key
 4. Select your preferred AI provider and model
 5. Start chatting with Earth Engine!
+
+## Agent Testing Panel
+
+The extension includes a comprehensive testing framework for evaluating AI agent performance:
+
+- **Multi-Provider Support**: Test with OpenAI GPT models or Anthropic Claude models
+- **Batch Testing**: Run multiple prompts automatically with configurable intervals
+- **Environment Controls**: Configure reset and clear functions, including optional GEE editor reload
+- **Results Analysis**: Export detailed test results with screenshots and metadata
+- **Screenshot Storage**: Multiple storage options (local, downloads folder, Google Drive)
+
+Access the testing panel by clicking the flask icon (🧪) in the main chat interface.
 
 ## Creating a New Release
 

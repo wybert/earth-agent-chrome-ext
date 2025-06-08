@@ -36,6 +36,7 @@ The Agent Testing Panel includes several options to optimize testing:
 - **Storage Method**: Choose between local, downloads, or Google Drive
 - **Clear Code Before Test**: Automatically clear the Earth Engine code editor before each test
 - **Reset Map Before Test**: Automatically reset the map, inspector, and console before each test
+- **Reload GEE Editor**: Reload the entire Google Earth Engine editor between tests (disabled by default)
 
 ### Reset Functionality
 Both reset functions now use the reliable `clickBySelector` tool:
@@ -92,24 +93,29 @@ All storage methods include comprehensive error handling:
 
 For each test, the system now performs these actions in sequence:
 
-1. **Reset Map/Inspector/Console** (if enabled):
+1. **Reload GEE Editor** (if enabled, disabled by default):
+   - Refreshes the entire Google Earth Engine code editor page
+   - Clears all state including variables, imports, and UI state
+   - Note: This option is disabled by default to prevent interruptions
+
+2. **Reset Map/Inspector/Console** (if enabled):
    - Click reset button: `button.goog-button.reset-button[title="Clear map, inspector, and console"]`
    - Wait 1 second for reset to complete
 
-2. **Clear Script** (if enabled):
+3. **Clear Script** (if enabled):
    - Try direct click: `div.goog-menuitem-content`
    - If that fails, click targeted dropdown: `button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]`
    - Wait 800ms for menu to appear
    - Click clear script: `div.goog-menuitem-content`
    - Wait 500ms for clearing to complete
 
-3. **Run Agent**: Send prompt and get AI response
+4. **Run Agent**: Send prompt and get AI response
 
-4. **Wait**: 2-second delay for UI changes to complete
+5. **Wait**: 2-second delay for UI changes to complete
 
-5. **Screenshot**: Capture the results showing the agent's work
+6. **Screenshot**: Capture the results showing the agent's work
 
-6. **Save**: Store screenshot using selected method
+7. **Save**: Store screenshot using selected method
 
 This ensures each test starts with a completely clean Google Earth Engine environment and captures only the results from the current test, providing consistent and reliable testing results.
 

@@ -40,9 +40,11 @@ interface TestConfiguration {
   model: string;
   heliconeApiKey: string;
   intervalMs: number;
+  timeoutMs: number;
   enableScreenshots: boolean;
   clearCodeBeforeTest: boolean;
   resetMapBeforeTest: boolean;
+  reloadGeeEditor: boolean;
   sessionId: string;
   screenshotStorage: 'local' | 'downloads' | 'google-drive';
   driveFolderId?: string;
@@ -106,9 +108,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     model: 'gpt-4o',
     heliconeApiKey: '',
     intervalMs: 5000,
+    timeoutMs: 60000,
     enableScreenshots: true,
     clearCodeBeforeTest: true,
     resetMapBeforeTest: true,
+    reloadGeeEditor: false,
     sessionId: `test-session-${Date.now()}`,
     screenshotStorage: 'downloads',
     driveFolderId: ''
@@ -142,7 +146,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             ...prev, 
             ...result.agentTestConfig,
             // Always generate a new session ID but keep other settings
-            sessionId: `test-session-${Date.now()}`
+            sessionId: `test-session-${Date.now()}`,
+            // Provide default timeout if not present in saved config
+            timeoutMs: result.agentTestConfig.timeoutMs || 60000
           }));
         }
       });
@@ -157,16 +163,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         model: config.model,
         heliconeApiKey: config.heliconeApiKey,
         intervalMs: config.intervalMs,
+        timeoutMs: config.timeoutMs,
         enableScreenshots: config.enableScreenshots,
         clearCodeBeforeTest: config.clearCodeBeforeTest,
         resetMapBeforeTest: config.resetMapBeforeTest,
+        reloadGeeEditor: config.reloadGeeEditor,
         screenshotStorage: config.screenshotStorage,
         driveFolderId: config.driveFolderId
       };
       console.log('Saving config to storage:', configToSave);
       chrome.storage.local.set({ agentTestConfig: configToSave });
     }
-  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.screenshotStorage, config.driveFolderId, isOpen]);
+  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.timeoutMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.reloadGeeEditor, config.screenshotStorage, config.driveFolderId, isOpen]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -463,17 +471,19 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       console.log('Creating test promise...');
       const response = await new Promise<string>((resolve, reject) => {
         const timeout = setTimeout(() => {
-          console.log('Test timeout reached');
-          reject(new Error('Test timeout'));
-        }, 30000);
+          console.log(`Test timeout reached after ${config.timeoutMs}ms`);
+          reject(new Error(`Test timeout after ${config.timeoutMs / 1000} seconds`));
+        }, config.timeoutMs);
         
+        // Create isolated session for each test to prevent conversation memory carryover
+        // Each test gets its own unique session ID to ensure independent results
         const chatMessage = {
           type: 'CHAT_MESSAGE',
           message: prompt.text,
           messages: [{ role: 'user', content: prompt.text }],
           provider: config.provider,
           model: config.model,
-          sessionId: config.sessionId
+          sessionId: `${config.sessionId}-test-${prompt.id}-${Date.now()}`
         };
 
         console.log('Sending chat message:', chatMessage);
@@ -835,6 +845,22 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       step="1000"
                     />
                   </div>
+                  
+                  <div>
+                    <Label htmlFor="timeout">Test Timeout (ms)</Label>
+                    <Input
+                      id="timeout"
+                      type="number"
+                      value={config.timeoutMs}
+                      onChange={(e) => updateConfig({ timeoutMs: parseInt(e.target.value) || 60000 })}
+                      min="10000"
+                      max="300000"
+                      step="5000"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      How long to wait for each test to complete (10-300 seconds). Complex prompts may need longer timeouts.
+                    </p>
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
@@ -911,6 +937,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       onCheckedChange={(checked) => updateConfig({ resetMapBeforeTest: checked })}
                     />
                     <Label htmlFor="reset-map">Reset Map/Inspector/Console Before Each Test</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="reload-gee-editor"
+                      checked={config.reloadGeeEditor}
+                      onCheckedChange={(checked) => updateConfig({ reloadGeeEditor: checked })}
+                    />
+                    <Label htmlFor="reload-gee-editor">Reload Google Earth Engine Editor Between Tests</Label>
+                  </div>
+                  <div className="text-sm text-muted-foreground ml-6 -mt-1">
+                    ⚠️ <strong>Disabled by default.</strong> Reloading the GEE editor clears all state but may cause interruptions.
                   </div>
 
                   {/* Test Functions Section */}
@@ -1183,9 +1221,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             model: 'gpt-4o',
                             heliconeApiKey: '',
                             intervalMs: 5000,
+                            timeoutMs: 60000,
                             enableScreenshots: true,
                             clearCodeBeforeTest: true,
                             resetMapBeforeTest: true,
+                            reloadGeeEditor: false,
                             sessionId: `test-session-${Date.now()}`,
                             screenshotStorage: 'downloads',
                             driveFolderId: ''

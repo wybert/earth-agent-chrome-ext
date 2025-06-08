@@ -281,6 +281,40 @@
    - How to implement memory persistence with reasonable complexity?
    - When is it appropriate to transition to a server-side solution?
 
+## Agent Testing Panel Configuration (Updated December 17, 2024)
+
+### Test Environment Controls
+
+The Agent Testing Panel includes sophisticated environment controls to ensure consistent test conditions:
+
+1. **Basic Reset Functions**
+   - **Clear Code Before Test**: Removes all code from the Earth Engine editor before each test
+   - **Reset Map/Inspector/Console**: Resets the visual interface components to clean state
+
+2. **Advanced Environment Control**
+   - **Reload GEE Editor** (Optional, disabled by default):
+     - Performs complete page refresh of Google Earth Engine code editor
+     - Clears all JavaScript state, variables, imports, and UI state
+     - Provides maximum isolation between tests but causes interruptions
+     - Disabled by default to maintain smooth testing workflow
+     - Can be enabled for edge cases requiring complete state reset
+
+### Configuration Persistence
+
+All test configuration options are automatically saved to Chrome storage and persist across browser sessions:
+- Provider and model selection
+- Test intervals and screenshot settings
+- Environment control preferences (reset, clear, reload settings)
+- Helicone API key and session management
+
+### UI Integration
+
+Environment controls are presented in the Setup tab with:
+- Clear toggle switches for each option
+- Descriptive labels explaining functionality
+- Warning text for potentially disruptive options
+- Immediate configuration persistence
+
 ## AI Agent Implementation (Updated August 5, 2024)
 
 ### Core AI Components
