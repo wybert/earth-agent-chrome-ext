@@ -10,11 +10,13 @@ import { type as typeText, type TypeParams, type TypeResponse } from './type';
 import { hover, type HoverParams, type HoverResponse } from './hover';
 import { screenshot, type ScreenshotResponse } from './screenshot';
 import { clickByRef, type ClickByRefParams } from './clickByRef';
+import { clickBySelector, type ClickBySelectorParams, type ClickBySelectorResponse } from './clickBySelector';
 
 // Export all tools
 export {
   click,
   clickByCoordinates,
+  clickBySelector,
   getElement,
   getElementByRefId,
   snapshot,
@@ -45,6 +47,7 @@ export type {
 // Main export of all browser tools
 export default {
   click,
+  clickBySelector,
   getElement,
   getElementByRefId,
   snapshot,

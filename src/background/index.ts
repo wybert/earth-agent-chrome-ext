@@ -1384,6 +1384,29 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
+
+    case 'CLICK_BY_SELECTOR': // New case for clicking by CSS selector
+      (async () => {
+        try {
+          console.log('Forwarding CLICK_BY_SELECTOR to content script with payload:', message.payload);
+          if (message.payload && typeof message.payload.selector === 'string') {
+            const response = await sendMessageToEarthEngineTab(message); // Forward the whole message
+            sendResponse(response);
+          } else {
+            sendResponse({
+              success: false,
+              error: 'Invalid payload for CLICK_BY_SELECTOR: selector is required.'
+            });
+          }
+        } catch (error) {
+          console.error('Error forwarding CLICK_BY_SELECTOR to content script:', error);
+          sendResponse({
+            success: false,
+            error: `Error forwarding CLICK_BY_SELECTOR: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
     
     default:
       console.warn(`Unknown message type received in background: ${message.type}`);
@@ -1453,6 +1476,42 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
     newPort.onDisconnect.addListener(() => {
       console.log('Agent test connection disconnected');
+    });
+  } else if (newPort.name === 'clear-code') {
+    console.log('Clear code connection established');
+    
+    newPort.onMessage.addListener(async (message: any) => {
+      console.log('Received clear code message:', message);
+      
+      if (message.type === 'CLEAR_CODE') {
+                 try {
+           // Use the editScript tool to clear the Earth Engine code editor
+           console.log('Clearing Earth Engine code editor...');
+           const result = await sendMessageToEarthEngineTab({
+             type: 'EDIT_SCRIPT',
+             scriptId: 'current',
+             content: ''
+           });
+          
+          if (result.success) {
+            console.log('Code cleared successfully');
+            newPort.postMessage({ type: 'CLEAR_CODE_SUCCESS' });
+          } else {
+            console.error('Failed to clear code:', result.error);
+            newPort.postMessage({ type: 'ERROR', error: result.error || 'Failed to clear code' });
+          }
+        } catch (error) {
+          console.error('Error clearing code:', error);
+          newPort.postMessage({ 
+            type: 'ERROR', 
+            error: error instanceof Error ? error.message : 'Unknown error clearing code'
+          });
+        }
+      }
+    });
+
+    newPort.onDisconnect.addListener(() => {
+      console.log('Clear code connection disconnected');
     });
   }
 });

@@ -3857,6 +3857,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     sendResponse({ success: false, error: 'Invalid payload for CLICK_BY_COORDINATES: x and y are required.' });
                 }
                 return true; // Will respond asynchronously
+            case 'CLICK_BY_SELECTOR':
+                if (message.payload && typeof message.payload.selector === 'string') {
+                    handleClickBySelector(message.payload.selector, message.payload.elementDescription, sendResponse);
+                }
+                else {
+                    sendResponse({ success: false, error: 'selector not provided in payload for CLICK_BY_SELECTOR' });
+                }
+                return true; // Will respond asynchronously
             case 'CLICK_BY_REF_ID':
                 if (message.payload && message.payload.refId) {
                     handleClickByRefId(message.payload.refId, sendResponse);
@@ -4624,6 +4632,116 @@ async function handleExecuteClickByCoordinates(x, y, sendResponse) {
         sendResponse({
             success: false,
             error: `Error clicking by coordinates in page: ${errorMessage}`
+        });
+    }
+}
+/**
+ * Handles clicking by CSS selector
+ */
+async function handleClickBySelector(selector, elementDescription, sendResponse) {
+    try {
+        console.log(`[Content Script - Click By Selector] Looking for element with selector: "${selector}"`);
+        // Function to search in shadow DOMs as well
+        const findElementInShadowDoms = (root, selector) => {
+            // Try direct query first
+            try {
+                const element = root.querySelector(selector);
+                if (element) {
+                    console.log(`[Content Script - Click By Selector] Found element directly:`, element);
+                    return element;
+                }
+            }
+            catch (error) {
+                console.error(`[Content Script - Click By Selector] Error in direct querySelector:`, error);
+            }
+            // Search in shadow DOMs
+            const allElements = root.querySelectorAll('*');
+            for (const host of Array.from(allElements)) {
+                if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+                    console.log(`[Content Script - Click By Selector] Searching in shadow DOM of:`, host);
+                    const elementInShadow = findElementInShadowDoms(host.shadowRoot, selector);
+                    if (elementInShadow) {
+                        console.log(`[Content Script - Click By Selector] Found element in shadow DOM:`, elementInShadow);
+                        return elementInShadow;
+                    }
+                }
+            }
+            return null;
+        };
+        const element = findElementInShadowDoms(document, selector);
+        if (!element) {
+            console.error(`[Content Script - Click By Selector] Element not found with selector: "${selector}"`);
+            sendResponse({
+                success: false,
+                error: `Element not found with selector: ${selector}`
+            });
+            return;
+        }
+        console.log(`[Content Script - Click By Selector] Found element:`, element);
+        console.log(`[Content Script - Click By Selector] Element details: tagName=${element.tagName}, id=${element.id || 'none'}, class=${element.className || 'none'}`);
+        // Check if element is connected to DOM
+        if (!element.isConnected) {
+            console.error(`[Content Script - Click By Selector] Element is detached from DOM`);
+            sendResponse({
+                success: false,
+                error: 'Element is detached from the DOM'
+            });
+            return;
+        }
+        // Scroll element into view
+        console.log(`[Content Script - Click By Selector] Scrolling element into view`);
+        element.scrollIntoView({ behavior: 'auto', block: 'center' });
+        // Get element's bounding rect for click coordinates
+        const rect = element.getBoundingClientRect();
+        console.log(`[Content Script - Click By Selector] Element bounding rect:`, rect);
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        // Create and dispatch mouse events
+        const mouseDownEvent = new MouseEvent('mousedown', {
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            clientX: centerX,
+            clientY: centerY,
+            button: 0
+        });
+        const mouseUpEvent = new MouseEvent('mouseup', {
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            clientX: centerX,
+            clientY: centerY,
+            button: 0
+        });
+        const clickEvent = new MouseEvent('click', {
+            view: window,
+            bubbles: true,
+            cancelable: true,
+            clientX: centerX,
+            clientY: centerY,
+            button: 0
+        });
+        // Dispatch events in sequence
+        console.log(`[Content Script - Click By Selector] Dispatching mouse events`);
+        element.dispatchEvent(mouseDownEvent);
+        element.dispatchEvent(mouseUpEvent);
+        element.dispatchEvent(clickEvent);
+        // Also trigger native click for form elements and links
+        if (element instanceof HTMLElement) {
+            console.log(`[Content Script - Click By Selector] Calling native click() method`);
+            element.click();
+        }
+        console.log(`[Content Script - Click By Selector] Click sequence completed`);
+        sendResponse({
+            success: true,
+            message: `Successfully clicked element with selector: ${selector}${elementDescription ? ` (${elementDescription})` : ''}`
+        });
+    }
+    catch (error) {
+        console.error(`[Content Script - Click By Selector] Error clicking element:`, error);
+        sendResponse({
+            success: false,
+            error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
         });
     }
 }

@@ -24,6 +24,7 @@ import { detectEnvironment } from '@/lib/utils';
 import { 
   click, 
   clickByCoordinates,
+  clickBySelector,
   typeText, 
   getElement, 
   screenshot, 
@@ -147,11 +148,10 @@ const ToolsTestPanel: React.FC<ToolsTestPanelProps> = ({ isOpen, onClose }) => {
               if (!elementSelector) {
                 throw new Error('Please enter a CSS selector');
               }
-              // For selector-based clicking, this still uses the old ref-based click for testing.
-              // This part might need a different tool or approach if you want to click by selector without a ref.
-              result = await click({
-                element: `Element with selector: ${elementSelector}`,
-                ref: 'click-by-selector-test-only' // This won't work in practice - just for testing
+              // Use the proper clickBySelector function
+              result = await clickBySelector({
+                selector: elementSelector,
+                elementDescription: `Element with selector: ${elementSelector}`
               });
             } else if (clickMethod === 'refId') {
               if (!clickRefId) {

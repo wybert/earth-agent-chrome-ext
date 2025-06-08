@@ -108126,18 +108126,20 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _components_ui_switch__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! @/components/ui/switch */ "./src/components/ui/switch.tsx");
 /* harmony import */ var _components_ui_badge__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! @/components/ui/badge */ "./src/components/ui/badge.tsx");
 /* harmony import */ var _components_ui_progress__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! @/components/ui/progress */ "./src/components/ui/progress.tsx");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/eye-off.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/eye.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/rotate-ccw.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/circle-help.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/upload.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/play.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/pause.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/download.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-text.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/eye-off.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/eye.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/rotate-ccw.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/circle-help.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/upload.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/play.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/pause.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/download.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-text.js");
 /* harmony import */ var _components_ui_tabs__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! @/components/ui/tabs */ "./src/components/ui/tabs.tsx");
 /* harmony import */ var _lib_tools_browser_screenshot__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! @/lib/tools/browser/screenshot */ "./src/lib/tools/browser/screenshot.ts");
+/* harmony import */ var _lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! @/lib/tools/browser/clickBySelector */ "./src/lib/tools/browser/clickBySelector.ts");
+
 
 
 
@@ -108203,6 +108205,8 @@ function AgentTestPanel({ isOpen, onClose }) {
         heliconeApiKey: '',
         intervalMs: 5000,
         enableScreenshots: true,
+        clearCodeBeforeTest: true,
+        resetMapBeforeTest: true,
         sessionId: `test-session-${Date.now()}`,
         screenshotStorage: 'downloads',
         driveFolderId: ''
@@ -108247,13 +108251,15 @@ function AgentTestPanel({ isOpen, onClose }) {
                 heliconeApiKey: config.heliconeApiKey,
                 intervalMs: config.intervalMs,
                 enableScreenshots: config.enableScreenshots,
+                clearCodeBeforeTest: config.clearCodeBeforeTest,
+                resetMapBeforeTest: config.resetMapBeforeTest,
                 screenshotStorage: config.screenshotStorage,
                 driveFolderId: config.driveFolderId
             };
             console.log('Saving config to storage:', configToSave);
             chrome.storage.local.set({ agentTestConfig: configToSave });
         }
-    }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, config.screenshotStorage, config.driveFolderId, isOpen]);
+    }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.screenshotStorage, config.driveFolderId, isOpen]);
     const updateConfig = (updates) => {
         setConfig(prev => ({ ...prev, ...updates }));
     };
@@ -108427,6 +108433,101 @@ function AgentTestPanel({ isOpen, onClose }) {
         console.log('executeTest called for prompt:', prompt);
         const startTime = Date.now();
         try {
+            // Reset map, inspector, and console before test if enabled
+            if (config.resetMapBeforeTest) {
+                try {
+                    console.log('Resetting Google Earth Engine map, inspector, and console...');
+                    const resetResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                        selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
+                        elementDescription: 'Reset button to clear map, inspector, and console'
+                    });
+                    if (resetResult.success) {
+                        console.log('Reset button clicked successfully');
+                        // Wait a moment for the reset to take effect
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    else {
+                        console.warn('Failed to click reset button:', resetResult.error);
+                    }
+                }
+                catch (error) {
+                    console.error('Failed to reset map/inspector/console:', error);
+                    // Don't fail the test, just log the error and continue
+                }
+            }
+            // Clear code editor before test if enabled
+            if (config.clearCodeBeforeTest) {
+                try {
+                    console.log('Clearing Google Earth Engine code editor using clickBySelector...');
+                    // First try clicking the clear script directly (menu might already be accessible)
+                    try {
+                        console.log('Trying to click Clear script directly...');
+                        const directResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                            selector: 'div.goog-menuitem-content',
+                            elementDescription: 'Clear script menu option (direct)'
+                        });
+                        if (directResult.success) {
+                            console.log('Direct clear script successful:', directResult.message);
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                        else {
+                            console.log('Direct click failed, trying dropdown approach...');
+                            throw new Error('Direct click failed');
+                        }
+                    }
+                    catch (error) {
+                        console.log('Direct click error, trying dropdown approach...');
+                        // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
+                        console.log('Step 1: Opening Reset dropdown menu...');
+                        const dropdownSelectors = [
+                            'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                            'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                            '.goog-toolbar-menu-button'
+                        ];
+                        let dropdownResult = null;
+                        for (const selector of dropdownSelectors) {
+                            console.log(`Trying dropdown selector: ${selector}`);
+                            dropdownResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                                selector: selector,
+                                elementDescription: `Reset dropdown arrow (${selector})`
+                            });
+                            if (dropdownResult.success) {
+                                console.log(`Dropdown opened with selector: ${selector}`);
+                                break;
+                            }
+                            else {
+                                console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
+                            }
+                        }
+                        if (dropdownResult && dropdownResult.success) {
+                            console.log('Reset dropdown opened successfully');
+                            // Wait for menu to appear
+                            await new Promise(resolve => setTimeout(resolve, 800));
+                            // Step 2: Click "Clear script" option in the dropdown menu
+                            console.log('Step 2: Clicking Clear script option...');
+                            const clearResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                                selector: 'div.goog-menuitem-content',
+                                elementDescription: 'Clear script menu option'
+                            });
+                            if (clearResult.success) {
+                                console.log('Code cleared successfully using clickBySelector');
+                                // Wait for clearing to take effect
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                            }
+                            else {
+                                console.warn('Failed to click clear script option:', clearResult.error);
+                            }
+                        }
+                        else {
+                            console.warn('Failed to open reset dropdown with any selector');
+                        }
+                    }
+                }
+                catch (error) {
+                    console.error('Failed to clear code editor:', error);
+                    // Don't fail the test, just log the error and continue
+                }
+            }
             // Send message to the agent through the extension's messaging system first
             console.log('Creating test promise...');
             const response = await new Promise((resolve, reject) => {
@@ -108719,7 +108820,7 @@ function AgentTestPanel({ isOpen, onClose }) {
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.CardHeader, { className: "flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-4" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.CardTitle, { className: "text-xl font-semibold" }, "Agent Testing Panel"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "ghost", size: "icon", onClick: onClose },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-5 w-5" }))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-5 w-5" }))),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.CardContent, { className: "flex-1 overflow-hidden" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_tabs__WEBPACK_IMPORTED_MODULE_10__.Tabs, { defaultValue: "setup", className: "h-full flex flex-col" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_tabs__WEBPACK_IMPORTED_MODULE_10__.TabsList, { className: "grid w-full grid-cols-4" },
@@ -108752,16 +108853,152 @@ function AgentTestPanel({ isOpen, onClose }) {
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "helicone-key" }, "Helicone API Key"),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative" },
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_input__WEBPACK_IMPORTED_MODULE_3__.Input, { id: "helicone-key", type: showApiKey ? "text" : "password", value: config.heliconeApiKey, onChange: (e) => updateConfig({ heliconeApiKey: e.target.value }), placeholder: "sk-...", className: "pr-10" }),
-                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { type: "button", variant: "ghost", size: "icon", className: "absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent", onClick: () => setShowApiKey(!showApiKey), title: showApiKey ? "Hide API key" : "Show API key" }, showApiKey ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-4 w-4" })) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_14__["default"], { className: "h-4 w-4" }))))),
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { type: "button", variant: "ghost", size: "icon", className: "absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent", onClick: () => setShowApiKey(!showApiKey), title: showApiKey ? "Hide API key" : "Show API key" }, showApiKey ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_14__["default"], { className: "h-4 w-4" })) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_15__["default"], { className: "h-4 w-4" }))))),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "session-id" }, "Session ID"),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_input__WEBPACK_IMPORTED_MODULE_3__.Input, { id: "session-id", value: config.sessionId, onChange: (e) => updateConfig({ sessionId: e.target.value }), placeholder: "test-session-..." }),
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "icon", onClick: () => updateConfig({ sessionId: `test-session-${Date.now()}` }), title: "Generate new session ID" },
-                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_15__["default"], { className: "h-4 w-4" })))),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_16__["default"], { className: "h-4 w-4" })))),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center space-x-2" },
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_switch__WEBPACK_IMPORTED_MODULE_7__.Switch, { id: "screenshots", checked: config.enableScreenshots, onCheckedChange: (checked) => updateConfig({ enableScreenshots: checked }) }),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "screenshots" }, "Enable Screenshots")),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center space-x-2" },
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_switch__WEBPACK_IMPORTED_MODULE_7__.Switch, { id: "clear-code", checked: config.clearCodeBeforeTest, onCheckedChange: (checked) => updateConfig({ clearCodeBeforeTest: checked }) }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "clear-code" }, "Clear Code Before Each Test")),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center space-x-2" },
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_switch__WEBPACK_IMPORTED_MODULE_7__.Switch, { id: "reset-map", checked: config.resetMapBeforeTest, onCheckedChange: (checked) => updateConfig({ resetMapBeforeTest: checked }) }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "reset-map" }, "Reset Map/Inspector/Console Before Each Test")),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "border-t pt-4" },
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h4", { className: "text-lg font-medium mb-3" }, "Test Functions"),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-muted-foreground mb-4" }, "Test these functions individually before running agent tests to ensure they work properly."),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-3" },
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "sm", onClick: async () => {
+                                                console.log('Testing Reset Map/Inspector/Console function...');
+                                                try {
+                                                    const resetResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                                                        selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
+                                                        elementDescription: 'Reset button to clear map, inspector, and console'
+                                                    });
+                                                    if (resetResult.success) {
+                                                        alert('✅ Reset Map/Inspector/Console test successful!');
+                                                        console.log('Reset successful:', resetResult.message);
+                                                    }
+                                                    else {
+                                                        alert(`❌ Reset test failed: ${resetResult.error}`);
+                                                        console.error('Reset failed:', resetResult.error);
+                                                    }
+                                                }
+                                                catch (error) {
+                                                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                                                    alert(`❌ Reset test error: ${errorMsg}`);
+                                                    console.error('Reset test error:', error);
+                                                }
+                                            } }, "\uD83D\uDD04 Test Reset Map/Inspector/Console"),
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "sm", onClick: async () => {
+                                                console.log('Testing Clear Script function...');
+                                                // First try clicking the clear script directly (menu might already be accessible)
+                                                try {
+                                                    console.log('Trying to click Clear script directly...');
+                                                    const directResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                                                        selector: 'div.goog-menuitem-content',
+                                                        elementDescription: 'Clear script menu option (direct)'
+                                                    });
+                                                    if (directResult.success) {
+                                                        console.log('Direct clear script successful:', directResult.message);
+                                                        alert('✅ Clear Script successful (direct click)!');
+                                                        return;
+                                                    }
+                                                    else {
+                                                        console.log('Direct click failed, trying dropdown approach...');
+                                                    }
+                                                }
+                                                catch (error) {
+                                                    console.log('Direct click error, trying dropdown approach...');
+                                                }
+                                                try {
+                                                    // If direct click failed, try opening dropdown first
+                                                    const dropdownSelectors = [
+                                                        'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                                                        'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                                                        '.goog-toolbar-menu-button',
+                                                        'button[title="Reset (Ctrl+Alt+Enter)"] + button',
+                                                        '.goog-button[role="button"][tabindex="0"]:not([title])',
+                                                        'button.goog-button:has(+ .goog-menu)',
+                                                        '.goog-toolbar-button[role="button"]',
+                                                        'button.goog-button.goog-toolbar-button',
+                                                        '[role="button"][aria-haspopup="menu"]',
+                                                        'button[aria-haspopup="true"]',
+                                                        '.goog-button[aria-haspopup="true"]',
+                                                        'button.goog-button[tabindex="0"]'
+                                                    ];
+                                                    let dropdownResult = null;
+                                                    for (const selector of dropdownSelectors) {
+                                                        console.log(`Trying dropdown selector: ${selector}`);
+                                                        dropdownResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                                                            selector: selector,
+                                                            elementDescription: `Reset dropdown arrow (${selector})`
+                                                        });
+                                                        if (dropdownResult.success) {
+                                                            console.log(`Dropdown opened with selector: ${selector}`);
+                                                            break;
+                                                        }
+                                                        else {
+                                                            console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
+                                                        }
+                                                    }
+                                                    if (dropdownResult && dropdownResult.success) {
+                                                        console.log('Reset dropdown opened successfully');
+                                                        // Wait for menu to appear
+                                                        await new Promise(resolve => setTimeout(resolve, 1000));
+                                                        // Step 2: Click "Clear script" option in the dropdown menu
+                                                        console.log('Step 2: Clicking Clear script option...');
+                                                        const clearSelectors = [
+                                                            'div.goog-menuitem-content',
+                                                            'div.goog-menuitem[role="menuitem"]',
+                                                            '.goog-menuitem-content:contains("Clear script")',
+                                                            'div[role="menuitem"]:has(.goog-menuitem-content)'
+                                                        ];
+                                                        let clearResult = null;
+                                                        for (const clearSelector of clearSelectors) {
+                                                            console.log(`Trying clear selector: ${clearSelector}`);
+                                                            clearResult = await (0,_lib_tools_browser_clickBySelector__WEBPACK_IMPORTED_MODULE_12__.clickBySelector)({
+                                                                selector: clearSelector,
+                                                                elementDescription: `Clear script menu option (${clearSelector})`
+                                                            });
+                                                            if (clearResult.success) {
+                                                                console.log(`Clear script successful with selector: ${clearSelector}`);
+                                                                break;
+                                                            }
+                                                            else {
+                                                                console.log(`Clear selector failed: ${clearSelector} - ${clearResult.error}`);
+                                                            }
+                                                        }
+                                                        if (clearResult.success) {
+                                                            alert('✅ Clear Script test successful!');
+                                                            console.log('Clear script successful:', clearResult.message);
+                                                        }
+                                                        else {
+                                                            alert(`❌ Clear script test failed: ${clearResult.error}`);
+                                                            console.error('Clear script failed:', clearResult.error);
+                                                        }
+                                                    }
+                                                    else {
+                                                        alert(`❌ Failed to open dropdown. Try manually opening the Reset menu first, then test again.`);
+                                                        console.error('All dropdown selectors failed');
+                                                    }
+                                                }
+                                                catch (error) {
+                                                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                                                    alert(`❌ Clear script test error: ${errorMsg}`);
+                                                    console.error('Clear script test error:', error);
+                                                }
+                                            } }, "\uD83E\uDDF9 Test Clear Script")),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md" },
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm text-yellow-800" },
+                                            "\uD83D\uDCA1 ",
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Clear Script Tip:"),
+                                            " If the Clear Script test fails, try manually clicking the Reset button dropdown in Google Earth Engine first, then test again. The dropdown needs to be accessible for the script clearing to work."))),
                                 config.enableScreenshots && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null,
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "screenshotStorage" }, "Screenshot Storage"),
@@ -108840,6 +109077,8 @@ function AgentTestPanel({ isOpen, onClose }) {
                                                     heliconeApiKey: '',
                                                     intervalMs: 5000,
                                                     enableScreenshots: true,
+                                                    clearCodeBeforeTest: true,
+                                                    resetMapBeforeTest: true,
                                                     sessionId: `test-session-${Date.now()}`,
                                                     screenshotStorage: 'downloads',
                                                     driveFolderId: ''
@@ -108851,19 +109090,19 @@ function AgentTestPanel({ isOpen, onClose }) {
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "text-lg font-medium mb-4" }, "Configuration Help"),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-2 text-sm text-muted-foreground" },
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-start gap-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_16__["default"], { className: "h-4 w-4 mt-0.5 flex-shrink-0" }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_17__["default"], { className: "h-4 w-4 mt-0.5 flex-shrink-0" }),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Helicone API Key:"),
                                         " Get your API key from ",
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("a", { href: "https://helicone.ai", target: "_blank", rel: "noopener noreferrer", className: "underline" }, "helicone.ai"),
                                         ". This enables request logging and analytics.")),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-start gap-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_16__["default"], { className: "h-4 w-4 mt-0.5 flex-shrink-0" }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_17__["default"], { className: "h-4 w-4 mt-0.5 flex-shrink-0" }),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Session ID:"),
                                         " Groups related test requests together in Helicone for easier analysis. Each test run should use a unique session ID.")),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-start gap-2" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_16__["default"], { className: "h-4 w-4 mt-0.5 flex-shrink-0" }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_17__["default"], { className: "h-4 w-4 mt-0.5 flex-shrink-0" }),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Screenshots:"),
                                         " Automatically captures screenshots after each agent response. Choose storage method:",
@@ -108889,7 +109128,7 @@ function AgentTestPanel({ isOpen, onClose }) {
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2 items-center" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", { ref: fileInputRef, type: "file", accept: ".json,.csv", onChange: handleFileUpload, className: "hidden" }),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", onClick: () => fileInputRef.current?.click() },
-                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_17__["default"], { className: "h-4 w-4 mr-2" }),
+                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_18__["default"], { className: "h-4 w-4 mr-2" }),
                                 "Upload File"),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-sm text-muted-foreground" }, "Upload JSON array or CSV file with prompts")),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "border-t pt-4" },
@@ -108928,7 +109167,7 @@ function AgentTestPanel({ isOpen, onClose }) {
                                                 prompt.description && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "text-sm text-muted-foreground" }, prompt.description))),
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm" }, prompt.text)),
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "ghost", size: "icon", onClick: () => removePrompt(prompt.id), className: "flex-shrink-0" },
-                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-4 w-4" }))))))))),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-4 w-4" }))))))))),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_tabs__WEBPACK_IMPORTED_MODULE_10__.TabsContent, { value: "run", className: "flex-1 space-y-6" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid grid-cols-3 gap-4" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { className: "p-4" },
@@ -108947,12 +109186,12 @@ function AgentTestPanel({ isOpen, onClose }) {
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", { className: "text-lg font-medium" }, "Test Progress"),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                                     !isRunning ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { onClick: runTests, disabled: config.prompts.length === 0 },
-                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_18__["default"], { className: "h-4 w-4 mr-2" }),
-                                        "Start Tests")) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { onClick: stopTests, variant: "destructive" },
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_19__["default"], { className: "h-4 w-4 mr-2" }),
+                                        "Start Tests")) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { onClick: stopTests, variant: "destructive" },
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_20__["default"], { className: "h-4 w-4 mr-2" }),
                                         "Stop Tests")),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { onClick: resetTests, variant: "outline" },
-                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_15__["default"], { className: "h-4 w-4 mr-2" }),
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_16__["default"], { className: "h-4 w-4 mr-2" }),
                                         "Reset"))),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_progress__WEBPACK_IMPORTED_MODULE_9__.Progress, { value: testProgress, className: "w-full" }),
                             isRunning && currentTestIndex < config.prompts.length && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { className: "p-4" },
@@ -108982,10 +109221,10 @@ function AgentTestPanel({ isOpen, onClose }) {
                                 ")"),
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                                 results.some(r => r.screenshotId) && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { onClick: downloadAllScreenshots, variant: "outline", size: "sm" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_20__["default"], { className: "h-4 w-4 mr-2" }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_21__["default"], { className: "h-4 w-4 mr-2" }),
                                     "Download All Screenshots")),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { onClick: exportResults, disabled: results.length === 0, variant: "outline" },
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_20__["default"], { className: "h-4 w-4 mr-2" }),
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_21__["default"], { className: "h-4 w-4 mr-2" }),
                                     "Export CSV"))),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex-1 overflow-auto" },
                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "space-y-2" }, results.map((result, index) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { key: result.id, className: `p-4 ${result.success ? 'border-green-200' : 'border-red-200'}` },
@@ -109007,7 +109246,7 @@ function AgentTestPanel({ isOpen, onClose }) {
                                                 result.model)),
                                         result.screenshotId && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { onClick: () => toggleScreenshotPreview(result.screenshotId), className: "inline-flex items-center" },
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_badge__WEBPACK_IMPORTED_MODULE_8__.Badge, { variant: "outline", className: "cursor-pointer hover:bg-blue-50 transition-colors" },
-                                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_21__["default"], { className: "h-3 w-3 mr-1" }),
+                                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_22__["default"], { className: "h-3 w-3 mr-1" }),
                                                 screenshotPreviews[result.screenshotId] ? 'Hide Preview' : 'Show Preview')))),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h4", { className: "font-medium text-sm mb-1" }, "Prompt:"),
@@ -109021,7 +109260,7 @@ function AgentTestPanel({ isOpen, onClose }) {
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex items-center justify-between mb-2" },
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h4", { className: "font-medium text-sm" }, "Screenshot:"),
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "sm", onClick: () => downloadScreenshot(result.screenshotId, result.prompt) },
-                                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_20__["default"], { className: "h-3 w-3 mr-1" }),
+                                                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_21__["default"], { className: "h-3 w-3 mr-1" }),
                                                 "Download")),
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "bg-gray-50 p-2 rounded" },
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", { src: screenshotPreviews[result.screenshotId], alt: `Screenshot for test ${index + 1}`, className: "max-w-full h-auto rounded border", style: { maxHeight: '300px' } }))))))))))))))));
@@ -109172,11 +109411,10 @@ const ToolsTestPanel = ({ isOpen, onClose }) => {
                             if (!elementSelector) {
                                 throw new Error('Please enter a CSS selector');
                             }
-                            // For selector-based clicking, this still uses the old ref-based click for testing.
-                            // This part might need a different tool or approach if you want to click by selector without a ref.
-                            result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.click)({
-                                element: `Element with selector: ${elementSelector}`,
-                                ref: 'click-by-selector-test-only' // This won't work in practice - just for testing
+                            // Use the proper clickBySelector function
+                            result = await (0,_lib_tools_browser__WEBPACK_IMPORTED_MODULE_5__.clickBySelector)({
+                                selector: elementSelector,
+                                elementDescription: `Element with selector: ${elementSelector}`
                             });
                         }
                         else if (clickMethod === 'refId') {
@@ -111894,6 +112132,370 @@ async function clickByRef(params) {
 
 /***/ }),
 
+/***/ "./src/lib/tools/browser/clickBySelector.ts":
+/*!**************************************************!*\
+  !*** ./src/lib/tools/browser/clickBySelector.ts ***!
+  \**************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   clickBySelector: () => (/* binding */ clickBySelector),
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
+/**
+ * ClickBySelector tool for browser automation
+ * This tool clicks an element on the page using CSS selector
+ * Useful for testing and direct element interaction
+ *
+ * @returns Promise with success status and result message
+ */
+
+/**
+ * Perform click on a web page using CSS selector
+ *
+ * @param params.selector CSS selector for the element to click
+ * @param params.elementDescription Optional human-readable description
+ * @returns Promise with success status and result message/error
+ */
+async function clickBySelector(params) {
+    const { selector, elementDescription } = params;
+    if (!selector) {
+        return {
+            success: false,
+            error: 'CSS selector is required',
+        };
+    }
+    console.log(`[Click By Selector] Attempting to click element with selector: "${selector}"`);
+    // Environment detection logic
+    const isWindowUndefined = typeof window === 'undefined';
+    const isSelfDefined = typeof self !== 'undefined';
+    const isChromeDefined = typeof chrome !== 'undefined';
+    const hasChromeRuntimeId = isChromeDefined && chrome.runtime?.id;
+    const hasChromeTabs = isChromeDefined && !!chrome.tabs;
+    const hasChromeScripting = isChromeDefined && !!chrome.scripting;
+    // Check if we're in a background script context
+    if (isWindowUndefined && isSelfDefined && isChromeDefined && hasChromeRuntimeId && hasChromeTabs && hasChromeScripting) {
+        console.log('[Click By Selector] Detected background script context');
+        return handleBackgroundScriptClickBySelector(params);
+    }
+    try {
+        const env = (0,_lib_utils__WEBPACK_IMPORTED_MODULE_0__.detectEnvironment)();
+        console.log('[Click By Selector] Environment detection result:', env);
+        // If we're in background or using background proxy
+        if ((env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) ||
+            (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime)) {
+            console.log('[Click By Selector] Using background script for click operation');
+            return sendClickBySelectorToBackground(params);
+        }
+        // If running directly in content script
+        if (env.isContentScript && typeof document !== 'undefined') {
+            console.log('[Click By Selector] Running directly in content script context');
+            return executeClickBySelectorInPage(selector, elementDescription);
+        }
+        return {
+            success: false,
+            error: 'Click by selector could not be performed in the current environment.'
+        };
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[Click By Selector] Error during environment detection or execution:', errorMessage);
+        return {
+            success: false,
+            error: `Error in clickBySelector: ${errorMessage}`
+        };
+    }
+}
+/**
+ * Send clickBySelector request to background script
+ */
+async function sendClickBySelectorToBackground(params) {
+    return new Promise((resolve) => {
+        const timeoutId = setTimeout(() => {
+            console.warn('[Click By Selector] Background script connection timed out.');
+            resolve({
+                success: false,
+                error: 'Background script connection timed out'
+            });
+        }, 5000);
+        try {
+            chrome.runtime.sendMessage({
+                type: 'CLICK_BY_SELECTOR',
+                payload: params
+            }, (response) => {
+                clearTimeout(timeoutId);
+                if (chrome.runtime.lastError) {
+                    resolve({
+                        success: false,
+                        error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                    });
+                    return;
+                }
+                resolve(response);
+            });
+        }
+        catch (err) {
+            clearTimeout(timeoutId);
+            resolve({
+                success: false,
+                error: err instanceof Error ? err.message : String(err)
+            });
+        }
+    });
+}
+/**
+ * Handle clickBySelector when running in background script context
+ */
+async function handleBackgroundScriptClickBySelector(params) {
+    const { selector, elementDescription } = params;
+    console.log('[Click By Selector - Background] Handling click by selector in background script');
+    return new Promise((resolve) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (chrome.runtime.lastError) {
+                console.error('[Click By Selector - Background] Error querying tabs:', chrome.runtime.lastError.message);
+                resolve({ success: false, error: `Error querying tabs: ${chrome.runtime.lastError.message}` });
+                return;
+            }
+            if (!tabs || tabs.length === 0) {
+                console.error('[Click By Selector - Background] No active tab found');
+                resolve({ success: false, error: 'No active tab found' });
+                return;
+            }
+            const tabId = tabs[0].id;
+            if (!tabId) {
+                console.error('[Click By Selector - Background] Invalid tab ID');
+                resolve({ success: false, error: 'Invalid tab' });
+                return;
+            }
+            console.log(`[Click By Selector - Background] Executing script in tab ${tabId}`);
+            chrome.scripting.executeScript({
+                target: { tabId },
+                func: (selector, description) => {
+                    try {
+                        console.log(`[Content Script - Click By Selector] Looking for element with selector: "${selector}"`);
+                        // Function to search in shadow DOMs as well
+                        const findElementInShadowDoms = (root, selector) => {
+                            // Try direct query first
+                            try {
+                                const element = root.querySelector(selector);
+                                if (element) {
+                                    console.log(`[Content Script - Click By Selector] Found element directly:`, element);
+                                    return element;
+                                }
+                            }
+                            catch (error) {
+                                console.error(`[Content Script - Click By Selector] Error in direct querySelector:`, error);
+                            }
+                            // Search in shadow DOMs
+                            const allElements = root.querySelectorAll('*');
+                            for (const host of Array.from(allElements)) {
+                                if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+                                    console.log(`[Content Script - Click By Selector] Searching in shadow DOM of:`, host);
+                                    const elementInShadow = findElementInShadowDoms(host.shadowRoot, selector);
+                                    if (elementInShadow) {
+                                        console.log(`[Content Script - Click By Selector] Found element in shadow DOM:`, elementInShadow);
+                                        return elementInShadow;
+                                    }
+                                }
+                            }
+                            return null;
+                        };
+                        const element = findElementInShadowDoms(document, selector);
+                        if (!element) {
+                            console.error(`[Content Script - Click By Selector] Element not found with selector: "${selector}"`);
+                            return {
+                                success: false,
+                                error: `Element not found with selector: ${selector}`
+                            };
+                        }
+                        console.log(`[Content Script - Click By Selector] Found element:`, element);
+                        console.log(`[Content Script - Click By Selector] Element details: tagName=${element.tagName}, id=${element.id || 'none'}, class=${element.className || 'none'}`);
+                        // Check if element is connected to DOM
+                        if (!element.isConnected) {
+                            console.error(`[Content Script - Click By Selector] Element is detached from DOM`);
+                            return {
+                                success: false,
+                                error: 'Element is detached from the DOM'
+                            };
+                        }
+                        // Scroll element into view
+                        console.log(`[Content Script - Click By Selector] Scrolling element into view`);
+                        element.scrollIntoView({ behavior: 'auto', block: 'center' });
+                        // Get element's bounding rect for click coordinates
+                        const rect = element.getBoundingClientRect();
+                        console.log(`[Content Script - Click By Selector] Element bounding rect:`, rect);
+                        const centerX = rect.left + rect.width / 2;
+                        const centerY = rect.top + rect.height / 2;
+                        // Create and dispatch mouse events
+                        const mouseDownEvent = new MouseEvent('mousedown', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: centerX,
+                            clientY: centerY,
+                            button: 0
+                        });
+                        const mouseUpEvent = new MouseEvent('mouseup', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: centerX,
+                            clientY: centerY,
+                            button: 0
+                        });
+                        const clickEvent = new MouseEvent('click', {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: centerX,
+                            clientY: centerY,
+                            button: 0
+                        });
+                        // Dispatch events in sequence
+                        console.log(`[Content Script - Click By Selector] Dispatching mouse events`);
+                        element.dispatchEvent(mouseDownEvent);
+                        element.dispatchEvent(mouseUpEvent);
+                        element.dispatchEvent(clickEvent);
+                        // Also trigger native click for form elements and links
+                        if (element instanceof HTMLElement) {
+                            console.log(`[Content Script - Click By Selector] Calling native click() method`);
+                            element.click();
+                        }
+                        console.log(`[Content Script - Click By Selector] Click sequence completed`);
+                        return {
+                            success: true,
+                            message: `Successfully clicked element with selector: ${selector}${description ? ` (${description})` : ''}`
+                        };
+                    }
+                    catch (error) {
+                        console.error(`[Content Script - Click By Selector] Error clicking element:`, error);
+                        return {
+                            success: false,
+                            error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`
+                        };
+                    }
+                },
+                args: [selector, elementDescription]
+            }).then((results) => {
+                if (chrome.runtime.lastError) {
+                    console.error('[Click By Selector - Background] Script execution error:', chrome.runtime.lastError.message);
+                    resolve({
+                        success: false,
+                        error: `Script execution error: ${chrome.runtime.lastError.message}`
+                    });
+                    return;
+                }
+                const result = results?.[0]?.result;
+                if (!result) {
+                    console.error('[Click By Selector - Background] No result from script execution');
+                    resolve({
+                        success: false,
+                        error: 'No result from script execution'
+                    });
+                    return;
+                }
+                console.log('[Click By Selector - Background] Script execution result:', result);
+                resolve(result);
+            }).catch((error) => {
+                console.error('[Click By Selector - Background] Script execution failed:', error);
+                resolve({
+                    success: false,
+                    error: `Script execution failed: ${error.message || String(error)}`
+                });
+            });
+        });
+    });
+}
+/**
+ * Execute clickBySelector directly in page context (content script)
+ */
+async function executeClickBySelectorInPage(selector, description) {
+    try {
+        console.log(`[Content Script - Click By Selector Direct] Looking for element with selector: "${selector}"`);
+        // Function to search in shadow DOMs as well
+        const findElementInShadowDoms = (root, selector) => {
+            // Try direct query first
+            try {
+                const element = root.querySelector(selector);
+                if (element) {
+                    return element;
+                }
+            }
+            catch (error) {
+                console.error(`Error in direct querySelector:`, error);
+            }
+            // Search in shadow DOMs
+            const allElements = root.querySelectorAll('*');
+            for (const host of Array.from(allElements)) {
+                if (host.shadowRoot && host.shadowRoot.mode === 'open') {
+                    const elementInShadow = findElementInShadowDoms(host.shadowRoot, selector);
+                    if (elementInShadow) {
+                        return elementInShadow;
+                    }
+                }
+            }
+            return null;
+        };
+        const element = findElementInShadowDoms(document, selector);
+        if (!element) {
+            return {
+                success: false,
+                error: `Element not found with selector: ${selector}`
+            };
+        }
+        console.log(`[Content Script - Click By Selector Direct] Found element:`, element);
+        // Check if element is connected to DOM
+        if (!element.isConnected) {
+            return {
+                success: false,
+                error: 'Element is detached from the DOM'
+            };
+        }
+        // Scroll element into view
+        element.scrollIntoView({ behavior: 'auto', block: 'center' });
+        // Get element's bounding rect for click coordinates
+        const rect = element.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        // Create and dispatch mouse events
+        const events = ['mousedown', 'mouseup', 'click'];
+        events.forEach(eventType => {
+            const event = new MouseEvent(eventType, {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: centerX,
+                clientY: centerY,
+                button: 0
+            });
+            element.dispatchEvent(event);
+        });
+        // Also trigger native click for form elements and links
+        if (element instanceof HTMLElement) {
+            element.click();
+        }
+        return {
+            success: true,
+            message: `Successfully clicked element with selector: ${selector}${description ? ` (${description})` : ''}`
+        };
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[Content Script - Click By Selector Direct] Error:', errorMessage);
+        return {
+            success: false,
+            error: `Error clicking element: ${errorMessage}`
+        };
+    }
+}
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (clickBySelector);
+
+
+/***/ }),
+
 /***/ "./src/lib/tools/browser/getElement.ts":
 /*!*********************************************!*\
   !*** ./src/lib/tools/browser/getElement.ts ***!
@@ -112611,6 +113213,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   click: () => (/* reexport safe */ _click__WEBPACK_IMPORTED_MODULE_0__.click),
 /* harmony export */   clickByCoordinates: () => (/* reexport safe */ _click__WEBPACK_IMPORTED_MODULE_0__.clickByCoordinates),
 /* harmony export */   clickByRef: () => (/* reexport safe */ _clickByRef__WEBPACK_IMPORTED_MODULE_6__.clickByRef),
+/* harmony export */   clickBySelector: () => (/* reexport safe */ _clickBySelector__WEBPACK_IMPORTED_MODULE_7__.clickBySelector),
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
 /* harmony export */   getElement: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_1__.getElement),
 /* harmony export */   getElementByRefId: () => (/* reexport safe */ _getElement__WEBPACK_IMPORTED_MODULE_1__.getElementByRefId),
@@ -112626,10 +113229,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _hover__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./hover */ "./src/lib/tools/browser/hover.ts");
 /* harmony import */ var _screenshot__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./screenshot */ "./src/lib/tools/browser/screenshot.ts");
 /* harmony import */ var _clickByRef__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./clickByRef */ "./src/lib/tools/browser/clickByRef.ts");
+/* harmony import */ var _clickBySelector__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./clickBySelector */ "./src/lib/tools/browser/clickBySelector.ts");
 /**
  * Browser Tools Index
  * Exports all browser automation tools
  */
+
 
 
 
@@ -112642,6 +113247,7 @@ __webpack_require__.r(__webpack_exports__);
 // Main export of all browser tools
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = ({
     click: _click__WEBPACK_IMPORTED_MODULE_0__.click,
+    clickBySelector: _clickBySelector__WEBPACK_IMPORTED_MODULE_7__.clickBySelector,
     getElement: _getElement__WEBPACK_IMPORTED_MODULE_1__.getElement,
     getElementByRefId: _getElement__WEBPACK_IMPORTED_MODULE_1__.getElementByRefId,
     snapshot: _snapshot__WEBPACK_IMPORTED_MODULE_2__.snapshot,

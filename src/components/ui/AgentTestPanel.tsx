@@ -12,6 +12,7 @@ import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle, Eye,
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { screenshot } from '@/lib/tools/browser/screenshot';
+import { clickBySelector } from '@/lib/tools/browser/clickBySelector';
 
 interface TestPrompt {
   id: string;
@@ -40,6 +41,8 @@ interface TestConfiguration {
   heliconeApiKey: string;
   intervalMs: number;
   enableScreenshots: boolean;
+  clearCodeBeforeTest: boolean;
+  resetMapBeforeTest: boolean;
   sessionId: string;
   screenshotStorage: 'local' | 'downloads' | 'google-drive';
   driveFolderId?: string;
@@ -104,6 +107,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     heliconeApiKey: '',
     intervalMs: 5000,
     enableScreenshots: true,
+    clearCodeBeforeTest: true,
+    resetMapBeforeTest: true,
     sessionId: `test-session-${Date.now()}`,
     screenshotStorage: 'downloads',
     driveFolderId: ''
@@ -153,13 +158,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         heliconeApiKey: config.heliconeApiKey,
         intervalMs: config.intervalMs,
         enableScreenshots: config.enableScreenshots,
+        clearCodeBeforeTest: config.clearCodeBeforeTest,
+        resetMapBeforeTest: config.resetMapBeforeTest,
         screenshotStorage: config.screenshotStorage,
         driveFolderId: config.driveFolderId
       };
       console.log('Saving config to storage:', configToSave);
       chrome.storage.local.set({ agentTestConfig: configToSave });
     }
-  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, config.screenshotStorage, config.driveFolderId, isOpen]);
+  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.screenshotStorage, config.driveFolderId, isOpen]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -354,6 +361,104 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     const startTime = Date.now();
     
     try {
+      // Reset map, inspector, and console before test if enabled
+      if (config.resetMapBeforeTest) {
+        try {
+          console.log('Resetting Google Earth Engine map, inspector, and console...');
+          const resetResult = await clickBySelector({
+            selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
+            elementDescription: 'Reset button to clear map, inspector, and console'
+          });
+          
+          if (resetResult.success) {
+            console.log('Reset button clicked successfully');
+            // Wait a moment for the reset to take effect
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            console.warn('Failed to click reset button:', resetResult.error);
+          }
+        } catch (error) {
+          console.error('Failed to reset map/inspector/console:', error);
+          // Don't fail the test, just log the error and continue
+        }
+      }
+      
+      // Clear code editor before test if enabled
+      if (config.clearCodeBeforeTest) {
+        try {
+          console.log('Clearing Google Earth Engine code editor using clickBySelector...');
+          
+          // First try clicking the clear script directly (menu might already be accessible)
+          try {
+            console.log('Trying to click Clear script directly...');
+            const directResult = await clickBySelector({
+              selector: 'div.goog-menuitem-content',
+              elementDescription: 'Clear script menu option (direct)'
+            });
+            
+            if (directResult.success) {
+              console.log('Direct clear script successful:', directResult.message);
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } else {
+              console.log('Direct click failed, trying dropdown approach...');
+              throw new Error('Direct click failed');
+            }
+          } catch (error) {
+            console.log('Direct click error, trying dropdown approach...');
+            
+            // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
+            console.log('Step 1: Opening Reset dropdown menu...');
+            const dropdownSelectors = [
+              'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+              'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+              '.goog-toolbar-menu-button'
+            ];
+            
+            let dropdownResult: any = null;
+            for (const selector of dropdownSelectors) {
+              console.log(`Trying dropdown selector: ${selector}`);
+              dropdownResult = await clickBySelector({
+                selector: selector,
+                elementDescription: `Reset dropdown arrow (${selector})`
+              });
+              
+              if (dropdownResult.success) {
+                console.log(`Dropdown opened with selector: ${selector}`);
+                break;
+              } else {
+                console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
+              }
+            }
+            
+            if (dropdownResult && dropdownResult.success) {
+              console.log('Reset dropdown opened successfully');
+              // Wait for menu to appear
+              await new Promise(resolve => setTimeout(resolve, 800));
+              
+              // Step 2: Click "Clear script" option in the dropdown menu
+              console.log('Step 2: Clicking Clear script option...');
+              const clearResult = await clickBySelector({
+                selector: 'div.goog-menuitem-content',
+                elementDescription: 'Clear script menu option'
+              });
+              
+              if (clearResult.success) {
+                console.log('Code cleared successfully using clickBySelector');
+                // Wait for clearing to take effect
+                await new Promise(resolve => setTimeout(resolve, 500));
+              } else {
+                console.warn('Failed to click clear script option:', clearResult.error);
+              }
+            } else {
+              console.warn('Failed to open reset dropdown with any selector');
+            }
+          }
+        } catch (error) {
+          console.error('Failed to clear code editor:', error);
+          // Don't fail the test, just log the error and continue
+        }
+      }
+      
       // Send message to the agent through the extension's messaging system first
       console.log('Creating test promise...');
       const response = await new Promise<string>((resolve, reject) => {
@@ -789,6 +894,176 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     />
                     <Label htmlFor="screenshots">Enable Screenshots</Label>
                   </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="clear-code"
+                      checked={config.clearCodeBeforeTest}
+                      onCheckedChange={(checked) => updateConfig({ clearCodeBeforeTest: checked })}
+                    />
+                    <Label htmlFor="clear-code">Clear Code Before Each Test</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="reset-map"
+                      checked={config.resetMapBeforeTest}
+                      onCheckedChange={(checked) => updateConfig({ resetMapBeforeTest: checked })}
+                    />
+                    <Label htmlFor="reset-map">Reset Map/Inspector/Console Before Each Test</Label>
+                  </div>
+
+                  {/* Test Functions Section */}
+                  <div className="border-t pt-4">
+                    <h4 className="text-lg font-medium mb-3">Test Functions</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Test these functions individually before running agent tests to ensure they work properly.
+                    </p>
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          console.log('Testing Reset Map/Inspector/Console function...');
+                          try {
+                            const resetResult = await clickBySelector({
+                              selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
+                              elementDescription: 'Reset button to clear map, inspector, and console'
+                            });
+                            
+                            if (resetResult.success) {
+                              alert('✅ Reset Map/Inspector/Console test successful!');
+                              console.log('Reset successful:', resetResult.message);
+                            } else {
+                              alert(`❌ Reset test failed: ${resetResult.error}`);
+                              console.error('Reset failed:', resetResult.error);
+                            }
+                          } catch (error) {
+                            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                            alert(`❌ Reset test error: ${errorMsg}`);
+                            console.error('Reset test error:', error);
+                          }
+                        }}
+                      >
+                        🔄 Test Reset Map/Inspector/Console
+                      </Button>
+                      
+                                             <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={async () => {
+                           console.log('Testing Clear Script function...');
+                           
+                           // First try clicking the clear script directly (menu might already be accessible)
+                           try {
+                             console.log('Trying to click Clear script directly...');
+                             const directResult = await clickBySelector({
+                               selector: 'div.goog-menuitem-content',
+                               elementDescription: 'Clear script menu option (direct)'
+                             });
+                             
+                             if (directResult.success) {
+                               console.log('Direct clear script successful:', directResult.message);
+                               alert('✅ Clear Script successful (direct click)!');
+                               return;
+                             } else {
+                               console.log('Direct click failed, trying dropdown approach...');
+                             }
+                           } catch (error) {
+                             console.log('Direct click error, trying dropdown approach...');
+                           }
+                           
+                           try {
+                             // If direct click failed, try opening dropdown first
+                             const dropdownSelectors = [
+                               'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                               'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+                               '.goog-toolbar-menu-button',
+                               'button[title="Reset (Ctrl+Alt+Enter)"] + button',
+                               '.goog-button[role="button"][tabindex="0"]:not([title])',
+                               'button.goog-button:has(+ .goog-menu)',
+                               '.goog-toolbar-button[role="button"]',
+                               'button.goog-button.goog-toolbar-button',
+                               '[role="button"][aria-haspopup="menu"]',
+                               'button[aria-haspopup="true"]',
+                               '.goog-button[aria-haspopup="true"]',
+                               'button.goog-button[tabindex="0"]'
+                             ];
+                             
+                             let dropdownResult: any = null;
+                             
+                             for (const selector of dropdownSelectors) {
+                               console.log(`Trying dropdown selector: ${selector}`);
+                               dropdownResult = await clickBySelector({
+                                 selector: selector,
+                                 elementDescription: `Reset dropdown arrow (${selector})`
+                               });
+                               
+                               if (dropdownResult.success) {
+                                 console.log(`Dropdown opened with selector: ${selector}`);
+                                 break;
+                               } else {
+                                 console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
+                               }
+                             }
+                             
+                             if (dropdownResult && dropdownResult.success) {
+                               console.log('Reset dropdown opened successfully');
+                               // Wait for menu to appear
+                               await new Promise(resolve => setTimeout(resolve, 1000));
+                               
+                               // Step 2: Click "Clear script" option in the dropdown menu
+                               console.log('Step 2: Clicking Clear script option...');
+                               const clearSelectors = [
+                                 'div.goog-menuitem-content',
+                                 'div.goog-menuitem[role="menuitem"]',
+                                 '.goog-menuitem-content:contains("Clear script")',
+                                 'div[role="menuitem"]:has(.goog-menuitem-content)'
+                               ];
+                               
+                               let clearResult: any = null;
+                               for (const clearSelector of clearSelectors) {
+                                 console.log(`Trying clear selector: ${clearSelector}`);
+                                 clearResult = await clickBySelector({
+                                   selector: clearSelector,
+                                   elementDescription: `Clear script menu option (${clearSelector})`
+                                 });
+                                 
+                                 if (clearResult.success) {
+                                   console.log(`Clear script successful with selector: ${clearSelector}`);
+                                   break;
+                                 } else {
+                                   console.log(`Clear selector failed: ${clearSelector} - ${clearResult.error}`);
+                                 }
+                               }
+                               
+                               if (clearResult.success) {
+                                 alert('✅ Clear Script test successful!');
+                                 console.log('Clear script successful:', clearResult.message);
+                               } else {
+                                 alert(`❌ Clear script test failed: ${clearResult.error}`);
+                                 console.error('Clear script failed:', clearResult.error);
+                               }
+                             } else {
+                               alert(`❌ Failed to open dropdown. Try manually opening the Reset menu first, then test again.`);
+                               console.error('All dropdown selectors failed');
+                             }
+                           } catch (error) {
+                             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                             alert(`❌ Clear script test error: ${errorMsg}`);
+                             console.error('Clear script test error:', error);
+                           }
+                         }}
+                       >
+                         🧹 Test Clear Script
+                       </Button>
+                    </div>
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-sm text-yellow-800">
+                        💡 <strong>Clear Script Tip:</strong> If the Clear Script test fails, try manually clicking the Reset button dropdown in Google Earth Engine first, then test again. The dropdown needs to be accessible for the script clearing to work.
+                      </p>
+                    </div>
+                  </div>
 
                   {config.enableScreenshots && (
                     <>
@@ -909,6 +1184,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             heliconeApiKey: '',
                             intervalMs: 5000,
                             enableScreenshots: true,
+                            clearCodeBeforeTest: true,
+                            resetMapBeforeTest: true,
                             sessionId: `test-session-${Date.now()}`,
                             screenshotStorage: 'downloads',
                             driveFolderId: ''
