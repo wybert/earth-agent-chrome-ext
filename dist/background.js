@@ -18741,6 +18741,1318 @@ let nanoid = (size = 21) => {
 
 /***/ }),
 
+/***/ "./node_modules/qwen-ai-provider/dist/index.mjs":
+/*!******************************************************!*\
+  !*** ./node_modules/qwen-ai-provider/dist/index.mjs ***!
+  \******************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createQwen: () => (/* binding */ createQwen),
+/* harmony export */   qwen: () => (/* binding */ qwen)
+/* harmony export */ });
+/* harmony import */ var _ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @ai-sdk/provider-utils */ "./node_modules/@ai-sdk/provider-utils/dist/index.mjs");
+/* harmony import */ var _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/provider */ "./node_modules/@ai-sdk/provider/dist/index.mjs");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
+// src/qwen-provider.ts
+
+
+// src/qwen-chat-language-model.ts
+
+
+
+
+// src/convert-to-qwen-chat-messages.ts
+
+
+function getQwenMetadata(message) {
+  var _a, _b;
+  return (_b = (_a = message == null ? void 0 : message.providerMetadata) == null ? void 0 : _a.qwen) != null ? _b : {};
+}
+function convertToQwenChatMessages(prompt) {
+  const messages = [];
+  for (const { role, content, ...message } of prompt) {
+    const metadata = getQwenMetadata({ ...message });
+    switch (role) {
+      case "system": {
+        messages.push({ role: "system", content, ...metadata });
+        break;
+      }
+      case "user": {
+        if (content.length === 1 && content[0].type === "text") {
+          messages.push({
+            role: "user",
+            content: content[0].text,
+            ...getQwenMetadata(content[0])
+          });
+          break;
+        }
+        messages.push({
+          role: "user",
+          content: content.map((part) => {
+            var _a;
+            const partMetadata = getQwenMetadata(part);
+            switch (part.type) {
+              case "text": {
+                return { type: "text", text: part.text, ...partMetadata };
+              }
+              case "image": {
+                return {
+                  type: "image_url",
+                  image_url: {
+                    url: part.image instanceof URL ? part.image.toString() : `data:${(_a = part.mimeType) != null ? _a : "image/jpeg"};base64,${(0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.convertUint8ArrayToBase64)(part.image)}`
+                  },
+                  ...partMetadata
+                };
+              }
+              default: {
+                throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+                  functionality: "File content parts in user messages"
+                });
+              }
+            }
+          }),
+          ...metadata
+        });
+        break;
+      }
+      case "assistant": {
+        let text = "";
+        const toolCalls = [];
+        for (const part of content) {
+          const partMetadata = getQwenMetadata(part);
+          switch (part.type) {
+            case "text": {
+              text += part.text;
+              break;
+            }
+            case "tool-call": {
+              toolCalls.push({
+                id: part.toolCallId,
+                type: "function",
+                function: {
+                  name: part.toolName,
+                  arguments: JSON.stringify(part.args)
+                },
+                ...partMetadata
+              });
+              break;
+            }
+            default: {
+              const _exhaustiveCheck = part;
+              throw new Error(`Unsupported part: ${_exhaustiveCheck}`);
+            }
+          }
+        }
+        messages.push({
+          role: "assistant",
+          content: text,
+          tool_calls: toolCalls.length > 0 ? toolCalls : void 0,
+          ...metadata
+        });
+        break;
+      }
+      case "tool": {
+        for (const toolResponse of content) {
+          const toolResponseMetadata = getQwenMetadata(toolResponse);
+          messages.push({
+            role: "tool",
+            tool_call_id: toolResponse.toolCallId,
+            content: JSON.stringify(toolResponse.result),
+            ...toolResponseMetadata
+          });
+        }
+        break;
+      }
+      default: {
+        const _exhaustiveCheck = role;
+        throw new Error(`Unsupported role: ${_exhaustiveCheck}`);
+      }
+    }
+  }
+  return messages;
+}
+
+// src/get-response-metadata.ts
+function getResponseMetadata({
+  id,
+  model,
+  created
+}) {
+  return {
+    // Assign 'id' if provided; otherwise, leave as undefined.
+    id: id != null ? id : void 0,
+    // Map 'model' to 'modelId' for improved clarity; assign if provided.
+    modelId: model != null ? model : void 0,
+    // If 'created' is provided, convert the Unix timestamp (seconds) to a JavaScript Date object.
+    timestamp: created != null ? new Date(created * 1e3) : void 0
+  };
+}
+
+// src/map-qwen-finish-reason.ts
+function mapQwenFinishReason(finishReason) {
+  switch (finishReason) {
+    case "stop":
+      return "stop";
+    case "length":
+      return "length";
+    case "tool_calls":
+      return "tool-calls";
+    default:
+      return "unknown";
+  }
+}
+
+// src/qwen-error.ts
+
+
+var qwenErrorDataSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+  object: zod__WEBPACK_IMPORTED_MODULE_2__.z.literal("error"),
+  message: zod__WEBPACK_IMPORTED_MODULE_2__.z.string(),
+  type: zod__WEBPACK_IMPORTED_MODULE_2__.z.string(),
+  param: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullable(),
+  code: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullable()
+});
+var qwenFailedResponseHandler = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonErrorResponseHandler)({
+  errorSchema: qwenErrorDataSchema,
+  errorToMessage: (error) => error.message
+});
+var defaultQwenErrorStructure = {
+  errorSchema: qwenErrorDataSchema,
+  errorToMessage: (data) => data.message
+};
+
+// src/qwen-prepare-tools.ts
+
+function prepareTools({
+  mode
+}) {
+  var _a;
+  const tools = ((_a = mode.tools) == null ? void 0 : _a.length) ? mode.tools : void 0;
+  const toolWarnings = [];
+  if (tools == null) {
+    return { tools: void 0, tool_choice: void 0, toolWarnings };
+  }
+  const toolChoice = mode.toolChoice;
+  const qwenCompatTools = [];
+  for (const tool of tools) {
+    if (tool.type === "provider-defined") {
+      toolWarnings.push({ type: "unsupported-tool", tool });
+    } else {
+      qwenCompatTools.push({
+        type: "function",
+        function: {
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters
+        }
+      });
+    }
+  }
+  if (toolChoice == null) {
+    return { tools: qwenCompatTools, tool_choice: void 0, toolWarnings };
+  }
+  const type = toolChoice.type;
+  switch (type) {
+    case "auto":
+    case "none":
+    case "required":
+      return { tools: qwenCompatTools, tool_choice: type, toolWarnings };
+    case "tool":
+      return {
+        tools: qwenCompatTools,
+        tool_choice: {
+          type: "function",
+          function: {
+            name: toolChoice.toolName
+          }
+        },
+        toolWarnings
+      };
+    default: {
+      const _exhaustiveCheck = type;
+      throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+        functionality: `Unsupported tool choice type: ${_exhaustiveCheck}`
+      });
+    }
+  }
+}
+
+// src/qwen-chat-language-model.ts
+var QwenChatResponseSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+  id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+  created: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish(),
+  model: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+  choices: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(
+    zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+      message: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+        role: zod__WEBPACK_IMPORTED_MODULE_2__.z.literal("assistant").nullish(),
+        content: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+        reasoning_content: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+        tool_calls: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(
+          zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+            id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+            type: zod__WEBPACK_IMPORTED_MODULE_2__.z.literal("function"),
+            function: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+              name: zod__WEBPACK_IMPORTED_MODULE_2__.z.string(),
+              arguments: zod__WEBPACK_IMPORTED_MODULE_2__.z.string()
+            })
+          })
+        ).nullish()
+      }),
+      finish_reason: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish()
+    })
+  ),
+  usage: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+    prompt_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish(),
+    completion_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish()
+  }).nullish()
+});
+var QwenChatLanguageModel = class {
+  // type inferred via constructor
+  /**
+   * Constructs a new QwenChatLanguageModel.
+   * @param modelId - The model identifier.
+   * @param settings - Settings for the chat.
+   * @param config - Model configuration.
+   */
+  constructor(modelId, settings, config) {
+    this.specificationVersion = "v1";
+    var _a, _b;
+    this.modelId = modelId;
+    this.settings = settings;
+    this.config = config;
+    const errorStructure = (_a = config.errorStructure) != null ? _a : defaultQwenErrorStructure;
+    this.chunkSchema = createQwenChatChunkSchema(
+      errorStructure.errorSchema
+    );
+    this.failedResponseHandler = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonErrorResponseHandler)(errorStructure);
+    this.supportsStructuredOutputs = (_b = config.supportsStructuredOutputs) != null ? _b : false;
+  }
+  /**
+   * Getter for the default object generation mode.
+   */
+  get defaultObjectGenerationMode() {
+    return this.config.defaultObjectGenerationMode;
+  }
+  /**
+   * Getter for the provider name.
+   */
+  get provider() {
+    return this.config.provider;
+  }
+  /**
+   * Internal getter that extracts the provider options name.
+   * @private
+   */
+  get providerOptionsName() {
+    return this.config.provider.split(".")[0].trim();
+  }
+  /**
+   * Generates the arguments and warnings required for a language model generation call.
+   *
+   * This function prepares the argument object based on the provided generation options and mode,
+   * including any necessary warnings for unsupported settings. It handles different generation modes
+   * such as regular, object-json, and object-tool.
+   *
+   * @param options.mode - The generation mode configuration containing the type and additional settings.
+   * @param options.prompt - The prompt input used to generate chat messages.
+   * @param options.maxTokens - The maximum number of tokens to generate.
+   * @param options.temperature - The temperature setting to control randomness in generation.
+   * @param options.topP - The nucleus sampling parameter (top-p) for token selection.
+   * @param options.topK - The top-k sampling parameter; if provided, it triggers a warning as it is unsupported.
+   * @param options.frequencyPenalty - The penalty applied to frequently occurring tokens.
+   * @param options.presencePenalty - The penalty applied based on the presence of tokens.
+   * @param options.providerMetadata - Additional metadata customized for the specific provider.
+   * @param options.stopSequences - An array of sequences that will signal the generation to stop.
+   * @param options.responseFormat - The desired response format; supports JSON schema formatting when structured outputs are enabled.
+   * @param options.seed - An optional seed value for randomization.
+   *
+   * @returns An object containing:
+   * - args: The arguments constructed for the language model generation request.
+   * - warnings: A list of warnings related to unsupported or deprecated settings.
+   */
+  getArgs({
+    mode,
+    prompt,
+    maxTokens,
+    temperature,
+    topP,
+    topK,
+    frequencyPenalty,
+    presencePenalty,
+    providerMetadata,
+    stopSequences,
+    responseFormat,
+    seed
+  }) {
+    var _a, _b;
+    const type = mode.type;
+    const warnings = [];
+    if (topK != null) {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "topK"
+      });
+    }
+    if ((responseFormat == null ? void 0 : responseFormat.type) === "json" && responseFormat.schema != null && !this.supportsStructuredOutputs) {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "responseFormat",
+        details: "JSON response format schema is only supported with structuredOutputs"
+      });
+    }
+    const baseArgs = {
+      // model id:
+      model: this.modelId,
+      // model specific settings:
+      user: this.settings.user,
+      // standardized settings:
+      max_tokens: maxTokens,
+      temperature,
+      top_p: topP,
+      frequency_penalty: frequencyPenalty,
+      presence_penalty: presencePenalty,
+      response_format: (responseFormat == null ? void 0 : responseFormat.type) === "json" ? this.supportsStructuredOutputs === true && responseFormat.schema != null ? {
+        type: "json_schema",
+        json_schema: {
+          schema: responseFormat.schema,
+          name: (_a = responseFormat.name) != null ? _a : "response",
+          description: responseFormat.description
+        }
+      } : { type: "json_object" } : void 0,
+      stop: stopSequences,
+      seed,
+      ...providerMetadata == null ? void 0 : providerMetadata[this.providerOptionsName],
+      // messages:
+      messages: convertToQwenChatMessages(prompt)
+    };
+    switch (type) {
+      case "regular": {
+        const { tools, tool_choice, toolWarnings } = prepareTools({
+          mode,
+          structuredOutputs: this.supportsStructuredOutputs
+        });
+        return {
+          args: { ...baseArgs, tools, tool_choice },
+          warnings: [...warnings, ...toolWarnings]
+        };
+      }
+      case "object-json": {
+        return {
+          args: {
+            ...baseArgs,
+            response_format: this.supportsStructuredOutputs === true && mode.schema != null ? {
+              type: "json_schema",
+              json_schema: {
+                schema: mode.schema,
+                name: (_b = mode.name) != null ? _b : "response",
+                description: mode.description
+              }
+            } : { type: "json_object" }
+          },
+          warnings
+        };
+      }
+      case "object-tool": {
+        return {
+          args: {
+            ...baseArgs,
+            tool_choice: {
+              type: "function",
+              function: { name: mode.tool.name }
+            },
+            tools: [
+              {
+                type: "function",
+                function: {
+                  name: mode.tool.name,
+                  description: mode.tool.description,
+                  parameters: mode.tool.parameters
+                }
+              }
+            ]
+          },
+          warnings
+        };
+      }
+      default: {
+        const _exhaustiveCheck = type;
+        throw new Error(`Unsupported type: ${_exhaustiveCheck}`);
+      }
+    }
+  }
+  /**
+   * Generates a text response from the model.
+   * @param options - Generation options.
+   * @returns A promise resolving with the generation result.
+   */
+  async doGenerate(options) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    const { args, warnings } = this.getArgs({ ...options });
+    const body = JSON.stringify(args);
+    const {
+      responseHeaders,
+      value: responseBody,
+      rawValue: parsedBody
+    } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.postJsonToApi)({
+      url: this.config.url({
+        path: "/chat/completions",
+        modelId: this.modelId
+      }),
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.combineHeaders)(this.config.headers(), options.headers),
+      body: args,
+      failedResponseHandler: this.failedResponseHandler,
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonResponseHandler)(
+        QwenChatResponseSchema
+      ),
+      abortSignal: options.abortSignal,
+      fetch: this.config.fetch
+    });
+    const { messages: rawPrompt, ...rawSettings } = args;
+    const choice = responseBody.choices[0];
+    const providerMetadata = (_b = (_a = this.config.metadataExtractor) == null ? void 0 : _a.extractMetadata) == null ? void 0 : _b.call(_a, {
+      parsedBody
+    });
+    return {
+      text: (_c = choice.message.content) != null ? _c : void 0,
+      reasoning: (_d = choice.message.reasoning_content) != null ? _d : void 0,
+      toolCalls: (_e = choice.message.tool_calls) == null ? void 0 : _e.map((toolCall) => {
+        var _a2;
+        return {
+          toolCallType: "function",
+          toolCallId: (_a2 = toolCall.id) != null ? _a2 : (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.generateId)(),
+          toolName: toolCall.function.name,
+          args: toolCall.function.arguments
+        };
+      }),
+      finishReason: mapQwenFinishReason(choice.finish_reason),
+      usage: {
+        promptTokens: (_g = (_f = responseBody.usage) == null ? void 0 : _f.prompt_tokens) != null ? _g : Number.NaN,
+        completionTokens: (_i = (_h = responseBody.usage) == null ? void 0 : _h.completion_tokens) != null ? _i : Number.NaN
+      },
+      ...providerMetadata && { providerMetadata },
+      rawCall: { rawPrompt, rawSettings },
+      rawResponse: { headers: responseHeaders },
+      response: getResponseMetadata(responseBody),
+      warnings,
+      request: { body }
+    };
+  }
+  /**
+   * Returns a stream of model responses.
+   * @param options - Stream generation options.
+   * @returns A promise resolving with the stream and additional metadata.
+   */
+  async doStream(options) {
+    var _a;
+    if (this.settings.simulateStreaming) {
+      const result = await this.doGenerate(options);
+      const simulatedStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "response-metadata", ...result.response });
+          if (result.reasoning) {
+            controller.enqueue({
+              type: "reasoning",
+              textDelta: result.reasoning
+            });
+          }
+          if (result.text) {
+            controller.enqueue({
+              type: "text-delta",
+              textDelta: result.text
+            });
+          }
+          if (result.toolCalls) {
+            for (const toolCall of result.toolCalls) {
+              controller.enqueue({
+                type: "tool-call",
+                ...toolCall
+              });
+            }
+          }
+          controller.enqueue({
+            type: "finish",
+            finishReason: result.finishReason,
+            usage: result.usage,
+            logprobs: result.logprobs,
+            providerMetadata: result.providerMetadata
+          });
+          controller.close();
+        }
+      });
+      return {
+        stream: simulatedStream,
+        rawCall: result.rawCall,
+        rawResponse: result.rawResponse,
+        warnings: result.warnings
+      };
+    }
+    const { args, warnings } = this.getArgs({ ...options });
+    const body = JSON.stringify({ ...args, stream: true });
+    const metadataExtractor = (_a = this.config.metadataExtractor) == null ? void 0 : _a.createStreamExtractor();
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.postJsonToApi)({
+      url: this.config.url({
+        path: "/chat/completions",
+        modelId: this.modelId
+      }),
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.combineHeaders)(this.config.headers(), options.headers),
+      body: {
+        ...args,
+        stream: true
+      },
+      failedResponseHandler: this.failedResponseHandler,
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createEventSourceResponseHandler)(
+        this.chunkSchema
+      ),
+      abortSignal: options.abortSignal,
+      fetch: this.config.fetch
+    });
+    const { messages: rawPrompt, ...rawSettings } = args;
+    const toolCalls = [];
+    let finishReason = "unknown";
+    let usage = {
+      promptTokens: void 0,
+      completionTokens: void 0
+    };
+    let isFirstChunk = true;
+    return {
+      stream: response.pipeThrough(
+        new TransformStream({
+          // Transforms incoming chunks and maps them to stream parts.
+          transform(chunk, controller) {
+            var _a2, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+            if (!chunk.success) {
+              finishReason = "error";
+              controller.enqueue({ type: "error", error: chunk.error });
+              return;
+            }
+            const value = chunk.value;
+            metadataExtractor == null ? void 0 : metadataExtractor.processChunk(chunk.rawValue);
+            if ("error" in value) {
+              finishReason = "error";
+              controller.enqueue({ type: "error", error: value.error.message });
+              return;
+            }
+            if (isFirstChunk) {
+              isFirstChunk = false;
+              controller.enqueue({
+                type: "response-metadata",
+                ...getResponseMetadata(value)
+              });
+            }
+            if (value.usage != null) {
+              usage = {
+                promptTokens: (_a2 = value.usage.prompt_tokens) != null ? _a2 : void 0,
+                completionTokens: (_b = value.usage.completion_tokens) != null ? _b : void 0
+              };
+            }
+            const choice = value.choices[0];
+            if ((choice == null ? void 0 : choice.finish_reason) != null) {
+              finishReason = mapQwenFinishReason(
+                choice.finish_reason
+              );
+            }
+            if ((choice == null ? void 0 : choice.delta) == null) {
+              return;
+            }
+            const delta = choice.delta;
+            if (delta.reasoning_content != null) {
+              controller.enqueue({
+                type: "reasoning",
+                textDelta: delta.reasoning_content
+              });
+            }
+            if (delta.content != null) {
+              controller.enqueue({
+                type: "text-delta",
+                textDelta: delta.content
+              });
+            }
+            if (delta.tool_calls != null) {
+              for (const toolCallDelta of delta.tool_calls) {
+                const index = toolCallDelta.index;
+                if (toolCalls[index] == null) {
+                  if (toolCallDelta.type !== "function") {
+                    throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.InvalidResponseDataError({
+                      data: toolCallDelta,
+                      message: `Expected 'function' type.`
+                    });
+                  }
+                  if (toolCallDelta.id == null) {
+                    throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.InvalidResponseDataError({
+                      data: toolCallDelta,
+                      message: `Expected 'id' to be a string.`
+                    });
+                  }
+                  if (((_c = toolCallDelta.function) == null ? void 0 : _c.name) == null) {
+                    throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.InvalidResponseDataError({
+                      data: toolCallDelta,
+                      message: `Expected 'function.name' to be a string.`
+                    });
+                  }
+                  toolCalls[index] = {
+                    id: toolCallDelta.id,
+                    type: "function",
+                    function: {
+                      name: toolCallDelta.function.name,
+                      arguments: (_d = toolCallDelta.function.arguments) != null ? _d : ""
+                    },
+                    hasFinished: false
+                  };
+                  const toolCall2 = toolCalls[index];
+                  if (((_e = toolCall2.function) == null ? void 0 : _e.name) != null && ((_f = toolCall2.function) == null ? void 0 : _f.arguments) != null) {
+                    if (toolCall2.function.arguments.length > 0) {
+                      controller.enqueue({
+                        type: "tool-call-delta",
+                        toolCallType: "function",
+                        toolCallId: toolCall2.id,
+                        toolName: toolCall2.function.name,
+                        argsTextDelta: toolCall2.function.arguments
+                      });
+                    }
+                    if ((0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.isParsableJson)(toolCall2.function.arguments)) {
+                      controller.enqueue({
+                        type: "tool-call",
+                        toolCallType: "function",
+                        toolCallId: (_g = toolCall2.id) != null ? _g : (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.generateId)(),
+                        toolName: toolCall2.function.name,
+                        args: toolCall2.function.arguments
+                      });
+                      toolCall2.hasFinished = true;
+                    }
+                  }
+                  continue;
+                }
+                const toolCall = toolCalls[index];
+                if (toolCall.hasFinished) {
+                  continue;
+                }
+                if (((_h = toolCallDelta.function) == null ? void 0 : _h.arguments) != null) {
+                  toolCall.function.arguments += (_j = (_i = toolCallDelta.function) == null ? void 0 : _i.arguments) != null ? _j : "";
+                }
+                controller.enqueue({
+                  type: "tool-call-delta",
+                  toolCallType: "function",
+                  toolCallId: toolCall.id,
+                  toolName: toolCall.function.name,
+                  argsTextDelta: (_k = toolCallDelta.function.arguments) != null ? _k : ""
+                });
+                if (((_l = toolCall.function) == null ? void 0 : _l.name) != null && ((_m = toolCall.function) == null ? void 0 : _m.arguments) != null && (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.isParsableJson)(toolCall.function.arguments)) {
+                  controller.enqueue({
+                    type: "tool-call",
+                    toolCallType: "function",
+                    toolCallId: (_n = toolCall.id) != null ? _n : (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.generateId)(),
+                    toolName: toolCall.function.name,
+                    args: toolCall.function.arguments
+                  });
+                  toolCall.hasFinished = true;
+                }
+              }
+            }
+          },
+          flush(controller) {
+            var _a2, _b;
+            const metadata = metadataExtractor == null ? void 0 : metadataExtractor.buildMetadata();
+            controller.enqueue({
+              type: "finish",
+              finishReason,
+              usage: {
+                promptTokens: (_a2 = usage.promptTokens) != null ? _a2 : Number.NaN,
+                completionTokens: (_b = usage.completionTokens) != null ? _b : Number.NaN
+              },
+              ...metadata && { providerMetadata: metadata }
+            });
+          }
+        })
+      ),
+      rawCall: { rawPrompt, rawSettings },
+      rawResponse: { headers: responseHeaders },
+      warnings,
+      request: { body }
+    };
+  }
+};
+function createQwenChatChunkSchema(errorSchema) {
+  return zod__WEBPACK_IMPORTED_MODULE_2__.z.union([
+    zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+      id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+      created: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish(),
+      model: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+      choices: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(
+        zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+          delta: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+            role: zod__WEBPACK_IMPORTED_MODULE_2__.z.enum(["assistant"]).nullish(),
+            content: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+            reasoning_content: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+            tool_calls: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(
+              zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+                index: zod__WEBPACK_IMPORTED_MODULE_2__.z.number(),
+                id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+                type: zod__WEBPACK_IMPORTED_MODULE_2__.z.literal("function").optional(),
+                function: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+                  name: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+                  arguments: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish()
+                })
+              })
+            ).nullish()
+          }).nullish(),
+          finish_reason: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish()
+        })
+      ),
+      usage: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+        prompt_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish(),
+        completion_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish()
+      }).nullish()
+    }),
+    errorSchema
+  ]);
+}
+
+// src/qwen-completion-language-model.ts
+
+
+
+
+// src/convert-to-qwen-completion-prompt.ts
+
+function convertToQwenCompletionPrompt({
+  prompt,
+  inputFormat,
+  user = "user",
+  assistant = "assistant"
+}) {
+  if (inputFormat === "prompt" && prompt.length === 1 && prompt[0].role === "user" && prompt[0].content.length === 1 && prompt[0].content[0].type === "text") {
+    return { prompt: prompt[0].content[0].text };
+  }
+  let text = "";
+  if (prompt[0].role === "system") {
+    text += `${prompt[0].content}
+
+`;
+    prompt = prompt.slice(1);
+  }
+  for (const { role, content } of prompt) {
+    switch (role) {
+      case "system": {
+        throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.InvalidPromptError({
+          message: `Unexpected system message in prompt: ${content}`,
+          prompt
+        });
+      }
+      case "user": {
+        const userMessage = content.map((part) => {
+          switch (part.type) {
+            case "text": {
+              return part.text;
+            }
+            case "image": {
+              throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+                functionality: "images"
+              });
+            }
+            default: {
+              throw new Error(`Unsupported content part type: ${part.type}`);
+            }
+          }
+        }).join("");
+        text += `${user}:
+${userMessage}
+
+`;
+        break;
+      }
+      case "assistant": {
+        const assistantMessage = content.map((part) => {
+          switch (part.type) {
+            case "text": {
+              return part.text;
+            }
+            case "tool-call": {
+              throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+                functionality: "tool-call messages"
+              });
+            }
+          }
+        }).join("");
+        text += `${assistant}:
+${assistantMessage}
+
+`;
+        break;
+      }
+      case "tool": {
+        throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+          functionality: "tool messages"
+        });
+      }
+      default: {
+        const _exhaustiveCheck = role;
+        throw new Error(`Unsupported role: ${_exhaustiveCheck}`);
+      }
+    }
+  }
+  text += `${assistant}:
+`;
+  return {
+    prompt: text,
+    stopSequences: [`
+${user}:`]
+  };
+}
+
+// src/qwen-completion-language-model.ts
+var QwenCompletionResponseSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+  id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+  created: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish(),
+  model: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+  choices: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(
+    zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+      text: zod__WEBPACK_IMPORTED_MODULE_2__.z.string(),
+      finish_reason: zod__WEBPACK_IMPORTED_MODULE_2__.z.string()
+    })
+  ),
+  usage: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+    prompt_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number(),
+    completion_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number()
+  }).nullish()
+});
+var QwenCompletionLanguageModel = class {
+  // type inferred via constructor
+  /**
+   * Creates an instance of QwenCompletionLanguageModel.
+   *
+   * @param modelId - The model identifier.
+   * @param settings - The settings specific for Qwen completions.
+   * @param config - The configuration object which includes provider options and error handling.
+   */
+  constructor(modelId, settings, config) {
+    this.specificationVersion = "v1";
+    this.defaultObjectGenerationMode = void 0;
+    var _a;
+    this.modelId = modelId;
+    this.settings = settings;
+    this.config = config;
+    const errorStructure = (_a = config.errorStructure) != null ? _a : defaultQwenErrorStructure;
+    this.chunkSchema = createQwenCompletionChunkSchema(
+      errorStructure.errorSchema
+    );
+    this.failedResponseHandler = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonErrorResponseHandler)(errorStructure);
+  }
+  get provider() {
+    return this.config.provider;
+  }
+  get providerOptionsName() {
+    return this.config.provider.split(".")[0].trim();
+  }
+  /**
+   * Generates the arguments for invoking the LanguageModelV1 doGenerate method.
+   *
+   * This function processes the given options to build a configuration object for the request. It converts the
+   * input prompt to a Qwen-specific format, merges stop sequences from both the user and the prompt conversion,
+   * and applies standardized settings for model generation. Additionally, it emits warnings for any unsupported
+   * settings (e.g., topK and non-text response formats) and throws errors if unsupported functionalities
+   * (such as tools, toolChoice, or specific modes) are detected.
+   *
+   * @param options - The configuration options for generating completion arguments.
+   * @param options.mode - The mode for generation, specifying the type and any additional functionalities.
+   * @param options.inputFormat - The format of the input prompt.
+   * @param options.prompt - The prompt text to be processed and used for generating a completion.
+   * @param options.maxTokens - The maximum number of tokens to generate.
+   * @param options.temperature - The sampling temperature for generation randomness.
+   * @param options.topP - The nucleus sampling probability threshold.
+   * @param options.topK - The Top-K sampling parameter (unsupported; will trigger a warning if provided).
+   * @param options.frequencyPenalty - The frequency penalty to reduce token repetition.
+   * @param options.presencePenalty - The presence penalty to encourage novel token generation.
+   * @param options.stopSequences - Additional stop sequences provided by the user.
+   * @param options.responseFormat - The desired response format (non-text formats will trigger a warning).
+   * @param options.seed - The seed for random number generation, ensuring deterministic outputs.
+   * @param options.providerMetadata - Additional metadata to be merged into the provider-specific settings.
+   *
+   * @returns An object containing:
+   *  - args: The built arguments object ready to be passed to the generation method.
+   *  - warnings: A list of warnings for unsupported settings that were detected.
+   *
+   * @throws UnsupportedFunctionalityError If unsupported functionalities (tools, toolChoice, object-json mode,
+   *         or object-tool mode) are specified in the mode configuration.
+   */
+  getArgs({
+    mode,
+    inputFormat,
+    prompt,
+    maxTokens,
+    temperature,
+    topP,
+    topK,
+    frequencyPenalty,
+    presencePenalty,
+    stopSequences: userStopSequences,
+    responseFormat,
+    seed,
+    providerMetadata
+  }) {
+    var _a;
+    const type = mode.type;
+    const warnings = [];
+    if (topK != null) {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "topK"
+      });
+    }
+    if (responseFormat != null && responseFormat.type !== "text") {
+      warnings.push({
+        type: "unsupported-setting",
+        setting: "responseFormat",
+        details: "JSON response format is not supported."
+      });
+    }
+    const { prompt: completionPrompt, stopSequences } = convertToQwenCompletionPrompt({ prompt, inputFormat });
+    const stop = [...stopSequences != null ? stopSequences : [], ...userStopSequences != null ? userStopSequences : []];
+    const baseArgs = {
+      // Model id and settings:
+      model: this.modelId,
+      echo: this.settings.echo,
+      logit_bias: this.settings.logitBias,
+      suffix: this.settings.suffix,
+      user: this.settings.user,
+      // Standardized settings:
+      max_tokens: maxTokens,
+      temperature,
+      top_p: topP,
+      frequency_penalty: frequencyPenalty,
+      presence_penalty: presencePenalty,
+      seed,
+      ...providerMetadata == null ? void 0 : providerMetadata[this.providerOptionsName],
+      // Prompt and stop sequences:
+      prompt: completionPrompt,
+      stop: stop.length > 0 ? stop : void 0
+    };
+    switch (type) {
+      case "regular": {
+        if ((_a = mode.tools) == null ? void 0 : _a.length) {
+          throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+            functionality: "tools"
+          });
+        }
+        if (mode.toolChoice) {
+          throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+            functionality: "toolChoice"
+          });
+        }
+        return { args: baseArgs, warnings };
+      }
+      case "object-json": {
+        throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+          functionality: "object-json mode"
+        });
+      }
+      case "object-tool": {
+        throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.UnsupportedFunctionalityError({
+          functionality: "object-tool mode"
+        });
+      }
+      default: {
+        const _exhaustiveCheck = type;
+        throw new Error(`Unsupported type: ${_exhaustiveCheck}`);
+      }
+    }
+  }
+  /**
+   * Generates a completion response.
+   *
+   * @param options - Generation options including prompt and parameters.
+   * @returns A promise resolving the generated text, usage, finish status, and metadata.
+   */
+  async doGenerate(options) {
+    var _a, _b, _c, _d;
+    const { args, warnings } = this.getArgs(options);
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.postJsonToApi)({
+      url: this.config.url({
+        path: "/completions",
+        modelId: this.modelId
+      }),
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.combineHeaders)(this.config.headers(), options.headers),
+      body: args,
+      failedResponseHandler: this.failedResponseHandler,
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonResponseHandler)(
+        QwenCompletionResponseSchema
+      ),
+      abortSignal: options.abortSignal,
+      fetch: this.config.fetch
+    });
+    const { prompt: rawPrompt, ...rawSettings } = args;
+    const choice = response.choices[0];
+    return {
+      text: choice.text,
+      usage: {
+        promptTokens: (_b = (_a = response.usage) == null ? void 0 : _a.prompt_tokens) != null ? _b : Number.NaN,
+        completionTokens: (_d = (_c = response.usage) == null ? void 0 : _c.completion_tokens) != null ? _d : Number.NaN
+      },
+      finishReason: mapQwenFinishReason(choice.finish_reason),
+      rawCall: { rawPrompt, rawSettings },
+      rawResponse: { headers: responseHeaders },
+      response: getResponseMetadata(response),
+      warnings,
+      request: { body: JSON.stringify(args) }
+    };
+  }
+  /**
+   * Streams a completion response.
+   *
+   * @param options - Generation options including prompt and parameters.
+   * @returns A promise resolving a stream of response parts and metadata.
+   */
+  async doStream(options) {
+    const { args, warnings } = this.getArgs(options);
+    const body = {
+      ...args,
+      stream: true
+    };
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.postJsonToApi)({
+      url: this.config.url({
+        path: "/completions",
+        modelId: this.modelId
+      }),
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.combineHeaders)(this.config.headers(), options.headers),
+      body,
+      failedResponseHandler: this.failedResponseHandler,
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createEventSourceResponseHandler)(
+        this.chunkSchema
+      ),
+      abortSignal: options.abortSignal,
+      fetch: this.config.fetch
+    });
+    const { prompt: rawPrompt, ...rawSettings } = args;
+    let finishReason = "unknown";
+    let usage = {
+      promptTokens: Number.NaN,
+      completionTokens: Number.NaN
+    };
+    let isFirstChunk = true;
+    return {
+      stream: response.pipeThrough(
+        new TransformStream({
+          transform(chunk, controller) {
+            if (!chunk.success) {
+              finishReason = "error";
+              controller.enqueue({ type: "error", error: chunk.error });
+              return;
+            }
+            const value = chunk.value;
+            if ("error" in value) {
+              finishReason = "error";
+              controller.enqueue({ type: "error", error: value.error });
+              return;
+            }
+            if (isFirstChunk) {
+              isFirstChunk = false;
+              controller.enqueue({
+                type: "response-metadata",
+                ...getResponseMetadata(value)
+              });
+            }
+            if (value.usage != null) {
+              usage = {
+                promptTokens: value.usage.prompt_tokens,
+                completionTokens: value.usage.completion_tokens
+              };
+            }
+            const choice = value.choices[0];
+            if ((choice == null ? void 0 : choice.finish_reason) != null) {
+              finishReason = mapQwenFinishReason(
+                choice.finish_reason
+              );
+            }
+            if ((choice == null ? void 0 : choice.text) != null) {
+              controller.enqueue({
+                type: "text-delta",
+                textDelta: choice.text
+              });
+            }
+          },
+          flush(controller) {
+            controller.enqueue({
+              type: "finish",
+              finishReason,
+              usage
+            });
+          }
+        })
+      ),
+      rawCall: { rawPrompt, rawSettings },
+      rawResponse: { headers: responseHeaders },
+      warnings,
+      request: { body: JSON.stringify(body) }
+    };
+  }
+};
+function createQwenCompletionChunkSchema(errorSchema) {
+  return zod__WEBPACK_IMPORTED_MODULE_2__.z.union([
+    zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+      id: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+      created: zod__WEBPACK_IMPORTED_MODULE_2__.z.number().nullish(),
+      model: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+      choices: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(
+        zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+          text: zod__WEBPACK_IMPORTED_MODULE_2__.z.string(),
+          finish_reason: zod__WEBPACK_IMPORTED_MODULE_2__.z.string().nullish(),
+          index: zod__WEBPACK_IMPORTED_MODULE_2__.z.number()
+        })
+      ),
+      usage: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+        prompt_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number(),
+        completion_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number()
+      }).nullish()
+    }),
+    errorSchema
+  ]);
+}
+
+// src/qwen-embedding-model.ts
+
+
+
+var qwenTextEmbeddingResponseSchema = zod__WEBPACK_IMPORTED_MODULE_2__.z.object({
+  data: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(zod__WEBPACK_IMPORTED_MODULE_2__.z.object({ embedding: zod__WEBPACK_IMPORTED_MODULE_2__.z.array(zod__WEBPACK_IMPORTED_MODULE_2__.z.number()) })),
+  usage: zod__WEBPACK_IMPORTED_MODULE_2__.z.object({ prompt_tokens: zod__WEBPACK_IMPORTED_MODULE_2__.z.number() }).nullish()
+});
+var QwenEmbeddingModel = class {
+  constructor(modelId, settings, config) {
+    this.specificationVersion = "v1";
+    this.modelId = modelId;
+    this.settings = settings;
+    this.config = config;
+  }
+  get provider() {
+    return this.config.provider;
+  }
+  get maxEmbeddingsPerCall() {
+    var _a;
+    return (_a = this.config.maxEmbeddingsPerCall) != null ? _a : 2048;
+  }
+  get supportsParallelCalls() {
+    var _a;
+    return (_a = this.config.supportsParallelCalls) != null ? _a : true;
+  }
+  /**
+   * Sends a request to the Qwen API to generate embeddings for the provided text inputs.
+   *
+   * This function validates that the number of embedding values does not exceed the allowed limit,
+   * constructs a JSON payload with the required parameters, and sends it to the API endpoint.
+   * It processes the response to extract embeddings, usage statistics, and raw response headers.
+   *
+   * @param param0 - The parameters object.
+   * @param param0.values - An array of strings to be embedded.
+   * @param param0.headers - Optional HTTP headers for the API request.
+   * @param param0.abortSignal - Optional signal to abort the API request.
+   * @returns A promise that resolves with an object containing:
+   *   - embeddings: An array of embedding arrays.
+   *   - usage: Optional usage information, including token counts.
+   *   - rawResponse: The response headers from the API call.
+   *
+   * @throws TooManyEmbeddingValuesForCallError if the number of input values exceeds the maximum allowed.
+   */
+  async doEmbed({
+    values,
+    headers,
+    abortSignal
+  }) {
+    var _a;
+    if (values.length > this.maxEmbeddingsPerCall) {
+      throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_1__.TooManyEmbeddingValuesForCallError({
+        provider: this.provider,
+        modelId: this.modelId,
+        maxEmbeddingsPerCall: this.maxEmbeddingsPerCall,
+        values
+      });
+    }
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.postJsonToApi)({
+      url: this.config.url({
+        path: "/embeddings",
+        modelId: this.modelId
+      }),
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.combineHeaders)(this.config.headers(), headers),
+      body: {
+        model: this.modelId,
+        input: values,
+        encoding_format: "float",
+        dimensions: this.settings.dimensions,
+        user: this.settings.user
+      },
+      // Handle response errors using the provided error structure.
+      failedResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonErrorResponseHandler)(
+        (_a = this.config.errorStructure) != null ? _a : defaultQwenErrorStructure
+      ),
+      // Process successful responses based on a minimal schema.
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.createJsonResponseHandler)(
+        qwenTextEmbeddingResponseSchema
+      ),
+      abortSignal,
+      fetch: this.config.fetch
+    });
+    return {
+      embeddings: response.data.map((item) => item.embedding),
+      usage: response.usage ? { tokens: response.usage.prompt_tokens } : void 0,
+      rawResponse: { headers: responseHeaders }
+    };
+  }
+};
+
+// src/qwen-provider.ts
+function createQwen(options = {}) {
+  var _a;
+  const baseURL = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.withoutTrailingSlash)(
+    (_a = options.baseURL) != null ? _a : "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+  );
+  const getHeaders = () => ({
+    Authorization: `Bearer ${(0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_0__.loadApiKey)({
+      apiKey: options.apiKey,
+      environmentVariableName: "DASHSCOPE_API_KEY",
+      description: "Qwen API key"
+    })}`,
+    ...options.headers
+  });
+  const getCommonModelConfig = (modelType) => ({
+    provider: `qwen.${modelType}`,
+    url: ({ path }) => {
+      const url = new URL(`${baseURL}${path}`);
+      if (options.queryParams) {
+        url.search = new URLSearchParams(options.queryParams).toString();
+      }
+      return url.toString();
+    },
+    headers: getHeaders,
+    fetch: options.fetch
+  });
+  const createChatModel = (modelId, settings = {}) => new QwenChatLanguageModel(modelId, settings, {
+    ...getCommonModelConfig("chat"),
+    defaultObjectGenerationMode: "tool"
+  });
+  const createCompletionModel = (modelId, settings = {}) => new QwenCompletionLanguageModel(
+    modelId,
+    settings,
+    getCommonModelConfig("completion")
+  );
+  const createTextEmbeddingModel = (modelId, settings = {}) => new QwenEmbeddingModel(
+    modelId,
+    settings,
+    getCommonModelConfig("embedding")
+  );
+  const provider = (modelId, settings) => createChatModel(modelId, settings);
+  provider.chatModel = createChatModel;
+  provider.completion = createCompletionModel;
+  provider.textEmbeddingModel = createTextEmbeddingModel;
+  provider.languageModel = createChatModel;
+  return provider;
+}
+var qwen = createQwen();
+
+//# sourceMappingURL=index.mjs.map
+
+/***/ }),
+
 /***/ "./node_modules/secure-json-parse/index.js":
 /*!*************************************************!*\
   !*** ./node_modules/secure-json-parse/index.js ***!
@@ -28556,12 +29868,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   GEE_SYSTEM_PROMPT: () => (/* binding */ GEE_SYSTEM_PROMPT),
 /* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest)
 /* harmony export */ });
-/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
-/* harmony import */ var _ai_sdk_google__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ai-sdk/google */ "./node_modules/@ai-sdk/google/dist/index.mjs");
-/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
-/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
+/* harmony import */ var _ai_sdk_google__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @ai-sdk/google */ "./node_modules/@ai-sdk/google/dist/index.mjs");
+/* harmony import */ var qwen_ai_provider__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! qwen-ai-provider */ "./node_modules/qwen-ai-provider/dist/index.mjs");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
+/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+
 
 
 
@@ -28572,7 +29886,8 @@ __webpack_require__.r(__webpack_exports__);
 const DEFAULT_MODELS = {
     openai: 'gpt-4o',
     anthropic: 'claude-sonnet-4-20250514',
-    google: 'gemini-2.0-flash'
+    google: 'gemini-2.0-flash',
+    qwen: 'qwen-max-latest'
 };
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input, options = {}) => {
@@ -28787,6 +30102,18 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             'gemini-1.5-flash-8b',
             'gemini-1.5-flash-8b-latest'
         ];
+        const qwenModels = [
+            'qwen-max-latest',
+            'qwen-max',
+            'qwen-plus-latest',
+            'qwen-plus',
+            'qwen-turbo-latest',
+            'qwen-turbo',
+            'qwen-vl-max',
+            'qwen2.5-72b-instruct',
+            'qwen2.5-14b-instruct-1m',
+            'qwen2.5-vl-72b-instruct'
+        ];
         if (provider === 'openai') {
             // Configure OpenAI with Helicone proxy if headers are provided
             const openaiConfig = { apiKey };
@@ -28795,7 +30122,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 openaiConfig.baseURL = 'https://oai.helicone.ai/v1';
                 openaiConfig.headers = heliconeHeaders;
             }
-            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_1__.createOpenAI)(openaiConfig);
+            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_2__.createOpenAI)(openaiConfig);
             effectiveModel = model || DEFAULT_MODELS.openai;
             console.log(`Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
@@ -28823,7 +30150,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 // Set the correct baseURL for the Anthropic API, without the version path
                 anthropicConfig.baseURL = 'https://api.anthropic.com';
             }
-            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_2__.createAnthropic)(anthropicConfig);
+            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_3__.createAnthropic)(anthropicConfig);
             console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
         else if (provider === 'google') {
@@ -28861,7 +30188,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 hasHeliconeHeaders: !!heliconeHeaders
             });
             try {
-                llmProvider = (0,_ai_sdk_google__WEBPACK_IMPORTED_MODULE_3__.createGoogleGenerativeAI)(googleConfig);
+                llmProvider = (0,_ai_sdk_google__WEBPACK_IMPORTED_MODULE_4__.createGoogleGenerativeAI)(googleConfig);
                 console.log(`✅ [Chat Handler] Google provider created successfully`);
             }
             catch (error) {
@@ -28874,6 +30201,55 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 });
             }
             console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+        }
+        else if (provider === 'qwen') {
+            // Use the requested model if it's in our list, otherwise use the default
+            let selectedModel = model;
+            if (!selectedModel || !qwenModels.includes(selectedModel)) {
+                console.log(`⚠️ [Chat Handler] Requested Qwen model "${model}" not found in available models. Using default.`);
+                selectedModel = DEFAULT_MODELS.qwen;
+            }
+            effectiveModel = selectedModel;
+            // Validate API key for Qwen (should be a DashScope API key)
+            if (!apiKey || apiKey.trim() === '') {
+                console.error(`❌ [Chat Handler] Qwen API key is missing or empty`);
+                return new Response(JSON.stringify({
+                    error: 'Qwen API key is required. Please check your Qwen API key in settings.'
+                }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            // Create the Qwen provider with the specified base URL
+            const qwenConfig = {
+                apiKey,
+                baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+            };
+            if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+                console.log('🔍 [Chat Handler] Configuring Qwen with Helicone observability');
+                // Note: Helicone support for Qwen might need different configuration
+                qwenConfig.headers = heliconeHeaders;
+            }
+            console.log(`🔧 [Chat Handler] Creating Qwen provider with config:`, {
+                apiKeyPrefix: apiKey.substring(0, 10) + '...',
+                model: effectiveModel,
+                baseURL: qwenConfig.baseURL,
+                hasHeliconeHeaders: !!heliconeHeaders
+            });
+            try {
+                llmProvider = (0,qwen_ai_provider__WEBPACK_IMPORTED_MODULE_0__.createQwen)(qwenConfig);
+                console.log(`✅ [Chat Handler] Qwen provider created successfully`);
+            }
+            catch (error) {
+                console.error(`❌ [Chat Handler] Failed to create Qwen provider:`, error);
+                return new Response(JSON.stringify({
+                    error: `Failed to create Qwen provider: ${error instanceof Error ? error.message : String(error)}`
+                }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            console.log(`Using Qwen provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
         else {
             return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
@@ -28935,10 +30311,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
         })
             .filter((msg) => msg !== null);
         // Define the weather tool using the AI SDK tool format
-        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Get the weather in a location',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({
-                location: zod__WEBPACK_IMPORTED_MODULE_5__.z.string().describe('The location to get the weather for'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
+                location: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The location to get the weather for'),
             }),
             execute: async ({ location }) => {
                 // Simulate weather data
@@ -28952,10 +30328,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Earth Engine dataset documentation tool
-        const earthEngineDatasetTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const earthEngineDatasetTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Get information about Earth Engine datasets including documentation and code examples',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({
-                datasetQuery: zod__WEBPACK_IMPORTED_MODULE_5__.z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
+                datasetQuery: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
             }),
             execute: async ({ datasetQuery }) => {
                 try {
@@ -28963,7 +30339,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                     console.time('EarthEngineDatasetTool execution');
                     // Use the Context7 getDocumentation function to fetch dataset information
                     // The Earth Engine dataset catalog is stored in wybert/earthengine-dataset-catalog-md
-                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_0__.getDocumentation)('wybert/earthengine-dataset-catalog-md', datasetQuery, { tokens: 15000 } // Get a good amount of content
+                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__.getDocumentation)('wybert/earthengine-dataset-catalog-md', datasetQuery, { tokens: 15000 } // Get a good amount of content
                     );
                     console.timeEnd('EarthEngineDatasetTool execution');
                     if (!result.success || !result.content) {
@@ -28993,11 +30369,11 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Earth Engine script editor tool
-        const earthEngineScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const earthEngineScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Insert JavaScript code into the Google Earth Engine code editor',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({
-                scriptId: zod__WEBPACK_IMPORTED_MODULE_5__.z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
-                code: zod__WEBPACK_IMPORTED_MODULE_5__.z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
+                scriptId: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
+                code: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
             }),
             execute: async ({ scriptId, code }) => {
                 try {
@@ -29122,10 +30498,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Earth Engine code runner tool
-        const earthEngineRunCodeTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const earthEngineRunCodeTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Run JavaScript code in the Google Earth Engine code editor',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({
-                code: zod__WEBPACK_IMPORTED_MODULE_5__.z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
+                code: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
             }),
             execute: async ({ code }) => {
                 try {
@@ -29249,9 +30625,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Screenshot tool
-        const screenshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const screenshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log(`📸 [ScreenshotTool] Tool called`);
@@ -29394,9 +30770,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Browser Snapshot tool
-        const snapshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const snapshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log('🔎 [SnapshotTool] Tool called in background');
@@ -29527,10 +30903,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Click by Reference ID tool
-        const clickByRefIdTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const clickByRefIdTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Clicks an element on the page identified by its aria-ref ID.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({
-                refId: zod__WEBPACK_IMPORTED_MODULE_5__.z.string().describe('The aria-ref ID of the element to click.'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
+                refId: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The aria-ref ID of the element to click.'),
             }),
             execute: async ({ refId }) => {
                 try {
@@ -29588,9 +30964,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Reset Map/Inspector/Console tool
-        const resetMapInspectorConsoleTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const resetMapInspectorConsoleTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log(`🔄 [ResetMapInspectorConsoleTool] Tool called to reset GEE environment`);
@@ -29696,9 +31072,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Clear Script tool
-        const clearScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const clearScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log(`🧹 [ClearScriptTool] Tool called to clear GEE code editor`);
@@ -29871,11 +31247,11 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Click by Coordinates tool
-        const clickByCoordinatesTool = (0,ai__WEBPACK_IMPORTED_MODULE_4__.tool)({
+        const clickByCoordinatesTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
             description: 'Clicks an element on the page at the specified (x, y) coordinates.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_5__.z.object({
-                x: zod__WEBPACK_IMPORTED_MODULE_5__.z.number().describe('The x-coordinate to click.'),
-                y: zod__WEBPACK_IMPORTED_MODULE_5__.z.number().describe('The y-coordinate to click.'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
+                x: zod__WEBPACK_IMPORTED_MODULE_6__.z.number().describe('The x-coordinate to click.'),
+                y: zod__WEBPACK_IMPORTED_MODULE_6__.z.number().describe('The y-coordinate to click.'),
             }),
             execute: async ({ x, y }) => {
                 try {
@@ -30021,7 +31397,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
         try {
             // Use streamText for AI generation with tools
             // streamText returns the result object synchronously. The async work happens when the stream is consumed.
-            const result = (0,ai__WEBPACK_IMPORTED_MODULE_4__.streamText)(streamOptions);
+            const result = (0,ai__WEBPACK_IMPORTED_MODULE_5__.streamText)(streamOptions);
             console.timeEnd('streamText execution');
             console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
             // The responsePromise logic has been removed as it is not the standard way to catch streaming errors.
@@ -31339,9 +32715,10 @@ const MAX_TAB_ACTION_RETRIES = 3;
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
-const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
     // Only open side panel if we're on the Earth Engine Code Editor
@@ -31614,6 +32991,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         API_KEY_STORAGE_KEY,
                         OPENAI_API_KEY_STORAGE_KEY,
                         ANTHROPIC_API_KEY_STORAGE_KEY,
+                        GOOGLE_API_KEY_STORAGE_KEY,
+                        QWEN_API_KEY_STORAGE_KEY,
                         API_PROVIDER_STORAGE_KEY,
                         MODEL_STORAGE_KEY
                     ]);
@@ -31625,6 +33004,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     }
                     else if (provider === 'anthropic') {
                         apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+                    }
+                    else if (provider === 'google') {
+                        apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+                    }
+                    else if (provider === 'qwen') {
+                        apiKey = config[QWEN_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
                     }
                     const model = config[MODEL_STORAGE_KEY];
                     if (!apiKey) {
@@ -32707,7 +34092,7 @@ async function handleChatMessage(message, port) {
         console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
         // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
         const apiConfig = await new Promise((resolve, reject) => {
-            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
+            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
                 if (chrome.runtime.lastError) {
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
@@ -32732,6 +34117,9 @@ async function handleChatMessage(message, port) {
                         keyLength: apiKey ? apiKey.length : 0,
                         keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
                     });
+                }
+                else if (provider === 'qwen') {
+                    apiKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 }
                 else {
                     apiKey = result[API_KEY_STORAGE_KEY] || '';

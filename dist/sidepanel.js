@@ -107143,6 +107143,7 @@ const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
+const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Default welcome message (Restore)
@@ -107221,6 +107222,7 @@ function ChatUI() {
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
+            QWEN_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY
         ], (result) => {
             const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -107237,6 +107239,10 @@ function ChatUI() {
             }
             else if (provider === 'google') {
                 currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                hasKey = !!currentKey;
+            }
+            else if (provider === 'qwen') {
+                currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 hasKey = !!currentKey;
             }
             const hasApiKey = hasKey;
@@ -107711,6 +107717,7 @@ function ChatUI() {
                     OPENAI_API_KEY_STORAGE_KEY,
                     ANTHROPIC_API_KEY_STORAGE_KEY,
                     GOOGLE_API_KEY_STORAGE_KEY,
+                    QWEN_API_KEY_STORAGE_KEY,
                     API_PROVIDER_STORAGE_KEY
                 ], (result) => {
                     const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -107727,6 +107734,10 @@ function ChatUI() {
                     }
                     else if (provider === 'google') {
                         currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                        hasKey = !!currentKey;
+                    }
+                    else if (provider === 'qwen') {
+                        currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                         hasKey = !!currentKey;
                     }
                     setApiConfigured(hasKey);
@@ -107813,6 +107824,7 @@ const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
+const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Available models for each provider
@@ -107857,6 +107869,18 @@ const AVAILABLE_MODELS = {
         'gemini-1.5-flash-latest',
         'gemini-1.5-flash-8b',
         'gemini-1.5-flash-8b-latest'
+    ],
+    qwen: [
+        'qwen-max-latest',
+        'qwen-max',
+        'qwen-plus-latest',
+        'qwen-plus',
+        'qwen-turbo-latest',
+        'qwen-turbo',
+        'qwen-vl-max',
+        'qwen2.5-72b-instruct',
+        'qwen2.5-14b-instruct-1m',
+        'qwen2.5-vl-72b-instruct'
     ]
 };
 // Human-readable model names
@@ -107895,7 +107919,17 @@ const MODEL_DISPLAY_NAMES = {
     'gemini-1.5-flash': 'Gemini 1.5 Flash',
     'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
     'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
-    'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)'
+    'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)',
+    'qwen-max-latest': 'Qwen-Max (Latest)',
+    'qwen-max': 'Qwen-Max',
+    'qwen-plus-latest': 'Qwen-Plus (Latest)',
+    'qwen-plus': 'Qwen-Plus',
+    'qwen-turbo-latest': 'Qwen-Turbo (Latest)',
+    'qwen-turbo': 'Qwen-Turbo',
+    'qwen-vl-max': 'Qwen-VL-Max',
+    'qwen2.5-72b-instruct': 'Qwen2.5-72B-Instruct',
+    'qwen2.5-14b-instruct-1m': 'Qwen2.5-14B-Instruct-1M',
+    'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct'
 };
 function Settings({ onClose }) {
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
@@ -107912,6 +107946,7 @@ function Settings({ onClose }) {
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
+            QWEN_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY
         ], (result) => {
@@ -107930,6 +107965,10 @@ function Settings({ onClose }) {
                 const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 setApiKey(googleKey);
             }
+            else if (savedProvider === 'qwen') {
+                const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(qwenKey);
+            }
             // Load saved model or default to first model for the provider
             const savedModel = result[MODEL_STORAGE_KEY] || '';
             if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
@@ -107947,6 +107986,7 @@ function Settings({ onClose }) {
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
+            QWEN_API_KEY_STORAGE_KEY,
             MODEL_STORAGE_KEY
         ], (result) => {
             if (provider === 'openai') {
@@ -107960,6 +108000,10 @@ function Settings({ onClose }) {
             else if (provider === 'google') {
                 const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 setApiKey(googleKey);
+            }
+            else if (provider === 'qwen') {
+                const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(qwenKey);
             }
             // When provider changes, check if current model is valid for new provider
             const currentSavedModel = result[MODEL_STORAGE_KEY] || '';
@@ -107989,6 +108033,9 @@ function Settings({ onClose }) {
         }
         else if (provider === 'google') {
             storageData[GOOGLE_API_KEY_STORAGE_KEY] = apiKey;
+        }
+        else if (provider === 'qwen') {
+            storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
         }
         storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
         chrome.storage.sync.set(storageData, () => {
@@ -108063,7 +108110,7 @@ function Settings({ onClose }) {
                     setConnectionStatus('error');
                 }
             }
-            // For Anthropic, we'll check if the API key format is valid (since we can't easily test without making a charged API call)
+            // For Anthropic, we'll check if the API key format is valid (usually starts with 'sk-ant-')
             else if (provider === 'anthropic') {
                 // Validate Anthropic API key format (usually starts with 'sk-ant-')
                 if (key.startsWith('sk-ant-') && key.length > 20) {
@@ -108153,6 +108200,48 @@ function Settings({ onClose }) {
                     setConnectionStatus('error');
                 }
             }
+            // For Qwen, we'll check if the API key looks valid
+            else if (provider === 'qwen') {
+                // Validate Qwen API key (DashScope API key format)
+                if (key && key.trim().length > 10) {
+                    console.log('Qwen API key format looks valid');
+                    // We could test with a simple API call but for now just validate that key is not empty
+                    // Note: This is commented out to avoid unnecessary API charges
+                    // Uncomment this for production if desired
+                    /*
+                    if (model) {
+                      try {
+                        const modelTestResponse = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/models', {
+                          method: 'GET',
+                          headers: {
+                            'Authorization': `Bearer ${key}`,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        
+                        if (modelTestResponse.ok) {
+                          console.log(`Qwen API connection test successful`);
+                          setConnectionStatus('success');
+                        } else {
+                          const errorData = await modelTestResponse.json();
+                          console.error(`Qwen API test failed:`, errorData);
+                          setConnectionStatus('error');
+                        }
+                      } catch (modelError) {
+                        console.error(`Error testing Qwen API:`, modelError);
+                        setConnectionStatus('error');
+                      }
+                    } else {
+                      setConnectionStatus('success');
+                    }
+                    */
+                    setConnectionStatus('success');
+                }
+                else {
+                    console.error('Qwen API key looks invalid');
+                    setConnectionStatus('error');
+                }
+            }
         }
         catch (error) {
             console.error('Error testing API connection:', error);
@@ -108179,8 +108268,10 @@ function Settings({ onClose }) {
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'openai' ? 'default' : 'outline', onClick: () => setProvider('openai') }, "OpenAI"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'anthropic' ? 'default' : 'outline', onClick: () => setProvider('anthropic') }, "Anthropic"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'google' ? 'default' : 'outline', onClick: () => setProvider('google') }, "Google")),
-                provider === 'google' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Google Gemini models may require a Google Cloud project with billing enabled. Please refer to Google's rate limit and pricing documentation."))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'google' ? 'default' : 'outline', onClick: () => setProvider('google') }, "Google"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'qwen' ? 'default' : 'outline', onClick: () => setProvider('qwen') }, "Qwen")),
+                provider === 'google' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Google Gemini models may require a Google Cloud project with billing enabled. Please refer to Google's rate limit and pricing documentation.")),
+                provider === 'qwen' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Qwen uses DashScope API keys. You can obtain your API key from the Alibaba Cloud DashScope console. Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1"))),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "Select Model"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", { className: "w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600", value: selectedModel, onChange: (e) => setSelectedModel(e.target.value) }, AVAILABLE_MODELS[provider].map((modelId) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { key: modelId, value: modelId }, MODEL_DISPLAY_NAMES[modelId] || modelId))))),
@@ -108188,7 +108279,7 @@ function Settings({ onClose }) {
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "API Key"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative flex-1" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: showApiKey ? 'text' : 'password', value: apiKey, onChange: (e) => setApiKey(e.target.value), placeholder: `Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Google'} API key`, className: "pr-10" }),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: showApiKey ? 'text' : 'password', value: apiKey, onChange: (e) => setApiKey(e.target.value), placeholder: `Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : provider === 'google' ? 'Google' : 'Qwen'} API key`, className: "pr-10" }),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { type: "button", className: "absolute inset-y-0 right-0 px-3 flex items-center", onClick: () => setShowApiKey(!showApiKey) }, showApiKey ? react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_5__["default"], { className: "h-4 w-4" }) : react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_6__["default"], { className: "h-4 w-4" }))),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { onClick: handleSave, disabled: isSaving || !apiKey }, "Save")),
                 saveStatus === 'success' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-green-600" },
@@ -108209,7 +108300,9 @@ function Settings({ onClose }) {
                     ? 'You can create an OpenAI API key in your OpenAI dashboard.'
                     : provider === 'anthropic'
                         ? 'You can create an Anthropic API key in your Anthropic console.'
-                        : 'You can create a Google Generative AI API key in your Google AI Studio.'),
+                        : provider === 'google'
+                            ? 'You can create a Google Generative AI API key in your Google AI Studio.'
+                            : 'You can create a Qwen API key in your Qwen console.'),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-1" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Model selection:"),
                     " Different models have varying capabilities, speeds, and costs. More powerful models may offer better results but could be slower or more expensive to use."),
@@ -108299,6 +108392,18 @@ const MODEL_OPTIONS = {
         { value: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Latest)' },
         { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
         { value: 'gemini-1.5-flash-8b-latest', label: 'Gemini 1.5 Flash 8B (Latest)' }
+    ],
+    qwen: [
+        { value: 'qwen-max-latest', label: 'Qwen-Max (Latest)' },
+        { value: 'qwen-max', label: 'Qwen-Max' },
+        { value: 'qwen-plus-latest', label: 'Qwen-Plus (Latest)' },
+        { value: 'qwen-plus', label: 'Qwen-Plus' },
+        { value: 'qwen-turbo-latest', label: 'Qwen-Turbo (Latest)' },
+        { value: 'qwen-turbo', label: 'Qwen-Turbo' },
+        { value: 'qwen-vl-max', label: 'Qwen-VL-Max' },
+        { value: 'qwen2.5-72b-instruct', label: 'Qwen2.5-72B-Instruct' },
+        { value: 'qwen2.5-14b-instruct-1m', label: 'Qwen2.5-14B-Instruct-1M' },
+        { value: 'qwen2.5-vl-72b-instruct', label: 'Qwen2.5-VL-72B-Instruct' }
     ]
 };
 const EXAMPLE_PROMPTS = [
@@ -108977,7 +109082,9 @@ function AgentTestPanel({ isOpen, onClose }) {
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectValue, null)),
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectContent, null,
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "openai" }, "OpenAI"),
-                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "anthropic" }, "Anthropic")))),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "anthropic" }, "Anthropic"),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "google" }, "Google"),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "qwen" }, "Qwen")))),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "model" }, "Model"),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.Select, { value: config.model, onValueChange: (value) => updateConfig({ model: value }) },

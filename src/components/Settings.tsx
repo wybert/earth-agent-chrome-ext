@@ -11,10 +11,11 @@ const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
+const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
-type ApiProvider = 'openai' | 'anthropic' | 'google';
+type ApiProvider = 'openai' | 'anthropic' | 'google' | 'qwen';
 
 // Available models for each provider
 const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
@@ -58,6 +59,18 @@ const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
     'gemini-1.5-flash-latest',
     'gemini-1.5-flash-8b',
     'gemini-1.5-flash-8b-latest'
+  ],
+  qwen: [
+    'qwen-max-latest',
+    'qwen-max',
+    'qwen-plus-latest', 
+    'qwen-plus',
+    'qwen-turbo-latest',
+    'qwen-turbo',
+    'qwen-vl-max',
+    'qwen2.5-72b-instruct',
+    'qwen2.5-14b-instruct-1m',
+    'qwen2.5-vl-72b-instruct'
   ]
 };
 
@@ -97,7 +110,17 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'gemini-1.5-flash': 'Gemini 1.5 Flash',
   'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
   'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
-  'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)'
+  'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)',
+  'qwen-max-latest': 'Qwen-Max (Latest)',
+  'qwen-max': 'Qwen-Max',
+  'qwen-plus-latest': 'Qwen-Plus (Latest)',
+  'qwen-plus': 'Qwen-Plus',
+  'qwen-turbo-latest': 'Qwen-Turbo (Latest)',
+  'qwen-turbo': 'Qwen-Turbo',
+  'qwen-vl-max': 'Qwen-VL-Max',
+  'qwen2.5-72b-instruct': 'Qwen2.5-72B-Instruct',
+  'qwen2.5-14b-instruct-1m': 'Qwen2.5-14B-Instruct-1M',
+  'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct'
 };
 
 interface SettingsProps {
@@ -120,6 +143,7 @@ export function Settings({ onClose }: SettingsProps) {
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
+      QWEN_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY,
       MODEL_STORAGE_KEY
     ], (result) => {
@@ -136,6 +160,9 @@ export function Settings({ onClose }: SettingsProps) {
       } else if (savedProvider === 'google') {
         const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(googleKey);
+      } else if (savedProvider === 'qwen') {
+        const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(qwenKey);
       }
 
       // Load saved model or default to first model for the provider
@@ -155,6 +182,7 @@ export function Settings({ onClose }: SettingsProps) {
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
+      QWEN_API_KEY_STORAGE_KEY,
       MODEL_STORAGE_KEY
     ], (result) => {
       if (provider === 'openai') {
@@ -166,6 +194,9 @@ export function Settings({ onClose }: SettingsProps) {
       } else if (provider === 'google') {
         const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(googleKey);
+      } else if (provider === 'qwen') {
+        const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(qwenKey);
       }
 
       // When provider changes, check if current model is valid for new provider
@@ -196,6 +227,8 @@ export function Settings({ onClose }: SettingsProps) {
       storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
     } else if (provider === 'google') {
       storageData[GOOGLE_API_KEY_STORAGE_KEY] = apiKey;
+    } else if (provider === 'qwen') {
+      storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
     }
     storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
     
@@ -275,7 +308,7 @@ export function Settings({ onClose }: SettingsProps) {
           setConnectionStatus('error');
         }
       } 
-      // For Anthropic, we'll check if the API key format is valid (since we can't easily test without making a charged API call)
+      // For Anthropic, we'll check if the API key format is valid (usually starts with 'sk-ant-')
       else if (provider === 'anthropic') {
         // Validate Anthropic API key format (usually starts with 'sk-ant-')
         if (key.startsWith('sk-ant-') && key.length > 20) {
@@ -365,6 +398,48 @@ export function Settings({ onClose }: SettingsProps) {
           setConnectionStatus('error');
         }
       }
+      // For Qwen, we'll check if the API key looks valid
+      else if (provider === 'qwen') {
+        // Validate Qwen API key (DashScope API key format)
+        if (key && key.trim().length > 10) {
+          console.log('Qwen API key format looks valid');
+          
+          // We could test with a simple API call but for now just validate that key is not empty
+          // Note: This is commented out to avoid unnecessary API charges
+          // Uncomment this for production if desired
+          /*
+          if (model) {
+            try {
+              const modelTestResponse = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/models', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${key}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (modelTestResponse.ok) {
+                console.log(`Qwen API connection test successful`);
+                setConnectionStatus('success');
+              } else {
+                const errorData = await modelTestResponse.json();
+                console.error(`Qwen API test failed:`, errorData);
+                setConnectionStatus('error');
+              }
+            } catch (modelError) {
+              console.error(`Error testing Qwen API:`, modelError);
+              setConnectionStatus('error');
+            }
+          } else {
+            setConnectionStatus('success');
+          }
+          */
+          setConnectionStatus('success');
+        } else {
+          console.error('Qwen API key looks invalid');
+          setConnectionStatus('error');
+        }
+      }
       
     } catch (error) {
       console.error('Error testing API connection:', error);
@@ -410,11 +485,23 @@ export function Settings({ onClose }: SettingsProps) {
             >
               Google
             </Button>
+            <Button 
+              variant={provider === 'qwen' ? 'default' : 'outline'}
+              onClick={() => setProvider('qwen')}
+            >
+              Qwen
+            </Button>
           </div>
           {provider === 'google' && (
             <p className="text-xs text-gray-500 mt-2">
               Note: Google Gemini models may require a Google Cloud project with billing enabled. 
               Please refer to Google's rate limit and pricing documentation.
+            </p>
+          )}
+          {provider === 'qwen' && (
+            <p className="text-xs text-gray-500 mt-2">
+              Note: Qwen uses DashScope API keys. You can obtain your API key from the Alibaba Cloud DashScope console.
+              Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
             </p>
           )}
         </div>
@@ -442,7 +529,7 @@ export function Settings({ onClose }: SettingsProps) {
                 type={showApiKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Google'} API key`}
+                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : provider === 'google' ? 'Google' : 'Qwen'} API key`}
                 className="pr-10"
               />
               <button 
@@ -490,7 +577,9 @@ export function Settings({ onClose }: SettingsProps) {
               ? 'You can create an OpenAI API key in your OpenAI dashboard.' 
               : provider === 'anthropic' 
               ? 'You can create an Anthropic API key in your Anthropic console.'
-              : 'You can create a Google Generative AI API key in your Google AI Studio.'}
+              : provider === 'google' 
+              ? 'You can create a Google Generative AI API key in your Google AI Studio.'
+              : 'You can create a Qwen API key in your Qwen console.'}
           </p>
           <p className="mt-1">
             <strong>Model selection:</strong> Different models have varying capabilities, speeds, and costs.

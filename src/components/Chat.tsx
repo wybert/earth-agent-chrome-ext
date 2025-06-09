@@ -43,6 +43,7 @@ const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
+const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
@@ -93,7 +94,7 @@ export function ChatUI() {
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google'>('openai');
+  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google' | 'qwen'>('openai');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
@@ -132,6 +133,7 @@ export function ChatUI() {
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
+      QWEN_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -148,6 +150,9 @@ export function ChatUI() {
         hasKey = !!currentKey;
       } else if (provider === 'google') {
         currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        hasKey = !!currentKey;
+      } else if (provider === 'qwen') {
+        currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
       }
       
@@ -632,6 +637,7 @@ export function ChatUI() {
         OPENAI_API_KEY_STORAGE_KEY,
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
+        QWEN_API_KEY_STORAGE_KEY,
         API_PROVIDER_STORAGE_KEY
       ], (result) => {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -648,6 +654,9 @@ export function ChatUI() {
           hasKey = !!currentKey;
         } else if (provider === 'google') {
           currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          hasKey = !!currentKey;
+        } else if (provider === 'qwen') {
+          currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
         }
         

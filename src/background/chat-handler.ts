@@ -2,18 +2,20 @@ import { Message, CoreMessage, streamText, tool, TextPart, ImagePart, FilePart }
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createQwen } from 'qwen-ai-provider';
 import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
 import { snapshot as browserSnapshot, SnapshotResponse } from '../lib/tools/browser/snapshot';
 
 // Available providers
-export type Provider = 'openai' | 'anthropic' | 'google';
+export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen';
 
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-20250514',
-  google: 'gemini-2.0-flash'
+  google: 'gemini-2.0-flash',
+  qwen: 'qwen-max-latest'
 };
 
 // Custom fetch function for Anthropic to handle CORS
@@ -226,7 +228,7 @@ export async function handleChatRequest(
     }
 
     // Setup LLM provider
-    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI>;
+    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI> | ReturnType<typeof createQwen>;
     let effectiveModel: string;
     
     // Define available models for validation
@@ -250,6 +252,19 @@ export async function handleChatRequest(
       'gemini-1.5-flash-latest',
       'gemini-1.5-flash-8b',
       'gemini-1.5-flash-8b-latest'
+    ];
+    
+    const qwenModels = [
+      'qwen-max-latest',
+      'qwen-max',
+      'qwen-plus-latest',
+      'qwen-plus',
+      'qwen-turbo-latest',
+      'qwen-turbo',
+      'qwen-vl-max',
+      'qwen2.5-72b-instruct',
+      'qwen2.5-14b-instruct-1m',
+      'qwen2.5-vl-72b-instruct'
     ];
     
     if (provider === 'openai') {
@@ -350,6 +365,60 @@ export async function handleChatRequest(
       }
       
       console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+    } else if (provider === 'qwen') {
+      // Use the requested model if it's in our list, otherwise use the default
+      let selectedModel = model;
+      if (!selectedModel || !qwenModels.includes(selectedModel)) {
+        console.log(`⚠️ [Chat Handler] Requested Qwen model "${model}" not found in available models. Using default.`);
+        selectedModel = DEFAULT_MODELS.qwen;
+      }
+      
+      effectiveModel = selectedModel;
+      
+      // Validate API key for Qwen (should be a DashScope API key)
+      if (!apiKey || apiKey.trim() === '') {
+        console.error(`❌ [Chat Handler] Qwen API key is missing or empty`);
+        return new Response(JSON.stringify({ 
+          error: 'Qwen API key is required. Please check your Qwen API key in settings.' 
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Create the Qwen provider with the specified base URL
+      const qwenConfig: any = {
+        apiKey,
+        baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+      };
+      
+      if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+        console.log('🔍 [Chat Handler] Configuring Qwen with Helicone observability');
+        // Note: Helicone support for Qwen might need different configuration
+        qwenConfig.headers = heliconeHeaders;
+      }
+      
+      console.log(`🔧 [Chat Handler] Creating Qwen provider with config:`, {
+        apiKeyPrefix: apiKey.substring(0, 10) + '...',
+        model: effectiveModel,
+        baseURL: qwenConfig.baseURL,
+        hasHeliconeHeaders: !!heliconeHeaders
+      });
+      
+      try {
+        llmProvider = createQwen(qwenConfig);
+        console.log(`✅ [Chat Handler] Qwen provider created successfully`);
+      } catch (error) {
+        console.error(`❌ [Chat Handler] Failed to create Qwen provider:`, error);
+        return new Response(JSON.stringify({ 
+          error: `Failed to create Qwen provider: ${error instanceof Error ? error.message : String(error)}` 
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`Using Qwen provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,

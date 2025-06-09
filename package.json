@@ -75,6 +75,7 @@
     "lucide-react": "^0.503.0",
     "next-themes": "^0.4.6",
     "openai": "^4.96.0",
+    "qwen-ai-provider": "^0.1.0",
     "react": "^19.1.0",
     "react-day-picker": "^9.0.12",
     "react-dom": "^19.1.0",

@@ -11,7 +11,7 @@ interface MessageBase {
 }
 
 // Provider type for API providers
-type Provider = 'openai' | 'anthropic' | 'google';
+type Provider = 'openai' | 'anthropic' | 'google' | 'qwen';
 
 // Store active port connections
 let port: chrome.runtime.Port | null = null;
@@ -31,9 +31,10 @@ const MAX_TAB_ACTION_RETRIES = 3;
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
-const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -347,6 +348,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             API_KEY_STORAGE_KEY,
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
+            GOOGLE_API_KEY_STORAGE_KEY,
+            QWEN_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY
           ]);
@@ -359,6 +362,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
           } else if (provider === 'anthropic') {
             apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+          } else if (provider === 'google') {
+            apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+          } else if (provider === 'qwen') {
+            apiKey = config[QWEN_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
           }
           
           const model = config[MODEL_STORAGE_KEY];
@@ -1602,7 +1609,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
       (resolve, reject) => {
         chrome.storage.sync.get(
-          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
+          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
           (result) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -1628,6 +1635,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
                 keyLength: apiKey ? apiKey.length : 0,
                 keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
               });
+            } else if (provider === 'qwen') {
+              apiKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
             } else {
               apiKey = result[API_KEY_STORAGE_KEY] || '';
             }

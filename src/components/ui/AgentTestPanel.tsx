@@ -36,7 +36,7 @@ interface TestResult {
 
 interface TestConfiguration {
   prompts: TestPrompt[];
-  provider: 'openai' | 'anthropic' | 'google';
+  provider: 'openai' | 'anthropic' | 'google' | 'qwen';
   model: string;
   heliconeApiKey: string;
   intervalMs: number;
@@ -84,6 +84,18 @@ const MODEL_OPTIONS = {
     { value: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Latest)' },
     { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
     { value: 'gemini-1.5-flash-8b-latest', label: 'Gemini 1.5 Flash 8B (Latest)' }
+  ],
+  qwen: [
+    { value: 'qwen-max-latest', label: 'Qwen-Max (Latest)' },
+    { value: 'qwen-max', label: 'Qwen-Max' },
+    { value: 'qwen-plus-latest', label: 'Qwen-Plus (Latest)' },
+    { value: 'qwen-plus', label: 'Qwen-Plus' },
+    { value: 'qwen-turbo-latest', label: 'Qwen-Turbo (Latest)' },
+    { value: 'qwen-turbo', label: 'Qwen-Turbo' },
+    { value: 'qwen-vl-max', label: 'Qwen-VL-Max' },
+    { value: 'qwen2.5-72b-instruct', label: 'Qwen2.5-72B-Instruct' },
+    { value: 'qwen2.5-14b-instruct-1m', label: 'Qwen2.5-14B-Instruct-1M' },
+    { value: 'qwen2.5-vl-72b-instruct', label: 'Qwen2.5-VL-72B-Instruct' }
   ]
 };
 
@@ -821,13 +833,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="provider">AI Provider</Label>
-                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' })}>
+                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' | 'google' | 'qwen' })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="openai">OpenAI</SelectItem>
                         <SelectItem value="anthropic">Anthropic</SelectItem>
+                        <SelectItem value="google">Google</SelectItem>
+                        <SelectItem value="qwen">Qwen</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
