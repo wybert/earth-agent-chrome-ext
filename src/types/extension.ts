@@ -28,6 +28,7 @@ export interface ExtensionMessage {
   message?: string;
   apiKey?: string;
   provider?: string;
+  model?: string;
   messages?: Message[];
   attachments?: Array<{ type: string; mimeType?: string; data: string }>; // Support for image attachments
   hasMultiModal?: boolean; // Flag to indicate multi-modal content

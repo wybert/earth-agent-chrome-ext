@@ -3,15 +3,18 @@ import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Check, X, Eye, EyeOff } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
+import { Label } from './ui/label';
 
 // Key for storing API key in Chrome Storage
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
-type ApiProvider = 'openai' | 'anthropic';
+type ApiProvider = 'openai' | 'anthropic' | 'google';
 
 // Available models for each provider
 const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
@@ -43,6 +46,18 @@ const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
     'claude-3-5-sonnet-20241022',
     'claude-3-5-haiku-20241022',
     'claude-3-5-sonnet-20240620'
+  ],
+  google: [
+    'gemini-2.5-pro-preview-06-05',
+    'gemini-2.5-flash-preview-05-20',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-pro',
+    'gemini-1.5-pro-latest',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash-8b',
+    'gemini-1.5-flash-8b-latest'
   ]
 };
 
@@ -72,7 +87,17 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
   'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (New)',
   'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-  'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)'
+  'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)',
+  'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
+  'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash Preview (May 20)',
+  'gemini-2.0-flash': 'Gemini 2.0 Flash',
+  'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
+  'gemini-1.5-pro': 'Gemini 1.5 Pro',
+  'gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
+  'gemini-1.5-flash': 'Gemini 1.5 Flash',
+  'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
+  'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
+  'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)'
 };
 
 interface SettingsProps {
@@ -94,6 +119,7 @@ export function Settings({ onClose }: SettingsProps) {
       API_KEY_STORAGE_KEY, 
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
+      GOOGLE_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY,
       MODEL_STORAGE_KEY
     ], (result) => {
@@ -107,6 +133,9 @@ export function Settings({ onClose }: SettingsProps) {
       } else if (savedProvider === 'anthropic') {
         const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(anthropicKey);
+      } else if (savedProvider === 'google') {
+        const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(googleKey);
       }
 
       // Load saved model or default to first model for the provider
@@ -125,6 +154,7 @@ export function Settings({ onClose }: SettingsProps) {
       API_KEY_STORAGE_KEY, 
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
+      GOOGLE_API_KEY_STORAGE_KEY,
       MODEL_STORAGE_KEY
     ], (result) => {
       if (provider === 'openai') {
@@ -133,6 +163,9 @@ export function Settings({ onClose }: SettingsProps) {
       } else if (provider === 'anthropic') {
         const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(anthropicKey);
+      } else if (provider === 'google') {
+        const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        setApiKey(googleKey);
       }
 
       // When provider changes, check if current model is valid for new provider
@@ -161,6 +194,8 @@ export function Settings({ onClose }: SettingsProps) {
       storageData[OPENAI_API_KEY_STORAGE_KEY] = apiKey;
     } else if (provider === 'anthropic') {
       storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
+    } else if (provider === 'google') {
+      storageData[GOOGLE_API_KEY_STORAGE_KEY] = apiKey;
     }
     storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
     
@@ -288,6 +323,48 @@ export function Settings({ onClose }: SettingsProps) {
           setConnectionStatus('error');
         }
       }
+      // For Google, we'll check if the API key format is valid
+      else if (provider === 'google') {
+        // Validate Google API key format (usually starts with 'AIza' and is 39 characters long)
+        if (key.startsWith('AIza') && key.length === 39) {
+          console.log('Google API key format looks valid');
+          
+          // We could test with a simple API call but for now just validate format
+          // Note: This is commented out to avoid unnecessary API charges
+          // Uncomment this for production if desired
+          /*
+          if (model) {
+            try {
+              const modelTestResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+                method: 'GET',
+                headers: {
+                  'x-goog-api-key': key,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (modelTestResponse.ok) {
+                console.log(`Google API connection test successful`);
+                setConnectionStatus('success');
+              } else {
+                const errorData = await modelTestResponse.json();
+                console.error(`Google API test failed:`, errorData);
+                setConnectionStatus('error');
+              }
+            } catch (modelError) {
+              console.error(`Error testing Google API:`, modelError);
+              setConnectionStatus('error');
+            }
+          } else {
+            setConnectionStatus('success');
+          }
+          */
+          setConnectionStatus('success');
+        } else {
+          console.error('Google API key format looks invalid');
+          setConnectionStatus('error');
+        }
+      }
       
     } catch (error) {
       console.error('Error testing API connection:', error);
@@ -327,7 +404,19 @@ export function Settings({ onClose }: SettingsProps) {
             >
               Anthropic
             </Button>
+            <Button 
+              variant={provider === 'google' ? 'default' : 'outline'}
+              onClick={() => setProvider('google')}
+            >
+              Google
+            </Button>
           </div>
+          {provider === 'google' && (
+            <p className="text-xs text-gray-500 mt-2">
+              Note: Google Gemini models may require a Google Cloud project with billing enabled. 
+              Please refer to Google's rate limit and pricing documentation.
+            </p>
+          )}
         </div>
 
         <div>
@@ -353,7 +442,7 @@ export function Settings({ onClose }: SettingsProps) {
                 type={showApiKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key`}
+                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Google'} API key`}
                 className="pr-10"
               />
               <button 
@@ -399,7 +488,9 @@ export function Settings({ onClose }: SettingsProps) {
           <p className="mt-1">
             {provider === 'openai' 
               ? 'You can create an OpenAI API key in your OpenAI dashboard.' 
-              : 'You can create an Anthropic API key in your Anthropic console.'}
+              : provider === 'anthropic' 
+              ? 'You can create an Anthropic API key in your Anthropic console.'
+              : 'You can create a Google Generative AI API key in your Google AI Studio.'}
           </p>
           <p className="mt-1">
             <strong>Model selection:</strong> Different models have varying capabilities, speeds, and costs.

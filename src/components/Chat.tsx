@@ -42,7 +42,9 @@ const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
 // Default welcome message (Restore)
 const createWelcomeMessage = (): Message => ({
@@ -91,7 +93,7 @@ export function ChatUI() {
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic'>('openai');
+  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google'>('openai');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
@@ -129,6 +131,7 @@ export function ChatUI() {
       API_KEY_STORAGE_KEY, 
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
+      GOOGLE_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -143,12 +146,15 @@ export function ChatUI() {
       } else if (provider === 'anthropic') {
         currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
+      } else if (provider === 'google') {
+        currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        hasKey = !!currentKey;
       }
       
       const hasApiKey = hasKey;
       setApiConfigured(hasApiKey);
       setApiKey(currentKey);
-      setApiProvider(provider);
+      setApiProvider(provider as any);
       
       if (!hasKey) {
         setShowSettings(true);
@@ -496,21 +502,31 @@ export function ChatUI() {
     const messagesForApi = sessions[activeSessionId]
       ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
       .concat(newUserMessage) || [newUserMessage];
+    
+    // Get provider and model from storage before sending the message
+    chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
+      const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+      const model = result[MODEL_STORAGE_KEY] || '';
       
-    const messagePayload: ExtensionMessage = {
-      type: 'CHAT_MESSAGE',
-      message: input.trim(),
-      messages: messagesForApi,
-      attachments: imageAttachments.length > 0 ? imageAttachments : undefined
-    };
-    
-    if (imageAttachments.length > 0) {
-      console.log(`Sending message with ${imageAttachments.length} image attachments`);
-      console.log(`Image attachments: ${imageAttachments.map(img => 
-        `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
-    }
-    
-    port.postMessage(messagePayload);
+      console.log(`🐛 [Debug] Chat sending message with provider: ${provider}, model: ${model}`);
+      
+      const messagePayload: ExtensionMessage = {
+        type: 'CHAT_MESSAGE',
+        message: input.trim(),
+        messages: messagesForApi,
+        attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
+        provider: provider,
+        model: model
+      };
+      
+      if (imageAttachments.length > 0) {
+        console.log(`Sending message with ${imageAttachments.length} image attachments`);
+        console.log(`Image attachments: ${imageAttachments.map(img => 
+          `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
+      }
+      
+      port.postMessage(messagePayload);
+    });
   }, [input, isLocalLoading, port, activeSessionId, sessions]);
 
   // Restore regenerate handler
@@ -530,12 +546,23 @@ export function ChatUI() {
       setMessages([...historyUpToUser, assistantPlaceholder]);
       const messagesForApi = historyUpToUser
           .filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'));
-      const messagePayload: ExtensionMessage = {
-        type: 'CHAT_MESSAGE',
-        message: lastUserMessage.content,
-        messages: messagesForApi
-      };
-      port.postMessage(messagePayload);
+      
+      // Get provider and model from storage before sending the regenerate message
+      chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
+        const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+        const model = result[MODEL_STORAGE_KEY] || '';
+        
+        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}`);
+        
+        const messagePayload: ExtensionMessage = {
+          type: 'CHAT_MESSAGE',
+          message: lastUserMessage.content,
+          messages: messagesForApi,
+          provider: provider,
+          model: model
+        };
+        port.postMessage(messagePayload);
+      });
     }
   }, [messages, isLocalLoading, port, activeSessionId]);
 
@@ -604,6 +631,7 @@ export function ChatUI() {
         API_KEY_STORAGE_KEY, 
         OPENAI_API_KEY_STORAGE_KEY,
         ANTHROPIC_API_KEY_STORAGE_KEY,
+        GOOGLE_API_KEY_STORAGE_KEY,
         API_PROVIDER_STORAGE_KEY
       ], (result) => {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -618,11 +646,14 @@ export function ChatUI() {
         } else if (provider === 'anthropic') {
           currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
+        } else if (provider === 'google') {
+          currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          hasKey = !!currentKey;
         }
         
         setApiConfigured(hasKey);
         setApiKey(currentKey);
-        setApiProvider(provider);
+        setApiProvider(provider as any);
         
         if (hasKey && fallbackMode) {
           handleRetryAPI();

@@ -11,7 +11,7 @@ interface MessageBase {
 }
 
 // Provider type for API providers
-type Provider = 'openai' | 'anthropic';
+type Provider = 'openai' | 'anthropic' | 'google';
 
 // Store active port connections
 let port: chrome.runtime.Port | null = null;
@@ -30,6 +30,7 @@ const MAX_TAB_ACTION_RETRIES = 3;
 // API configuration storage keys
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Keep for backward compatibility
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
@@ -1424,6 +1425,7 @@ chrome.runtime.onConnect.addListener((newPort) => {
     
     newPort.onMessage.addListener(async (message: any) => {
       console.log('Received message from side panel:', message);
+      console.log(`🐛 [Debug] Message type: ${message.type}, Provider: ${message.provider}, Model: ${message.model}`);
       
       // Handle side panel specific messages
       switch (message.type) {
@@ -1433,6 +1435,7 @@ chrome.runtime.onConnect.addListener((newPort) => {
           
         case 'CHAT_MESSAGE':
           // Handle chat messages from side panel
+          console.log(`🚀 [Debug] Calling handleChatMessage for side panel`);
           handleChatMessage(message, newPort);
           break;
           
@@ -1599,7 +1602,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
       (resolve, reject) => {
         chrome.storage.sync.get(
-          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
+          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
           (result) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -1616,11 +1619,21 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
             } else if (provider === 'anthropic') {
               apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+            } else if (provider === 'google') {
+              apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+              console.log(`🐛 [Debug] Google API key retrieval:`, {
+                googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
+                fallbackKey: result[API_KEY_STORAGE_KEY] ? 'present' : 'missing',
+                finalKey: apiKey ? 'present' : 'missing',
+                keyLength: apiKey ? apiKey.length : 0,
+                keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
+              });
             } else {
               apiKey = result[API_KEY_STORAGE_KEY] || '';
             }
             
             console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
+            console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
             
             resolve({
               apiKey,

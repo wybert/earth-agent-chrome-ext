@@ -2,12 +2,12 @@
 
 ## Overview
 
-The Earth Engine Agent now supports selecting different AI models for both OpenAI and Anthropic providers. This feature allows users to choose the most appropriate model for their needs, balancing capability, speed, and cost considerations.
+The Earth Engine Agent now supports selecting different AI models for OpenAI, Anthropic, and Google providers. This feature allows users to choose the most appropriate model for their needs, balancing capability, speed, and cost considerations.
 
 ## Accessing Model Selection
 
 1. Click the **Settings** button in the chat interface
-2. Select your preferred **API Provider** (OpenAI or Anthropic)
+2. Select your preferred **API Provider** (OpenAI, Anthropic, or Google)
 3. Choose a specific **Model** from the dropdown menu
 4. Enter your API key for the selected provider
 5. Click **Save** to apply your changes
@@ -42,6 +42,21 @@ The Earth Engine Agent now supports selecting different AI models for both OpenA
 | **claude-3.5-sonnet-20240620** | Enhanced Claude 3.5 | Improved capabilities with good performance |
 | **claude-3.7-sonnet-20240808** | Latest Claude 3 model | Best overall Claude 3 performance |
 
+### Google Models
+
+| Model | Description | Best For |
+|-------|-------------|----------|
+| **gemini-2.5-pro-preview** | Latest Gemini model with experimental features | Cutting-edge research, experimental workflows |
+| **gemini-2.5-flash-preview** | Fast Gemini 2.5 with advanced capabilities | Quick analysis with high quality |
+| **gemini-2.5-pro-exp** | Experimental Gemini with enhanced reasoning | Complex Earth Engine analysis |
+| **gemini-2.0-flash** | Balanced performance and speed | General Earth Engine tasks |
+| **gemini-1.5-pro** | Long context, strong reasoning | Large dataset analysis, extensive code |
+| **gemini-1.5-pro-latest** | Latest version of Gemini 1.5 Pro | Most recent improvements to Gemini 1.5 |
+| **gemini-1.5-flash** | Fast processing, cost-effective | Quick responses, routine tasks |
+| **gemini-1.5-flash-latest** | Latest version of Gemini 1.5 Flash | Most recent improvements to Flash |
+| **gemini-1.5-flash-8b** | Lightweight, very fast | Simple queries, rapid prototyping |
+| **gemini-1.5-flash-8b-latest** | Latest 8B model | Fastest responses for basic tasks |
+
 ## Considerations
 
 ### Performance vs. Cost
@@ -56,6 +71,7 @@ Remember that different models have different pricing structures:
 
 - OpenAI charges based on input and output tokens
 - Anthropic charges based on input and output tokens with different rates for each model
+- Google charges based on input and output tokens with competitive pricing for Gemini models
 - Check the respective provider's pricing pages for current rates
 
 ## Technical Details
@@ -79,4 +95,4 @@ If you encounter issues with a specific model:
 5. **Version-Specific Issues**: If a model version is problematic, try a different date version of the same model
 6. **Tier Access**: Some models may require a higher API tier or specific permissions
 
-For persistent issues, try reverting to the default model (GPT-4o for OpenAI or Claude-3-Haiku for Anthropic).
+For persistent issues, try reverting to the default model (GPT-4o for OpenAI, Claude-3-Haiku for Anthropic, or Gemini-1.5-Pro-Latest for Google).

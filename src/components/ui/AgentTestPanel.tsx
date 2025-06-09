@@ -36,7 +36,7 @@ interface TestResult {
 
 interface TestConfiguration {
   prompts: TestPrompt[];
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'google';
   model: string;
   heliconeApiKey: string;
   intervalMs: number;
@@ -72,6 +72,18 @@ const MODEL_OPTIONS = {
     { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
     { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
     { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+  ],
+  google: [
+    { value: 'gemini-2.5-pro-preview-06-05', label: 'Gemini 2.5 Pro Preview (June 5)' },
+    { value: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash Preview (May 20)' },
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { value: 'gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Latest)' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    { value: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Latest)' },
+    { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
+    { value: 'gemini-1.5-flash-8b-latest', label: 'Gemini 1.5 Flash 8B (Latest)' }
   ]
 };
 

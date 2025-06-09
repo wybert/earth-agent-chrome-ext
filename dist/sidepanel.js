@@ -107142,7 +107142,9 @@ const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Default welcome message (Restore)
 const createWelcomeMessage = () => ({
     id: `welcome-${Date.now()}`,
@@ -107218,6 +107220,7 @@ function ChatUI() {
             API_KEY_STORAGE_KEY,
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
+            GOOGLE_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY
         ], (result) => {
             const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -107230,6 +107233,10 @@ function ChatUI() {
             }
             else if (provider === 'anthropic') {
                 currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                hasKey = !!currentKey;
+            }
+            else if (provider === 'google') {
+                currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 hasKey = !!currentKey;
             }
             const hasApiKey = hasKey;
@@ -107585,17 +107592,25 @@ function ChatUI() {
         const messagesForApi = sessions[activeSessionId]
             ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
             .concat(newUserMessage) || [newUserMessage];
-        const messagePayload = {
-            type: 'CHAT_MESSAGE',
-            message: input.trim(),
-            messages: messagesForApi,
-            attachments: imageAttachments.length > 0 ? imageAttachments : undefined
-        };
-        if (imageAttachments.length > 0) {
-            console.log(`Sending message with ${imageAttachments.length} image attachments`);
-            console.log(`Image attachments: ${imageAttachments.map(img => `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
-        }
-        port.postMessage(messagePayload);
+        // Get provider and model from storage before sending the message
+        chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
+            const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+            const model = result[MODEL_STORAGE_KEY] || '';
+            console.log(`🐛 [Debug] Chat sending message with provider: ${provider}, model: ${model}`);
+            const messagePayload = {
+                type: 'CHAT_MESSAGE',
+                message: input.trim(),
+                messages: messagesForApi,
+                attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
+                provider: provider,
+                model: model
+            };
+            if (imageAttachments.length > 0) {
+                console.log(`Sending message with ${imageAttachments.length} image attachments`);
+                console.log(`Image attachments: ${imageAttachments.map(img => `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
+            }
+            port.postMessage(messagePayload);
+        });
     }, [input, isLocalLoading, port, activeSessionId, sessions]);
     // Restore regenerate handler
     const handleRegenerate = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(() => {
@@ -107616,12 +107631,20 @@ function ChatUI() {
             setMessages([...historyUpToUser, assistantPlaceholder]);
             const messagesForApi = historyUpToUser
                 .filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'));
-            const messagePayload = {
-                type: 'CHAT_MESSAGE',
-                message: lastUserMessage.content,
-                messages: messagesForApi
-            };
-            port.postMessage(messagePayload);
+            // Get provider and model from storage before sending the regenerate message
+            chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
+                const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
+                const model = result[MODEL_STORAGE_KEY] || '';
+                console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}`);
+                const messagePayload = {
+                    type: 'CHAT_MESSAGE',
+                    message: lastUserMessage.content,
+                    messages: messagesForApi,
+                    provider: provider,
+                    model: model
+                };
+                port.postMessage(messagePayload);
+            });
         }
     }, [messages, isLocalLoading, port, activeSessionId]);
     // Restore stop handler
@@ -107687,6 +107710,7 @@ function ChatUI() {
                     API_KEY_STORAGE_KEY,
                     OPENAI_API_KEY_STORAGE_KEY,
                     ANTHROPIC_API_KEY_STORAGE_KEY,
+                    GOOGLE_API_KEY_STORAGE_KEY,
                     API_PROVIDER_STORAGE_KEY
                 ], (result) => {
                     const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -107699,6 +107723,10 @@ function ChatUI() {
                     }
                     else if (provider === 'anthropic') {
                         currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                        hasKey = !!currentKey;
+                    }
+                    else if (provider === 'google') {
+                        currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                         hasKey = !!currentKey;
                     }
                     setApiConfigured(hasKey);
@@ -107784,6 +107812,7 @@ __webpack_require__.r(__webpack_exports__);
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Available models for each provider
@@ -107816,6 +107845,18 @@ const AVAILABLE_MODELS = {
         'claude-3-5-sonnet-20241022',
         'claude-3-5-haiku-20241022',
         'claude-3-5-sonnet-20240620'
+    ],
+    google: [
+        'gemini-2.5-pro-preview-06-05',
+        'gemini-2.5-flash-preview-05-20',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-pro',
+        'gemini-1.5-pro-latest',
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-flash-8b-latest'
     ]
 };
 // Human-readable model names
@@ -107844,7 +107885,17 @@ const MODEL_DISPLAY_NAMES = {
     'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
     'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (New)',
     'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-    'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)'
+    'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)',
+    'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
+    'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash Preview (May 20)',
+    'gemini-2.0-flash': 'Gemini 2.0 Flash',
+    'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
+    'gemini-1.5-pro': 'Gemini 1.5 Pro',
+    'gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
+    'gemini-1.5-flash': 'Gemini 1.5 Flash',
+    'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
+    'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
+    'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)'
 };
 function Settings({ onClose }) {
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
@@ -107860,6 +107911,7 @@ function Settings({ onClose }) {
             API_KEY_STORAGE_KEY,
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
+            GOOGLE_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY
         ], (result) => {
@@ -107873,6 +107925,10 @@ function Settings({ onClose }) {
             else if (savedProvider === 'anthropic') {
                 const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 setApiKey(anthropicKey);
+            }
+            else if (savedProvider === 'google') {
+                const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(googleKey);
             }
             // Load saved model or default to first model for the provider
             const savedModel = result[MODEL_STORAGE_KEY] || '';
@@ -107890,6 +107946,7 @@ function Settings({ onClose }) {
             API_KEY_STORAGE_KEY,
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
+            GOOGLE_API_KEY_STORAGE_KEY,
             MODEL_STORAGE_KEY
         ], (result) => {
             if (provider === 'openai') {
@@ -107899,6 +107956,10 @@ function Settings({ onClose }) {
             else if (provider === 'anthropic') {
                 const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 setApiKey(anthropicKey);
+            }
+            else if (provider === 'google') {
+                const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+                setApiKey(googleKey);
             }
             // When provider changes, check if current model is valid for new provider
             const currentSavedModel = result[MODEL_STORAGE_KEY] || '';
@@ -107925,6 +107986,9 @@ function Settings({ onClose }) {
         }
         else if (provider === 'anthropic') {
             storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
+        }
+        else if (provider === 'google') {
+            storageData[GOOGLE_API_KEY_STORAGE_KEY] = apiKey;
         }
         storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
         chrome.storage.sync.set(storageData, () => {
@@ -108047,6 +108111,48 @@ function Settings({ onClose }) {
                     setConnectionStatus('error');
                 }
             }
+            // For Google, we'll check if the API key format is valid
+            else if (provider === 'google') {
+                // Validate Google API key format (usually starts with 'AIza' and is 39 characters long)
+                if (key.startsWith('AIza') && key.length === 39) {
+                    console.log('Google API key format looks valid');
+                    // We could test with a simple API call but for now just validate format
+                    // Note: This is commented out to avoid unnecessary API charges
+                    // Uncomment this for production if desired
+                    /*
+                    if (model) {
+                      try {
+                        const modelTestResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+                          method: 'GET',
+                          headers: {
+                            'x-goog-api-key': key,
+                            'Content-Type': 'application/json'
+                          }
+                        });
+                        
+                        if (modelTestResponse.ok) {
+                          console.log(`Google API connection test successful`);
+                          setConnectionStatus('success');
+                        } else {
+                          const errorData = await modelTestResponse.json();
+                          console.error(`Google API test failed:`, errorData);
+                          setConnectionStatus('error');
+                        }
+                      } catch (modelError) {
+                        console.error(`Error testing Google API:`, modelError);
+                        setConnectionStatus('error');
+                      }
+                    } else {
+                      setConnectionStatus('success');
+                    }
+                    */
+                    setConnectionStatus('success');
+                }
+                else {
+                    console.error('Google API key format looks invalid');
+                    setConnectionStatus('error');
+                }
+            }
         }
         catch (error) {
             console.error('Error testing API connection:', error);
@@ -108072,7 +108178,9 @@ function Settings({ onClose }) {
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "Select API Provider"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'openai' ? 'default' : 'outline', onClick: () => setProvider('openai') }, "OpenAI"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'anthropic' ? 'default' : 'outline', onClick: () => setProvider('anthropic') }, "Anthropic"))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'anthropic' ? 'default' : 'outline', onClick: () => setProvider('anthropic') }, "Anthropic"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'google' ? 'default' : 'outline', onClick: () => setProvider('google') }, "Google")),
+                provider === 'google' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Google Gemini models may require a Google Cloud project with billing enabled. Please refer to Google's rate limit and pricing documentation."))),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "Select Model"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", { className: "w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600", value: selectedModel, onChange: (e) => setSelectedModel(e.target.value) }, AVAILABLE_MODELS[provider].map((modelId) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { key: modelId, value: modelId }, MODEL_DISPLAY_NAMES[modelId] || modelId))))),
@@ -108080,7 +108188,7 @@ function Settings({ onClose }) {
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "API Key"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative flex-1" },
-                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: showApiKey ? 'text' : 'password', value: apiKey, onChange: (e) => setApiKey(e.target.value), placeholder: `Enter your ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key`, className: "pr-10" }),
+                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: showApiKey ? 'text' : 'password', value: apiKey, onChange: (e) => setApiKey(e.target.value), placeholder: `Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : 'Google'} API key`, className: "pr-10" }),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { type: "button", className: "absolute inset-y-0 right-0 px-3 flex items-center", onClick: () => setShowApiKey(!showApiKey) }, showApiKey ? react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_5__["default"], { className: "h-4 w-4" }) : react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_6__["default"], { className: "h-4 w-4" }))),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { onClick: handleSave, disabled: isSaving || !apiKey }, "Save")),
                 saveStatus === 'success' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-green-600" },
@@ -108099,7 +108207,9 @@ function Settings({ onClose }) {
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null, "Your API key is stored securely in Chrome's synced storage and is never sent to our servers."),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-1" }, provider === 'openai'
                     ? 'You can create an OpenAI API key in your OpenAI dashboard.'
-                    : 'You can create an Anthropic API key in your Anthropic console.'),
+                    : provider === 'anthropic'
+                        ? 'You can create an Anthropic API key in your Anthropic console.'
+                        : 'You can create a Google Generative AI API key in your Google AI Studio.'),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-1" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Model selection:"),
                     " Different models have varying capabilities, speeds, and costs. More powerful models may offer better results but could be slower or more expensive to use."),
@@ -108177,6 +108287,18 @@ const MODEL_OPTIONS = {
         { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
         { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
         { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+    ],
+    google: [
+        { value: 'gemini-2.5-pro-preview-06-05', label: 'Gemini 2.5 Pro Preview (June 5)' },
+        { value: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash Preview (May 20)' },
+        { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+        { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
+        { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+        { value: 'gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Latest)' },
+        { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+        { value: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Latest)' },
+        { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
+        { value: 'gemini-1.5-flash-8b-latest', label: 'Gemini 1.5 Flash 8B (Latest)' }
     ]
 };
 const EXAMPLE_PROMPTS = [

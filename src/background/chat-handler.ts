@@ -1,17 +1,19 @@
 import { Message, CoreMessage, streamText, tool, TextPart, ImagePart, FilePart } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
 import { snapshot as browserSnapshot, SnapshotResponse } from '../lib/tools/browser/snapshot';
 
 // Available providers
-export type Provider = 'openai' | 'anthropic';
+export type Provider = 'openai' | 'anthropic' | 'google';
 
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
-  anthropic: 'claude-sonnet-4-20250514'
+  anthropic: 'claude-sonnet-4-20250514',
+  google: 'gemini-2.0-flash'
 };
 
 // Custom fetch function for Anthropic to handle CORS
@@ -224,8 +226,31 @@ export async function handleChatRequest(
     }
 
     // Setup LLM provider
-    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic>;
+    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI>;
     let effectiveModel: string;
+    
+    // Define available models for validation
+    const anthropicModels = [
+      'claude-opus-4-20250514',
+      'claude-sonnet-4-20250514',
+      'claude-3-7-sonnet-20250219',
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-5-sonnet-20240620'
+    ];
+
+    const googleModels = [
+      'gemini-2.5-pro-preview-06-05',
+      'gemini-2.5-flash-preview-05-20',
+      'gemini-2.0-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-1.5-pro',
+      'gemini-1.5-pro-latest',
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash-8b-latest'
+    ];
     
     if (provider === 'openai') {
       // Configure OpenAI with Helicone proxy if headers are provided
@@ -242,14 +267,6 @@ export async function handleChatRequest(
       console.log(`Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'anthropic') {
       // Check if the requested model exists in our available model list
-      const anthropicModels = [
-        'claude-opus-4-20250514',
-        'claude-sonnet-4-20250514',
-        'claude-3-7-sonnet-20250219',
-        'claude-3-5-sonnet-20241022',
-        'claude-3-5-haiku-20241022',
-        'claude-3-5-sonnet-20240620'
-      ];
       
       // Use the requested model if it's in our list, otherwise use the default
       let selectedModel = model;
@@ -279,6 +296,60 @@ export async function handleChatRequest(
       llmProvider = createAnthropic(anthropicConfig);
       
       console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+    } else if (provider === 'google') {
+      // Use the requested model if it's in our list, otherwise use the default
+      let selectedModel = model;
+      if (!selectedModel || !googleModels.includes(selectedModel)) {
+        console.log(`⚠️ [Chat Handler] Requested Google model "${model}" not found in available models. Using default.`);
+        selectedModel = DEFAULT_MODELS.google;
+      }
+      
+      effectiveModel = selectedModel;
+      
+      // Validate API key format for Google
+      if (!apiKey || !apiKey.startsWith('AIza') || apiKey.length !== 39) {
+        console.error(`❌ [Chat Handler] Invalid Google API key format. Expected format: AIzaXXX... (39 characters), got: ${apiKey ? apiKey.substring(0, 10) + '...' : 'empty'}`);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid Google API key format. Please check your Google API key in settings.' 
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Create the Google provider
+      const googleConfig: any = {
+        apiKey,
+        // Add baseURL to help with debugging
+        // Note: AI SDK Google provider uses the default Google AI API endpoint
+      };
+      
+      if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+        console.log('🔍 [Chat Handler] Configuring Google with Helicone observability');
+        // Note: Helicone support for Google might need different configuration
+        googleConfig.headers = heliconeHeaders;
+      }
+      
+      console.log(`🔧 [Chat Handler] Creating Google provider with config:`, {
+        apiKeyPrefix: apiKey.substring(0, 10) + '...',
+        model: effectiveModel,
+        hasHeliconeHeaders: !!heliconeHeaders
+      });
+      
+      try {
+        llmProvider = createGoogleGenerativeAI(googleConfig);
+        console.log(`✅ [Chat Handler] Google provider created successfully`);
+      } catch (error) {
+        console.error(`❌ [Chat Handler] Failed to create Google provider:`, error);
+        return new Response(JSON.stringify({ 
+          error: `Failed to create Google provider: ${error instanceof Error ? error.message : String(error)}` 
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
@@ -1491,6 +1562,12 @@ export async function handleChatRequest(
       maxRetries: 3,
       toolCallStreaming: false,
       experimental_continueSteps: true,
+      // Add onError callback to capture and log streaming errors
+      onError: ({ error }: { error: any }) => {
+        console.error(`❌ [Chat Handler] Streaming error occurred`, error);
+        // We can inspect the error object for more details
+        // This is where we'll see the actual message from the Google API
+      },
     };
     
     // For Anthropic models, add special headers for browser usage
@@ -1504,49 +1581,103 @@ export async function handleChatRequest(
       streamOptions.experimental_enableToolContentInResult = true;
     }
     
+    // For Google provider, add specific logging and validation
+    if (provider === 'google') {
+      console.log(`🔧 [Chat Handler] Using Google provider with API key length: ${apiKey.length}`);
+      console.log(`🔧 [Chat Handler] Google model being used: ${effectiveModel}`);
+      console.log(`🔧 [Chat Handler] Google available models: ${googleModels.join(', ')}`);
+    }
+    
     console.log(`📊 [Chat Handler] Final stream configuration:`, JSON.stringify(streamOptions, (k, v) => 
       k === 'messages' ? '[Messages array]' : (k === 'tools' ? '[Tools object]' : v), 2));
     
-    // Use streamText for AI generation with tools
-    const result = await streamText(streamOptions);
-    
-    console.timeEnd('streamText execution');
-    console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
-    
-    // Debug the result object to see what we got back
-    console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
-    console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
-    // log the result headers
-    // console.log(`📊 [Chat Handler] Result headers: ${JSON.stringify((await result.response))}`);
-    // console.log(JSON.stringify(result.response.headers, null, 2));
-    
-    // Expose result to global scope for interactive investigation
-    (globalThis as any).lastStreamTextResult = result;
-    console.log(`🔍 [Chat Handler] Result object exposed as 'globalThis.lastStreamTextResult' for interactive investigation`);
-    console.log(`🔍 [Chat Handler] Try: globalThis.lastStreamTextResult.textPromise, globalThis.lastStreamTextResult.toolCallsPromise, etc.`);
-    
-    // Verify it was set correctly
-    console.log(`🔍 [Chat Handler] Verification - globalThis.lastStreamTextResult exists:`, typeof (globalThis as any).lastStreamTextResult);
-    console.log(`🔍 [Chat Handler] Verification - Object keys:`, Object.keys((globalThis as any).lastStreamTextResult || {}));
+    try {
+      // Use streamText for AI generation with tools
+      // streamText returns the result object synchronously. The async work happens when the stream is consumed.
+      const result = streamText(streamOptions);
+      
+      console.timeEnd('streamText execution');
+      console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
+      
+      // The responsePromise logic has been removed as it is not the standard way to catch streaming errors.
+      // The `onError` callback added to streamOptions is the correct and documented approach.
 
-    // If there were tool calls, log them
-    if (result.toolCalls && Array.isArray(result.toolCalls)) {
-      console.log(`🛠️ [Chat Handler] Tool calls made: ${result.toolCalls.length}`);
-      result.toolCalls.forEach((call, idx) => {
-        console.log(`🛠️ [Chat Handler] Tool call ${idx+1}: ${call.name || 'unnamed'}`);
-        if (call.args) {
-          console.log(`🛠️ [Chat Handler] Tool call args: ${JSON.stringify(call.args)}`);
+      // Debug the result object to see what we got back
+      console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
+      console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
+      // log the result headers
+      // console.log(`📊 [Chat Handler] Result headers: ${JSON.stringify((await result.response))}`);
+      // console.log(JSON.stringify(result.response.headers, null, 2));
+      
+      // Expose result to global scope for interactive investigation
+      (globalThis as any).lastStreamTextResult = result;
+      console.log(`🔍 [Chat Handler] Result object exposed as 'globalThis.lastStreamTextResult' for interactive investigation`);
+      console.log(`🔍 [Chat Handler] Try: globalThis.lastStreamTextResult.textPromise, globalThis.lastStreamTextResult.toolCallsPromise, etc.`);
+      
+      // Verify it was set correctly
+      console.log(`🔍 [Chat Handler] Verification - globalThis.lastStreamTextResult exists:`, typeof (globalThis as any).lastStreamTextResult);
+      console.log(`🔍 [Chat Handler] Verification - Object keys:`, Object.keys((globalThis as any).lastStreamTextResult || {}));
+
+      // If there were tool calls, log them
+      if (result.toolCalls && Array.isArray(result.toolCalls)) {
+        console.log(`🛠️ [Chat Handler] Tool calls made: ${result.toolCalls.length}`);
+        result.toolCalls.forEach((call, idx) => {
+          console.log(`🛠️ [Chat Handler] Tool call ${idx+1}: ${call.name || 'unnamed'}`);
+          if (call.args) {
+            console.log(`🛠️ [Chat Handler] Tool call args: ${JSON.stringify(call.args)}`);
+          }
+          if (call.result) {
+            console.log(`🛠️ [Chat Handler] Tool call result status: ${call.result.success ? 'success' : 'failure'}`);
+          }
+        });
+      }
+      
+      // Convert to text stream response
+      return result.toTextStreamResponse();
+    } catch (streamError: any) {
+      console.timeEnd('streamText execution');
+      // This block will catch errors during the *initial setup* of the stream,
+      // but not errors that occur *during* the streaming process itself.
+      // Those are handled by the `onError` callback.
+      console.error(`❌ [Chat Handler] streamText setup error for ${provider} provider:`, streamError);
+      
+      // Additional logging for Google provider errors
+      if (provider === 'google') {
+        console.error(`❌ [Google Provider] Detailed error information:`);
+        console.error(`  - Model: ${effectiveModel}`);
+        console.error(`  - API Key length: ${apiKey.length}`);
+        console.error(`  - Error name: ${streamError.name}`);
+        console.error(`  - Error message: ${streamError.message}`);
+        console.error(`  - Error stack: ${streamError.stack}`);
+        
+        if (streamError.cause) {
+          console.error(`  - Error cause:`, streamError.cause);
         }
-        if (call.result) {
-          console.log(`🛠️ [Chat Handler] Tool call result status: ${call.result.success ? 'success' : 'failure'}`);
+        
+        // Check for specific Google API errors
+        if (streamError.message?.includes('API key')) {
+          console.error(`❌ [Google Provider] API key related error detected`);
         }
+        if (streamError.message?.includes('model')) {
+          console.error(`❌ [Google Provider] Model related error detected`);
+        }
+        if (streamError.message?.includes('quota') || streamError.message?.includes('billing')) {
+          console.error(`❌ [Google Provider] Quota/billing related error detected`);
+        }
+      }
+      
+      return new Response(JSON.stringify({ 
+        error: 'Chat processing failed',
+        message: streamError instanceof Error ? streamError.message : 'Unknown error occurred',
+        provider: provider,
+        model: effectiveModel
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    // Convert to text stream response
-    return result.toTextStreamResponse();
   } catch (error: any) {
-    console.error('Chat handler error:', error);
+    console.error('Chat handler general error:', error);
     return new Response(JSON.stringify({ 
       error: 'Chat processing failed',
       message: error instanceof Error ? error.message : 'Unknown error occurred' 
