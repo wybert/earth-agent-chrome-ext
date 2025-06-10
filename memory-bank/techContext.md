@@ -8,7 +8,7 @@
 - **Tailwind CSS**: Utility-first CSS framework
 - **Chrome Extension Manifest V3**: Extension architecture
 - **Vercel AI SDK**: Framework for AI interactions, streaming responses, and agent capabilities
-- **AI Models**: Anthropic Claude, OpenAI models
+- **AI Models**: Anthropic Claude, OpenAI models, Google Gemini, **Qwen (DashScope)**, **Ollama (Local Models)**
 
 ### Development Tools
 - **Vite**: Build tool
@@ -53,11 +53,22 @@
 - **UI <-> Background Communication**: Uses `chrome.runtime.sendMessage` initiated from the UI or library functions (`src/lib/`) to the main listener in the background script (`background/index.ts`).
 - **Message Types**: Defined interfaces (`Message`, tool-specific responses) ensure type safety.
 
-### AI Integration (Updated August 6, 2024)
+### AI Integration (Updated December 17, 2024)
 - **Vercel AI SDK**: Primary framework used in `src/background/chat-handler.ts`.
   - Handles streaming responses.
   - Provides `tool()` function for defining AI-callable tools.
   - Manages interaction flow with LLMs.
+- **✅ Five AI Providers Fully Integrated:**
+  - **OpenAI**: Models including gpt-4o, gpt-4.1, gpt-o3
+  - **Anthropic**: Models including claude-sonnet-4, claude-3.7
+  - **Google**: Models including gemini-2.0-flash
+  - **✅ Qwen (December 17, 2024)**: Models including qwen-max-latest, qwen-plus-latest, qwen-turbo variants, qwen2.5 series
+  - **✅ Ollama (January 31, 2025)**: Local models including gemma3, llama3, qwen3, deepseek-r1, phi4, and many more - **Note**: Tool support varies by model ([Check Ollama model compatibility](https://ollama.com/search))
+- **✅ qwen-ai-provider Package**: Community provider integrated via `qwen-ai-provider` (version `^0.1.0`)
+- **✅ DashScope API Integration**: Base URL `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **✅ ollama-ai-provider Package**: Community provider integrated via `ollama-ai-provider` (version `^0.9.3`)
+- **✅ Ollama Local Integration**: Configurable base URL (default: `http://localhost:11434/api`) with CORS support
+- **Provider Type System**: Updated `Provider` type to include `'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'`
 - **AI Tool Implementation Pattern**: For tools requiring page interaction (like Earth Engine tools):
   - The `execute` block within the `tool()` definition in `chat-handler.ts` is responsible for:
     1. Finding the target Earth Engine tab (`chrome.tabs.query`).
@@ -121,17 +132,46 @@
 
 ## API Integration
 
+### ✅ Multi-Provider API Integration (Updated December 17, 2024)
+
 ### Anthropic API
 - **Endpoints**: `/v1/messages`
-- **Models**: `claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku`
+- **Models**: `claude-3-opus`, `claude-3-sonnet`, `claude-3-haiku`, `claude-sonnet-4`
 - **Features**: Streaming responses, tool use, system prompts
 - **Implementation**: Direct API calls and Vercel AI SDK
+- **Status**: ✅ Fully integrated
 
 ### OpenAI API
 - **Endpoints**: `/v1/chat/completions`
-- **Models**: `gpt-4`, `gpt-3.5-turbo`
+- **Models**: `gpt-4`, `gpt-3.5-turbo`, `gpt-4o`, `gpt-4.1`, `gpt-o3`
 - **Features**: Streaming responses, function calling, system prompts
 - **Implementation**: Direct API calls and Vercel AI SDK
+- **Status**: ✅ Fully integrated
+
+### Google Gemini API
+- **Endpoints**: Gemini API endpoints
+- **Models**: `gemini-2.0-flash`, `gemini-1.5-pro`
+- **Features**: Streaming responses, tool use, system prompts
+- **Implementation**: Vercel AI SDK with Google provider
+- **Status**: ✅ Fully integrated
+
+### ✅ Qwen (DashScope) API (December 17, 2024)
+- **Endpoints**: `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **Models**: `qwen-max-latest`, `qwen-plus-latest`, `qwen-turbo-latest`, `qwen2.5-72b-instruct`, `qwen2.5-32b-instruct`, `qwen2.5-14b-instruct`, `qwen2.5-7b-instruct`, `qwen2.5-3b-instruct`, `qwen2.5-1.5b-instruct`, `qwen2.5-0.5b-instruct`
+- **Features**: Streaming responses, tool use, system prompts (OpenAI-compatible API)
+- **Implementation**: Vercel AI SDK with `qwen-ai-provider` community package
+- **API Key**: DashScope API key required (stored as QWEN_API_KEY_STORAGE_KEY)
+- **Status**: ✅ Fully integrated and committed to git (commit `6e8de55`)
+
+### ✅ Ollama API (January 31, 2025)
+- **Endpoints**: Configurable base URL (default: `http://localhost:11434/api`)
+- **Models**: User-selectable from local Ollama installation - gemma3, llama3, qwen3, deepseek-r1, phi4, mistral, codellama, and many more
+- **Features**: Streaming responses, **tool use (model-dependent)**, system prompts
+- **Implementation**: Vercel AI SDK with `ollama-ai-provider` community package
+- **CORS Configuration**: Requires `OLLAMA_ORIGINS="*" ollama serve` for Chrome extension compatibility
+- **API Key**: Optional (typically not needed for local instances)
+- **Tool Support**: **Variable by model** - Users should check [Ollama model search](https://ollama.com/search) for "tools" tag compatibility
+- **Status**: ✅ Fully integrated with full tool support for compatible models
 
 ### Context7 API
 - **Endpoints**: Documentation retrieval
@@ -140,10 +180,17 @@
 
 ## Security
 
-### API Key Management
+### API Key Management (Updated January 31, 2025)
 - **Storage**: Chrome extension secure storage with encryption
 - **Access Control**: Background-script-only access to API keys
 - **User Control**: User-provided API keys with option to store
+- **✅ Five Provider Support**: Secure storage for OpenAI, Anthropic, Google, Qwen, and **Ollama** API keys
+- **✅ Storage Keys**: 
+  - `OPENAI_API_KEY_STORAGE_KEY`
+  - `ANTHROPIC_API_KEY_STORAGE_KEY` 
+  - `GOOGLE_API_KEY_STORAGE_KEY`
+  - `QWEN_API_KEY_STORAGE_KEY`
+  - `OLLAMA_API_KEY_STORAGE_KEY` (optional - for authenticated Ollama instances)
 
 ### Permissions
 - **Required Permissions**: 
@@ -155,6 +202,7 @@
 - **Host Permissions**:
   - `"https://code.earthengine.google.com/*"`: Earth Engine code editor
   - `"https://context7.com/*"`: Documentation service
+  - `"http://localhost:*/*"`, `"http://127.0.0.1:*/*"`: Local Ollama server access
 
 ## Data Flow
 

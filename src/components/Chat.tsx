@@ -44,6 +44,7 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
@@ -94,7 +95,7 @@ export function ChatUI() {
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google' | 'qwen'>('openai');
+  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'>('openai');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
@@ -134,6 +135,7 @@ export function ChatUI() {
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
+      OLLAMA_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -154,6 +156,10 @@ export function ChatUI() {
       } else if (provider === 'qwen') {
         currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
+      } else if (provider === 'ollama') {
+        currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+        hasKey = true; // Ollama doesn't require an API key for local instances
+        console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
       }
       
       const hasApiKey = hasKey;
@@ -380,7 +386,19 @@ export function ChatUI() {
         break;
       case 'ERROR':
         console.error('Background script error:', response.error);
-        setError(new Error(`API Error: ${response.error || 'Unknown error.'}`));
+        
+        // Check if it's an Ollama CORS error and provide helpful UI feedback
+        let errorMessage = `API Error: ${response.error || 'Unknown error.'}`;
+        try {
+          if (typeof response.error === 'string' && response.error.includes('Ollama CORS Configuration Required')) {
+            const errorData = JSON.parse(response.error);
+            errorMessage = `🚨 Ollama CORS Issue Detected!\n\n${errorData.message}\n\n💡 Solution:\n${errorData.solution}\n\n🔧 Alternative:\n${errorData.alternativeSolution}`;
+          }
+        } catch {
+          // Use original error message if parsing fails
+        }
+        
+        setError(new Error(errorMessage));
         setIsLocalLoading(false);
         const errorAssistantMessage: Message = {
           id: response.requestId || (Date.now() + 1).toString(),
@@ -524,6 +542,15 @@ export function ChatUI() {
         model: model
       };
       
+      console.log(`🔧 [Chat] Full message payload being sent:`, {
+        type: messagePayload.type,
+        provider: messagePayload.provider,
+        model: messagePayload.model,
+        messageLength: messagePayload.message?.length || 0,
+        messagesCount: messagePayload.messages?.length || 0,
+        hasAttachments: !!messagePayload.attachments
+      });
+      
       if (imageAttachments.length > 0) {
         console.log(`Sending message with ${imageAttachments.length} image attachments`);
         console.log(`Image attachments: ${imageAttachments.map(img => 
@@ -638,6 +665,7 @@ export function ChatUI() {
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
         QWEN_API_KEY_STORAGE_KEY,
+        OLLAMA_API_KEY_STORAGE_KEY,
         API_PROVIDER_STORAGE_KEY
       ], (result) => {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -658,6 +686,9 @@ export function ChatUI() {
         } else if (provider === 'qwen') {
           currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
+        } else if (provider === 'ollama') {
+          currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+          hasKey = true; // Ollama doesn't require an API key for local instances
         }
         
         setApiConfigured(hasKey);

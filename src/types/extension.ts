@@ -15,6 +15,8 @@ export interface Message {
   parts?: MessagePart[];
 }
 
+export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+
 export interface ExtensionMessage {
   type: string;
   payload?: any;
@@ -27,7 +29,7 @@ export interface ExtensionMessage {
   chunk?: string;
   message?: string;
   apiKey?: string;
-  provider?: string;
+  provider?: Provider;
   model?: string;
   messages?: Message[];
   attachments?: Array<{ type: string; mimeType?: string; data: string }>; // Support for image attachments

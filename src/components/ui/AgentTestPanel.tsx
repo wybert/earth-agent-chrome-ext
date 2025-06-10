@@ -36,7 +36,7 @@ interface TestResult {
 
 interface TestConfiguration {
   prompts: TestPrompt[];
-  provider: 'openai' | 'anthropic' | 'google' | 'qwen';
+  provider: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
   model: string;
   heliconeApiKey: string;
   intervalMs: number;
@@ -96,6 +96,25 @@ const MODEL_OPTIONS = {
     { value: 'qwen2.5-72b-instruct', label: 'Qwen2.5-72B-Instruct' },
     { value: 'qwen2.5-14b-instruct-1m', label: 'Qwen2.5-14B-Instruct-1M' },
     { value: 'qwen2.5-vl-72b-instruct', label: 'Qwen2.5-VL-72B-Instruct' }
+  ],
+  ollama: [
+    { value: 'phi3', label: 'Phi-3 (Recommended)' },
+    { value: 'llama3.3:70b', label: 'Llama 3.3 70B' },
+    { value: 'llama3.3', label: 'Llama 3.3' },
+    { value: 'llama3.2:90b', label: 'Llama 3.2 90B' },
+    { value: 'llama3.2:70b', label: 'Llama 3.2 70B' },
+    { value: 'llama3.2', label: 'Llama 3.2' },
+    { value: 'llama3.1:70b', label: 'Llama 3.1 70B' },
+    { value: 'llama3.1', label: 'Llama 3.1' },
+    { value: 'mistral', label: 'Mistral' },
+    { value: 'codellama', label: 'Code Llama' },
+    { value: 'deepseek-coder-v2', label: 'DeepSeek Coder V2' },
+    { value: 'qwen2.5', label: 'Qwen 2.5' },
+    { value: 'gemma2', label: 'Gemma 2' },
+    { value: 'llava', label: 'LLaVA (Vision)' },
+    { value: 'llava-llama3', label: 'LLaVA Llama3 (Vision)' },
+    { value: 'llava-phi3', label: 'LLaVA Phi3 (Vision)' },
+    { value: 'moondream', label: 'Moondream (Vision)' }
   ]
 };
 
@@ -203,6 +222,17 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.timeoutMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.reloadGeeEditor, config.screenshotStorage, config.driveFolderId, isOpen]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
+    // If provider is changing to Ollama and no model is specified, set default
+    if (updates.provider === 'ollama' && !updates.model) {
+      updates.model = 'phi3';
+    }
+    // If provider is changing from Ollama to another provider, set appropriate default
+    else if (updates.provider && updates.provider !== 'ollama' && updates.provider !== config.provider) {
+      if (MODEL_OPTIONS[updates.provider] && MODEL_OPTIONS[updates.provider].length > 0) {
+        updates.model = MODEL_OPTIONS[updates.provider][0].value;
+      }
+    }
+    
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
@@ -833,7 +863,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="provider">AI Provider</Label>
-                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' | 'google' | 'qwen' })}>
+                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama' })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -842,24 +872,41 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         <SelectItem value="anthropic">Anthropic</SelectItem>
                         <SelectItem value="google">Google</SelectItem>
                         <SelectItem value="qwen">Qwen</SelectItem>
+                        <SelectItem value="ollama">Ollama</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div>
-                    <Label htmlFor="model">Model</Label>
-                    <Select value={config.model} onValueChange={(value) => updateConfig({ model: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MODEL_OPTIONS[config.provider].map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="model">
+                      {config.provider === 'ollama' ? 'Model ID' : 'Model'}
+                    </Label>
+                    {config.provider === 'ollama' ? (
+                      <div>
+                        <Input
+                          id="model"
+                          value={config.model}
+                          onChange={(e) => updateConfig({ model: e.target.value })}
+                          placeholder="Enter Ollama model ID (e.g., llama3.2, phi3, mistral)"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2
+                        </p>
+                      </div>
+                    ) : (
+                      <Select value={config.model} onValueChange={(value) => updateConfig({ model: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MODEL_OPTIONS[config.provider].map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   
                   <div>

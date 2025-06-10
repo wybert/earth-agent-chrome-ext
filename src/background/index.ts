@@ -11,7 +11,7 @@ interface MessageBase {
 }
 
 // Provider type for API providers
-type Provider = 'openai' | 'anthropic' | 'google' | 'qwen';
+type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
 // Store active port connections
 let port: chrome.runtime.Port | null = null;
@@ -32,6 +32,8 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
+const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
@@ -350,6 +352,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
             QWEN_API_KEY_STORAGE_KEY,
+            OLLAMA_API_KEY_STORAGE_KEY,
+            OLLAMA_BASE_URL_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY
           ]);
@@ -366,11 +370,20 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
           } else if (provider === 'qwen') {
             apiKey = config[QWEN_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
+          } else if (provider === 'ollama') {
+            apiKey = config[OLLAMA_API_KEY_STORAGE_KEY] || ''; // Ollama often doesn't need API key for local instances
           }
           
           const model = config[MODEL_STORAGE_KEY];
           
-          if (!apiKey) {
+          console.log(`🔧 [Background] API key validation for ${provider}:`, {
+            hasApiKey: !!apiKey,
+            provider: provider,
+            apiKeyLength: apiKey ? apiKey.length : 0
+          });
+          
+          if (!apiKey && provider !== 'ollama') {
+            console.error(`❌ [Background] API key not configured for ${provider}`);
             sendResponse({
               type: 'ERROR',
               error: 'API key not configured. Please set your API key in the extension settings.'
@@ -406,13 +419,34 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           }
           
           try {
+            // Get Ollama base URL if provider is ollama
+            let baseURL: string | undefined;
+            if (provider === 'ollama') {
+              baseURL = config[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+              console.log(`🔧 [Background] Ollama configuration:`, {
+                baseURL: baseURL,
+                model: model,
+                hasApiKey: !!apiKey,
+                messageCount: chatMessages.length
+              });
+            }
+            
+            console.log(`🔧 [Background] Calling handleChatRequest with:`, {
+              provider: provider,
+              model: model,
+              hasApiKey: !!apiKey,
+              baseURL: baseURL,
+              messageCount: chatMessages.length
+            });
+            
             // Handle the chat request through the appropriate handler
             const response = await handleChatRequest(
               chatMessages,
               apiKey,
               provider as Provider,
               model,
-              message.heliconeHeaders // Include Helicone headers if provided
+              message.heliconeHeaders, // Include Helicone headers if provided
+              baseURL // Include base URL for Ollama
             );
             
             // Get response body as a readable stream
@@ -1606,10 +1640,10 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
     
     // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
-    const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
+    const apiConfig = await new Promise<{apiKey: string, provider: string, model: string, baseURL?: string}>(
       (resolve, reject) => {
         chrome.storage.sync.get(
-          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
+          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, OLLAMA_API_KEY_STORAGE_KEY, OLLAMA_BASE_URL_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
           (result) => {
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message));
@@ -1637,24 +1671,36 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               });
             } else if (provider === 'qwen') {
               apiKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+            } else if (provider === 'ollama') {
+              apiKey = result[OLLAMA_API_KEY_STORAGE_KEY] || ''; // Ollama often doesn't need API key for local instances
             } else {
               apiKey = result[API_KEY_STORAGE_KEY] || '';
             }
             
+            // Get baseURL for Ollama if needed
+            let baseURL: string | undefined;
+            if (provider === 'ollama') {
+              baseURL = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+            }
+            
             console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
             console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
+            if (baseURL) {
+              console.log(`[${requestId}] Base URL: ${baseURL}`);
+            }
             
             resolve({
               apiKey,
               provider,
-              model: model
+              model: model,
+              baseURL
             });
           }
         );
       }
     );
     
-    if (!apiConfig.apiKey) {
+    if (!apiConfig.apiKey && apiConfig.provider !== 'ollama') {
       console.error(`[${requestId}] API key not configured`);
       port.postMessage({ 
         type: 'ERROR',
@@ -1677,7 +1723,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       apiConfig.apiKey,
       apiConfig.provider as any, // Cast to Provider type
       apiConfig.model,
-      message.heliconeHeaders
+      message.heliconeHeaders,
+      apiConfig.baseURL
     );
       
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);

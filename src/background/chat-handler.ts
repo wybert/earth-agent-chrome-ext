@@ -3,19 +3,21 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createQwen } from 'qwen-ai-provider';
+import { createOllama } from 'ollama-ai-provider';
 import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
 import { snapshot as browserSnapshot, SnapshotResponse } from '../lib/tools/browser/snapshot';
 
 // Available providers
-export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen';
+export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-20250514',
   google: 'gemini-2.0-flash',
-  qwen: 'qwen-max-latest'
+  qwen: 'qwen-max-latest',
+  ollama: 'phi3'
 };
 
 // Custom fetch function for Anthropic to handle CORS
@@ -204,13 +206,15 @@ export async function handleChatRequest(
   apiKey: string, 
   provider: Provider, 
   model?: string, 
-  heliconeHeaders?: Record<string, string>
+  heliconeHeaders?: Record<string, string>,
+  baseURL?: string
 ): Promise<Response> {
   try {
     // Debug log at start of request
     console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}`);
     
-    if (!apiKey) {
+    if (!apiKey && provider !== 'ollama') {
+      console.error(`❌ [Chat Handler] API key not configured for ${provider}`);
       return new Response(JSON.stringify({ 
         error: 'API key not configured',
         message: 'Please set your API key in the extension settings' 
@@ -228,7 +232,7 @@ export async function handleChatRequest(
     }
 
     // Setup LLM provider
-    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI> | ReturnType<typeof createQwen>;
+    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI> | ReturnType<typeof createQwen> | ReturnType<typeof createOllama>;
     let effectiveModel: string;
     
     // Define available models for validation
@@ -265,6 +269,26 @@ export async function handleChatRequest(
       'qwen2.5-72b-instruct',
       'qwen2.5-14b-instruct-1m',
       'qwen2.5-vl-72b-instruct'
+    ];
+    
+    const ollamaModels = [
+      'phi3',
+      'llama3.3:70b',
+      'llama3.3',
+      'llama3.2:90b',
+      'llama3.2:70b',
+      'llama3.2',
+      'llama3.1:70b',
+      'llama3.1',
+      'mistral',
+      'codellama',
+      'deepseek-coder-v2',
+      'qwen2.5',
+      'gemma2',
+      'llava',
+      'llava-llama3',
+      'llava-phi3',
+      'moondream'
     ];
     
     if (provider === 'openai') {
@@ -419,6 +443,97 @@ export async function handleChatRequest(
       }
       
       console.log(`Using Qwen provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+    } else if (provider === 'ollama') {
+      console.log(`🔧 [Chat Handler] Processing Ollama request:`, {
+        requestedModel: model,
+        baseURL: baseURL,
+        hasApiKey: !!apiKey,
+        defaultModel: DEFAULT_MODELS.ollama
+      });
+      
+      // Use the requested model if provided, otherwise use the default
+      let selectedModel = model;
+      if (!selectedModel || selectedModel.trim() === '') {
+        console.log(`⚠️ [Chat Handler] No Ollama model specified. Using default.`);
+        selectedModel = DEFAULT_MODELS.ollama;
+      }
+      
+      effectiveModel = selectedModel;
+      
+      // Use baseURL from parameter or default Ollama baseURL
+      const ollamaBaseURL = baseURL || 'http://localhost:11434/api';
+      
+      // Create a simple fetch function for Ollama with proper headers
+      const ollamaFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
+        // Add required headers for Ollama
+        const defaultHeaders = {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'User-Agent': 'Chrome-Extension'
+        };
+        
+        // Merge with existing headers
+        options.headers = {
+          ...defaultHeaders,
+          ...options.headers
+        };
+        
+        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+        console.log(`🔄 [Ollama Fetch] Making request to: ${url} (${options.method || 'GET'})`);
+        
+        try {
+          const response = await fetch(input, options);
+          if (!response.ok) {
+            console.error(`❌ [Ollama Fetch] Error: ${response.status} ${response.statusText}`);
+          }
+          return response;
+        } catch (error) {
+          console.error(`❌ [Ollama Fetch] Network error:`, error);
+          throw error;
+        }
+      };
+      
+      // Create the Ollama provider with the specified base URL
+      const ollamaConfig: any = {
+        baseURL: ollamaBaseURL,
+        // Use our custom fetch for Ollama requests
+        fetch: ollamaFetch
+      };
+      
+      // Add the API key only if it exists and is not empty
+      if (apiKey && apiKey.trim() !== '') {
+        console.log('🔧 [Chat Handler] Adding API key to Ollama config');
+        ollamaConfig.apiKey = apiKey;
+      } else {
+        console.log('🔧 [Chat Handler] No API key provided for Ollama (expected for local instances)');
+      }
+      
+      if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+        console.log('🔍 [Chat Handler] Configuring Ollama with Helicone observability');
+        ollamaConfig.headers = heliconeHeaders;
+      }
+      
+      console.log(`🔧 [Chat Handler] Creating Ollama provider with config:`, {
+        model: effectiveModel,
+        baseURL: ollamaBaseURL,
+        hasApiKey: !!ollamaConfig.apiKey,
+        hasHeliconeHeaders: !!heliconeHeaders
+      });
+      
+      try {
+        llmProvider = createOllama(ollamaConfig);
+        console.log(`✅ [Chat Handler] Ollama provider created successfully`);
+      } catch (error) {
+        console.error(`❌ [Chat Handler] Failed to create Ollama provider:`, error);
+        return new Response(JSON.stringify({ 
+          error: `Failed to create Ollama provider: ${error instanceof Error ? error.message : String(error)}` 
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      console.log(`Using Ollama provider with model: ${effectiveModel} at ${ollamaBaseURL} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
@@ -1611,9 +1726,23 @@ export async function handleChatRequest(
     // Configure stream options based on provider
     let streamOptions: any = {
       model: llmProvider(effectiveModel),
-      system: GEE_SYSTEM_PROMPT,
+      // Temporarily remove system prompt for Ollama to match curl format
+      ...(provider !== 'ollama' && { system: GEE_SYSTEM_PROMPT }),
       messages: formattedMessages,
-      tools: {
+      temperature: 0.7,
+      maxRetries: 3,
+      // Add onError callback to capture and log streaming errors
+      onError: ({ error }: { error: any }) => {
+        console.error(`❌ [Chat Handler] Streaming error occurred`, error);
+        // We can inspect the error object for more details
+        // This is where we'll see the actual message from the API
+      },
+    };
+    
+    // Add tools conditionally - temporarily disable for Ollama to test 403 issue
+    if (provider !== 'ollama') {
+      console.log(`🛠️ [Chat Handler] Adding tools for ${provider} provider`);
+      streamOptions.tools = {
         weather: weatherTool,
         earthEngineDataset: earthEngineDatasetTool,
         earthEngineScript: earthEngineScriptTool,
@@ -1624,20 +1753,32 @@ export async function handleChatRequest(
         clickByCoordinates: clickByCoordinatesTool,
         resetMapInspectorConsole: resetMapInspectorConsoleTool,
         clearScript: clearScriptTool
-      },
-      toolChoice: 'auto',
-      maxSteps: 12, // Allow up to 5 steps
-      temperature: 0.7,
-      maxRetries: 3,
-      toolCallStreaming: false,
-      experimental_continueSteps: true,
-      // Add onError callback to capture and log streaming errors
-      onError: ({ error }: { error: any }) => {
-        console.error(`❌ [Chat Handler] Streaming error occurred`, error);
-        // We can inspect the error object for more details
-        // This is where we'll see the actual message from the Google API
-      },
-    };
+      };
+      streamOptions.toolChoice = 'auto';
+      streamOptions.maxSteps = 12; // Allow up to 12 steps
+      streamOptions.toolCallStreaming = false;
+      streamOptions.experimental_continueSteps = true;
+    } else if (provider === 'ollama') {
+      console.log(`🛠️ [Chat Handler] Re-enabling tools for Ollama (CORS issue resolved)`);
+      streamOptions.tools = {
+        weather: weatherTool,
+        earthEngineDataset: earthEngineDatasetTool,
+        earthEngineScript: earthEngineScriptTool,
+        earthEngineRunCode: earthEngineRunCodeTool,
+        screenshot: screenshotTool,
+        snapshot: snapshotTool,
+        clickByRefId: clickByRefIdTool,
+        clickByCoordinates: clickByCoordinatesTool,
+        resetMapInspectorConsole: resetMapInspectorConsoleTool,
+        clearScript: clearScriptTool
+      };
+      streamOptions.toolChoice = 'auto';
+      streamOptions.maxSteps = 12; // Allow up to 12 steps
+      streamOptions.toolCallStreaming = false;
+      streamOptions.experimental_continueSteps = true;
+    } else {
+      console.log(`🛠️ [Chat Handler] No tools configured for provider: ${provider}`);
+    }
     
     // For Anthropic models, add special headers for browser usage
     if (provider === 'anthropic') {
@@ -1656,6 +1797,14 @@ export async function handleChatRequest(
       console.log(`🔧 [Chat Handler] Google model being used: ${effectiveModel}`);
       console.log(`🔧 [Chat Handler] Google available models: ${googleModels.join(', ')}`);
     }
+    
+    // For Ollama provider, add specific logging (now using normal AI SDK flow)
+    if (provider === 'ollama') {
+      console.log(`🔧 [Chat Handler] Using Ollama provider with model: ${effectiveModel}`);
+      console.log(`🔧 [Chat Handler] Ollama base URL: ${baseURL || 'http://localhost:11434/api'}`);
+    }
+      
+
     
     console.log(`📊 [Chat Handler] Final stream configuration:`, JSON.stringify(streamOptions, (k, v) => 
       k === 'messages' ? '[Messages array]' : (k === 'tools' ? '[Tools object]' : v), 2));

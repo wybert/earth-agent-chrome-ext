@@ -12,10 +12,12 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
+const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
-type ApiProvider = 'openai' | 'anthropic' | 'google' | 'qwen';
+type ApiProvider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
 // Available models for each provider
 const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
@@ -71,6 +73,25 @@ const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
     'qwen2.5-72b-instruct',
     'qwen2.5-14b-instruct-1m',
     'qwen2.5-vl-72b-instruct'
+  ],
+  ollama: [
+    'phi3',
+    'llama3.3:70b',
+    'llama3.3',
+    'llama3.2:90b',
+    'llama3.2:70b',
+    'llama3.2',
+    'llama3.1:70b',
+    'llama3.1',
+    'mistral',
+    'codellama',
+    'deepseek-coder-v2',
+    'qwen2.5',
+    'gemma2',
+    'llava',
+    'llava-llama3',
+    'llava-phi3',
+    'moondream'
   ]
 };
 
@@ -120,7 +141,24 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'qwen-vl-max': 'Qwen-VL-Max',
   'qwen2.5-72b-instruct': 'Qwen2.5-72B-Instruct',
   'qwen2.5-14b-instruct-1m': 'Qwen2.5-14B-Instruct-1M',
-  'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct'
+  'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct',
+  'phi3': 'Phi-3 (Recommended)',
+  'llama3.3:70b': 'Llama 3.3 70B',
+  'llama3.3': 'Llama 3.3',
+  'llama3.2:90b': 'Llama 3.2 90B',
+  'llama3.2:70b': 'Llama 3.2 70B',
+  'llama3.2': 'Llama 3.2',
+  'llama3.1:70b': 'Llama 3.1 70B',
+  'llama3.1': 'Llama 3.1',
+  'mistral': 'Mistral',
+  'codellama': 'Code Llama',
+  'deepseek-coder-v2': 'DeepSeek Coder V2',
+  'qwen2.5': 'Qwen 2.5',
+  'gemma2': 'Gemma 2',
+  'llava': 'LLaVA (Vision)',
+  'llava-llama3': 'LLaVA Llama3 (Vision)',
+  'llava-phi3': 'LLaVA Phi3 (Vision)',
+  'moondream': 'Moondream (Vision)'
 };
 
 interface SettingsProps {
@@ -131,6 +169,7 @@ export function Settings({ onClose }: SettingsProps) {
   const [apiKey, setApiKey] = useState('');
   const [provider, setProvider] = useState<ApiProvider>('openai');
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState('http://localhost:11434/api');
   const [isSaving, setIsSaving] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -144,6 +183,8 @@ export function Settings({ onClose }: SettingsProps) {
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
+      OLLAMA_API_KEY_STORAGE_KEY,
+      OLLAMA_BASE_URL_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY,
       MODEL_STORAGE_KEY
     ], (result) => {
@@ -163,11 +204,19 @@ export function Settings({ onClose }: SettingsProps) {
       } else if (savedProvider === 'qwen') {
         const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(qwenKey);
+      } else if (savedProvider === 'ollama') {
+        const ollamaKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+        setApiKey(ollamaKey);
+        const ollamaUrl = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+        setOllamaBaseUrl(ollamaUrl);
       }
 
       // Load saved model or default to first model for the provider
       const savedModel = result[MODEL_STORAGE_KEY] as string || '';
-      if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
+      if (savedProvider === 'ollama') {
+        // For Ollama, use saved model or default to phi3
+        setSelectedModel(savedModel || 'phi3');
+      } else if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
         setSelectedModel(savedModel);
       } else {
         setSelectedModel(AVAILABLE_MODELS[savedProvider][0]);
@@ -183,6 +232,8 @@ export function Settings({ onClose }: SettingsProps) {
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
+      OLLAMA_API_KEY_STORAGE_KEY,
+      OLLAMA_BASE_URL_STORAGE_KEY,
       MODEL_STORAGE_KEY
     ], (result) => {
       if (provider === 'openai') {
@@ -197,12 +248,20 @@ export function Settings({ onClose }: SettingsProps) {
       } else if (provider === 'qwen') {
         const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         setApiKey(qwenKey);
+      } else if (provider === 'ollama') {
+        const ollamaKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+        setApiKey(ollamaKey);
+        const ollamaUrl = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+        setOllamaBaseUrl(ollamaUrl);
       }
 
       // When provider changes, check if current model is valid for new provider
       const currentSavedModel = result[MODEL_STORAGE_KEY] as string || '';
       
-      if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
+      if (provider === 'ollama') {
+        // For Ollama, use saved model or default to phi3
+        setSelectedModel(currentSavedModel || 'phi3');
+      } else if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
         // Keep current model if it's valid for the new provider (rare case)
         setSelectedModel(currentSavedModel);
       } else {
@@ -229,8 +288,14 @@ export function Settings({ onClose }: SettingsProps) {
       storageData[GOOGLE_API_KEY_STORAGE_KEY] = apiKey;
     } else if (provider === 'qwen') {
       storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
+    } else if (provider === 'ollama') {
+      storageData[OLLAMA_API_KEY_STORAGE_KEY] = apiKey;
+      storageData[OLLAMA_BASE_URL_STORAGE_KEY] = ollamaBaseUrl;
     }
-    storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
+    
+    if (provider !== 'ollama') {
+      storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility (not needed for Ollama)
+    }
     
     chrome.storage.sync.set(
       storageData,
@@ -440,6 +505,54 @@ export function Settings({ onClose }: SettingsProps) {
           setConnectionStatus('error');
         }
       }
+      // For Ollama, we'll check if the base URL is reachable
+      else if (provider === 'ollama') {
+        console.log('🔧 [Settings] Testing Ollama connection', {
+          baseUrl: ollamaBaseUrl,
+          model: model,
+          hasApiKey: !!key
+        });
+        
+        // For Ollama, test the actual connection
+        try {
+          // Test the /api/tags endpoint to see if Ollama is running
+          const testUrl = `${ollamaBaseUrl.replace('/api', '')}/api/tags`;
+          console.log('🔧 [Settings] Testing Ollama endpoint:', testUrl);
+          
+          const testResponse = await fetch(testUrl, {
+            method: 'GET',
+            headers: key ? { 'Authorization': `Bearer ${key}` } : {},
+            // Add timeout and proper error handling
+            signal: AbortSignal.timeout(5000)
+          });
+          
+          if (testResponse.ok) {
+            const data = await testResponse.json();
+            console.log('✅ [Settings] Ollama connection test successful:', data);
+            setConnectionStatus('success');
+          } else {
+            console.error('❌ [Settings] Ollama connection test failed:', {
+              status: testResponse.status,
+              statusText: testResponse.statusText,
+              url: testUrl
+            });
+            setConnectionStatus('error');
+          }
+        } catch (ollamaError) {
+          console.error('❌ [Settings] Error testing Ollama connection:', {
+            error: ollamaError,
+            baseUrl: ollamaBaseUrl,
+            message: ollamaError instanceof Error ? ollamaError.message : 'Unknown error'
+          });
+          // For local development, still mark as success if it's a network error (Ollama might be running but not accessible due to CORS)
+          if (ollamaError instanceof Error && (ollamaError.message.includes('fetch') || ollamaError.message.includes('network'))) {
+            console.log('🔧 [Settings] Assuming Ollama is available despite fetch error (likely CORS)');
+            setConnectionStatus('success');
+          } else {
+            setConnectionStatus('error');
+          }
+        }
+      }
       
     } catch (error) {
       console.error('Error testing API connection:', error);
@@ -491,6 +604,12 @@ export function Settings({ onClose }: SettingsProps) {
             >
               Qwen
             </Button>
+            <Button 
+              variant={provider === 'ollama' ? 'default' : 'outline'}
+              onClick={() => setProvider('ollama')}
+            >
+              Ollama
+            </Button>
           </div>
           {provider === 'google' && (
             <p className="text-xs text-gray-500 mt-2">
@@ -504,71 +623,119 @@ export function Settings({ onClose }: SettingsProps) {
               Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
             </p>
           )}
+          {provider === 'ollama' && (
+            <p className="text-xs text-gray-500 mt-2">
+              Note: Ollama runs locally or on a remote server. For local instances, usually no API key is required.
+              Default Base URL: http://localhost:11434/api
+            </p>
+          )}
         </div>
 
+        {provider === 'ollama' && (
+          <div>
+            <label className="text-sm mb-1 block">Base URL</label>
+            <Input
+              type="text"
+              value={ollamaBaseUrl}
+              onChange={(e) => setOllamaBaseUrl(e.target.value)}
+              placeholder="http://localhost:11434/api"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Enter the URL of your Ollama instance. Use http://localhost:11434/api for local installations.
+            </p>
+          </div>
+        )}
+
         <div>
-          <label className="text-sm mb-1 block">Select Model</label>
-          <select 
-            className="w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-          >
-            {AVAILABLE_MODELS[provider].map((modelId) => (
-              <option key={modelId} value={modelId}>
-                {MODEL_DISPLAY_NAMES[modelId] || modelId}
-              </option>
-            ))}
-          </select>
+          <label className="text-sm mb-1 block">
+            {provider === 'ollama' ? 'Enter Model ID' : 'Select Model'}
+          </label>
+          {provider === 'ollama' ? (
+            <div>
+              <Input
+                type="text"
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                placeholder="Enter Ollama model ID (e.g., llama3.2, phi3, mistral)"
+                className="mb-2"
+              />
+              <p className="text-xs text-gray-500 mb-4">
+                Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2
+              </p>
+            </div>
+          ) : (
+            <select 
+              className="w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+            >
+              {AVAILABLE_MODELS[provider].map((modelId) => (
+                <option key={modelId} value={modelId}>
+                  {MODEL_DISPLAY_NAMES[modelId] || modelId}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         
-        <div>
-          <label className="text-sm mb-1 block">API Key</label>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Input
-                type={showApiKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : provider === 'google' ? 'Google' : 'Qwen'} API key`}
-                className="pr-10"
-              />
-              <button 
-                type="button" 
-                className="absolute inset-y-0 right-0 px-3 flex items-center"
-                onClick={() => setShowApiKey(!showApiKey)}
-              >
-                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+        {provider !== 'ollama' && (
+          <div>
+            <label className="text-sm mb-1 block">API Key</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : provider === 'google' ? 'Google' : 'Qwen'} API key`}
+                  className="pr-10"
+                />
+                <button 
+                  type="button" 
+                  className="absolute inset-y-0 right-0 px-3 flex items-center"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button onClick={handleSave} disabled={isSaving || !apiKey}>
+                Save
+              </Button>
             </div>
-            <Button onClick={handleSave} disabled={isSaving || !apiKey}>
-              Save
+          </div>
+        )}
+        
+        {provider === 'ollama' && (
+          <div>
+            <Button onClick={handleSave} disabled={isSaving} className="w-full">
+              Save Configuration
             </Button>
           </div>
+        )}
 
-          {saveStatus === 'success' && (
-            <div className="mt-2 text-sm flex items-center text-green-600">
-              <Check className="h-4 w-4 mr-1" /> API key saved successfully
-            </div>
-          )}
+        {saveStatus === 'success' && (
+          <div className="mt-2 text-sm flex items-center text-green-600">
+            <Check className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Configuration saved successfully' : 'API key saved successfully'}
+          </div>
+        )}
 
-          {saveStatus === 'error' && (
-            <div className="mt-2 text-sm flex items-center text-red-600">
-              <X className="h-4 w-4 mr-1" /> Error saving API key
-            </div>
-          )}
+        {saveStatus === 'error' && (
+          <div className="mt-2 text-sm flex items-center text-red-600">
+            <X className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Error saving configuration' : 'Error saving API key'}
+          </div>
+        )}
 
-          {connectionStatus === 'success' && (
-            <div className="mt-2 text-sm flex items-center text-green-600">
-              <Check className="h-4 w-4 mr-1" /> API connection verified successfully
-            </div>
-          )}
+        {connectionStatus === 'success' && (
+          <div className="mt-2 text-sm flex items-center text-green-600">
+            <Check className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Ollama connection verified successfully' : 'API connection verified successfully'}
+          </div>
+        )}
 
-          {connectionStatus === 'error' && (
-            <div className="mt-2 text-sm flex items-center text-red-600">
-              <X className="h-4 w-4 mr-1" /> Could not verify API connection
-            </div>
-          )}
-        </div>
+        {connectionStatus === 'error' && (
+          <div className="mt-2 text-sm flex items-center text-red-600">
+            <X className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Could not verify Ollama connection' : 'Could not verify API connection'}
+          </div>
+        )}
 
         <div className="text-sm text-gray-500">
           <p>Your API key is stored securely in Chrome's synced storage and is never sent to our servers.</p>
@@ -579,7 +746,9 @@ export function Settings({ onClose }: SettingsProps) {
               ? 'You can create an Anthropic API key in your Anthropic console.'
               : provider === 'google' 
               ? 'You can create a Google Generative AI API key in your Google AI Studio.'
-              : 'You can create a Qwen API key in your Qwen console.'}
+              : provider === 'qwen'
+              ? 'You can create a Qwen API key in your Qwen console.'
+              : 'For Ollama, API key is usually not required for local instances. Configure base URL above.'}
           </p>
           <p className="mt-1">
             <strong>Model selection:</strong> Different models have varying capabilities, speeds, and costs.

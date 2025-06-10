@@ -44,13 +44,29 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 
 ## Configuration
 
-After installation, you'll need to configure your API keys:
+After installation, you'll need to configure your AI provider:
 
 1. Click the Earth Agent extension icon in Chrome
 2. Go to Settings
-3. Add your OpenAI or Anthropic API key
-4. Select your preferred AI provider and model
+3. Choose your AI provider:
+   - **OpenAI**: Add your OpenAI API key (supports GPT-4o, GPT-4.1, GPT-o3, etc.)
+   - **Anthropic**: Add your Anthropic API key (supports Claude models)
+   - **Google**: Add your Google API key (supports Gemini models)
+   - **Qwen**: Add your DashScope API key (supports Qwen models)
+   - **Ollama**: Configure local Ollama server (requires local installation)
+4. Select your preferred model
 5. Start chatting with Earth Engine!
+
+### Ollama Setup (Local AI Models)
+
+For Ollama local models:
+
+1. [Install Ollama](https://ollama.com/) on your machine
+2. Pull your desired models: `ollama pull gemma3` or `ollama pull llama3`
+3. **Important**: Start Ollama with CORS enabled: `OLLAMA_ORIGINS="*" ollama serve`
+4. In the extension settings, select "Ollama" as provider
+5. Enter your model name (e.g., "gemma3:1b", "llama3:latest")
+6. **Tool Support**: Not all models support tools - check [Ollama model search](https://ollama.com/search) for models with "tools" tag for full Earth Engine integration
 
 ## Environment Management
 
@@ -62,15 +78,29 @@ The agent includes powerful environment management capabilities:
 
 These tools help maintain a clean workspace during development and are particularly useful when switching between different Earth Engine tasks.
 
+## AI Model Tool Support
+
+The extension provides powerful Earth Engine integration tools, but tool support varies by AI provider and model:
+
+- **✅ Full Tool Support**: OpenAI GPT models, Anthropic Claude models, Google Gemini models, Qwen models
+- **⚠️ Variable Tool Support**: Ollama models - tool support depends on the specific model
+  - **Tool-Compatible Ollama Models**: Check [Ollama model search](https://ollama.com/search) for models with "tools" tag
+  - **Examples with tools**: `qwen3`, `llama3.1`, `mistral`, `codellama`, `firefunction-v2`
+  - **Basic Chat Only**: Models without tool support can still provide Earth Engine guidance and code suggestions
+- **📖 Documentation**: For other providers, refer to their respective documentation for tool/function calling capabilities
+
+**Tip**: For the best Earth Engine integration experience with automated code execution, use tool-compatible models from any provider.
+
 ## Agent Testing Panel
 
 The extension includes a comprehensive testing framework for evaluating AI agent performance:
 
-- **Multi-Provider Support**: Test with OpenAI GPT models or Anthropic Claude models
+- **Multi-Provider Support**: Test with OpenAI GPT models, Anthropic Claude models, Google Gemini, Qwen models, or Ollama local models
 - **Batch Testing**: Run multiple prompts automatically with configurable intervals
 - **Environment Controls**: Configure reset and clear functions, including optional GEE editor reload
 - **Results Analysis**: Export detailed test results with screenshots and metadata
 - **Screenshot Storage**: Multiple storage options (local, downloads folder, Google Drive)
+- **Tool Compatibility**: Automatically adapts testing based on model tool support capabilities
 
 Access the testing panel by clicking the flask icon (🧪) in the main chat interface.
 

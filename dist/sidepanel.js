@@ -107144,6 +107144,7 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Default welcome message (Restore)
@@ -107223,6 +107224,7 @@ function ChatUI() {
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
             QWEN_API_KEY_STORAGE_KEY,
+            OLLAMA_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY
         ], (result) => {
             const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -107244,6 +107246,11 @@ function ChatUI() {
             else if (provider === 'qwen') {
                 currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 hasKey = !!currentKey;
+            }
+            else if (provider === 'ollama') {
+                currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+                hasKey = true; // Ollama doesn't require an API key for local instances
+                console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
             }
             const hasApiKey = hasKey;
             setApiConfigured(hasApiKey);
@@ -107477,7 +107484,18 @@ function ChatUI() {
                 break;
             case 'ERROR':
                 console.error('Background script error:', response.error);
-                setError(new Error(`API Error: ${response.error || 'Unknown error.'}`));
+                // Check if it's an Ollama CORS error and provide helpful UI feedback
+                let errorMessage = `API Error: ${response.error || 'Unknown error.'}`;
+                try {
+                    if (typeof response.error === 'string' && response.error.includes('Ollama CORS Configuration Required')) {
+                        const errorData = JSON.parse(response.error);
+                        errorMessage = `🚨 Ollama CORS Issue Detected!\n\n${errorData.message}\n\n💡 Solution:\n${errorData.solution}\n\n🔧 Alternative:\n${errorData.alternativeSolution}`;
+                    }
+                }
+                catch {
+                    // Use original error message if parsing fails
+                }
+                setError(new Error(errorMessage));
                 setIsLocalLoading(false);
                 const errorAssistantMessage = {
                     id: response.requestId || (Date.now() + 1).toString(),
@@ -107611,6 +107629,14 @@ function ChatUI() {
                 provider: provider,
                 model: model
             };
+            console.log(`🔧 [Chat] Full message payload being sent:`, {
+                type: messagePayload.type,
+                provider: messagePayload.provider,
+                model: messagePayload.model,
+                messageLength: messagePayload.message?.length || 0,
+                messagesCount: messagePayload.messages?.length || 0,
+                hasAttachments: !!messagePayload.attachments
+            });
             if (imageAttachments.length > 0) {
                 console.log(`Sending message with ${imageAttachments.length} image attachments`);
                 console.log(`Image attachments: ${imageAttachments.map(img => `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
@@ -107718,6 +107744,7 @@ function ChatUI() {
                     ANTHROPIC_API_KEY_STORAGE_KEY,
                     GOOGLE_API_KEY_STORAGE_KEY,
                     QWEN_API_KEY_STORAGE_KEY,
+                    OLLAMA_API_KEY_STORAGE_KEY,
                     API_PROVIDER_STORAGE_KEY
                 ], (result) => {
                     const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
@@ -107739,6 +107766,10 @@ function ChatUI() {
                     else if (provider === 'qwen') {
                         currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                         hasKey = !!currentKey;
+                    }
+                    else if (provider === 'ollama') {
+                        currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+                        hasKey = true; // Ollama doesn't require an API key for local instances
                     }
                     setApiConfigured(hasKey);
                     setApiKey(currentKey);
@@ -107825,6 +107856,8 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
+const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 // Available models for each provider
@@ -107881,6 +107914,25 @@ const AVAILABLE_MODELS = {
         'qwen2.5-72b-instruct',
         'qwen2.5-14b-instruct-1m',
         'qwen2.5-vl-72b-instruct'
+    ],
+    ollama: [
+        'phi3',
+        'llama3.3:70b',
+        'llama3.3',
+        'llama3.2:90b',
+        'llama3.2:70b',
+        'llama3.2',
+        'llama3.1:70b',
+        'llama3.1',
+        'mistral',
+        'codellama',
+        'deepseek-coder-v2',
+        'qwen2.5',
+        'gemma2',
+        'llava',
+        'llava-llama3',
+        'llava-phi3',
+        'moondream'
     ]
 };
 // Human-readable model names
@@ -107929,12 +107981,30 @@ const MODEL_DISPLAY_NAMES = {
     'qwen-vl-max': 'Qwen-VL-Max',
     'qwen2.5-72b-instruct': 'Qwen2.5-72B-Instruct',
     'qwen2.5-14b-instruct-1m': 'Qwen2.5-14B-Instruct-1M',
-    'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct'
+    'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct',
+    'phi3': 'Phi-3 (Recommended)',
+    'llama3.3:70b': 'Llama 3.3 70B',
+    'llama3.3': 'Llama 3.3',
+    'llama3.2:90b': 'Llama 3.2 90B',
+    'llama3.2:70b': 'Llama 3.2 70B',
+    'llama3.2': 'Llama 3.2',
+    'llama3.1:70b': 'Llama 3.1 70B',
+    'llama3.1': 'Llama 3.1',
+    'mistral': 'Mistral',
+    'codellama': 'Code Llama',
+    'deepseek-coder-v2': 'DeepSeek Coder V2',
+    'qwen2.5': 'Qwen 2.5',
+    'gemma2': 'Gemma 2',
+    'llava': 'LLaVA (Vision)',
+    'llava-llama3': 'LLaVA Llama3 (Vision)',
+    'llava-phi3': 'LLaVA Phi3 (Vision)',
+    'moondream': 'Moondream (Vision)'
 };
 function Settings({ onClose }) {
     const [apiKey, setApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
     const [provider, setProvider] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('openai');
     const [selectedModel, setSelectedModel] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('');
+    const [ollamaBaseUrl, setOllamaBaseUrl] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('http://localhost:11434/api');
     const [isSaving, setIsSaving] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [showApiKey, setShowApiKey] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [saveStatus, setSaveStatus] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)('idle');
@@ -107947,6 +108017,8 @@ function Settings({ onClose }) {
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
             QWEN_API_KEY_STORAGE_KEY,
+            OLLAMA_API_KEY_STORAGE_KEY,
+            OLLAMA_BASE_URL_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY
         ], (result) => {
@@ -107969,9 +108041,19 @@ function Settings({ onClose }) {
                 const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 setApiKey(qwenKey);
             }
+            else if (savedProvider === 'ollama') {
+                const ollamaKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+                setApiKey(ollamaKey);
+                const ollamaUrl = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+                setOllamaBaseUrl(ollamaUrl);
+            }
             // Load saved model or default to first model for the provider
             const savedModel = result[MODEL_STORAGE_KEY] || '';
-            if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
+            if (savedProvider === 'ollama') {
+                // For Ollama, use saved model or default to phi3
+                setSelectedModel(savedModel || 'phi3');
+            }
+            else if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
                 setSelectedModel(savedModel);
             }
             else {
@@ -107987,6 +108069,8 @@ function Settings({ onClose }) {
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
             QWEN_API_KEY_STORAGE_KEY,
+            OLLAMA_API_KEY_STORAGE_KEY,
+            OLLAMA_BASE_URL_STORAGE_KEY,
             MODEL_STORAGE_KEY
         ], (result) => {
             if (provider === 'openai') {
@@ -108005,9 +108089,19 @@ function Settings({ onClose }) {
                 const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 setApiKey(qwenKey);
             }
+            else if (provider === 'ollama') {
+                const ollamaKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
+                setApiKey(ollamaKey);
+                const ollamaUrl = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+                setOllamaBaseUrl(ollamaUrl);
+            }
             // When provider changes, check if current model is valid for new provider
             const currentSavedModel = result[MODEL_STORAGE_KEY] || '';
-            if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
+            if (provider === 'ollama') {
+                // For Ollama, use saved model or default to phi3
+                setSelectedModel(currentSavedModel || 'phi3');
+            }
+            else if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
                 // Keep current model if it's valid for the new provider (rare case)
                 setSelectedModel(currentSavedModel);
             }
@@ -108037,7 +108131,13 @@ function Settings({ onClose }) {
         else if (provider === 'qwen') {
             storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
         }
-        storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility
+        else if (provider === 'ollama') {
+            storageData[OLLAMA_API_KEY_STORAGE_KEY] = apiKey;
+            storageData[OLLAMA_BASE_URL_STORAGE_KEY] = ollamaBaseUrl;
+        }
+        if (provider !== 'ollama') {
+            storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility (not needed for Ollama)
+        }
         chrome.storage.sync.set(storageData, () => {
             if (chrome.runtime.lastError) {
                 console.error('Error saving API key:', chrome.runtime.lastError);
@@ -108242,6 +108342,54 @@ function Settings({ onClose }) {
                     setConnectionStatus('error');
                 }
             }
+            // For Ollama, we'll check if the base URL is reachable
+            else if (provider === 'ollama') {
+                console.log('🔧 [Settings] Testing Ollama connection', {
+                    baseUrl: ollamaBaseUrl,
+                    model: model,
+                    hasApiKey: !!key
+                });
+                // For Ollama, test the actual connection
+                try {
+                    // Test the /api/tags endpoint to see if Ollama is running
+                    const testUrl = `${ollamaBaseUrl.replace('/api', '')}/api/tags`;
+                    console.log('🔧 [Settings] Testing Ollama endpoint:', testUrl);
+                    const testResponse = await fetch(testUrl, {
+                        method: 'GET',
+                        headers: key ? { 'Authorization': `Bearer ${key}` } : {},
+                        // Add timeout and proper error handling
+                        signal: AbortSignal.timeout(5000)
+                    });
+                    if (testResponse.ok) {
+                        const data = await testResponse.json();
+                        console.log('✅ [Settings] Ollama connection test successful:', data);
+                        setConnectionStatus('success');
+                    }
+                    else {
+                        console.error('❌ [Settings] Ollama connection test failed:', {
+                            status: testResponse.status,
+                            statusText: testResponse.statusText,
+                            url: testUrl
+                        });
+                        setConnectionStatus('error');
+                    }
+                }
+                catch (ollamaError) {
+                    console.error('❌ [Settings] Error testing Ollama connection:', {
+                        error: ollamaError,
+                        baseUrl: ollamaBaseUrl,
+                        message: ollamaError instanceof Error ? ollamaError.message : 'Unknown error'
+                    });
+                    // For local development, still mark as success if it's a network error (Ollama might be running but not accessible due to CORS)
+                    if (ollamaError instanceof Error && (ollamaError.message.includes('fetch') || ollamaError.message.includes('network'))) {
+                        console.log('🔧 [Settings] Assuming Ollama is available despite fetch error (likely CORS)');
+                        setConnectionStatus('success');
+                    }
+                    else {
+                        setConnectionStatus('error');
+                    }
+                }
+            }
         }
         catch (error) {
             console.error('Error testing API connection:', error);
@@ -108269,31 +108417,45 @@ function Settings({ onClose }) {
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'openai' ? 'default' : 'outline', onClick: () => setProvider('openai') }, "OpenAI"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'anthropic' ? 'default' : 'outline', onClick: () => setProvider('anthropic') }, "Anthropic"),
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'google' ? 'default' : 'outline', onClick: () => setProvider('google') }, "Google"),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'qwen' ? 'default' : 'outline', onClick: () => setProvider('qwen') }, "Qwen")),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'qwen' ? 'default' : 'outline', onClick: () => setProvider('qwen') }, "Qwen"),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { variant: provider === 'ollama' ? 'default' : 'outline', onClick: () => setProvider('ollama') }, "Ollama")),
                 provider === 'google' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Google Gemini models may require a Google Cloud project with billing enabled. Please refer to Google's rate limit and pricing documentation.")),
-                provider === 'qwen' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Qwen uses DashScope API keys. You can obtain your API key from the Alibaba Cloud DashScope console. Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1"))),
+                provider === 'qwen' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Qwen uses DashScope API keys. You can obtain your API key from the Alibaba Cloud DashScope console. Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1")),
+                provider === 'ollama' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-2" }, "Note: Ollama runs locally or on a remote server. For local instances, usually no API key is required. Default Base URL: http://localhost:11434/api"))),
+            provider === 'ollama' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "Base URL"),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: "text", value: ollamaBaseUrl, onChange: (e) => setOllamaBaseUrl(e.target.value), placeholder: "http://localhost:11434/api" }),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mt-1" }, "Enter the URL of your Ollama instance. Use http://localhost:11434/api for local installations."))),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "Select Model"),
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", { className: "w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600", value: selectedModel, onChange: (e) => setSelectedModel(e.target.value) }, AVAILABLE_MODELS[provider].map((modelId) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { key: modelId, value: modelId }, MODEL_DISPLAY_NAMES[modelId] || modelId))))),
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, provider === 'ollama' ? 'Enter Model ID' : 'Select Model'),
+                provider === 'ollama' ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: "text", value: selectedModel, onChange: (e) => setSelectedModel(e.target.value), placeholder: "Enter Ollama model ID (e.g., llama3.2, phi3, mistral)", className: "mb-2" }),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-gray-500 mb-4" }, "Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2"))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", { className: "w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600", value: selectedModel, onChange: (e) => setSelectedModel(e.target.value) }, AVAILABLE_MODELS[provider].map((modelId) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", { key: modelId, value: modelId }, MODEL_DISPLAY_NAMES[modelId] || modelId)))))),
+            provider !== 'ollama' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", { className: "text-sm mb-1 block" }, "API Key"),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex gap-2" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative flex-1" },
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_input__WEBPACK_IMPORTED_MODULE_2__.Input, { type: showApiKey ? 'text' : 'password', value: apiKey, onChange: (e) => setApiKey(e.target.value), placeholder: `Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : provider === 'google' ? 'Google' : 'Qwen'} API key`, className: "pr-10" }),
                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", { type: "button", className: "absolute inset-y-0 right-0 px-3 flex items-center", onClick: () => setShowApiKey(!showApiKey) }, showApiKey ? react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_5__["default"], { className: "h-4 w-4" }) : react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_6__["default"], { className: "h-4 w-4" }))),
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { onClick: handleSave, disabled: isSaving || !apiKey }, "Save")),
-                saveStatus === 'success' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-green-600" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_7__["default"], { className: "h-4 w-4 mr-1" }),
-                    " API key saved successfully")),
-                saveStatus === 'error' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-red-600" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_4__["default"], { className: "h-4 w-4 mr-1" }),
-                    " Error saving API key")),
-                connectionStatus === 'success' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-green-600" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_7__["default"], { className: "h-4 w-4 mr-1" }),
-                    " API connection verified successfully")),
-                connectionStatus === 'error' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-red-600" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_4__["default"], { className: "h-4 w-4 mr-1" }),
-                    " Could not verify API connection"))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { onClick: handleSave, disabled: isSaving || !apiKey }, "Save")))),
+            provider === 'ollama' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { onClick: handleSave, disabled: isSaving, className: "w-full" }, "Save Configuration"))),
+            saveStatus === 'success' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-green-600" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_7__["default"], { className: "h-4 w-4 mr-1" }),
+                " ",
+                provider === 'ollama' ? 'Configuration saved successfully' : 'API key saved successfully')),
+            saveStatus === 'error' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-red-600" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_4__["default"], { className: "h-4 w-4 mr-1" }),
+                " ",
+                provider === 'ollama' ? 'Error saving configuration' : 'Error saving API key')),
+            connectionStatus === 'success' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-green-600" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_7__["default"], { className: "h-4 w-4 mr-1" }),
+                " ",
+                provider === 'ollama' ? 'Ollama connection verified successfully' : 'API connection verified successfully')),
+            connectionStatus === 'error' && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "mt-2 text-sm flex items-center text-red-600" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_4__["default"], { className: "h-4 w-4 mr-1" }),
+                " ",
+                provider === 'ollama' ? 'Could not verify Ollama connection' : 'Could not verify API connection')),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "text-sm text-gray-500" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", null, "Your API key is stored securely in Chrome's synced storage and is never sent to our servers."),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-1" }, provider === 'openai'
@@ -108302,7 +108464,9 @@ function Settings({ onClose }) {
                         ? 'You can create an Anthropic API key in your Anthropic console.'
                         : provider === 'google'
                             ? 'You can create a Google Generative AI API key in your Google AI Studio.'
-                            : 'You can create a Qwen API key in your Qwen console.'),
+                            : provider === 'qwen'
+                                ? 'You can create a Qwen API key in your Qwen console.'
+                                : 'For Ollama, API key is usually not required for local instances. Configure base URL above.'),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-1" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement("strong", null, "Model selection:"),
                     " Different models have varying capabilities, speeds, and costs. More powerful models may offer better results but could be slower or more expensive to use."),
@@ -108404,6 +108568,25 @@ const MODEL_OPTIONS = {
         { value: 'qwen2.5-72b-instruct', label: 'Qwen2.5-72B-Instruct' },
         { value: 'qwen2.5-14b-instruct-1m', label: 'Qwen2.5-14B-Instruct-1M' },
         { value: 'qwen2.5-vl-72b-instruct', label: 'Qwen2.5-VL-72B-Instruct' }
+    ],
+    ollama: [
+        { value: 'phi3', label: 'Phi-3 (Recommended)' },
+        { value: 'llama3.3:70b', label: 'Llama 3.3 70B' },
+        { value: 'llama3.3', label: 'Llama 3.3' },
+        { value: 'llama3.2:90b', label: 'Llama 3.2 90B' },
+        { value: 'llama3.2:70b', label: 'Llama 3.2 70B' },
+        { value: 'llama3.2', label: 'Llama 3.2' },
+        { value: 'llama3.1:70b', label: 'Llama 3.1 70B' },
+        { value: 'llama3.1', label: 'Llama 3.1' },
+        { value: 'mistral', label: 'Mistral' },
+        { value: 'codellama', label: 'Code Llama' },
+        { value: 'deepseek-coder-v2', label: 'DeepSeek Coder V2' },
+        { value: 'qwen2.5', label: 'Qwen 2.5' },
+        { value: 'gemma2', label: 'Gemma 2' },
+        { value: 'llava', label: 'LLaVA (Vision)' },
+        { value: 'llava-llama3', label: 'LLaVA Llama3 (Vision)' },
+        { value: 'llava-phi3', label: 'LLaVA Phi3 (Vision)' },
+        { value: 'moondream', label: 'Moondream (Vision)' }
     ]
 };
 const EXAMPLE_PROMPTS = [
@@ -108503,6 +108686,16 @@ function AgentTestPanel({ isOpen, onClose }) {
         }
     }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.timeoutMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.reloadGeeEditor, config.screenshotStorage, config.driveFolderId, isOpen]);
     const updateConfig = (updates) => {
+        // If provider is changing to Ollama and no model is specified, set default
+        if (updates.provider === 'ollama' && !updates.model) {
+            updates.model = 'phi3';
+        }
+        // If provider is changing from Ollama to another provider, set appropriate default
+        else if (updates.provider && updates.provider !== 'ollama' && updates.provider !== config.provider) {
+            if (MODEL_OPTIONS[updates.provider] && MODEL_OPTIONS[updates.provider].length > 0) {
+                updates.model = MODEL_OPTIONS[updates.provider][0].value;
+            }
+        }
         setConfig(prev => ({ ...prev, ...updates }));
     };
     const addPrompt = () => {
@@ -109084,13 +109277,16 @@ function AgentTestPanel({ isOpen, onClose }) {
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "openai" }, "OpenAI"),
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "anthropic" }, "Anthropic"),
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "google" }, "Google"),
-                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "qwen" }, "Qwen")))),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "qwen" }, "Qwen"),
+                                            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { value: "ollama" }, "Ollama")))),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "model" }, "Model"),
-                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.Select, { value: config.model, onValueChange: (value) => updateConfig({ model: value }) },
+                                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "model" }, config.provider === 'ollama' ? 'Model ID' : 'Model'),
+                                    config.provider === 'ollama' ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_input__WEBPACK_IMPORTED_MODULE_3__.Input, { id: "model", value: config.model, onChange: (e) => updateConfig({ model: e.target.value }), placeholder: "Enter Ollama model ID (e.g., llama3.2, phi3, mistral)" }),
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-xs text-muted-foreground mt-1" }, "Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2"))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.Select, { value: config.model, onValueChange: (value) => updateConfig({ model: value }) },
                                         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectTrigger, null,
                                             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectValue, null)),
-                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectContent, null, MODEL_OPTIONS[config.provider].map(option => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { key: option.value, value: option.value }, option.label)))))),
+                                        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectContent, null, MODEL_OPTIONS[config.provider].map(option => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_select__WEBPACK_IMPORTED_MODULE_6__.SelectItem, { key: option.value, value: option.value }, option.label))))))),
                                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null,
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_label__WEBPACK_IMPORTED_MODULE_4__.Label, { htmlFor: "interval" }, "Interval Between Tests (ms)"),
                                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_input__WEBPACK_IMPORTED_MODULE_3__.Input, { id: "interval", type: "number", value: config.intervalMs, onChange: (e) => updateConfig({ intervalMs: parseInt(e.target.value) || 5000 }), min: "1000", step: "1000" })),

@@ -18741,6 +18741,1110 @@ let nanoid = (size = 21) => {
 
 /***/ }),
 
+/***/ "./node_modules/ollama-ai-provider/dist/index.mjs":
+/*!********************************************************!*\
+  !*** ./node_modules/ollama-ai-provider/dist/index.mjs ***!
+  \********************************************************/
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createOllama: () => (/* binding */ createOllama),
+/* harmony export */   ollama: () => (/* binding */ ollama)
+/* harmony export */ });
+/* harmony import */ var _ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @ai-sdk/provider-utils */ "./node_modules/@ai-sdk/provider-utils/dist/index.mjs");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
+/* harmony import */ var _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @ai-sdk/provider */ "./node_modules/@ai-sdk/provider/dist/index.mjs");
+/* harmony import */ var partial_json__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! partial-json */ "./node_modules/partial-json/dist/index.js");
+// src/ollama-provider.ts
+
+
+// src/ollama-chat-language-model.ts
+
+
+
+// src/convert-to-ollama-chat-messages.ts
+
+
+function convertToOllamaChatMessages(prompt) {
+  const messages = [];
+  for (const { content, role } of prompt) {
+    switch (role) {
+      case "system": {
+        messages.push({ content, role: "system" });
+        break;
+      }
+      case "user": {
+        messages.push({
+          ...content.reduce(
+            (previous, current) => {
+              if (current.type === "text") {
+                previous.content += current.text;
+              } else if (current.type === "image" && current.image instanceof URL) {
+                throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_0__.UnsupportedFunctionalityError({
+                  functionality: "Image URLs in user messages"
+                });
+              } else if (current.type === "image" && current.image instanceof Uint8Array) {
+                previous.images = previous.images || [];
+                previous.images.push((0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.convertUint8ArrayToBase64)(current.image));
+              }
+              return previous;
+            },
+            { content: "" }
+          ),
+          role: "user"
+        });
+        break;
+      }
+      case "assistant": {
+        const text = [];
+        const toolCalls = [];
+        for (const part of content) {
+          switch (part.type) {
+            case "text": {
+              text.push(part.text);
+              break;
+            }
+            case "tool-call": {
+              toolCalls.push({
+                function: {
+                  arguments: part.args,
+                  name: part.toolName
+                },
+                id: part.toolCallId,
+                type: "function"
+              });
+              break;
+            }
+            default: {
+              const _exhaustiveCheck = part;
+              throw new Error(`Unsupported part: ${_exhaustiveCheck}`);
+            }
+          }
+        }
+        messages.push({
+          content: text.join(","),
+          role: "assistant",
+          tool_calls: toolCalls.length > 0 ? toolCalls : void 0
+        });
+        break;
+      }
+      case "tool": {
+        messages.push(
+          ...content.map((part) => ({
+            // Non serialized contents are not accepted by ollama, triggering the following error:
+            // "json: cannot unmarshal array into Go struct field ChatRequest.messages of type string"
+            content: typeof part.result === "object" ? JSON.stringify(part.result) : `${part.result}`,
+            role: "tool",
+            tool_call_id: part.toolCallId
+          }))
+        );
+        break;
+      }
+      default: {
+        const _exhaustiveCheck = role;
+        throw new Error(`Unsupported role: ${_exhaustiveCheck}`);
+      }
+    }
+  }
+  return messages;
+}
+
+// src/generate-tool/infer-tool-calls-from-stream.ts
+
+
+var InferToolCallsFromStream = class {
+  constructor({
+    tools,
+    type
+  }) {
+    this._firstMessage = true;
+    this._tools = tools;
+    this._toolPartial = "";
+    this._toolCalls = [];
+    this._type = type;
+    this._detectedToolCall = false;
+  }
+  get toolCalls() {
+    return this._toolCalls;
+  }
+  get detectedToolCall() {
+    return this._detectedToolCall;
+  }
+  parse({
+    controller,
+    delta
+  }) {
+    var _a;
+    this.detectToolCall(delta);
+    if (!this._detectedToolCall) {
+      return false;
+    }
+    this._toolPartial += delta;
+    let parsedFunctions = (0,partial_json__WEBPACK_IMPORTED_MODULE_2__.parse)(this._toolPartial);
+    if (!Array.isArray(parsedFunctions)) {
+      parsedFunctions = [parsedFunctions];
+    }
+    for (const [index, parsedFunction] of parsedFunctions.entries()) {
+      const parsedArguments = (_a = JSON.stringify(parsedFunction == null ? void 0 : parsedFunction.parameters)) != null ? _a : "";
+      if (parsedArguments === "") {
+        continue;
+      }
+      if (!this._toolCalls[index]) {
+        this._toolCalls[index] = {
+          function: {
+            arguments: "",
+            name: parsedFunction.name
+          },
+          id: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.generateId)(),
+          type: "function"
+        };
+      }
+      const toolCall = this._toolCalls[index];
+      toolCall.function.arguments = parsedArguments;
+      controller.enqueue({
+        argsTextDelta: delta,
+        toolCallId: toolCall.id,
+        toolCallType: "function",
+        toolName: toolCall.function.name,
+        type: "tool-call-delta"
+      });
+    }
+    return true;
+  }
+  finish({
+    controller
+  }) {
+    for (const toolCall of this.toolCalls) {
+      controller.enqueue({
+        args: toolCall.function.arguments,
+        toolCallId: toolCall.id,
+        toolCallType: "function",
+        toolName: toolCall.function.name,
+        type: "tool-call"
+      });
+    }
+    return this.finishReason();
+  }
+  detectToolCall(delta) {
+    if (!this._tools || this._tools.length === 0) {
+      return;
+    }
+    if (this._firstMessage) {
+      if (this._type === "object-tool") {
+        this._detectedToolCall = true;
+      } else if (this._type === "regular" && (delta.trim().startsWith("{") || delta.trim().startsWith("["))) {
+        this._detectedToolCall = true;
+      }
+      this._firstMessage = false;
+    }
+  }
+  finishReason() {
+    if (!this.detectedToolCall) {
+      return "stop";
+    }
+    return this._type === "object-tool" ? "stop" : "tool-calls";
+  }
+};
+
+// src/map-ollama-finish-reason.ts
+function mapOllamaFinishReason({
+  finishReason,
+  hasToolCalls
+}) {
+  switch (finishReason) {
+    case "stop": {
+      return hasToolCalls ? "tool-calls" : "stop";
+    }
+    default: {
+      return "other";
+    }
+  }
+}
+
+// src/ollama-error.ts
+
+
+var ollamaErrorDataSchema = zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+  error: zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+    code: zod__WEBPACK_IMPORTED_MODULE_3__.z.string().nullable(),
+    message: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+    param: zod__WEBPACK_IMPORTED_MODULE_3__.z.any().nullable(),
+    type: zod__WEBPACK_IMPORTED_MODULE_3__.z.string()
+  })
+});
+var ollamaFailedResponseHandler = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.createJsonErrorResponseHandler)({
+  errorSchema: ollamaErrorDataSchema,
+  errorToMessage: (data) => data.error.message
+});
+
+// src/prepare-tools.ts
+
+function prepareTools({
+  mode
+}) {
+  var _a;
+  const tools = ((_a = mode.tools) == null ? void 0 : _a.length) ? mode.tools : void 0;
+  const toolWarnings = [];
+  const toolChoice = mode.toolChoice;
+  if (tools === void 0) {
+    return {
+      tools: void 0,
+      toolWarnings
+    };
+  }
+  const ollamaTools = [];
+  for (const tool of tools) {
+    if (tool.type === "provider-defined") {
+      toolWarnings.push({ tool, type: "unsupported-tool" });
+    } else {
+      ollamaTools.push({
+        function: {
+          description: tool.description,
+          name: tool.name,
+          parameters: tool.parameters
+        },
+        type: "function"
+      });
+    }
+  }
+  if (toolChoice === void 0) {
+    return {
+      tools: ollamaTools,
+      toolWarnings
+    };
+  }
+  const type = toolChoice.type;
+  switch (type) {
+    case "auto": {
+      return {
+        tools: ollamaTools,
+        toolWarnings
+      };
+    }
+    case "none": {
+      return {
+        tools: void 0,
+        toolWarnings
+      };
+    }
+    default: {
+      const _exhaustiveCheck = type;
+      throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_0__.UnsupportedFunctionalityError({
+        functionality: `Unsupported tool choice type: ${_exhaustiveCheck}`
+      });
+    }
+  }
+}
+
+// src/utils/remove-undefined.ts
+function removeUndefined(object) {
+  return Object.fromEntries(
+    Object.entries(object).filter(([, v]) => v !== void 0)
+  );
+}
+
+// src/utils/response-handler.ts
+
+
+
+// src/utils/text-line-stream.ts
+var TextLineStream = class extends TransformStream {
+  constructor() {
+    super({
+      flush: (controller) => {
+        if (this.buffer.length === 0) return;
+        controller.enqueue(this.buffer);
+      },
+      transform: (chunkText, controller) => {
+        chunkText = this.buffer + chunkText;
+        while (true) {
+          const EOL = chunkText.indexOf("\n");
+          if (EOL === -1) break;
+          controller.enqueue(chunkText.slice(0, EOL));
+          chunkText = chunkText.slice(EOL + 1);
+        }
+        this.buffer = chunkText;
+      }
+    });
+    this.buffer = "";
+  }
+};
+
+// src/utils/response-handler.ts
+var createJsonStreamResponseHandler = (chunkSchema) => async ({ response }) => {
+  const responseHeaders = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.extractResponseHeaders)(response);
+  if (response.body === null) {
+    throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_0__.EmptyResponseBodyError({});
+  }
+  return {
+    responseHeaders,
+    value: response.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TextLineStream()).pipeThrough(
+      new TransformStream({
+        transform(chunkText, controller) {
+          controller.enqueue(
+            (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.safeParseJSON)({
+              schema: chunkSchema,
+              text: chunkText
+            })
+          );
+        }
+      })
+    )
+  };
+};
+
+// src/ollama-chat-language-model.ts
+var OllamaChatLanguageModel = class {
+  constructor(modelId, settings, config) {
+    this.modelId = modelId;
+    this.settings = settings;
+    this.config = config;
+    this.specificationVersion = "v1";
+    this.defaultObjectGenerationMode = "json";
+    this.supportsImageUrls = false;
+  }
+  get supportsStructuredOutputs() {
+    var _a;
+    return (_a = this.settings.structuredOutputs) != null ? _a : false;
+  }
+  get provider() {
+    return this.config.provider;
+  }
+  getArguments({
+    frequencyPenalty,
+    maxTokens,
+    mode,
+    presencePenalty,
+    prompt,
+    responseFormat,
+    seed,
+    stopSequences,
+    temperature,
+    topK,
+    topP
+  }) {
+    const type = mode.type;
+    const warnings = [];
+    if (responseFormat !== void 0 && responseFormat.type === "json" && responseFormat.schema !== void 0 && !this.supportsStructuredOutputs) {
+      warnings.push({
+        details: "JSON response format schema is only supported with structuredOutputs",
+        setting: "responseFormat",
+        type: "unsupported-setting"
+      });
+    }
+    const baseArguments = {
+      format: responseFormat == null ? void 0 : responseFormat.type,
+      model: this.modelId,
+      options: removeUndefined({
+        f16_kv: this.settings.f16Kv,
+        frequency_penalty: frequencyPenalty,
+        low_vram: this.settings.lowVram,
+        main_gpu: this.settings.mainGpu,
+        min_p: this.settings.minP,
+        mirostat: this.settings.mirostat,
+        mirostat_eta: this.settings.mirostatEta,
+        mirostat_tau: this.settings.mirostatTau,
+        num_batch: this.settings.numBatch,
+        num_ctx: this.settings.numCtx,
+        num_gpu: this.settings.numGpu,
+        num_keep: this.settings.numKeep,
+        num_predict: maxTokens,
+        num_thread: this.settings.numThread,
+        numa: this.settings.numa,
+        penalize_newline: this.settings.penalizeNewline,
+        presence_penalty: presencePenalty,
+        repeat_last_n: this.settings.repeatLastN,
+        repeat_penalty: this.settings.repeatPenalty,
+        seed,
+        stop: stopSequences,
+        temperature,
+        tfs_z: this.settings.tfsZ,
+        top_k: topK,
+        top_p: topP,
+        typical_p: this.settings.typicalP,
+        use_mlock: this.settings.useMlock,
+        use_mmap: this.settings.useMmap,
+        vocab_only: this.settings.vocabOnly
+      })
+    };
+    switch (type) {
+      case "regular": {
+        const { tools, toolWarnings } = prepareTools({
+          mode
+        });
+        return {
+          args: {
+            ...baseArguments,
+            messages: convertToOllamaChatMessages(prompt),
+            tools
+          },
+          type,
+          warnings: [...warnings, ...toolWarnings]
+        };
+      }
+      case "object-json": {
+        return {
+          args: {
+            ...baseArguments,
+            format: this.supportsStructuredOutputs && mode.schema !== void 0 ? mode.schema : "json",
+            messages: convertToOllamaChatMessages(prompt)
+          },
+          type,
+          warnings
+        };
+      }
+      case "object-tool": {
+        return {
+          args: {
+            ...baseArguments,
+            messages: convertToOllamaChatMessages(prompt),
+            tool_choice: {
+              function: { name: mode.tool.name },
+              type: "function"
+            },
+            tools: [
+              {
+                function: {
+                  description: mode.tool.description,
+                  name: mode.tool.name,
+                  parameters: mode.tool.parameters
+                },
+                type: "function"
+              }
+            ]
+          },
+          type,
+          warnings
+        };
+      }
+      default: {
+        const _exhaustiveCheck = type;
+        throw new Error(`Unsupported type: ${_exhaustiveCheck}`);
+      }
+    }
+  }
+  async doGenerate(options) {
+    var _a, _b;
+    const { args, warnings } = this.getArguments(options);
+    const body = {
+      ...args,
+      stream: false
+    };
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.postJsonToApi)({
+      abortSignal: options.abortSignal,
+      body,
+      failedResponseHandler: ollamaFailedResponseHandler,
+      fetch: this.config.fetch,
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.combineHeaders)(this.config.headers(), options.headers),
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.createJsonResponseHandler)(
+        ollamaChatResponseSchema
+      ),
+      url: `${this.config.baseURL}/chat`
+    });
+    const { messages: rawPrompt, ...rawSettings } = body;
+    const toolCalls = (_a = response.message.tool_calls) == null ? void 0 : _a.map((toolCall) => {
+      var _a2;
+      return {
+        args: JSON.stringify(toolCall.function.arguments),
+        toolCallId: (_a2 = toolCall.id) != null ? _a2 : (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.generateId)(),
+        toolCallType: "function",
+        toolName: toolCall.function.name
+      };
+    });
+    return {
+      finishReason: mapOllamaFinishReason({
+        finishReason: response.done_reason,
+        hasToolCalls: toolCalls !== void 0 && toolCalls.length > 0
+      }),
+      rawCall: { rawPrompt, rawSettings },
+      rawResponse: { headers: responseHeaders },
+      request: { body: JSON.stringify(body) },
+      text: (_b = response.message.content) != null ? _b : void 0,
+      toolCalls,
+      usage: {
+        completionTokens: response.eval_count || 0,
+        promptTokens: response.prompt_eval_count || 0
+      },
+      warnings
+    };
+  }
+  async doStream(options) {
+    if (this.settings.simulateStreaming) {
+      const result = await this.doGenerate(options);
+      const simulatedStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({ type: "response-metadata", ...result.response });
+          if (result.text) {
+            controller.enqueue({
+              textDelta: result.text,
+              type: "text-delta"
+            });
+          }
+          if (result.toolCalls) {
+            for (const toolCall of result.toolCalls) {
+              controller.enqueue({
+                argsTextDelta: toolCall.args,
+                toolCallId: toolCall.toolCallId,
+                toolCallType: "function",
+                toolName: toolCall.toolName,
+                type: "tool-call-delta"
+              });
+              controller.enqueue({
+                type: "tool-call",
+                ...toolCall
+              });
+            }
+          }
+          controller.enqueue({
+            finishReason: result.finishReason,
+            logprobs: result.logprobs,
+            providerMetadata: result.providerMetadata,
+            type: "finish",
+            usage: result.usage
+          });
+          controller.close();
+        }
+      });
+      return {
+        rawCall: result.rawCall,
+        rawResponse: result.rawResponse,
+        stream: simulatedStream,
+        warnings: result.warnings
+      };
+    }
+    const { args: body, type, warnings } = this.getArguments(options);
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.postJsonToApi)({
+      abortSignal: options.abortSignal,
+      body,
+      failedResponseHandler: ollamaFailedResponseHandler,
+      fetch: this.config.fetch,
+      headers: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.combineHeaders)(this.config.headers(), options.headers),
+      successfulResponseHandler: createJsonStreamResponseHandler(
+        ollamaChatStreamChunkSchema
+      ),
+      url: `${this.config.baseURL}/chat`
+    });
+    const { messages: rawPrompt, ...rawSettings } = body;
+    const tools = options.mode.type === "regular" ? options.mode.tools : options.mode.type === "object-tool" ? [options.mode.tool] : void 0;
+    const inferToolCallsFromStream = new InferToolCallsFromStream({
+      tools,
+      type
+    });
+    let finishReason = "other";
+    let usage = {
+      completionTokens: Number.NaN,
+      promptTokens: Number.NaN
+    };
+    const { experimentalStreamTools = true } = this.settings;
+    return {
+      rawCall: { rawPrompt, rawSettings },
+      rawResponse: { headers: responseHeaders },
+      request: { body: JSON.stringify(body) },
+      stream: response.pipeThrough(
+        new TransformStream({
+          async flush(controller) {
+            controller.enqueue({
+              finishReason,
+              type: "finish",
+              usage
+            });
+          },
+          async transform(chunk, controller) {
+            if (!chunk.success) {
+              controller.enqueue({ error: chunk.error, type: "error" });
+              return;
+            }
+            const value = chunk.value;
+            if (value.done) {
+              finishReason = inferToolCallsFromStream.finish({ controller });
+              usage = {
+                completionTokens: value.eval_count,
+                promptTokens: value.prompt_eval_count || 0
+              };
+              return;
+            }
+            if (experimentalStreamTools) {
+              const isToolCallStream = inferToolCallsFromStream.parse({
+                controller,
+                delta: value.message.content
+              });
+              if (isToolCallStream) {
+                return;
+              }
+            }
+            if (value.message.content !== null) {
+              controller.enqueue({
+                textDelta: value.message.content,
+                type: "text-delta"
+              });
+            }
+          }
+        })
+      ),
+      warnings
+    };
+  }
+};
+var ollamaChatResponseSchema = zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+  created_at: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+  done: zod__WEBPACK_IMPORTED_MODULE_3__.z.literal(true),
+  done_reason: zod__WEBPACK_IMPORTED_MODULE_3__.z.string().optional().nullable(),
+  eval_count: zod__WEBPACK_IMPORTED_MODULE_3__.z.number(),
+  eval_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number(),
+  load_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().optional(),
+  message: zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+    content: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+    role: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+    tool_calls: zod__WEBPACK_IMPORTED_MODULE_3__.z.array(
+      zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+        function: zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+          arguments: zod__WEBPACK_IMPORTED_MODULE_3__.z.record(zod__WEBPACK_IMPORTED_MODULE_3__.z.any()),
+          name: zod__WEBPACK_IMPORTED_MODULE_3__.z.string()
+        }),
+        id: zod__WEBPACK_IMPORTED_MODULE_3__.z.string().optional()
+      })
+    ).optional().nullable()
+  }),
+  model: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+  prompt_eval_count: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().optional(),
+  prompt_eval_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().optional(),
+  total_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number()
+});
+var ollamaChatStreamChunkSchema = zod__WEBPACK_IMPORTED_MODULE_3__.z.discriminatedUnion("done", [
+  zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+    created_at: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+    done: zod__WEBPACK_IMPORTED_MODULE_3__.z.literal(false),
+    message: zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+      content: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+      role: zod__WEBPACK_IMPORTED_MODULE_3__.z.string()
+    }),
+    model: zod__WEBPACK_IMPORTED_MODULE_3__.z.string()
+  }),
+  zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+    created_at: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+    done: zod__WEBPACK_IMPORTED_MODULE_3__.z.literal(true),
+    eval_count: zod__WEBPACK_IMPORTED_MODULE_3__.z.number(),
+    eval_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number(),
+    load_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().optional(),
+    model: zod__WEBPACK_IMPORTED_MODULE_3__.z.string(),
+    prompt_eval_count: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().optional(),
+    prompt_eval_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().optional(),
+    total_duration: zod__WEBPACK_IMPORTED_MODULE_3__.z.number()
+  })
+]);
+
+// src/ollama-embedding-model.ts
+
+
+
+var OllamaEmbeddingModel = class {
+  constructor(modelId, settings, config) {
+    this.specificationVersion = "v1";
+    this.modelId = modelId;
+    this.settings = settings;
+    this.config = config;
+  }
+  get provider() {
+    return this.config.provider;
+  }
+  get maxEmbeddingsPerCall() {
+    var _a;
+    return (_a = this.settings.maxEmbeddingsPerCall) != null ? _a : 2048;
+  }
+  get supportsParallelCalls() {
+    return false;
+  }
+  async doEmbed({
+    abortSignal,
+    values
+  }) {
+    if (values.length > this.maxEmbeddingsPerCall) {
+      throw new _ai_sdk_provider__WEBPACK_IMPORTED_MODULE_0__.TooManyEmbeddingValuesForCallError({
+        maxEmbeddingsPerCall: this.maxEmbeddingsPerCall,
+        modelId: this.modelId,
+        provider: this.provider,
+        values
+      });
+    }
+    const { responseHeaders, value: response } = await (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.postJsonToApi)({
+      abortSignal,
+      body: {
+        input: values,
+        model: this.modelId
+      },
+      failedResponseHandler: ollamaFailedResponseHandler,
+      fetch: this.config.fetch,
+      headers: this.config.headers(),
+      successfulResponseHandler: (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.createJsonResponseHandler)(
+        ollamaTextEmbeddingResponseSchema
+      ),
+      url: `${this.config.baseURL}/embed`
+    });
+    return {
+      embeddings: response.embeddings,
+      rawResponse: { headers: responseHeaders },
+      usage: response.prompt_eval_count ? { tokens: response.prompt_eval_count } : void 0
+    };
+  }
+};
+var ollamaTextEmbeddingResponseSchema = zod__WEBPACK_IMPORTED_MODULE_3__.z.object({
+  embeddings: zod__WEBPACK_IMPORTED_MODULE_3__.z.array(zod__WEBPACK_IMPORTED_MODULE_3__.z.array(zod__WEBPACK_IMPORTED_MODULE_3__.z.number())),
+  prompt_eval_count: zod__WEBPACK_IMPORTED_MODULE_3__.z.number().nullable()
+});
+
+// src/ollama-provider.ts
+function createOllama(options = {}) {
+  var _a;
+  const baseURL = (_a = (0,_ai_sdk_provider_utils__WEBPACK_IMPORTED_MODULE_1__.withoutTrailingSlash)(options.baseURL)) != null ? _a : "http://127.0.0.1:11434/api";
+  const getHeaders = () => ({
+    ...options.headers
+  });
+  const createChatModel = (modelId, settings = {}) => new OllamaChatLanguageModel(modelId, settings, {
+    baseURL,
+    fetch: options.fetch,
+    headers: getHeaders,
+    provider: "ollama.chat"
+  });
+  const createEmbeddingModel = (modelId, settings = {}) => new OllamaEmbeddingModel(modelId, settings, {
+    baseURL,
+    fetch: options.fetch,
+    headers: getHeaders,
+    provider: "ollama.embedding"
+  });
+  const provider = function(modelId, settings) {
+    if (new.target) {
+      throw new Error(
+        "The Ollama model function cannot be called with the new keyword."
+      );
+    }
+    return createChatModel(modelId, settings);
+  };
+  provider.chat = createChatModel;
+  provider.embedding = createEmbeddingModel;
+  provider.languageModel = createChatModel;
+  provider.textEmbedding = createEmbeddingModel;
+  provider.textEmbeddingModel = createEmbeddingModel;
+  return provider;
+}
+var ollama = createOllama();
+
+//# sourceMappingURL=index.mjs.map
+
+/***/ }),
+
+/***/ "./node_modules/partial-json/dist/index.js":
+/*!*************************************************!*\
+  !*** ./node_modules/partial-json/dist/index.js ***!
+  \*************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Allow = exports.MalformedJSON = exports.PartialJSON = exports.parseJSON = exports.parse = void 0;
+const options_1 = __webpack_require__(/*! ./options */ "./node_modules/partial-json/dist/options.js");
+Object.defineProperty(exports, "Allow", ({ enumerable: true, get: function () { return options_1.Allow; } }));
+__exportStar(__webpack_require__(/*! ./options */ "./node_modules/partial-json/dist/options.js"), exports);
+class PartialJSON extends Error {
+}
+exports.PartialJSON = PartialJSON;
+class MalformedJSON extends Error {
+}
+exports.MalformedJSON = MalformedJSON;
+/**
+ * Parse incomplete JSON
+ * @param {string} jsonString Partial JSON to be parsed
+ * @param {number} allowPartial Specify what types are allowed to be partial, see {@link Allow} for details
+ * @returns The parsed JSON
+ * @throws {PartialJSON} If the JSON is incomplete (related to the `allow` parameter)
+ * @throws {MalformedJSON} If the JSON is malformed
+ */
+function parseJSON(jsonString, allowPartial = options_1.Allow.ALL) {
+    if (typeof jsonString !== "string") {
+        throw new TypeError(`expecting str, got ${typeof jsonString}`);
+    }
+    if (!jsonString.trim()) {
+        throw new Error(`${jsonString} is empty`);
+    }
+    return _parseJSON(jsonString.trim(), allowPartial);
+}
+exports.parseJSON = parseJSON;
+;
+const _parseJSON = (jsonString, allow) => {
+    const length = jsonString.length;
+    let index = 0;
+    const markPartialJSON = (msg) => {
+        throw new PartialJSON(`${msg} at position ${index}`);
+    };
+    const throwMalformedError = (msg) => {
+        throw new MalformedJSON(`${msg} at position ${index}`);
+    };
+    const parseAny = () => {
+        skipBlank();
+        if (index >= length)
+            markPartialJSON("Unexpected end of input");
+        if (jsonString[index] === '"')
+            return parseStr();
+        if (jsonString[index] === "{")
+            return parseObj();
+        if (jsonString[index] === "[")
+            return parseArr();
+        if (jsonString.substring(index, index + 4) === "null" || (options_1.Allow.NULL & allow && length - index < 4 && "null".startsWith(jsonString.substring(index)))) {
+            index += 4;
+            return null;
+        }
+        if (jsonString.substring(index, index + 4) === "true" || (options_1.Allow.BOOL & allow && length - index < 4 && "true".startsWith(jsonString.substring(index)))) {
+            index += 4;
+            return true;
+        }
+        if (jsonString.substring(index, index + 5) === "false" || (options_1.Allow.BOOL & allow && length - index < 5 && "false".startsWith(jsonString.substring(index)))) {
+            index += 5;
+            return false;
+        }
+        if (jsonString.substring(index, index + 8) === "Infinity" || (options_1.Allow.INFINITY & allow && length - index < 8 && "Infinity".startsWith(jsonString.substring(index)))) {
+            index += 8;
+            return Infinity;
+        }
+        if (jsonString.substring(index, index + 9) === "-Infinity" || (options_1.Allow._INFINITY & allow && 1 < length - index && length - index < 9 && "-Infinity".startsWith(jsonString.substring(index)))) {
+            index += 9;
+            return -Infinity;
+        }
+        if (jsonString.substring(index, index + 3) === "NaN" || (options_1.Allow.NAN & allow && length - index < 3 && "NaN".startsWith(jsonString.substring(index)))) {
+            index += 3;
+            return NaN;
+        }
+        return parseNum();
+    };
+    const parseStr = () => {
+        const start = index;
+        let escape = false;
+        index++; // skip initial quote
+        while (index < length && (jsonString[index] !== '"' || (escape && jsonString[index - 1] === "\\"))) {
+            escape = jsonString[index] === "\\" ? !escape : false;
+            index++;
+        }
+        if (jsonString.charAt(index) == '"') {
+            try {
+                return JSON.parse(jsonString.substring(start, ++index - Number(escape)));
+            }
+            catch (e) {
+                throwMalformedError(String(e));
+            }
+        }
+        else if (options_1.Allow.STR & allow) {
+            try {
+                return JSON.parse(jsonString.substring(start, index - Number(escape)) + '"');
+            }
+            catch (e) {
+                // SyntaxError: Invalid escape sequence
+                return JSON.parse(jsonString.substring(start, jsonString.lastIndexOf("\\")) + '"');
+            }
+        }
+        markPartialJSON("Unterminated string literal");
+    };
+    const parseObj = () => {
+        index++; // skip initial brace
+        skipBlank();
+        const obj = {};
+        try {
+            while (jsonString[index] !== "}") {
+                skipBlank();
+                if (index >= length && options_1.Allow.OBJ & allow)
+                    return obj;
+                const key = parseStr();
+                skipBlank();
+                index++; // skip colon
+                try {
+                    const value = parseAny();
+                    obj[key] = value;
+                }
+                catch (e) {
+                    if (options_1.Allow.OBJ & allow)
+                        return obj;
+                    else
+                        throw e;
+                }
+                skipBlank();
+                if (jsonString[index] === ",")
+                    index++; // skip comma
+            }
+        }
+        catch (e) {
+            if (options_1.Allow.OBJ & allow)
+                return obj;
+            else
+                markPartialJSON("Expected '}' at end of object");
+        }
+        index++; // skip final brace
+        return obj;
+    };
+    const parseArr = () => {
+        index++; // skip initial bracket
+        const arr = [];
+        try {
+            while (jsonString[index] !== "]") {
+                arr.push(parseAny());
+                skipBlank();
+                if (jsonString[index] === ",") {
+                    index++; // skip comma
+                }
+            }
+        }
+        catch (e) {
+            if (options_1.Allow.ARR & allow) {
+                return arr;
+            }
+            markPartialJSON("Expected ']' at end of array");
+        }
+        index++; // skip final bracket
+        return arr;
+    };
+    const parseNum = () => {
+        if (index === 0) {
+            if (jsonString === "-")
+                throwMalformedError("Not sure what '-' is");
+            try {
+                return JSON.parse(jsonString);
+            }
+            catch (e) {
+                if (options_1.Allow.NUM & allow)
+                    try {
+                        return JSON.parse(jsonString.substring(0, jsonString.lastIndexOf("e")));
+                    }
+                    catch (e) { }
+                throwMalformedError(String(e));
+            }
+        }
+        const start = index;
+        if (jsonString[index] === "-")
+            index++;
+        while (jsonString[index] && ",]}".indexOf(jsonString[index]) === -1)
+            index++;
+        if (index == length && !(options_1.Allow.NUM & allow))
+            markPartialJSON("Unterminated number literal");
+        try {
+            return JSON.parse(jsonString.substring(start, index));
+        }
+        catch (e) {
+            if (jsonString.substring(start, index) === "-")
+                markPartialJSON("Not sure what '-' is");
+            try {
+                return JSON.parse(jsonString.substring(start, jsonString.lastIndexOf("e")));
+            }
+            catch (e) {
+                throwMalformedError(String(e));
+            }
+        }
+    };
+    const skipBlank = () => {
+        while (index < length && " \n\r\t".includes(jsonString[index])) {
+            index++;
+        }
+    };
+    return parseAny();
+};
+const parse = parseJSON;
+exports.parse = parse;
+
+
+/***/ }),
+
+/***/ "./node_modules/partial-json/dist/options.js":
+/*!***************************************************!*\
+  !*** ./node_modules/partial-json/dist/options.js ***!
+  \***************************************************/
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * Sometimes you don't allow every type to be partially parsed.
+ * For example, you may not want a partial number because it may increase its size gradually before it's complete.
+ * In this case, you can use the `Allow` object to control what types you allow to be partially parsed.
+ * @module
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Allow = exports.ALL = exports.COLLECTION = exports.ATOM = exports.SPECIAL = exports.INF = exports._INFINITY = exports.INFINITY = exports.NAN = exports.BOOL = exports.NULL = exports.OBJ = exports.ARR = exports.NUM = exports.STR = void 0;
+/**
+ * allow partial strings like `"hello \u12` to be parsed as `"hello "`
+ */
+exports.STR = 0b000000001;
+/**
+ * allow partial numbers like `123.` to be parsed as `123`
+ */
+exports.NUM = 0b000000010;
+/**
+ * allow partial arrays like `[1, 2,` to be parsed as `[1, 2]`
+ */
+exports.ARR = 0b000000100;
+/**
+ * allow partial objects like `{"a": 1, "b":` to be parsed as `{"a": 1}`
+ */
+exports.OBJ = 0b000001000;
+/**
+ * allow `nu` to be parsed as `null`
+ */
+exports.NULL = 0b000010000;
+/**
+ * allow `tr` to be parsed as `true`, and `fa` to be parsed as `false`
+ */
+exports.BOOL = 0b000100000;
+/**
+ * allow `Na` to be parsed as `NaN`
+ */
+exports.NAN = 0b001000000;
+/**
+ * allow `Inf` to be parsed as `Infinity`
+ */
+exports.INFINITY = 0b010000000;
+/**
+ * allow `-Inf` to be parsed as `-Infinity`
+ */
+exports._INFINITY = 0b100000000;
+exports.INF = exports.INFINITY | exports._INFINITY;
+exports.SPECIAL = exports.NULL | exports.BOOL | exports.INF | exports.NAN;
+exports.ATOM = exports.STR | exports.NUM | exports.SPECIAL;
+exports.COLLECTION = exports.ARR | exports.OBJ;
+exports.ALL = exports.ATOM | exports.COLLECTION;
+/**
+ * Control what types you allow to be partially parsed.
+ * The default is to allow all types to be partially parsed, which in most casees is the best option.
+ * @example
+ * If you don't want to allow partial objects, you can use the following code:
+ * ```ts
+ * import { Allow, parse } from "partial-json";
+ * parse(`[{"a": 1, "b": 2}, {"a": 3,`, Allow.ARR); // [ { a: 1, b: 2 } ]
+ * ```
+ * Or you can use `~` to disallow a type:
+ * ```ts
+ * parse(`[{"a": 1, "b": 2}, {"a": 3,`, ~Allow.OBJ); // [ { a: 1, b: 2 } ]
+ * ```
+ * @example
+ * If you don't want to allow partial strings, you can use the following code:
+ * ```ts
+ * import { Allow, parse } from "partial-json";
+ * parse(`["complete string", "incompl`, ~Allow.STR); // [ 'complete string' ]
+ * ```
+ */
+exports.Allow = { STR: exports.STR, NUM: exports.NUM, ARR: exports.ARR, OBJ: exports.OBJ, NULL: exports.NULL, BOOL: exports.BOOL, NAN: exports.NAN, INFINITY: exports.INFINITY, _INFINITY: exports._INFINITY, INF: exports.INF, SPECIAL: exports.SPECIAL, ATOM: exports.ATOM, COLLECTION: exports.COLLECTION, ALL: exports.ALL };
+exports["default"] = exports.Allow;
+
+
+/***/ }),
+
 /***/ "./node_modules/qwen-ai-provider/dist/index.mjs":
 /*!******************************************************!*\
   !*** ./node_modules/qwen-ai-provider/dist/index.mjs ***!
@@ -29868,13 +30972,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   GEE_SYSTEM_PROMPT: () => (/* binding */ GEE_SYSTEM_PROMPT),
 /* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest)
 /* harmony export */ });
-/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
-/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
-/* harmony import */ var _ai_sdk_google__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @ai-sdk/google */ "./node_modules/@ai-sdk/google/dist/index.mjs");
+/* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_openai__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @ai-sdk/openai */ "./node_modules/@ai-sdk/openai/dist/index.mjs");
+/* harmony import */ var _ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @ai-sdk/anthropic */ "./node_modules/@ai-sdk/anthropic/dist/index.mjs");
+/* harmony import */ var _ai_sdk_google__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! @ai-sdk/google */ "./node_modules/@ai-sdk/google/dist/index.mjs");
 /* harmony import */ var qwen_ai_provider__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! qwen-ai-provider */ "./node_modules/qwen-ai-provider/dist/index.mjs");
-/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
-/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+/* harmony import */ var ollama_ai_provider__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ollama-ai-provider */ "./node_modules/ollama-ai-provider/dist/index.mjs");
+/* harmony import */ var zod__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! zod */ "./node_modules/zod/lib/index.mjs");
+/* harmony import */ var _lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../lib/tools/context7 */ "./src/lib/tools/context7/index.ts");
+
 
 
 
@@ -29887,7 +30993,8 @@ const DEFAULT_MODELS = {
     openai: 'gpt-4o',
     anthropic: 'claude-sonnet-4-20250514',
     google: 'gemini-2.0-flash',
-    qwen: 'qwen-max-latest'
+    qwen: 'qwen-max-latest',
+    ollama: 'phi3'
 };
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input, options = {}) => {
@@ -30059,11 +31166,12 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
 /**
  * Handle chat messages from the UI
  */
-async function handleChatRequest(messages, apiKey, provider, model, heliconeHeaders) {
+async function handleChatRequest(messages, apiKey, provider, model, heliconeHeaders, baseURL) {
     try {
         // Debug log at start of request
         console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}`);
-        if (!apiKey) {
+        if (!apiKey && provider !== 'ollama') {
+            console.error(`❌ [Chat Handler] API key not configured for ${provider}`);
             return new Response(JSON.stringify({
                 error: 'API key not configured',
                 message: 'Please set your API key in the extension settings'
@@ -30114,6 +31222,25 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             'qwen2.5-14b-instruct-1m',
             'qwen2.5-vl-72b-instruct'
         ];
+        const ollamaModels = [
+            'phi3',
+            'llama3.3:70b',
+            'llama3.3',
+            'llama3.2:90b',
+            'llama3.2:70b',
+            'llama3.2',
+            'llama3.1:70b',
+            'llama3.1',
+            'mistral',
+            'codellama',
+            'deepseek-coder-v2',
+            'qwen2.5',
+            'gemma2',
+            'llava',
+            'llava-llama3',
+            'llava-phi3',
+            'moondream'
+        ];
         if (provider === 'openai') {
             // Configure OpenAI with Helicone proxy if headers are provided
             const openaiConfig = { apiKey };
@@ -30122,7 +31249,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 openaiConfig.baseURL = 'https://oai.helicone.ai/v1';
                 openaiConfig.headers = heliconeHeaders;
             }
-            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_2__.createOpenAI)(openaiConfig);
+            llmProvider = (0,_ai_sdk_openai__WEBPACK_IMPORTED_MODULE_3__.createOpenAI)(openaiConfig);
             effectiveModel = model || DEFAULT_MODELS.openai;
             console.log(`Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
@@ -30150,7 +31277,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 // Set the correct baseURL for the Anthropic API, without the version path
                 anthropicConfig.baseURL = 'https://api.anthropic.com';
             }
-            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_3__.createAnthropic)(anthropicConfig);
+            llmProvider = (0,_ai_sdk_anthropic__WEBPACK_IMPORTED_MODULE_4__.createAnthropic)(anthropicConfig);
             console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
         else if (provider === 'google') {
@@ -30188,7 +31315,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 hasHeliconeHeaders: !!heliconeHeaders
             });
             try {
-                llmProvider = (0,_ai_sdk_google__WEBPACK_IMPORTED_MODULE_4__.createGoogleGenerativeAI)(googleConfig);
+                llmProvider = (0,_ai_sdk_google__WEBPACK_IMPORTED_MODULE_5__.createGoogleGenerativeAI)(googleConfig);
                 console.log(`✅ [Chat Handler] Google provider created successfully`);
             }
             catch (error) {
@@ -30251,6 +31378,88 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             }
             console.log(`Using Qwen provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
         }
+        else if (provider === 'ollama') {
+            console.log(`🔧 [Chat Handler] Processing Ollama request:`, {
+                requestedModel: model,
+                baseURL: baseURL,
+                hasApiKey: !!apiKey,
+                defaultModel: DEFAULT_MODELS.ollama
+            });
+            // Use the requested model if provided, otherwise use the default
+            let selectedModel = model;
+            if (!selectedModel || selectedModel.trim() === '') {
+                console.log(`⚠️ [Chat Handler] No Ollama model specified. Using default.`);
+                selectedModel = DEFAULT_MODELS.ollama;
+            }
+            effectiveModel = selectedModel;
+            // Use baseURL from parameter or default Ollama baseURL
+            const ollamaBaseURL = baseURL || 'http://localhost:11434/api';
+            // Create a simple fetch function for Ollama with proper headers
+            const ollamaFetch = async (input, options = {}) => {
+                // Add required headers for Ollama
+                const defaultHeaders = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'User-Agent': 'Chrome-Extension'
+                };
+                // Merge with existing headers
+                options.headers = {
+                    ...defaultHeaders,
+                    ...options.headers
+                };
+                const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+                console.log(`🔄 [Ollama Fetch] Making request to: ${url} (${options.method || 'GET'})`);
+                try {
+                    const response = await fetch(input, options);
+                    if (!response.ok) {
+                        console.error(`❌ [Ollama Fetch] Error: ${response.status} ${response.statusText}`);
+                    }
+                    return response;
+                }
+                catch (error) {
+                    console.error(`❌ [Ollama Fetch] Network error:`, error);
+                    throw error;
+                }
+            };
+            // Create the Ollama provider with the specified base URL
+            const ollamaConfig = {
+                baseURL: ollamaBaseURL,
+                // Use our custom fetch for Ollama requests
+                fetch: ollamaFetch
+            };
+            // Add the API key only if it exists and is not empty
+            if (apiKey && apiKey.trim() !== '') {
+                console.log('🔧 [Chat Handler] Adding API key to Ollama config');
+                ollamaConfig.apiKey = apiKey;
+            }
+            else {
+                console.log('🔧 [Chat Handler] No API key provided for Ollama (expected for local instances)');
+            }
+            if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+                console.log('🔍 [Chat Handler] Configuring Ollama with Helicone observability');
+                ollamaConfig.headers = heliconeHeaders;
+            }
+            console.log(`🔧 [Chat Handler] Creating Ollama provider with config:`, {
+                model: effectiveModel,
+                baseURL: ollamaBaseURL,
+                hasApiKey: !!ollamaConfig.apiKey,
+                hasHeliconeHeaders: !!heliconeHeaders
+            });
+            try {
+                llmProvider = (0,ollama_ai_provider__WEBPACK_IMPORTED_MODULE_1__.createOllama)(ollamaConfig);
+                console.log(`✅ [Chat Handler] Ollama provider created successfully`);
+            }
+            catch (error) {
+                console.error(`❌ [Chat Handler] Failed to create Ollama provider:`, error);
+                return new Response(JSON.stringify({
+                    error: `Failed to create Ollama provider: ${error instanceof Error ? error.message : String(error)}`
+                }), {
+                    status: 500,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+            console.log(`Using Ollama provider with model: ${effectiveModel} at ${ollamaBaseURL} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+        }
         else {
             return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
                 status: 400,
@@ -30311,10 +31520,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
         })
             .filter((msg) => msg !== null);
         // Define the weather tool using the AI SDK tool format
-        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const weatherTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Get the weather in a location',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
-                location: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The location to get the weather for'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+                location: zod__WEBPACK_IMPORTED_MODULE_7__.z.string().describe('The location to get the weather for'),
             }),
             execute: async ({ location }) => {
                 // Simulate weather data
@@ -30328,10 +31537,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Earth Engine dataset documentation tool
-        const earthEngineDatasetTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const earthEngineDatasetTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Get information about Earth Engine datasets including documentation and code examples',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
-                datasetQuery: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+                datasetQuery: zod__WEBPACK_IMPORTED_MODULE_7__.z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
             }),
             execute: async ({ datasetQuery }) => {
                 try {
@@ -30339,7 +31548,7 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                     console.time('EarthEngineDatasetTool execution');
                     // Use the Context7 getDocumentation function to fetch dataset information
                     // The Earth Engine dataset catalog is stored in wybert/earthengine-dataset-catalog-md
-                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_1__.getDocumentation)('wybert/earthengine-dataset-catalog-md', datasetQuery, { tokens: 15000 } // Get a good amount of content
+                    const result = await (0,_lib_tools_context7__WEBPACK_IMPORTED_MODULE_2__.getDocumentation)('wybert/earthengine-dataset-catalog-md', datasetQuery, { tokens: 15000 } // Get a good amount of content
                     );
                     console.timeEnd('EarthEngineDatasetTool execution');
                     if (!result.success || !result.content) {
@@ -30369,11 +31578,11 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Earth Engine script editor tool
-        const earthEngineScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const earthEngineScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Insert JavaScript code into the Google Earth Engine code editor',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
-                scriptId: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
-                code: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+                scriptId: zod__WEBPACK_IMPORTED_MODULE_7__.z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
+                code: zod__WEBPACK_IMPORTED_MODULE_7__.z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
             }),
             execute: async ({ scriptId, code }) => {
                 try {
@@ -30498,10 +31707,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Earth Engine code runner tool
-        const earthEngineRunCodeTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const earthEngineRunCodeTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Run JavaScript code in the Google Earth Engine code editor',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
-                code: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+                code: zod__WEBPACK_IMPORTED_MODULE_7__.z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
             }),
             execute: async ({ code }) => {
                 try {
@@ -30625,9 +31834,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Screenshot tool
-        const screenshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const screenshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log(`📸 [ScreenshotTool] Tool called`);
@@ -30770,9 +31979,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Browser Snapshot tool
-        const snapshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const snapshotTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log('🔎 [SnapshotTool] Tool called in background');
@@ -30903,10 +32112,10 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Click by Reference ID tool
-        const clickByRefIdTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const clickByRefIdTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Clicks an element on the page identified by its aria-ref ID.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
-                refId: zod__WEBPACK_IMPORTED_MODULE_6__.z.string().describe('The aria-ref ID of the element to click.'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+                refId: zod__WEBPACK_IMPORTED_MODULE_7__.z.string().describe('The aria-ref ID of the element to click.'),
             }),
             execute: async ({ refId }) => {
                 try {
@@ -30964,9 +32173,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Reset Map/Inspector/Console tool
-        const resetMapInspectorConsoleTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const resetMapInspectorConsoleTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log(`🔄 [ResetMapInspectorConsoleTool] Tool called to reset GEE environment`);
@@ -31072,9 +32281,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Clear Script tool
-        const clearScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const clearScriptTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({}), // No parameters needed
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({}), // No parameters needed
             execute: async () => {
                 try {
                     console.log(`🧹 [ClearScriptTool] Tool called to clear GEE code editor`);
@@ -31247,11 +32456,11 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             },
         });
         // Define Click by Coordinates tool
-        const clickByCoordinatesTool = (0,ai__WEBPACK_IMPORTED_MODULE_5__.tool)({
+        const clickByCoordinatesTool = (0,ai__WEBPACK_IMPORTED_MODULE_6__.tool)({
             description: 'Clicks an element on the page at the specified (x, y) coordinates.',
-            parameters: zod__WEBPACK_IMPORTED_MODULE_6__.z.object({
-                x: zod__WEBPACK_IMPORTED_MODULE_6__.z.number().describe('The x-coordinate to click.'),
-                y: zod__WEBPACK_IMPORTED_MODULE_6__.z.number().describe('The y-coordinate to click.'),
+            parameters: zod__WEBPACK_IMPORTED_MODULE_7__.z.object({
+                x: zod__WEBPACK_IMPORTED_MODULE_7__.z.number().describe('The x-coordinate to click.'),
+                y: zod__WEBPACK_IMPORTED_MODULE_7__.z.number().describe('The y-coordinate to click.'),
             }),
             execute: async ({ x, y }) => {
                 try {
@@ -31350,9 +32559,22 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
         // Configure stream options based on provider
         let streamOptions = {
             model: llmProvider(effectiveModel),
-            system: GEE_SYSTEM_PROMPT,
+            // Temporarily remove system prompt for Ollama to match curl format
+            ...(provider !== 'ollama' && { system: GEE_SYSTEM_PROMPT }),
             messages: formattedMessages,
-            tools: {
+            temperature: 0.7,
+            maxRetries: 3,
+            // Add onError callback to capture and log streaming errors
+            onError: ({ error }) => {
+                console.error(`❌ [Chat Handler] Streaming error occurred`, error);
+                // We can inspect the error object for more details
+                // This is where we'll see the actual message from the API
+            },
+        };
+        // Add tools conditionally - temporarily disable for Ollama to test 403 issue
+        if (provider !== 'ollama') {
+            console.log(`🛠️ [Chat Handler] Adding tools for ${provider} provider`);
+            streamOptions.tools = {
                 weather: weatherTool,
                 earthEngineDataset: earthEngineDatasetTool,
                 earthEngineScript: earthEngineScriptTool,
@@ -31363,20 +32585,34 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                 clickByCoordinates: clickByCoordinatesTool,
                 resetMapInspectorConsole: resetMapInspectorConsoleTool,
                 clearScript: clearScriptTool
-            },
-            toolChoice: 'auto',
-            maxSteps: 12, // Allow up to 5 steps
-            temperature: 0.7,
-            maxRetries: 3,
-            toolCallStreaming: false,
-            experimental_continueSteps: true,
-            // Add onError callback to capture and log streaming errors
-            onError: ({ error }) => {
-                console.error(`❌ [Chat Handler] Streaming error occurred`, error);
-                // We can inspect the error object for more details
-                // This is where we'll see the actual message from the Google API
-            },
-        };
+            };
+            streamOptions.toolChoice = 'auto';
+            streamOptions.maxSteps = 12; // Allow up to 12 steps
+            streamOptions.toolCallStreaming = false;
+            streamOptions.experimental_continueSteps = true;
+        }
+        else if (provider === 'ollama') {
+            console.log(`🛠️ [Chat Handler] Re-enabling tools for Ollama (CORS issue resolved)`);
+            streamOptions.tools = {
+                weather: weatherTool,
+                earthEngineDataset: earthEngineDatasetTool,
+                earthEngineScript: earthEngineScriptTool,
+                earthEngineRunCode: earthEngineRunCodeTool,
+                screenshot: screenshotTool,
+                snapshot: snapshotTool,
+                clickByRefId: clickByRefIdTool,
+                clickByCoordinates: clickByCoordinatesTool,
+                resetMapInspectorConsole: resetMapInspectorConsoleTool,
+                clearScript: clearScriptTool
+            };
+            streamOptions.toolChoice = 'auto';
+            streamOptions.maxSteps = 12; // Allow up to 12 steps
+            streamOptions.toolCallStreaming = false;
+            streamOptions.experimental_continueSteps = true;
+        }
+        else {
+            console.log(`🛠️ [Chat Handler] No tools configured for provider: ${provider}`);
+        }
         // For Anthropic models, add special headers for browser usage
         if (provider === 'anthropic') {
             console.log(`🔧 [Chat Handler] Adding special headers for Anthropic browser usage`);
@@ -31393,11 +32629,16 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
             console.log(`🔧 [Chat Handler] Google model being used: ${effectiveModel}`);
             console.log(`🔧 [Chat Handler] Google available models: ${googleModels.join(', ')}`);
         }
+        // For Ollama provider, add specific logging (now using normal AI SDK flow)
+        if (provider === 'ollama') {
+            console.log(`🔧 [Chat Handler] Using Ollama provider with model: ${effectiveModel}`);
+            console.log(`🔧 [Chat Handler] Ollama base URL: ${baseURL || 'http://localhost:11434/api'}`);
+        }
         console.log(`📊 [Chat Handler] Final stream configuration:`, JSON.stringify(streamOptions, (k, v) => k === 'messages' ? '[Messages array]' : (k === 'tools' ? '[Tools object]' : v), 2));
         try {
             // Use streamText for AI generation with tools
             // streamText returns the result object synchronously. The async work happens when the stream is consumed.
-            const result = (0,ai__WEBPACK_IMPORTED_MODULE_5__.streamText)(streamOptions);
+            const result = (0,ai__WEBPACK_IMPORTED_MODULE_6__.streamText)(streamOptions);
             console.timeEnd('streamText execution');
             console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
             // The responsePromise logic has been removed as it is not the standard way to catch streaming errors.
@@ -32637,7 +33878,7 @@ function detectEnvironment() {
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __webpack_require__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -32716,6 +33957,8 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
+const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
@@ -32993,6 +34236,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         ANTHROPIC_API_KEY_STORAGE_KEY,
                         GOOGLE_API_KEY_STORAGE_KEY,
                         QWEN_API_KEY_STORAGE_KEY,
+                        OLLAMA_API_KEY_STORAGE_KEY,
+                        OLLAMA_BASE_URL_STORAGE_KEY,
                         API_PROVIDER_STORAGE_KEY,
                         MODEL_STORAGE_KEY
                     ]);
@@ -33011,8 +34256,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     else if (provider === 'qwen') {
                         apiKey = config[QWEN_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
                     }
+                    else if (provider === 'ollama') {
+                        apiKey = config[OLLAMA_API_KEY_STORAGE_KEY] || ''; // Ollama often doesn't need API key for local instances
+                    }
                     const model = config[MODEL_STORAGE_KEY];
-                    if (!apiKey) {
+                    console.log(`🔧 [Background] API key validation for ${provider}:`, {
+                        hasApiKey: !!apiKey,
+                        provider: provider,
+                        apiKeyLength: apiKey ? apiKey.length : 0
+                    });
+                    if (!apiKey && provider !== 'ollama') {
+                        console.error(`❌ [Background] API key not configured for ${provider}`);
                         sendResponse({
                             type: 'ERROR',
                             error: 'API key not configured. Please set your API key in the extension settings.'
@@ -33043,8 +34297,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                         }
                     }
                     try {
+                        // Get Ollama base URL if provider is ollama
+                        let baseURL;
+                        if (provider === 'ollama') {
+                            baseURL = config[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+                            console.log(`🔧 [Background] Ollama configuration:`, {
+                                baseURL: baseURL,
+                                model: model,
+                                hasApiKey: !!apiKey,
+                                messageCount: chatMessages.length
+                            });
+                        }
+                        console.log(`🔧 [Background] Calling handleChatRequest with:`, {
+                            provider: provider,
+                            model: model,
+                            hasApiKey: !!apiKey,
+                            baseURL: baseURL,
+                            messageCount: chatMessages.length
+                        });
                         // Handle the chat request through the appropriate handler
-                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(chatMessages, apiKey, provider, model, message.heliconeHeaders // Include Helicone headers if provided
+                        const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(chatMessages, apiKey, provider, model, message.heliconeHeaders, // Include Helicone headers if provided
+                        baseURL // Include base URL for Ollama
                         );
                         // Get response body as a readable stream
                         const reader = response.body?.getReader();
@@ -34092,7 +35365,7 @@ async function handleChatMessage(message, port) {
         console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
         // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
         const apiConfig = await new Promise((resolve, reject) => {
-            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
+            chrome.storage.sync.get([API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, OLLAMA_API_KEY_STORAGE_KEY, OLLAMA_BASE_URL_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
                 if (chrome.runtime.lastError) {
                     reject(new Error(chrome.runtime.lastError.message));
                     return;
@@ -34121,19 +35394,31 @@ async function handleChatMessage(message, port) {
                 else if (provider === 'qwen') {
                     apiKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
                 }
+                else if (provider === 'ollama') {
+                    apiKey = result[OLLAMA_API_KEY_STORAGE_KEY] || ''; // Ollama often doesn't need API key for local instances
+                }
                 else {
                     apiKey = result[API_KEY_STORAGE_KEY] || '';
                 }
+                // Get baseURL for Ollama if needed
+                let baseURL;
+                if (provider === 'ollama') {
+                    baseURL = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
+                }
                 console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
                 console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
+                if (baseURL) {
+                    console.log(`[${requestId}] Base URL: ${baseURL}`);
+                }
                 resolve({
                     apiKey,
                     provider,
-                    model: model
+                    model: model,
+                    baseURL
                 });
             });
         });
-        if (!apiConfig.apiKey) {
+        if (!apiConfig.apiKey && apiConfig.provider !== 'ollama') {
             console.error(`[${requestId}] API key not configured`);
             port.postMessage({
                 type: 'ERROR',
@@ -34150,7 +35435,7 @@ async function handleChatMessage(message, port) {
         // Call the new handler which directly processes messages
         // Include Helicone headers if provided in the message
         const response = await (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.handleChatRequest)(conversationMessages, apiConfig.apiKey, apiConfig.provider, // Cast to Provider type
-        apiConfig.model, message.heliconeHeaders);
+        apiConfig.model, message.heliconeHeaders, apiConfig.baseURL);
         console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
         if (!response.ok) {
             // Handle potential errors from the handler
