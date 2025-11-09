@@ -28,8 +28,8 @@ const components: Components = {
   th: ({ node, ...props }: any) => <th className="border px-4 py-2 text-left font-bold [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
   td: ({ node, ...props }: any) => <td className="border px-4 py-2 text-left [&[align=center]]:text-center [&[align=right]]:text-right" {...props} />,
   pre: ({ node, children, ...props }: any) => {
-    // Basic pre formatting, removed CodeBlock component usage
-    return <pre className="overflow-x-scroll rounded-md border bg-background/50 p-4 font-mono text-sm [scrollbar-width:none]" {...props}>{children}</pre>
+    // Basic pre formatting with proper overflow handling
+    return <pre className="overflow-x-auto rounded-md border bg-background/50 p-4 font-mono text-sm max-w-full whitespace-pre-wrap break-words" {...props}>{children}</pre>
   },
   code: ({ node, inline, className, children, ...props }: any) => {
     // Basic code formatting, handle potential language class from remarkGfm
@@ -38,7 +38,7 @@ const components: Components = {
       <code
         className={cn(
           'relative rounded border bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm',
-          inline ? '' : 'whitespace-pre',
+          inline ? '' : 'block whitespace-pre-wrap break-all',
           className // Keep original className which might contain language-xxx
         )}
         {...props}
