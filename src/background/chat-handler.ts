@@ -1,4 +1,4 @@
-import { Message, CoreMessage, streamText, tool, TextPart, ImagePart, FilePart } from 'ai';
+import { UIMessage, ModelMessage, streamText, tool, TextPart, ImagePart, FilePart, stepCountIs } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -202,10 +202,10 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
  * Handle chat messages from the UI
  */
 export async function handleChatRequest(
-  messages: Message[], 
-  apiKey: string, 
-  provider: Provider, 
-  model?: string, 
+  messages: UIMessage[],
+  apiKey: string,
+  provider: Provider,
+  model?: string,
   heliconeHeaders?: Record<string, string>,
   baseURL?: string
 ): Promise<Response> {
@@ -542,8 +542,8 @@ export async function handleChatRequest(
     }
 
     // Message mapping that supports both string content and multi-modal content with parts
-    const formattedMessages: CoreMessage[] = messages
-      .map((msg): CoreMessage | null => {
+    const formattedMessages: ModelMessage[] = messages
+      .map((msg): ModelMessage | null => {
         // Handle messages with simple string content
         if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') && 
             typeof msg.content === 'string') {
@@ -596,14 +596,14 @@ export async function handleChatRequest(
           }
         }
         console.warn('Filtering out message with incompatible role/content:', msg);
-        return null; 
+        return null;
       })
-      .filter((msg): msg is CoreMessage => msg !== null);
+      .filter((msg): msg is ModelMessage => msg !== null);
 
     // Define the weather tool using the AI SDK tool format
     const weatherTool = tool({
       description: 'Get the weather in a location',
-      parameters: z.object({
+      inputSchema: z.object({
         location: z.string().describe('The location to get the weather for'),
       }),
       execute: async ({ location }) => {
@@ -621,7 +621,7 @@ export async function handleChatRequest(
     // Define Earth Engine dataset documentation tool
     const earthEngineDatasetTool = tool({
       description: 'Get information about Earth Engine datasets including documentation and code examples',
-      parameters: z.object({
+      inputSchema: z.object({
         datasetQuery: z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
       }),
       execute: async ({ datasetQuery }) => {
@@ -670,7 +670,7 @@ export async function handleChatRequest(
     // Define Earth Engine script editor tool
     const earthEngineScriptTool = tool({
       description: 'Insert JavaScript code into the Google Earth Engine code editor',
-      parameters: z.object({
+      inputSchema: z.object({
         scriptId: z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
         code: z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
       }),
@@ -805,7 +805,7 @@ export async function handleChatRequest(
     // Define Earth Engine code runner tool
     const earthEngineRunCodeTool = tool({
       description: 'Run JavaScript code in the Google Earth Engine code editor',
-      parameters: z.object({
+      inputSchema: z.object({
         code: z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
       }),
       execute: async ({ code }) => {
@@ -937,7 +937,7 @@ export async function handleChatRequest(
     // Define Screenshot tool
     const screenshotTool = tool({
       description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
-      parameters: z.object({}), // No parameters needed
+      inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         try {
           console.log(`📸 [ScreenshotTool] Tool called`);
@@ -1072,15 +1072,18 @@ export async function handleChatRequest(
           };
         }
       },
-      // Fix experimental_toToolResultContent to match expected type signature
-      experimental_toToolResultContent: (result: any) => {
-        console.log('📸 [ScreenshotTool] Converting result to tool content');
-        
+      // toModelOutput converts the execute result into content for the AI model
+      toModelOutput: (result: any) => {
+        console.log('📸 [ScreenshotTool] Converting result to model output');
+
         if (!result.success) {
           // Return error as text
-          return [{ type: 'text', text: `Error taking screenshot: ${result.error || 'Unknown error'}` }];
+          return {
+            type: 'content',
+            value: [{ type: 'text', text: `Error taking screenshot: ${result.error || 'Unknown error'}` }]
+          };
         }
-        
+
         // Extract the base64 content from the data URL
         let base64Data = result.screenshotDataUrl;
         // Remove the data URL prefix if it exists (e.g., "data:image/jpeg;base64,")
@@ -1088,19 +1091,22 @@ export async function handleChatRequest(
           base64Data = base64Data.split(';base64,')[1];
           console.log('📸 [ScreenshotTool] Extracted base64 data from data URL');
         }
-        
-        // Return both text and image for successful screenshots
-        return [
-          { type: 'text', text: 'Here is the screenshot of the current browser tab:' },
-          { type: 'image', data: base64Data, mimeType: 'image/jpeg' }
-        ];
+
+        // Return both text and media for successful screenshots
+        return {
+          type: 'content',
+          value: [
+            { type: 'text', text: 'Here is the screenshot of the current browser tab:' },
+            { type: 'media', mediaType: 'image/jpeg', data: base64Data }
+          ]
+        };
       },
     });
 
     // Define Browser Snapshot tool
     const snapshotTool = tool({
       description: 'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
-      parameters: z.object({}), // No parameters needed
+      inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         try {
           console.log('🔎 [SnapshotTool] Tool called in background');
@@ -1210,33 +1216,42 @@ export async function handleChatRequest(
           };
         }
       },
-      experimental_toToolResultContent: (result: any) => {
-        console.log('🔎 [SnapshotTool] Converting result to tool content');
-        
+      toModelOutput: (result: any) => {
+        console.log('🔎 [SnapshotTool] Converting result to model output');
+
         if (!result.success) {
-          console.error('❌ [SnapshotTool] Error in toToolResultContent - result not successful:', result.error);
-          return [{ type: 'text', text: `Error taking snapshot: ${result.error || 'Unknown error'}` }];
+          console.error('❌ [SnapshotTool] Error in toModelOutput - result not successful:', result.error);
+          return {
+            type: 'content',
+            value: [{ type: 'text', text: `Error taking snapshot: ${result.error || 'Unknown error'}` }]
+          };
         }
 
         if (result.snapshot) {
-          console.log('🔎 [SnapshotTool] Full snapshot data for UI conversion (copy from here):');
+          console.log('🔎 [SnapshotTool] Full snapshot data for model output (copy from here):');
           console.log(result.snapshot);
         } else {
-          console.warn('⚠️ [SnapshotTool] No snapshot data found in result for UI conversion, though success was true.');
-           return [{ type: 'text', text: 'Snapshot tool succeeded but no snapshot data was returned.' }];
+          console.warn('⚠️ [SnapshotTool] No snapshot data found in result for model output, though success was true.');
+          return {
+            type: 'content',
+            value: [{ type: 'text', text: 'Snapshot tool succeeded but no snapshot data was returned.' }]
+          };
         }
-        
+
         // Return the snapshot data as text
-        return [
-          { type: 'text', text: 'Here is the accessibility snapshot of the current browser tab:\n' + result.snapshot }
-        ];
+        return {
+          type: 'content',
+          value: [
+            { type: 'text', text: 'Here is the accessibility snapshot of the current browser tab:\n' + result.snapshot }
+          ]
+        };
       },
     });
 
     // Define Click by Reference ID tool
     const clickByRefIdTool = tool({
       description: 'Clicks an element on the page identified by its aria-ref ID.',
-      parameters: z.object({
+      inputSchema: z.object({
         refId: z.string().describe('The aria-ref ID of the element to click.'),
       }),
       execute: async ({ refId }) => {
@@ -1297,15 +1312,18 @@ export async function handleChatRequest(
           return { success: false, error: `Error clicking by refId: ${errorMessage}` };
         }
       },
-      experimental_toToolResultContent: (result: any) => {
-        return [{ type: 'text', text: result.success ? (result.message || `Successfully clicked element with refId ${result.refId}.`) : `Error clicking element: ${result.error}` }];
+      toModelOutput: (result: any) => {
+        return {
+          type: 'content',
+          value: [{ type: 'text', text: result.success ? (result.message || `Successfully clicked element with refId ${result.refId}.`) : `Error clicking element: ${result.error}` }]
+        };
       },
     });
 
     // Define Reset Map/Inspector/Console tool
     const resetMapInspectorConsoleTool = tool({
       description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment.',
-      parameters: z.object({}), // No parameters needed
+      inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         try {
           console.log(`🔄 [ResetMapInspectorConsoleTool] Tool called to reset GEE environment`);
@@ -1409,20 +1427,23 @@ export async function handleChatRequest(
           };
         }
       },
-      experimental_toToolResultContent: (result: any) => {
-        return [{ 
-          type: 'text', 
-          text: result.success 
-            ? '✅ Google Earth Engine environment has been reset successfully. The map, inspector, and console are now cleared.' 
-            : `❌ Failed to reset GEE environment: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
-        }];
+      toModelOutput: (result: any) => {
+        return {
+          type: 'content',
+          value: [{
+            type: 'text',
+            text: result.success
+              ? '✅ Google Earth Engine environment has been reset successfully. The map, inspector, and console are now cleared.'
+              : `❌ Failed to reset GEE environment: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
+          }]
+        };
       },
     });
 
     // Define Clear Script tool
     const clearScriptTool = tool({
       description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state.',
-      parameters: z.object({}), // No parameters needed
+      inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         try {
           console.log(`🧹 [ClearScriptTool] Tool called to clear GEE code editor`);
@@ -1597,20 +1618,23 @@ export async function handleChatRequest(
           };
         }
       },
-      experimental_toToolResultContent: (result: any) => {
-        return [{ 
-          type: 'text', 
-          text: result.success 
-            ? '✅ Google Earth Engine code editor has been cleared successfully. All scripts have been removed and you now have a blank editor.' 
-            : `❌ Failed to clear GEE code editor: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
-        }];
+      toModelOutput: (result: any) => {
+        return {
+          type: 'content',
+          value: [{
+            type: 'text',
+            text: result.success
+              ? '✅ Google Earth Engine code editor has been cleared successfully. All scripts have been removed and you now have a blank editor.'
+              : `❌ Failed to clear GEE code editor: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
+          }]
+        };
       },
     });
 
     // Define Click by Coordinates tool
     const clickByCoordinatesTool = tool({
       description: 'Clicks an element on the page at the specified (x, y) coordinates.',
-      parameters: z.object({
+      inputSchema: z.object({
         x: z.number().describe('The x-coordinate to click.'),
         y: z.number().describe('The y-coordinate to click.'),
       }),
@@ -1672,8 +1696,11 @@ export async function handleChatRequest(
           return { success: false, error: `Error clicking by coordinates: ${errorMessage}` };
         }
       },
-      experimental_toToolResultContent: (result: any) => {
-        return [{ type: 'text', text: result.success ? (result.message || `Successfully clicked at coordinates (${result.x}, ${result.y}).`) : `Error clicking by coordinates: ${result.error}` }];
+      toModelOutput: (result: any) => {
+        return {
+          type: 'content',
+          value: [{ type: 'text', text: result.success ? (result.message || `Successfully clicked at coordinates (${result.x}, ${result.y}).`) : `Error clicking by coordinates: ${result.error}` }]
+        };
       },
     });
 
@@ -1755,9 +1782,7 @@ export async function handleChatRequest(
         clearScript: clearScriptTool
       };
       streamOptions.toolChoice = 'auto';
-      streamOptions.maxSteps = 12; // Allow up to 12 steps
-      streamOptions.toolCallStreaming = false;
-      streamOptions.experimental_continueSteps = true;
+      streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
     } else if (provider === 'ollama') {
       console.log(`🛠️ [Chat Handler] Re-enabling tools for Ollama (CORS issue resolved)`);
       streamOptions.tools = {
@@ -1773,9 +1798,7 @@ export async function handleChatRequest(
         clearScript: clearScriptTool
       };
       streamOptions.toolChoice = 'auto';
-      streamOptions.maxSteps = 12; // Allow up to 12 steps
-      streamOptions.toolCallStreaming = false;
-      streamOptions.experimental_continueSteps = true;
+      streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
     } else {
       console.log(`🛠️ [Chat Handler] No tools configured for provider: ${provider}`);
     }
@@ -1787,8 +1810,8 @@ export async function handleChatRequest(
         'anthropic-version': '2023-06-01',
         'anthropic-dangerous-direct-browser-access': 'true'
       };
-      // Enable experimental content for multi-modal tool responses (supported by Anthropic)
-      streamOptions.experimental_enableToolContentInResult = true;
+      // Note: In AI SDK 5.0, multi-modal tool results (images) are automatically
+      // supported for both Anthropic and OpenAI when using toModelOutput
     }
     
     // For Google provider, add specific logging and validation
