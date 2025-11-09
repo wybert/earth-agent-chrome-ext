@@ -1,5 +1,5 @@
-import type { Attachment, UIMessage } from 'ai';
-import { useChat } from 'ai/react';
+import type { Attachment, UIMessage } from '@ai-sdk/react';
+import { useChat } from '@ai-sdk/react';
 
 // Test function to verify AI SDK imports
 export async function testAISDKImports() {
