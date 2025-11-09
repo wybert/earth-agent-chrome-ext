@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical } from 'lucide-react';
-import type { UIMessage as Message } from '@ai-sdk/react'; // Updated for AI SDK 5.0
+// Project uses custom Message type for Chrome extension communication
+// AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
-import { ExtensionMessage } from '../types/extension'; // Restore this type
+import { Message, ExtensionMessage } from '../types/extension';
 import ToolsTestPanel from './ui/ToolsTestPanel';
 import AgentTestPanel from './ui/AgentTestPanel';
 import { z } from 'zod'; // Restore Zod

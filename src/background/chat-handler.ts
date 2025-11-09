@@ -1,4 +1,5 @@
-import { UIMessage, ModelMessage, streamText, tool, TextPart, ImagePart, FilePart, stepCountIs } from 'ai';
+import { ModelMessage, streamText, tool, TextPart, ImagePart, FilePart, stepCountIs } from 'ai';
+import type { Message } from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -202,7 +203,7 @@ Speak in a helpful, educational tone while providing practical guidance for Eart
  * Handle chat messages from the UI
  */
 export async function handleChatRequest(
-  messages: UIMessage[],
+  messages: Message[],
   apiKey: string,
   provider: Provider,
   model?: string,

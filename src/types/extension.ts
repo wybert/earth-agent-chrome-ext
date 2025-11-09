@@ -9,7 +9,7 @@ export interface MessagePart {
 }
 
 export interface Message {
-  id?: string;
+  id: string; // Required for AI SDK 5.0 compatibility
   role: string;
   content?: string;
   parts?: MessagePart[];
