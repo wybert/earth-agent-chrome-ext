@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical } from 'lucide-react';
-import type { Message } from 'ai'; // Keep this type
+import type { UIMessage as Message } from '@ai-sdk/react'; // Updated for AI SDK 5.0
 import { Settings } from './Settings';
 import { ExtensionMessage } from '../types/extension'; // Restore this type
 import ToolsTestPanel from './ui/ToolsTestPanel';
