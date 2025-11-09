@@ -1,5 +1,5 @@
 import { OpenAI } from '@langchain/openai';
-import type { Message } from 'ai/react';
+import type { Message } from '@ai-sdk/react';
 
 // Simple test function to ensure imports are working
 async function testImports() {
