@@ -8,6 +8,7 @@ import { Settings } from './Settings';
 import { Message, ExtensionMessage } from '../types/extension';
 import ToolsTestPanel from './ui/ToolsTestPanel';
 import AgentTestPanel from './ui/AgentTestPanel';
+import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
 
@@ -721,7 +722,8 @@ export function ChatUI() {
               {getSessionDisplayName(activeSessionId)}
             </h2>
          </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <TabStatusIndicator />
           <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
             <Wrench className="h-5 w-5 text-gray-600" />
           </Button>
@@ -738,7 +740,7 @@ export function ChatUI() {
           )}
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-hidden">
         <Chat
           messages={displayMessages as any} // Keep cast for now

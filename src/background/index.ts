@@ -1,4 +1,4 @@
-import { handleChatRequest } from './chat-handler';
+import { handleChatRequest, selectBestEarthEngineTab } from './chat-handler';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
@@ -1449,7 +1449,71 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-    
+
+    case 'GET_TARGET_TAB_STATUS':
+      // Get information about which GEE tab would be targeted
+      (async () => {
+        try {
+          console.log('Getting target tab status...');
+
+          // Query for all GEE tabs
+          const earthEngineTabs = await chrome.tabs.query({
+            url: "*://code.earthengine.google.com/*"
+          });
+
+          if (!earthEngineTabs || earthEngineTabs.length === 0) {
+            sendResponse({
+              success: true,
+              hasGEETab: false,
+              message: 'No Google Earth Engine tab found'
+            });
+            return;
+          }
+
+          // Get the currently active tab
+          const activeTabs = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          });
+          const activeTab = activeTabs && activeTabs.length > 0 ? activeTabs[0] : null;
+
+          // Select the best tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+
+          if (!selectedTab) {
+            sendResponse({
+              success: true,
+              hasGEETab: false,
+              message: 'No valid Google Earth Engine tab found'
+            });
+            return;
+          }
+
+          // Check if the selected tab is the active tab
+          const isActiveTab = activeTab?.id === selectedTab.id;
+
+          sendResponse({
+            success: true,
+            hasGEETab: true,
+            selectedTabId: selectedTab.id,
+            selectedTabTitle: selectedTab.title,
+            selectedTabUrl: selectedTab.url,
+            isActiveTab: isActiveTab,
+            activeTabId: activeTab?.id,
+            activeTabTitle: activeTab?.title,
+            activeTabUrl: activeTab?.url,
+            totalGEETabs: earthEngineTabs.length
+          });
+        } catch (error) {
+          console.error('Error getting target tab status:', error);
+          sendResponse({
+            success: false,
+            error: `Error getting target tab status: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+
     default:
       console.warn(`Unknown message type received in background: ${message.type}`);
       sendResponse({ success: false, error: `Unknown message type: ${message.type}` });

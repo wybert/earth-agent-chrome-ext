@@ -21,6 +21,49 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
   ollama: 'phi3'
 };
 
+/**
+ * Smart tab selection: Chooses the most relevant GEE tab from multiple options
+ * Priority:
+ * 1. Active tab in current window
+ * 2. Any active tab
+ * 3. Most recently accessed tab
+ * 4. First tab
+ */
+export function selectBestEarthEngineTab(tabs: chrome.tabs.Tab[]): chrome.tabs.Tab | null {
+  if (tabs.length === 0) return null;
+  if (tabs.length === 1) return tabs[0];
+
+  console.log(`🔍 [Tab Selection] Found ${tabs.length} GEE tabs, selecting the best one...`);
+
+  // 1. Try to find active tab in current window
+  const activeInCurrentWindow = tabs.find(tab => tab.active && tab.windowId);
+  if (activeInCurrentWindow) {
+    console.log(`✅ [Tab Selection] Selected active tab in current window: ${activeInCurrentWindow.id}`);
+    return activeInCurrentWindow;
+  }
+
+  // 2. Try to find any active tab
+  const anyActive = tabs.find(tab => tab.active);
+  if (anyActive) {
+    console.log(`✅ [Tab Selection] Selected active tab: ${anyActive.id}`);
+    return anyActive;
+  }
+
+  // 3. Find most recently accessed tab
+  const withLastAccessed = tabs.filter(tab => typeof tab.lastAccessed === 'number');
+  if (withLastAccessed.length > 0) {
+    const mostRecent = withLastAccessed.reduce((a, b) =>
+      (a.lastAccessed || 0) > (b.lastAccessed || 0) ? a : b
+    );
+    console.log(`✅ [Tab Selection] Selected most recently accessed tab: ${mostRecent.id}`);
+    return mostRecent;
+  }
+
+  // 4. Fallback to first tab
+  console.log(`⚠️ [Tab Selection] Using first tab as fallback: ${tabs[0].id}`);
+  return tabs[0];
+}
+
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
   // Get the URL as a string
@@ -707,8 +750,10 @@ export async function handleChatRequest(
               suggestion: "Please open Google Earth Engine in a browser tab first"
             };
           }
-          
-          const tabId = earthEngineTabs[0].id;
+
+          // Smart tab selection: prefer active or recently used tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+          const tabId = selectedTab?.id;
           if (!tabId) {
             console.warn('❌ [EarthEngineScriptTool] Invalid Earth Engine tab');
             return {
@@ -839,8 +884,10 @@ export async function handleChatRequest(
               suggestion: "Please open Google Earth Engine in a browser tab first"
             };
           }
-          
-          const tabId = earthEngineTabs[0].id;
+
+          // Smart tab selection: prefer active or recently used tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+          const tabId = selectedTab?.id;
           if (!tabId) {
             console.warn('❌ [EarthEngineRunCodeTool] Invalid Earth Engine tab');
             return {
@@ -1355,7 +1402,9 @@ export async function handleChatRequest(
             };
           }
 
-          const tabId = earthEngineTabs[0].id;
+          // Smart tab selection: prefer active or recently used tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+          const tabId = selectedTab?.id;
           if (!tabId) {
             console.warn('❌ [ResetMapInspectorConsoleTool] Invalid Earth Engine tab');
             return {
@@ -1475,7 +1524,9 @@ export async function handleChatRequest(
             };
           }
 
-          const tabId = earthEngineTabs[0].id;
+          // Smart tab selection: prefer active or recently used tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+          const tabId = selectedTab?.id;
           if (!tabId) {
             console.warn('❌ [ClearScriptTool] Invalid Earth Engine tab');
             return {

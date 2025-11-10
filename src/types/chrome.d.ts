@@ -6,6 +6,13 @@ declare namespace chrome {
 
 // Chrome extension type definitions
 
+// Extend Chrome Tab type to include lastAccessed property
+declare namespace chrome.tabs {
+  interface Tab {
+    lastAccessed?: number;
+  }
+}
+
 // Add FetchEvent interface for service workers
 interface FetchEvent extends Event {
   request: Request;
