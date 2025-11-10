@@ -62884,7 +62884,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   DEFAULT_MODELS: () => (/* binding */ DEFAULT_MODELS),
 /* harmony export */   GEE_SYSTEM_PROMPT: () => (/* binding */ GEE_SYSTEM_PROMPT),
-/* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest)
+/* harmony export */   handleChatRequest: () => (/* binding */ handleChatRequest),
+/* harmony export */   selectBestEarthEngineTab: () => (/* binding */ selectBestEarthEngineTab)
 /* harmony export */ });
 /* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ai */ "./node_modules/ai/node_modules/@ai-sdk/provider-utils/dist/index.mjs");
 /* harmony import */ var ai__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ai */ "./node_modules/ai/dist/index.mjs");
@@ -62911,6 +62912,43 @@ const DEFAULT_MODELS = {
     qwen: 'qwen-max-latest',
     ollama: 'phi3'
 };
+/**
+ * Smart tab selection: Chooses the most relevant GEE tab from multiple options
+ * Priority:
+ * 1. Active tab in current window
+ * 2. Any active tab
+ * 3. Most recently accessed tab
+ * 4. First tab
+ */
+function selectBestEarthEngineTab(tabs) {
+    if (tabs.length === 0)
+        return null;
+    if (tabs.length === 1)
+        return tabs[0];
+    console.log(`🔍 [Tab Selection] Found ${tabs.length} GEE tabs, selecting the best one...`);
+    // 1. Try to find active tab in current window
+    const activeInCurrentWindow = tabs.find(tab => tab.active && tab.windowId);
+    if (activeInCurrentWindow) {
+        console.log(`✅ [Tab Selection] Selected active tab in current window: ${activeInCurrentWindow.id}`);
+        return activeInCurrentWindow;
+    }
+    // 2. Try to find any active tab
+    const anyActive = tabs.find(tab => tab.active);
+    if (anyActive) {
+        console.log(`✅ [Tab Selection] Selected active tab: ${anyActive.id}`);
+        return anyActive;
+    }
+    // 3. Find most recently accessed tab
+    const withLastAccessed = tabs.filter(tab => typeof tab.lastAccessed === 'number');
+    if (withLastAccessed.length > 0) {
+        const mostRecent = withLastAccessed.reduce((a, b) => (a.lastAccessed || 0) > (b.lastAccessed || 0) ? a : b);
+        console.log(`✅ [Tab Selection] Selected most recently accessed tab: ${mostRecent.id}`);
+        return mostRecent;
+    }
+    // 4. Fallback to first tab
+    console.log(`⚠️ [Tab Selection] Using first tab as fallback: ${tabs[0].id}`);
+    return tabs[0];
+}
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input, options = {}) => {
     // Get the URL as a string
@@ -63527,7 +63565,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                             suggestion: "Please open Google Earth Engine in a browser tab first"
                         };
                     }
-                    const tabId = earthEngineTabs[0].id;
+                    // Smart tab selection: prefer active or recently used tab
+                    const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+                    const tabId = selectedTab?.id;
                     if (!tabId) {
                         console.warn('❌ [EarthEngineScriptTool] Invalid Earth Engine tab');
                         return {
@@ -63654,7 +63694,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                             suggestion: "Please open Google Earth Engine in a browser tab first"
                         };
                     }
-                    const tabId = earthEngineTabs[0].id;
+                    // Smart tab selection: prefer active or recently used tab
+                    const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+                    const tabId = selectedTab?.id;
                     if (!tabId) {
                         console.warn('❌ [EarthEngineRunCodeTool] Invalid Earth Engine tab');
                         return {
@@ -64135,7 +64177,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                             suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
                         };
                     }
-                    const tabId = earthEngineTabs[0].id;
+                    // Smart tab selection: prefer active or recently used tab
+                    const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+                    const tabId = selectedTab?.id;
                     if (!tabId) {
                         console.warn('❌ [ResetMapInspectorConsoleTool] Invalid Earth Engine tab');
                         return {
@@ -64246,7 +64290,9 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
                             suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
                         };
                     }
-                    const tabId = earthEngineTabs[0].id;
+                    // Smart tab selection: prefer active or recently used tab
+                    const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+                    const tabId = selectedTab?.id;
                     if (!tabId) {
                         console.warn('❌ [ClearScriptTool] Invalid Earth Engine tab');
                         return {
@@ -67125,6 +67171,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                     sendResponse({
                         success: false,
                         error: `Error forwarding CLICK_BY_SELECTOR: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            })();
+            return true; // Will respond asynchronously
+        case 'GET_TARGET_TAB_STATUS':
+            // Get information about which GEE tab would be targeted
+            (async () => {
+                try {
+                    console.log('Getting target tab status...');
+                    // Query for all GEE tabs
+                    const earthEngineTabs = await chrome.tabs.query({
+                        url: "*://code.earthengine.google.com/*"
+                    });
+                    if (!earthEngineTabs || earthEngineTabs.length === 0) {
+                        sendResponse({
+                            success: true,
+                            hasGEETab: false,
+                            message: 'No Google Earth Engine tab found'
+                        });
+                        return;
+                    }
+                    // Get the currently active tab
+                    const activeTabs = await chrome.tabs.query({
+                        active: true,
+                        currentWindow: true
+                    });
+                    const activeTab = activeTabs && activeTabs.length > 0 ? activeTabs[0] : null;
+                    // Select the best tab
+                    const selectedTab = (0,_chat_handler__WEBPACK_IMPORTED_MODULE_0__.selectBestEarthEngineTab)(earthEngineTabs);
+                    if (!selectedTab) {
+                        sendResponse({
+                            success: true,
+                            hasGEETab: false,
+                            message: 'No valid Google Earth Engine tab found'
+                        });
+                        return;
+                    }
+                    // Check if the selected tab is the active tab
+                    const isActiveTab = activeTab?.id === selectedTab.id;
+                    sendResponse({
+                        success: true,
+                        hasGEETab: true,
+                        selectedTabId: selectedTab.id,
+                        selectedTabTitle: selectedTab.title,
+                        selectedTabUrl: selectedTab.url,
+                        isActiveTab: isActiveTab,
+                        activeTabId: activeTab?.id,
+                        activeTabTitle: activeTab?.title,
+                        activeTabUrl: activeTab?.url,
+                        totalGEETabs: earthEngineTabs.length
+                    });
+                }
+                catch (error) {
+                    console.error('Error getting target tab status:', error);
+                    sendResponse({
+                        success: false,
+                        error: `Error getting target tab status: ${error instanceof Error ? error.message : String(error)}`
                     });
                 }
             })();
