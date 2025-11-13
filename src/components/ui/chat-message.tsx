@@ -111,16 +111,21 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
     return null
   }
 
+  // Render avatar component
+  const avatar = (
+    <div
+      className={cn(
+        "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow",
+        isUser ? "bg-background" : "bg-primary text-primary-foreground"
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </div>
+  );
+
   return (
     <div className={cn("group flex items-start gap-3", isUser && "justify-end")}>
-      <div
-        className={cn(
-          "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow",
-          isUser ? "bg-background" : "bg-primary text-primary-foreground"
-        )}
-      >
-        <Icon className="h-5 w-5" />
-    </div>
+      {!isUser && avatar}
       <div
         className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}
       >
@@ -267,6 +272,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
           </div>
         ) : null}
       </div>
+      {isUser && avatar}
     </div>
   )
 }
