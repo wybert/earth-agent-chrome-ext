@@ -120741,7 +120741,7 @@ const chatBubbleVariants = (0,class_variance_authority__WEBPACK_IMPORTED_MODULE_
     },
 });
 function BubbleMessage({ content, isUser, animation, actions, }) {
-    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("group/message relative") },
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("group/message relative inline-block") },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_5__.motion.div, { layout: true, initial: { opacity: 0, scale: 0.95, y: 10 }, animate: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.95, y: -10 }, transition: {
                 opacity: { duration: 0.2 },
                 layout: {
@@ -120750,8 +120750,8 @@ function BubbleMessage({ content, isUser, animation, actions, }) {
                     duration: animation === "fadeIn" ? 0.4 : 0,
                 },
             }, style: { originX: isUser ? 1 : 0 }, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)(chatBubbleVariants({ isUser, animation }), "break-words max-w-[600px] overflow-hidden inline-block min-w-fit") },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_markdown_renderer__WEBPACK_IMPORTED_MODULE_4__.MarkdownRenderer, { content: content }),
-            actions ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100" }, actions)) : null)));
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_markdown_renderer__WEBPACK_IMPORTED_MODULE_4__.MarkdownRenderer, { content: content })),
+        actions ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("absolute -bottom-4 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100 shadow-sm", "right-2") }, actions)) : null));
 }
 function ChatMessage({ message, isLoading, actions }) {
     const Icon = message.role === "user" ? lucide_react__WEBPACK_IMPORTED_MODULE_6__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_7__["default"];
