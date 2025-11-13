@@ -713,29 +713,29 @@ export function ChatUI() {
 
   return (
     <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none overflow-hidden">
-      <div className="flex justify-between items-center p-2 px-3 border-b">
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="icon" onClick={handleNewChat} aria-label="New Chat" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="New Chat">
-              <Plus className="h-5 w-5 text-gray-600" />
+      <div className="flex justify-between items-center p-2 px-3 border-b min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+           <Button variant="outline" size="icon" onClick={handleNewChat} aria-label="New Chat" className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="New Chat">
+              <Plus className="h-4 w-4 text-gray-600" />
             </Button>
-            <h2 className="text-base font-medium truncate" title={activeSessionId || 'Chat'}>
+            <h2 className="text-sm font-medium truncate" title={activeSessionId || 'Chat'}>
               {getSessionDisplayName(activeSessionId)}
             </h2>
          </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1 items-center shrink-0">
           <TabStatusIndicator />
-          <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
-            <Wrench className="h-5 w-5 text-gray-600" />
+          <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
+            <Wrench className="h-4 w-4 text-gray-600" />
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
-            <FlaskConical className="h-5 w-5 text-gray-600" />
+          <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
+            <FlaskConical className="h-4 w-4 text-gray-600" />
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="Settings">
-            <SettingsIcon className="h-5 w-5 text-gray-600" />
+          <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Settings">
+            <SettingsIcon className="h-4 w-4 text-gray-600" />
           </Button>
           {canRegenerate && (
-            <Button variant="outline" size="icon" onClick={handleRegenerate} aria-label="Regenerate response" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="Regenerate">
-              <RefreshCw className="h-5 w-5 text-gray-600" />
+            <Button variant="outline" size="icon" onClick={handleRegenerate} aria-label="Regenerate response" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Regenerate">
+              <RefreshCw className="h-4 w-4 text-gray-600" />
             </Button>
           )}
         </div>
