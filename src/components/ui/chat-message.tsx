@@ -56,19 +56,18 @@ function BubbleMessage({
         style={{ originX: isUser ? 1 : 0 }}
             className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "break-words max-w-[600px] overflow-hidden inline-block min-w-fit"
+          "break-words max-w-[600px] overflow-visible inline-block min-w-fit relative"
         )}
       >
         <MarkdownRenderer content={content} />
+        {actions ? (
+          <div className={cn(
+            "absolute bottom-1 right-1 flex space-x-0.5 rounded-md border bg-background/95 backdrop-blur-sm p-0.5 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100 shadow-sm scale-75"
+          )}>
+            {actions}
+          </div>
+        ) : null}
       </motion.div>
-      {actions ? (
-        <div className={cn(
-          "absolute -bottom-4 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100 shadow-sm",
-          "right-2"
-        )}>
-          {actions}
-        </div>
-      ) : null}
     </div>
   )
 }
