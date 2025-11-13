@@ -56,7 +56,7 @@ function BubbleMessage({
         style={{ originX: isUser ? 1 : 0 }}
             className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "break-words max-w-[85%] overflow-hidden"
+          "break-words max-w-[600px] overflow-hidden inline-block min-w-fit"
         )}
       >
         <MarkdownRenderer content={content} />
@@ -127,7 +127,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
     <div className={cn("group flex items-start gap-3", isUser && "justify-end")}>
       {!isUser && avatar}
       <div
-        className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}
+        className={cn("flex flex-col gap-2 flex-1 min-w-0", isUser ? "items-end" : "items-start")}
       >
         {content && !message.parts?.length ? (
           <BubbleMessage content={content} isUser={isUser} actions={actions} />
