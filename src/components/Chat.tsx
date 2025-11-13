@@ -733,11 +733,6 @@ export function ChatUI() {
           <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Settings">
             <SettingsIcon className="h-4 w-4 text-gray-600" />
           </Button>
-          {canRegenerate && (
-            <Button variant="outline" size="icon" onClick={handleRegenerate} aria-label="Regenerate response" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Regenerate">
-              <RefreshCw className="h-4 w-4 text-gray-600" />
-            </Button>
-          )}
         </div>
       </div>
 
@@ -751,6 +746,8 @@ export function ChatUI() {
           stop={stop}
           setMessages={setMessages as any}
           append={append as any} // Pass append even if unused by Chat component itself
+          onRegenerate={handleRegenerate}
+          showRegenerate={canRegenerate}
           className="h-full"
         />
               </div>
