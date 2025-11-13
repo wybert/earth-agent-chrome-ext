@@ -578,35 +578,40 @@ export function Settings({ onClose }: SettingsProps) {
           </div>
         )}
         <div>
-          <label className="text-sm mb-1 block">Select API Provider</label>
-          <div className="flex gap-2">
-            <Button 
+          <label className="text-sm mb-2 block">Select API Provider</label>
+          <div className="flex flex-wrap gap-2">
+            <Button
               variant={provider === 'openai' ? 'default' : 'outline'}
               onClick={() => setProvider('openai')}
+              className="flex-1 min-w-[90px] text-sm px-3 py-2"
             >
               OpenAI
             </Button>
-            <Button 
+            <Button
               variant={provider === 'anthropic' ? 'default' : 'outline'}
               onClick={() => setProvider('anthropic')}
+              className="flex-1 min-w-[90px] text-sm px-3 py-2"
             >
               Anthropic
             </Button>
-            <Button 
+            <Button
               variant={provider === 'google' ? 'default' : 'outline'}
               onClick={() => setProvider('google')}
+              className="flex-1 min-w-[90px] text-sm px-3 py-2"
             >
               Google
             </Button>
-            <Button 
+            <Button
               variant={provider === 'qwen' ? 'default' : 'outline'}
               onClick={() => setProvider('qwen')}
+              className="flex-1 min-w-[90px] text-sm px-3 py-2"
             >
               Qwen
             </Button>
-            <Button 
+            <Button
               variant={provider === 'ollama' ? 'default' : 'outline'}
               onClick={() => setProvider('ollama')}
+              className="flex-1 min-w-[90px] text-sm px-3 py-2"
             >
               Ollama
             </Button>
