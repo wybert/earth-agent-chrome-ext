@@ -120750,9 +120750,11 @@ function ChatMessage({ message, isLoading, actions }) {
     if (!content && !message.parts?.length && !message.toolInvocations?.length) {
         return null;
     }
+    // Render avatar component
+    const avatar = (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow", isUser ? "bg-background" : "bg-primary text-primary-foreground") },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(Icon, { className: "h-5 w-5" })));
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("group flex items-start gap-3", isUser && "justify-end") },
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow", isUser ? "bg-background" : "bg-primary text-primary-foreground") },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(Icon, { className: "h-5 w-5" })),
+        !isUser && avatar,
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex flex-col gap-2", isUser ? "items-end" : "items-start") },
             content && !message.parts?.length ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(BubbleMessage, { content: content, isUser: isUser, actions: actions })) : null,
             message.parts?.map((part, index) => {
@@ -120808,7 +120810,8 @@ function ChatMessage({ message, isLoading, actions }) {
                         return null;
                     }) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2))))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2)))))))),
             isLoading ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)(chatBubbleVariants({ isUser: false })) },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 animate-spin text-muted-foreground" }))) : null)));
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 animate-spin text-muted-foreground" }))) : null),
+        isUser && avatar));
 }
 
 
