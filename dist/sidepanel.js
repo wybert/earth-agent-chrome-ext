@@ -118017,11 +118017,9 @@ function ChatUI() {
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "icon", onClick: () => setShowAgentTest(true), "aria-label": "Agent Testing", className: "hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0", disabled: !apiConfigured, title: "Agent Testing" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { className: "h-4 w-4 text-gray-600" })),
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "icon", onClick: () => setShowSettings(true), "aria-label": "Settings", className: "aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0", title: "Settings" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-4 w-4 text-gray-600" })),
-                canRegenerate && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_2__.Button, { variant: "outline", size: "icon", onClick: handleRegenerate, "aria-label": "Regenerate response", className: "hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0", title: "Regenerate" },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-4 w-4 text-gray-600" }))))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-4 w-4 text-gray-600" })))),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "flex-1 overflow-hidden" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_chat__WEBPACK_IMPORTED_MODULE_7__.Chat, { messages: displayMessages, input: input, handleInputChange: handleInputChange, handleSubmit: fallbackMode ? handleLocalSubmit : handleChatSubmit, isGenerating: currentLoading, stop: stop, setMessages: setMessages, append: append, className: "h-full" })),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_chat__WEBPACK_IMPORTED_MODULE_7__.Chat, { messages: displayMessages, input: input, handleInputChange: handleInputChange, handleSubmit: fallbackMode ? handleLocalSubmit : handleChatSubmit, isGenerating: currentLoading, stop: stop, setMessages: setMessages, append: append, onRegenerate: handleRegenerate, showRegenerate: canRegenerate, className: "h-full" })),
         error && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_card__WEBPACK_IMPORTED_MODULE_1__.Card, { className: "p-4 m-2 bg-destructive/10 text-destructive border-destructive/50" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm font-medium" }, "Error"),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "text-sm mt-1" }, error.message),
@@ -120891,7 +120889,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-function Chat({ messages, handleSubmit, input, handleInputChange, stop, isGenerating, append, suggestions, className, onRateResponse, setMessages, transcribeAudio, ...props }) {
+function Chat({ messages, handleSubmit, input, handleInputChange, stop, isGenerating, append, suggestions, className, onRateResponse, setMessages, transcribeAudio, onRegenerate, showRegenerate, ...props }) {
     const lastMessage = messages.at(-1);
     const isEmpty = messages.length === 0;
     const isTyping = lastMessage?.role === "user";
@@ -120985,7 +120983,7 @@ function Chat({ messages, handleSubmit, input, handleInputChange, stop, isGenera
         isEmpty && append && suggestions ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_prompt_suggestions__WEBPACK_IMPORTED_MODULE_7__.PromptSuggestions, { label: "Try these prompts \u2728", append: append, suggestions: suggestions })) : null,
         messages.length > 0 ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ChatMessages, { messages: messages },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_message_list__WEBPACK_IMPORTED_MODULE_6__.MessageList, { messages: messages, isTyping: isTyping, messageOptions: messageOptions }))) : null,
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ChatForm, { className: "mt-auto", isPending: isGenerating || isTyping, handleSubmit: handleSubmit }, ({ files, setFiles }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_message_input__WEBPACK_IMPORTED_MODULE_5__.MessageInput, { value: inputProps.value, onChange: handleInputChange, allowAttachments: true, files: files, setFiles: setFiles, stop: handleStop, isGenerating: isGenerating, transcribeAudio: transcribeAudio })))));
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(ChatForm, { className: "mt-auto", isPending: isGenerating || isTyping, handleSubmit: handleSubmit }, ({ files, setFiles }) => (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_message_input__WEBPACK_IMPORTED_MODULE_5__.MessageInput, { value: inputProps.value, onChange: handleInputChange, allowAttachments: true, files: files, setFiles: setFiles, stop: handleStop, isGenerating: isGenerating, transcribeAudio: transcribeAudio, onRegenerate: onRegenerate, showRegenerate: showRegenerate })))));
 }
 Chat.displayName = "Chat";
 function ChatMessages({ messages, children, }) {
@@ -121357,13 +121355,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var framer_motion__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! framer-motion */ "./node_modules/framer-motion/dist/es/components/AnimatePresence/index.mjs");
-/* harmony import */ var framer_motion__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! framer-motion */ "./node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/paperclip.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/mic.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/square.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/arrow-up.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/loader-circle.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/info.js");
+/* harmony import */ var framer_motion__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! framer-motion */ "./node_modules/framer-motion/dist/es/render/components/motion/proxy.mjs");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/refresh-cw.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/paperclip.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/mic.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/square.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/arrow-up.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/loader-circle.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/info.js");
 /* harmony import */ var remeda__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! remeda */ "./node_modules/remeda/dist/chunk-A3PVMI4K.js");
 /* harmony import */ var _lib_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @/lib/utils */ "./src/lib/utils.ts");
 /* harmony import */ var _hooks_use_audio_recording__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @/hooks/use-audio-recording */ "./src/hooks/use-audio-recording.ts");
@@ -121382,7 +121381,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-function MessageInput({ placeholder = "Ask AI...", className, onKeyDown: onKeyDownProp, submitOnEnter = true, stop, isGenerating, enableInterrupt = true, transcribeAudio, ...props }) {
+function MessageInput({ placeholder = "Ask AI...", className, onKeyDown: onKeyDownProp, submitOnEnter = true, stop, isGenerating, enableInterrupt = true, transcribeAudio, onRegenerate, showRegenerate = false, ...props }) {
     const [isDragging, setIsDragging] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const [showInterruptPrompt, setShowInterruptPrompt] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const { isListening, isSpeechSupported, isRecording, isTranscribing, audioStream, toggleListening, stopRecording, } = (0,_hooks_use_audio_recording__WEBPACK_IMPORTED_MODULE_2__.useAudioRecording)({
@@ -121515,30 +121514,32 @@ function MessageInput({ placeholder = "Ask AI...", className, onKeyDown: onKeyDo
                                 } }));
                         }))))))),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "absolute right-3 top-3 z-20 flex gap-2" },
+            showRegenerate && onRegenerate && !isGenerating && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", size: "icon", variant: "outline", className: "h-8 w-8", "aria-label": "Regenerate response", onClick: onRegenerate, title: "Regenerate" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-4 w-4" }))),
             props.allowAttachments && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", size: "icon", variant: "outline", className: "h-8 w-8", "aria-label": "Attach a file", onClick: async () => {
                     const files = await showFileUploadDialog();
                     addFiles(files);
                 } },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-4 w-4" }))),
-            isSpeechSupported && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isRecording ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_10__.motion.div, { className: "h-8 w-8" },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-4 w-4" }))),
+            isSpeechSupported && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isRecording ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_11__.motion.div, { className: "h-8 w-8" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", variant: "outline", className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("h-8 w-8", isListening && "text-primary"), "aria-label": "Voice input", size: "icon", onClick: toggleListening },
-                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { size: 16 })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", variant: "outline", className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("h-8 w-8", isListening && "text-primary"), "aria-label": "Voice input", size: "icon", onClick: toggleListening },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { size: 16 }))))),
+                    react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 16 })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", variant: "outline", className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("h-8 w-8", isListening && "text-primary"), "aria-label": "Voice input", size: "icon", onClick: toggleListening },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 16 }))))),
             isGenerating && stop ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", size: "icon", className: "h-8 w-8", "aria-label": "Stop generating", onClick: stop },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-3 w-3 animate-pulse", fill: "currentColor" }))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "submit", size: "icon", className: "h-8 w-8 transition-opacity", "aria-label": "Send message", disabled: props.value === "" || isGenerating },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-5 w-5" })))),
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-3 w-3 animate-pulse", fill: "currentColor" }))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "submit", size: "icon", className: "h-8 w-8 transition-opacity", "aria-label": "Send message", disabled: props.value === "" || isGenerating },
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_14__["default"], { className: "h-5 w-5" })))),
         props.allowAttachments && react__WEBPACK_IMPORTED_MODULE_0___default().createElement(FileUploadOverlay, { isDragging: isDragging }),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(RecordingControls, { isRecording: isRecording, isTranscribing: isTranscribing, audioStream: audioStream, textAreaHeight: textAreaRef.current?.scrollHeight || 0, onStopRecording: stopRecording }),
-        transcribeAudio && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isRecording ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_10__.motion.div, { className: "absolute inset-0 z-20 flex items-center justify-center rounded-xl" },
+        transcribeAudio && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isRecording ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_11__.motion.div, { className: "absolute inset-0 z-20 flex items-center justify-center rounded-xl" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_audio_visualizer__WEBPACK_IMPORTED_MODULE_3__.AudioVisualizer, { mediaRecorder: audioStream ? new MediaRecorder(audioStream) : null }),
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", variant: "outline", className: "absolute bottom-4 right-4 h-8 w-8", "aria-label": "Stop recording", onClick: stopRecording },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { className: "h-3 w-3 animate-pulse", fill: "currentColor" })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", variant: "outline", className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("h-8 w-8", isListening && "text-primary"), "aria-label": "Voice input", size: "icon", onClick: toggleListening },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], { size: 16 })))))));
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { className: "h-3 w-3 animate-pulse", fill: "currentColor" })))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", variant: "outline", className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("h-8 w-8", isListening && "text-primary"), "aria-label": "Voice input", size: "icon", onClick: toggleListening },
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 16 })))))));
 }
 MessageInput.displayName = "MessageInput";
 function FileUploadOverlay({ isDragging }) {
-    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isDragging && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_10__.motion.div, { className: "pointer-events-none absolute inset-0 z-20 flex items-center justify-center space-x-2 rounded-xl border border-dashed border-border bg-background text-sm text-muted-foreground", initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 }, "aria-hidden": true },
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-4 w-4" }),
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isDragging && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_11__.motion.div, { className: "pointer-events-none absolute inset-0 z-20 flex items-center justify-center space-x-2 rounded-xl border border-dashed border-border bg-background text-sm text-muted-foreground", initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 }, "aria-hidden": true },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-4 w-4" }),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, "Drop your files here to attach them.")))));
 }
 function showFileUploadDialog() {
@@ -121559,10 +121560,10 @@ function showFileUploadDialog() {
     });
 }
 function TranscribingOverlay() {
-    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_10__.motion.div, { className: "flex h-full w-full flex-col items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm", initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } },
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_11__.motion.div, { className: "flex h-full w-full flex-col items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm", initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.2 } },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_14__["default"], { className: "h-8 w-8 animate-spin text-primary" }),
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_10__.motion.div, { className: "absolute inset-0 h-8 w-8 animate-pulse rounded-full bg-primary/20", initial: { scale: 0.8, opacity: 0 }, animate: { scale: 1.2, opacity: 1 }, transition: {
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_15__["default"], { className: "h-8 w-8 animate-spin text-primary" }),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_11__.motion.div, { className: "absolute inset-0 h-8 w-8 animate-pulse rounded-full bg-primary/20", initial: { scale: 0.8, opacity: 0 }, animate: { scale: 1.2, opacity: 1 }, transition: {
                     duration: 1,
                     repeat: Infinity,
                     repeatType: "reverse",
@@ -121571,7 +121572,7 @@ function TranscribingOverlay() {
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", { className: "mt-4 text-sm font-medium text-muted-foreground" }, "Transcribing audio...")));
 }
 function RecordingPrompt({ isVisible, onStopRecording }) {
-    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isVisible && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_10__.motion.div, { initial: { top: 0, filter: "blur(5px)" }, animate: {
+    return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_8__.AnimatePresence, null, isVisible && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(framer_motion__WEBPACK_IMPORTED_MODULE_11__.motion.div, { initial: { top: 0, filter: "blur(5px)" }, animate: {
             top: -40,
             filter: "blur(0px)",
             transition: {
@@ -121580,7 +121581,7 @@ function RecordingPrompt({ isVisible, onStopRecording }) {
             },
         }, exit: { top: 0, filter: "blur(5px)" }, className: "absolute left-1/2 flex -translate-x-1/2 cursor-pointer overflow-hidden whitespace-nowrap rounded-full border bg-background py-1 text-center text-sm text-muted-foreground", onClick: onStopRecording },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", { className: "mx-2.5 flex items-center" },
-            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_15__["default"], { className: "mr-2 h-3 w-3" }),
+            react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_16__["default"], { className: "mr-2 h-3 w-3" }),
             "Click to finish recording")))));
 }
 function RecordingControls({ isRecording, isTranscribing, audioStream, textAreaHeight, onStopRecording, }) {

@@ -34,6 +34,8 @@ interface ChatPropsBase {
   ) => void
   setMessages?: (messages: any[]) => void
   transcribeAudio?: (blob: Blob) => Promise<string>
+  onRegenerate?: () => void
+  showRegenerate?: boolean
 }
 
 interface ChatPropsWithoutSuggestions extends ChatPropsBase {
@@ -61,6 +63,8 @@ export function Chat({
   onRateResponse,
   setMessages,
   transcribeAudio,
+  onRegenerate,
+  showRegenerate,
   ...props
 }: ChatProps) {
   const lastMessage = messages.at(-1)
@@ -226,6 +230,8 @@ export function Chat({
             stop={handleStop}
             isGenerating={isGenerating}
             transcribeAudio={transcribeAudio}
+            onRegenerate={onRegenerate}
+            showRegenerate={showRegenerate}
           />
         )}
       </ChatForm>
