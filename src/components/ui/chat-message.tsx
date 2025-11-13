@@ -39,7 +39,7 @@ function BubbleMessage({
   actions,
 }: BubbleMessageProps) {
     return (
-    <div className={cn("group/message relative")}>
+    <div className={cn("group/message relative inline-block")}>
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -60,12 +60,15 @@ function BubbleMessage({
         )}
       >
         <MarkdownRenderer content={content} />
-        {actions ? (
-          <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100">
-            {actions}
-          </div>
-        ) : null}
       </motion.div>
+      {actions ? (
+        <div className={cn(
+          "absolute -bottom-4 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100 shadow-sm",
+          "right-2"
+        )}>
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }
