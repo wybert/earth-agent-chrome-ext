@@ -65948,20 +65948,57 @@ const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
-    // Only open side panel if we're on the Earth Engine Code Editor
-    if (tab.url?.startsWith('https://code.earthengine.google.com/')) {
-        // Open the side panel
-        await chrome.sidePanel.open({ windowId: tab.windowId });
-        await chrome.sidePanel.setOptions({
-            enabled: true,
-            path: 'sidepanel.html'
+    console.log('Extension icon clicked, current tab URL:', tab.url);
+    console.log('Tab details:', { id: tab.id, url: tab.url, windowId: tab.windowId });
+    // First, immediately open the side panel (this preserves user gesture)
+    chrome.sidePanel.setOptions({
+        enabled: true,
+        path: 'sidepanel.html'
+    }, () => {
+        // Open side panel in the current window
+        if (tab.windowId) {
+            chrome.sidePanel.open({ windowId: tab.windowId }, () => {
+                if (chrome.runtime.lastError) {
+                    console.error('Failed to open side panel:', chrome.runtime.lastError);
+                }
+                else {
+                    console.log('Side panel opened successfully');
+                }
+            });
+        }
+    });
+    // Check if we need to create or switch to Earth Engine tab
+    const isOnEarthEngine = tab.url?.startsWith('https://code.earthengine.google.com/');
+    console.log('Is on Earth Engine?', isOnEarthEngine);
+    if (!isOnEarthEngine) {
+        console.log('Not on Earth Engine, checking for existing tabs...');
+        // Check if there's already an Earth Engine tab
+        const earthEngineTabs = await chrome.tabs.query({
+            url: "https://code.earthengine.google.com/*"
         });
+        console.log('Found', earthEngineTabs.length, 'existing Earth Engine tabs');
+        if (earthEngineTabs.length > 0) {
+            // Switch to existing tab
+            const targetTab = earthEngineTabs[0];
+            console.log('Switching to existing Earth Engine tab:', targetTab.id);
+            await chrome.tabs.update(targetTab.id, { active: true });
+            if (targetTab.windowId) {
+                await chrome.windows.update(targetTab.windowId, { focused: true });
+            }
+        }
+        else {
+            // Create new tab
+            console.log('Creating new Earth Engine tab');
+            chrome.tabs.create({
+                url: 'https://code.earthengine.google.com/',
+                active: true
+            }, (newTab) => {
+                console.log('New tab created:', newTab.id);
+            });
+        }
     }
     else {
-        // If not on Earth Engine, create a new tab with Earth Engine
-        await chrome.tabs.create({
-            url: 'https://code.earthengine.google.com/'
-        });
+        console.log('Already on Earth Engine tab, nothing to do');
     }
 });
 // Validate server identity with better error handling
