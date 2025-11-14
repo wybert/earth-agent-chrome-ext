@@ -3991,13 +3991,41 @@ if (periodicCheckIntervalId === undefined) { // Ensure it's not set multiple tim
     window[CONTENT_SCRIPT_ID + '_intervalId'] = periodicCheckIntervalId;
 }
 /**
- * Handles the RUN_CODE message by clicking the run button in the Earth Engine editor
+ * Handles the RUN_CODE message by inserting code and clicking the run button in the Earth Engine editor
  */
 async function handleRunCode(code, sendResponse) {
     try {
-        console.log('Handling RUN_CODE message, clicking run button');
-        // Find the run button by its class and title attributes
-        // GEE editor has a button with class "goog-button run-button" and title "Run script (Ctrl+Enter)"
+        console.log('Handling RUN_CODE message with code:', code.substring(0, 100) + '...');
+        // Step 1: First insert the code into the editor
+        if (code && code.trim().length > 0) {
+            console.log('Inserting code into editor before running...');
+            // Use the same logic as handleEditScript to insert code
+            const insertResult = await new Promise((resolve) => {
+                handleEditScript({
+                    type: 'EDIT_SCRIPT',
+                    scriptId: 'current',
+                    content: code
+                }, (response) => {
+                    resolve(response);
+                });
+            });
+            if (!insertResult.success) {
+                console.error('Failed to insert code:', insertResult.error);
+                sendResponse({
+                    success: false,
+                    error: `Failed to insert code into editor: ${insertResult.error}`
+                });
+                return;
+            }
+            console.log('Code inserted successfully, waiting before running...');
+            // Wait a bit longer to ensure code is fully inserted and editor is ready
+            await new Promise(resolve => setTimeout(resolve, 800));
+        }
+        else {
+            console.log('No code provided, will just click run button on existing code');
+        }
+        // Step 2: Find and click the run button
+        console.log('Looking for run button...');
         const runButton = document.querySelector('button.goog-button.run-button[title="Run script (Ctrl+Enter)"]');
         if (!runButton) {
             // Fallback to alternative selectors if the specific one fails
@@ -4016,15 +4044,16 @@ async function handleRunCode(code, sendResponse) {
             fallbackButton.click();
         }
         else {
-            // Click the run button
+            console.log('Clicking run button');
             runButton.click();
         }
         // Wait for a short time to allow the button state to change
         setTimeout(() => {
             // We successfully clicked the button
+            console.log('Run button clicked successfully');
             sendResponse({
                 success: true,
-                result: 'Run button clicked successfully'
+                result: 'Code inserted and run button clicked successfully'
             });
         }, 500);
     }
