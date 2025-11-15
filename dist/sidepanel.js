@@ -124536,6 +124536,7 @@ const LANGUAGE_ALIASES = {
     mjs: "javascript",
     jsx: "jsx",
     tsx: "tsx",
+    code: "javascript",
 };
 const usePrismTheme = () => {
     const [theme, setTheme] = react__WEBPACK_IMPORTED_MODULE_0___default().useState(prism_react_renderer__WEBPACK_IMPORTED_MODULE_1__.themes.github);
