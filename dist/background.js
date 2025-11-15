@@ -62907,7 +62907,7 @@ __webpack_require__.r(__webpack_exports__);
 // Default models configuration
 const DEFAULT_MODELS = {
     openai: 'gpt-5.1',
-    anthropic: 'claude-sonnet-4-20250514',
+    anthropic: 'claude-sonnet-4-5-20250929',
     google: 'gemini-2.0-flash',
     qwen: 'qwen-max-latest',
     ollama: 'phi3'
@@ -63144,12 +63144,11 @@ async function handleChatRequest(messages, apiKey, provider, model, heliconeHead
         let effectiveModel;
         // Define available models for validation
         const anthropicModels = [
+            'claude-sonnet-4-5-20250929',
+            'claude-haiku-4-5-20251001',
+            'claude-opus-4-1-20250805',
             'claude-opus-4-20250514',
-            'claude-sonnet-4-20250514',
-            'claude-3-7-sonnet-20250219',
-            'claude-3-5-sonnet-20241022',
-            'claude-3-5-haiku-20241022',
-            'claude-3-5-sonnet-20240620'
+            'claude-sonnet-4-20250514'
         ];
         const googleModels = [
             'gemini-2.5-pro-preview-06-05',
