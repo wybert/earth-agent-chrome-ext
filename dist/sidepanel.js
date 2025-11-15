@@ -118121,16 +118121,23 @@ const AVAILABLE_MODELS = {
         'claude-sonnet-4-20250514'
     ],
     google: [
+        // Latest Aliases (Auto-updated)
+        'gemini-pro-latest',
+        'gemini-flash-latest',
+        'gemini-flash-lite-latest',
+        // Gemini 2.5 Pro Series (Most Capable)
+        'gemini-2.5-pro',
         'gemini-2.5-pro-preview-06-05',
+        'gemini-2.5-pro-preview-05-06',
+        'gemini-2.5-pro-preview-03-25',
+        // Gemini 2.5 Flash Series (Balanced)
+        'gemini-2.5-flash',
         'gemini-2.5-flash-preview-05-20',
-        'gemini-2.0-flash',
-        'gemini-2.0-flash-lite',
-        'gemini-1.5-pro',
-        'gemini-1.5-pro-latest',
-        'gemini-1.5-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-flash-8b',
-        'gemini-1.5-flash-8b-latest'
+        'gemini-2.5-flash-preview-09-2025',
+        // Gemini 2.5 Flash-Lite Series (Fast)
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash-lite-preview-06-17',
+        'gemini-2.5-flash-lite-preview-09-2025'
     ],
     qwen: [
         'qwen-max-latest',
@@ -118198,16 +118205,23 @@ const MODEL_DISPLAY_NAMES = {
     // Claude 4 Series
     'claude-opus-4-20250514': 'Claude Opus 4',
     'claude-sonnet-4-20250514': 'Claude Sonnet 4',
+    // Latest Aliases
+    'gemini-pro-latest': 'Gemini Pro (Latest)',
+    'gemini-flash-latest': 'Gemini Flash (Latest)',
+    'gemini-flash-lite-latest': 'Gemini Flash-Lite (Latest)',
+    // Gemini 2.5 Pro Series
+    'gemini-2.5-pro': 'Gemini 2.5 Pro (Recommended)',
     'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
+    'gemini-2.5-pro-preview-05-06': 'Gemini 2.5 Pro Preview (May 6)',
+    'gemini-2.5-pro-preview-03-25': 'Gemini 2.5 Pro Preview (March 25)',
+    // Gemini 2.5 Flash Series
+    'gemini-2.5-flash': 'Gemini 2.5 Flash',
     'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash Preview (May 20)',
-    'gemini-2.0-flash': 'Gemini 2.0 Flash',
-    'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
-    'gemini-1.5-pro': 'Gemini 1.5 Pro',
-    'gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
-    'gemini-1.5-flash': 'Gemini 1.5 Flash',
-    'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
-    'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
-    'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)',
+    'gemini-2.5-flash-preview-09-2025': 'Gemini 2.5 Flash Preview (Sep 2025)',
+    // Gemini 2.5 Flash-Lite Series
+    'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite (Fast)',
+    'gemini-2.5-flash-lite-preview-06-17': 'Gemini 2.5 Flash-Lite Preview (June 17)',
+    'gemini-2.5-flash-lite-preview-09-2025': 'Gemini 2.5 Flash-Lite Preview (Sep 2025)',
     'qwen-max-latest': 'Qwen-Max (Latest)',
     'qwen-max': 'Qwen-Max',
     'qwen-plus-latest': 'Qwen-Plus (Latest)',
