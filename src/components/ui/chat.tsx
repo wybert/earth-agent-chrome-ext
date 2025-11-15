@@ -198,25 +198,29 @@ export function Chat({
   return (
     <div className={cn("relative flex h-full flex-col", className)} {...props}>
       {isEmpty && append && suggestions ? (
-        <PromptSuggestions
-          label="Try these prompts ✨"
-          append={append}
-          suggestions={suggestions}
-        />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <PromptSuggestions
+            label="Try these prompts ✨"
+            append={append}
+            suggestions={suggestions}
+          />
+        </div>
       ) : null}
 
       {messages.length > 0 ? (
-        <ChatMessages messages={messages}>
-          <MessageList
-            messages={messages}
-            isTyping={isTyping}
-            messageOptions={messageOptions}
-          />
-        </ChatMessages>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ChatMessages messages={messages}>
+            <MessageList
+              messages={messages}
+              isTyping={isTyping}
+              messageOptions={messageOptions}
+            />
+          </ChatMessages>
+        </div>
       ) : null}
 
       <ChatForm
-        className="mt-auto px-3 pb-3"
+        className="shrink-0 px-3 pb-3"
         isPending={isGenerating || isTyping}
         handleSubmit={handleSubmit}
       >
@@ -256,7 +260,7 @@ export function ChatMessages({
 
   return (
     <div
-      className="grid grid-cols-1 overflow-y-auto pb-4"
+      className="grid grid-cols-1 overflow-y-auto pb-4 h-full"
       ref={containerRef}
       onScroll={handleScroll}
       onTouchStart={handleTouchStart}

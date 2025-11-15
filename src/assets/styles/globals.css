@@ -89,17 +89,23 @@
     @apply border-border;
   }
   
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
     min-width: 320px;
   }
-  
+
   /* Improve default focus styles */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2;
   }
-  
+
   /* Smooth scrolling for better UX */
   html {
     scroll-behavior: smooth;
