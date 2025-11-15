@@ -712,8 +712,9 @@ export function ChatUI() {
   const canRegenerate = messages.some(m => m.role === 'user') && !currentLoading && !fallbackMode && !!port;
 
   return (
-    <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none overflow-hidden">
-      <div className="flex justify-between items-center p-2 px-3 border-b min-w-0">
+    <Card className="w-full h-full flex flex-col border-0 rounded-none shadow-none overflow-hidden">
+      {/* Fixed Header - Top Toolbar */}
+      <div className="flex-none flex justify-between items-center p-2 px-3 border-b min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
            <Button variant="outline" size="icon" onClick={handleNewChat} aria-label="New Chat" className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="New Chat">
               <Plus className="h-4 w-4 text-gray-600" />
@@ -736,56 +737,58 @@ export function ChatUI() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      {/* Main Content Area - Chat with fixed input at bottom */}
+      <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
         <Chat
-          messages={displayMessages as any} // Keep cast for now
+          messages={displayMessages as any}
           input={input}
           handleInputChange={handleInputChange}
           handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
           isGenerating={currentLoading}
           stop={stop}
           setMessages={setMessages as any}
-          append={append as any} // Pass append even if unused by Chat component itself
+          append={append as any}
           onRegenerate={handleRegenerate}
           showRegenerate={canRegenerate}
           className="h-full"
         />
-              </div>
 
-      {/* Restore Error and Fallback Displays */}
-      {error && (
-         <Card className="p-4 m-2 bg-destructive/10 text-destructive border-destructive/50">
-           <p className="text-sm font-medium">Error</p>
-           <p className="text-sm mt-1">{error.message}</p>
-           {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
-                <Button variant="outline" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-               <RefreshCw size={14} className="mr-2" /> Retry Connection
-                </Button>
-           )}
-            {!fallbackMode && (
-                <Button variant="outline" size="sm" onClick={() => { setError(new Error("Switched to Fallback Mode manually.")); setFallbackMode(true); }} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-                 Switch to Fallback Mode
+        {/* Error and Fallback Displays - Positioned at bottom above input */}
+        {error && (
+           <Card className="absolute bottom-20 left-2 right-2 p-4 bg-destructive/10 text-destructive border-destructive/50 z-10">
+             <p className="text-sm font-medium">Error</p>
+             <p className="text-sm mt-1">{error.message}</p>
+             {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
+                  <Button variant="outline" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
+                 <RefreshCw size={14} className="mr-2" /> Retry Connection
+                  </Button>
+             )}
+              {!fallbackMode && (
+                  <Button variant="outline" size="sm" onClick={() => { setError(new Error("Switched to Fallback Mode manually.")); setFallbackMode(true); }} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
+                   Switch to Fallback Mode
+                  </Button>
+               )}
+           </Card>
+        )}
+        {fallbackMode && (
+           <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
+             <p className="text-sm font-medium">Fallback Mode</p>
+             <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
+             {apiConfigured && (
+               <Button variant="default" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200" disabled={currentLoading || (port !== null && connectionAttempts === 0)}>
+                 <RefreshCw size={14} className="mr-2"/> Reconnect
+               </Button>
+             )}
+             {!apiConfigured && (
+                <Button variant="link" size="sm" onClick={() => setShowSettings(true)} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200">
+                  Configure API Key
                 </Button>
              )}
-         </Card>
-          )}
-      {fallbackMode && (
-         <Card className="p-4 m-2 bg-yellow-100 border-yellow-300 text-yellow-800">
-           <p className="text-sm font-medium">Fallback Mode</p>
-           <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
-           {apiConfigured && (
-             <Button variant="default" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200" disabled={currentLoading || (port !== null && connectionAttempts === 0)}>
-               <RefreshCw size={14} className="mr-2"/> Reconnect
-             </Button>
-           )}
-           {!apiConfigured && (
-              <Button variant="link" size="sm" onClick={() => setShowSettings(true)} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200">
-                Configure API Key
-              </Button>
-           )}
-         </Card>
-       )}
+           </Card>
+        )}
+      </div>
 
+      {/* Overlay Panels */}
       <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
       <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
     </Card>
