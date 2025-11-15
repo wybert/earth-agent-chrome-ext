@@ -16,7 +16,7 @@ export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-5.1',
   anthropic: 'claude-sonnet-4-5-20250929',
-  google: 'gemini-2.0-flash',
+  google: 'gemini-2.5-pro',
   qwen: 'qwen-max-latest',
   ollama: 'phi3'
 };
@@ -289,16 +289,19 @@ export async function handleChatRequest(
     ];
 
     const googleModels = [
+      'gemini-pro-latest',
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-2.5-pro',
       'gemini-2.5-pro-preview-06-05',
+      'gemini-2.5-pro-preview-05-06',
+      'gemini-2.5-pro-preview-03-25',
+      'gemini-2.5-flash',
       'gemini-2.5-flash-preview-05-20',
-      'gemini-2.0-flash',
-      'gemini-2.0-flash-lite',
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-latest',
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash-8b',
-      'gemini-1.5-flash-8b-latest'
+      'gemini-2.5-flash-preview-09-2025',
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash-lite-preview-06-17',
+      'gemini-2.5-flash-lite-preview-09-2025'
     ];
     
     const qwenModels = [
