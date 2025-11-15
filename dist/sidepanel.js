@@ -118111,12 +118111,14 @@ const AVAILABLE_MODELS = {
         'gpt-4o-mini-2024-07-18'
     ],
     anthropic: [
+        // Claude 4.5 Series (Latest)
+        'claude-sonnet-4-5-20250929',
+        'claude-haiku-4-5-20251001',
+        // Claude 4.1 Series
+        'claude-opus-4-1-20250805',
+        // Claude 4 Series
         'claude-opus-4-20250514',
-        'claude-sonnet-4-20250514',
-        'claude-3-7-sonnet-20250219',
-        'claude-3-5-sonnet-20241022',
-        'claude-3-5-haiku-20241022',
-        'claude-3-5-sonnet-20240620'
+        'claude-sonnet-4-20250514'
     ],
     google: [
         'gemini-2.5-pro-preview-06-05',
@@ -118188,12 +118190,14 @@ const MODEL_DISPLAY_NAMES = {
     'gpt-4o-2024-11-20': 'GPT-4o (November 2024)',
     'gpt-4o-mini': 'GPT-4o Mini',
     'gpt-4o-mini-2024-07-18': 'GPT-4o Mini (July 2024)',
-    'claude-opus-4-20250514': 'Claude Opus 4 (Latest)',
-    'claude-sonnet-4-20250514': 'Claude Sonnet 4 (Latest)',
-    'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
-    'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (New)',
-    'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-    'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)',
+    // Claude 4.5 Series
+    'claude-sonnet-4-5-20250929': 'Claude Sonnet 4.5 (Recommended)',
+    'claude-haiku-4-5-20251001': 'Claude Haiku 4.5 (Fast)',
+    // Claude 4.1 Series
+    'claude-opus-4-1-20250805': 'Claude Opus 4.1',
+    // Claude 4 Series
+    'claude-opus-4-20250514': 'Claude Opus 4',
+    'claude-sonnet-4-20250514': 'Claude Sonnet 4',
     'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
     'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash Preview (May 20)',
     'gemini-2.0-flash': 'Gemini 2.0 Flash',

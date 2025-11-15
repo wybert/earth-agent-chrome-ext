@@ -15,7 +15,7 @@ export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
   openai: 'gpt-5.1',
-  anthropic: 'claude-sonnet-4-20250514',
+  anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.0-flash',
   qwen: 'qwen-max-latest',
   ollama: 'phi3'
@@ -281,12 +281,11 @@ export async function handleChatRequest(
     
     // Define available models for validation
     const anthropicModels = [
+      'claude-sonnet-4-5-20250929',
+      'claude-haiku-4-5-20251001',
+      'claude-opus-4-1-20250805',
       'claude-opus-4-20250514',
-      'claude-sonnet-4-20250514',
-      'claude-3-7-sonnet-20250219',
-      'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022',
-      'claude-3-5-sonnet-20240620'
+      'claude-sonnet-4-20250514'
     ];
 
     const googleModels = [
