@@ -14,7 +14,7 @@ export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
-  openai: 'gpt-4o',
+  openai: 'gpt-5.1',
   anthropic: 'claude-sonnet-4-20250514',
   google: 'gemini-2.0-flash',
   qwen: 'qwen-max-latest',

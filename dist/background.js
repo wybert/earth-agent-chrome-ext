@@ -62906,7 +62906,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // Default models configuration
 const DEFAULT_MODELS = {
-    openai: 'gpt-4o',
+    openai: 'gpt-5.1',
     anthropic: 'claude-sonnet-4-20250514',
     google: 'gemini-2.0-flash',
     qwen: 'qwen-max-latest',
