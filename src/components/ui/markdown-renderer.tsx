@@ -29,6 +29,7 @@ const LANGUAGE_ALIASES: Record<string, Language> = {
   mjs: "javascript",
   jsx: "jsx",
   tsx: "tsx",
+  code: "javascript",
 }
 
 const usePrismTheme = () => {
