@@ -181,10 +181,10 @@ const components: Components = {
   h5: ({ node, ...props }: any) => <h5 className="mt-8 scroll-m-20 text-lg font-semibold tracking-tight" {...props} />,
   h6: ({ node, ...props }: any) => <h6 className="mt-8 scroll-m-20 text-base font-semibold tracking-tight" {...props} />,
   a: ({ node, ...props }: any) => <a className="font-medium underline underline-offset-4" target="_blank" rel="noopener noreferrer" {...props} />,
-  p: ({ node, ...props }: any) => <p className="leading-7 [&:not(:first-child)]:mt-6 break-words" {...props} />,
-  ul: ({ node, ...props }: any) => <ul className="my-6 ml-6 list-disc" {...props} />,
-  ol: ({ node, ...props }: any) => <ol className="my-6 ml-6 list-decimal" {...props} />,
-  li: ({ node, ...props }: any) => <li className="mt-2" {...props} />,
+  p: ({ node, ...props }: any) => <p className="leading-7 [&:not(:first-child)]:mt-6 break-words overflow-wrap-anywhere" {...props} />,
+  ul: ({ node, ...props }: any) => <ul className="my-6 ml-6 list-disc break-words overflow-wrap-anywhere" {...props} />,
+  ol: ({ node, ...props }: any) => <ol className="my-6 ml-6 list-decimal break-words overflow-wrap-anywhere" {...props} />,
+  li: ({ node, ...props }: any) => <li className="mt-2 break-words overflow-wrap-anywhere" {...props} />,
   blockquote: ({ node, ...props }: any) => <blockquote className="mt-6 border-l-2 pl-6 italic [&>*]:text-muted-foreground" {...props} />,
   img: ({ node, ...props }: any) => <img className="rounded-md border" {...props} />,
   hr: ({ node, ...props }: any) => <hr className="my-4 md:my-8" {...props} />,
@@ -212,11 +212,17 @@ const components: Components = {
     )
   },
   code: ({ node, inline, className, children, ...props }: any) => {
+    // inline code: inline is undefined or true
+    // block code: inline is explicitly false
+    const isInlineCode = inline !== false;
+
     return (
       <code
         className={cn(
           'relative rounded border bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm',
-          inline ? '' : 'block whitespace-pre-wrap break-all',
+          isInlineCode
+            ? 'inline align-baseline break-words overflow-wrap-anywhere'
+            : 'block whitespace-pre-wrap break-all',
           className // Keep original className which might contain language-xxx
         )}
         {...props}
