@@ -9,6 +9,7 @@ export function useAutoScroll(dependencies: React.DependencyList) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const previousScrollTop = useRef<number | null>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const [hasScrollableContent, setHasScrollableContent] = useState(false)
 
   const scrollToBottom = () => {
     if (containerRef.current) {
@@ -19,6 +20,9 @@ export function useAutoScroll(dependencies: React.DependencyList) {
   const handleScroll = () => {
     if (containerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = containerRef.current
+
+      // Check if content is scrollable
+      setHasScrollableContent(scrollHeight > clientHeight)
 
       const distanceFromBottom = Math.abs(
         scrollHeight - scrollTop - clientHeight
@@ -53,12 +57,20 @@ export function useAutoScroll(dependencies: React.DependencyList) {
   useEffect(() => {
     if (containerRef.current) {
       previousScrollTop.current = containerRef.current.scrollTop
+      // Initial check for scrollable content
+      const { scrollHeight, clientHeight } = containerRef.current
+      setHasScrollableContent(scrollHeight > clientHeight)
     }
   }, [])
 
   useEffect(() => {
     if (shouldAutoScroll) {
       scrollToBottom()
+    }
+    // Check scrollable content on dependency change
+    if (containerRef.current) {
+      const { scrollHeight, clientHeight } = containerRef.current
+      setHasScrollableContent(scrollHeight > clientHeight)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies)
@@ -68,6 +80,7 @@ export function useAutoScroll(dependencies: React.DependencyList) {
     scrollToBottom,
     handleScroll,
     shouldAutoScroll,
+    hasScrollableContent,
     handleTouchStart,
   }
 }
