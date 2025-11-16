@@ -132,4 +132,58 @@
   .word-break-break-word {
     word-break: break-word;
   }
+}
+
+/* KaTeX math formula styles */
+@layer base {
+  /* Inline math - force wrapping */
+  .katex {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Block display math - scroll if too long */
+  .katex-display {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100% !important;
+    margin: 1em 0 !important;
+  }
+
+  /* Inline math in paragraphs and lists */
+  p .katex,
+  li .katex {
+    display: inline !important;
+    max-width: 100% !important;
+    word-break: break-word !important;
+  }
+
+  /* Math HTML wrapper */
+  .katex-html {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Math elements should be able to break */
+  .katex .mord,
+  .katex .mbin,
+  .katex .mrel,
+  .katex .mopen,
+  .katex .mclose,
+  .katex .mpunct {
+    white-space: normal !important;
+  }
+
+  /* Mobile optimization */
+  @media (max-width: 640px) {
+    .katex {
+      font-size: 0.9em !important;
+    }
+
+    .katex-display {
+      font-size: 0.85em !important;
+      padding: 0.5em 0 !important;
+    }
+  }
 } 

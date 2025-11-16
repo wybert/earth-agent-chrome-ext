@@ -39,7 +39,7 @@ function BubbleMessage({
   actions,
 }: BubbleMessageProps) {
     return (
-    <div className={cn("group/message relative inline-block max-w-full")}>
+    <div className={cn("group/message relative w-fit max-w-full")}>
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -56,7 +56,7 @@ function BubbleMessage({
         style={{ originX: isUser ? 1 : 0 }}
             className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "break-words overflow-wrap-anywhere max-w-full sm:max-w-[600px] relative"
+          "break-words overflow-wrap-anywhere w-full max-w-full sm:max-w-[600px] relative"
         )}
       >
         <MarkdownRenderer content={content} />

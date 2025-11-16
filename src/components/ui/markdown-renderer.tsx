@@ -1,9 +1,11 @@
 import React, { type CSSProperties } from 'react';
 import ReactMarkdown, { type Components } from "react-markdown"
 import rehypeRaw from "rehype-raw"
+import rehypeKatex from "rehype-katex"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
 import { Highlight, themes, type Language, type PrismTheme, type RenderProps } from "prism-react-renderer"
+import "katex/dist/katex.min.css"
 
 import { cn } from "@/lib/utils"
 import { CopyButton } from "@/components/ui/copy-button"
@@ -202,13 +204,34 @@ interface MarkdownRendererProps {
 export function MarkdownRenderer({
   content,
 }: MarkdownRendererProps) {
+  const normalizedContent = React.useMemo(() => {
+    let processed = content;
+
+    // Step 1: Convert LaTeX-style brackets to dollar signs
+    // \[...\] -> $$...$$
+    // \(...\) -> $...$
+    processed = processed
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_, formula) => `$$${formula}$$`)
+      .replace(/\\\(([\s\S]*?)\\\)/g, (_, formula) => `$${formula}$`);
+
+    // Step 2: Fix escaped asterisks in math formulas
+    // Replace \* with * inside $...$ and $$...$$
+    processed = processed.replace(/(\$\$?)([\s\S]*?)(\$\$?)/g, (match, open, formula, close) => {
+      // Remove backslashes before asterisks in formulas
+      const fixedFormula = formula.replace(/\\\*/g, '*');
+      return open + fixedFormula + close;
+    });
+
+    return processed;
+  }, [content]);
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeRaw]}
+      rehypePlugins={[rehypeRaw, rehypeKatex]}
       components={components}
     >
-      {content}
+      {normalizedContent}
     </ReactMarkdown>
   )
 }
