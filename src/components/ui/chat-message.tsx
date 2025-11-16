@@ -274,7 +274,6 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
           </div>
         ) : null}
       </div>
-      {isUser && avatar}
     </div>
   )
 }

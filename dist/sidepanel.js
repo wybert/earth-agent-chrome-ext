@@ -147696,8 +147696,7 @@ function ChatMessage({ message, isLoading, actions }) {
                         return null;
                     }) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2))))) : (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("pre", { className: "mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800" }, JSON.stringify(toolInvocation.result, null, 2)))))))),
             isLoading ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)(chatBubbleVariants({ isUser: false })) },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 animate-spin text-muted-foreground" }))) : null),
-        isUser && avatar));
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_8__["default"], { className: "h-5 w-5 animate-spin text-muted-foreground" }))) : null)));
 }
 
 
