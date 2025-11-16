@@ -62,22 +62,33 @@ export function SessionSidebar({
     })
 
     return (
-      <button
+      <div
         key={session.id}
         className={cn(
-          "group relative mb-2 w-full rounded-lg border bg-background/80 p-3 text-left transition hover:bg-background",
+          "group relative mb-2 w-full cursor-pointer rounded-lg border bg-background/80 px-2.5 py-2.5 transition hover:bg-background",
           session.id === activeSessionId && "border-primary/60 bg-primary/5"
         )}
+        style={{ width: "100%" }}
+        role="button"
+        tabIndex={0}
         onClick={() => onSelect(session.id)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            onSelect(session.id)
+          }
+        }}
       >
-        <div className="flex items-center justify-between text-sm font-medium">
-          <span className="truncate" title={session.title}>{session.title}</span>
-          <span className="ml-2 shrink-0 text-xs text-muted-foreground">{relativeTime}</span>
+        <div className="flex flex-col gap-1.5 w-full min-w-0">
+          <h3 className="text-sm font-medium break-words overflow-wrap-anywhere word-break-break-word" title={session.title}>
+            {session.title}
+          </h3>
+          <p className="break-words overflow-wrap-anywhere word-break-break-word text-xs text-muted-foreground">
+            {session.preview || "No messages yet"}
+          </p>
+          <span className="text-xs text-muted-foreground">{relativeTime}</span>
         </div>
-        <p className="mt-1 max-h-[2.5rem] min-h-[1.5rem] overflow-hidden text-xs text-muted-foreground">
-          {session.preview || "No messages yet"}
-        </p>
-        <div className="mt-2 flex items-center gap-1 opacity-0 transition group-hover:opacity-100">
+        <div className="mt-2 flex flex-wrap items-center gap-1 opacity-0 transition group-hover:opacity-100">
           <Button variant="ghost" size="icon" className="h-7 w-7" title="Rename" onClick={(event) => { event.stopPropagation(); onRename(session.id) }}>
             <Edit2 className="h-3.5 w-3.5" />
           </Button>
@@ -91,26 +102,26 @@ export function SessionSidebar({
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
-      </button>
+      </div>
     )
   }
 
   return (
     <div className={cn("flex h-full w-full flex-col border-r bg-muted/20", className)}>
-      <div className="flex items-center justify-between border-b px-3 py-2">
-        <div className="text-sm font-semibold">Chats</div>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="ghost" onClick={onCreate}>
-            <Plus className="mr-1 h-3.5 w-3.5" /> New
+      <div className="flex h-14 items-center justify-between border-b px-4">
+        <h2 className="text-lg font-semibold text-foreground">Chats</h2>
+        {showCloseButton && (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onClose}
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
           </Button>
-          {showCloseButton && (
-            <Button size="icon" variant="ghost" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        )}
       </div>
-      <div className="border-b px-3 py-2">
+      <div className="border-b px-4 py-2">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -118,20 +129,24 @@ export function SessionSidebar({
           className="h-8"
         />
       </div>
-      <ScrollArea className="flex-1 px-3 py-3">
+      <ScrollArea className="flex-1 px-4 py-3">
         {pinned.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 pr-2">
             <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Pinned</p>
-            {pinned.map(renderSessionRow)}
+            <div className="space-y-2">
+              {pinned.map(renderSessionRow)}
+            </div>
           </div>
         )}
-        <div>
+        <div className="pr-2">
           {recent.length > 0 ? (
             <>
               {pinned.length > 0 && (
                 <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Recent</p>
               )}
-              {recent.map(renderSessionRow)}
+              <div className="space-y-2">
+                {recent.map(renderSessionRow)}
+              </div>
             </>
           ) : (
             pinned.length === 0 && (
