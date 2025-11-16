@@ -147838,10 +147838,10 @@ function Chat({ messages, handleSubmit, input, handleInputChange, stop, isGenera
 }
 Chat.displayName = "Chat";
 function ChatMessages({ messages, children, }) {
-    const { containerRef, scrollToBottom, handleScroll, shouldAutoScroll, handleTouchStart, } = (0,_hooks_use_auto_scroll__WEBPACK_IMPORTED_MODULE_2__.useAutoScroll)([messages]);
+    const { containerRef, scrollToBottom, handleScroll, shouldAutoScroll, hasScrollableContent, handleTouchStart, } = (0,_hooks_use_auto_scroll__WEBPACK_IMPORTED_MODULE_2__.useAutoScroll)([messages]);
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "grid grid-cols-1 overflow-y-auto pb-4 h-full", ref: containerRef, onScroll: handleScroll, onTouchStart: handleTouchStart },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "max-w-full [grid-column:1/1] [grid-row:1/1]" }, children),
-        !shouldAutoScroll && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "pointer-events-none flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]" },
+        !shouldAutoScroll && hasScrollableContent && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "pointer-events-none flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "sticky bottom-0 left-0 flex w-full justify-end" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_3__.Button, { onClick: scrollToBottom, className: "pointer-events-auto h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1", size: "icon", variant: "ghost" },
                     react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], { className: "h-4 w-4" })))))));
@@ -149065,6 +149065,7 @@ function useAutoScroll(dependencies) {
     const containerRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(null);
     const previousScrollTop = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)(null);
     const [shouldAutoScroll, setShouldAutoScroll] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(true);
+    const [hasScrollableContent, setHasScrollableContent] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     const scrollToBottom = () => {
         if (containerRef.current) {
             containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -149073,6 +149074,8 @@ function useAutoScroll(dependencies) {
     const handleScroll = () => {
         if (containerRef.current) {
             const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+            // Check if content is scrollable
+            setHasScrollableContent(scrollHeight > clientHeight);
             const distanceFromBottom = Math.abs(scrollHeight - scrollTop - clientHeight);
             const isScrollingUp = previousScrollTop.current
                 ? scrollTop < previousScrollTop.current
@@ -149097,11 +149100,19 @@ function useAutoScroll(dependencies) {
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         if (containerRef.current) {
             previousScrollTop.current = containerRef.current.scrollTop;
+            // Initial check for scrollable content
+            const { scrollHeight, clientHeight } = containerRef.current;
+            setHasScrollableContent(scrollHeight > clientHeight);
         }
     }, []);
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         if (shouldAutoScroll) {
             scrollToBottom();
+        }
+        // Check scrollable content on dependency change
+        if (containerRef.current) {
+            const { scrollHeight, clientHeight } = containerRef.current;
+            setHasScrollableContent(scrollHeight > clientHeight);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, dependencies);
@@ -149110,6 +149121,7 @@ function useAutoScroll(dependencies) {
         scrollToBottom,
         handleScroll,
         shouldAutoScroll,
+        hasScrollableContent,
         handleTouchStart,
     };
 }

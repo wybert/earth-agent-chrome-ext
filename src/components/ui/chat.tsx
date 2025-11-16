@@ -255,6 +255,7 @@ export function ChatMessages({
     scrollToBottom,
     handleScroll,
     shouldAutoScroll,
+    hasScrollableContent,
     handleTouchStart,
   } = useAutoScroll([messages])
 
@@ -269,7 +270,7 @@ export function ChatMessages({
         {children}
       </div>
 
-      {!shouldAutoScroll && (
+      {!shouldAutoScroll && hasScrollableContent && (
         <div className="pointer-events-none flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]">
           <div className="sticky bottom-0 left-0 flex w-full justify-end">
             <Button
