@@ -147605,7 +147605,7 @@ const chatBubbleVariants = (0,class_variance_authority__WEBPACK_IMPORTED_MODULE_
     variants: {
         isUser: {
             true: "bg-primary text-primary-foreground",
-            false: "bg-muted text-muted-foreground",
+            false: "bg-transparent text-foreground",
         },
         animation: {
             none: "",
