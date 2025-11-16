@@ -147641,7 +147641,6 @@ function ChatMessage({ message, isLoading, actions }) {
     const avatar = (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow", isUser ? "bg-background" : "bg-primary text-primary-foreground") },
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(Icon, { className: "h-5 w-5" })));
     return (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("group flex items-start gap-3", isUser && "justify-end") },
-        !isUser && avatar,
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_2__.cn)("flex flex-col gap-2 flex-1 min-w-0", isUser ? "items-end" : "items-start") },
             content && !message.parts?.length ? (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(BubbleMessage, { content: content, isUser: isUser, actions: actions })) : null,
             message.parts?.map((part, index) => {

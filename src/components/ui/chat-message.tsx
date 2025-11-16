@@ -127,7 +127,6 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
 
   return (
     <div className={cn("group flex items-start gap-3", isUser && "justify-end")}>
-      {!isUser && avatar}
       <div
         className={cn("flex flex-col gap-2 flex-1 min-w-0", isUser ? "items-end" : "items-start")}
       >
