@@ -56,7 +56,8 @@ function BubbleMessage({
         style={{ originX: isUser ? 1 : 0 }}
             className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "break-words overflow-wrap-anywhere w-full max-w-full sm:max-w-[600px] relative"
+          "break-words overflow-wrap-anywhere w-full max-w-full relative",
+          isUser && "sm:max-w-[600px]"
         )}
       >
         <MarkdownRenderer content={content} />
