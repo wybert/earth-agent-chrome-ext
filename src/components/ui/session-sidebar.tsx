@@ -108,8 +108,8 @@ export function SessionSidebar({
 
   return (
     <div className={cn("flex h-full w-full flex-col border-r bg-muted/20", className)}>
-      <div className="flex h-14 items-center justify-between border-b px-4">
-        <h2 className="text-lg font-semibold text-foreground">Chats</h2>
+      <div className="flex h-12 items-center justify-between border-b px-4">
+        <h2 className="text-base font-semibold text-foreground">Chats</h2>
         {showCloseButton && (
           <Button
             size="icon"

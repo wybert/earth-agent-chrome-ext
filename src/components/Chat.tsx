@@ -180,6 +180,7 @@ export function ChatUI() {
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
 
   // Restore local state management
   const [sessions, setSessions] = useState<ChatSessions>({});
@@ -946,10 +947,18 @@ export function ChatUI() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setIsMobileSidebarOpen(true)}
-              aria-label="Open chats"
-              className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0 md:hidden"
-              title="Open chat list"
+              onClick={() => {
+                // Check if we're on desktop (md breakpoint is 768px)
+                const isDesktop = window.innerWidth >= 768;
+                if (isDesktop) {
+                  setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
+                } else {
+                  setIsMobileSidebarOpen(true);
+                }
+              }}
+              aria-label="Toggle chat list"
+              className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              title="Toggle chat list"
             >
               <Menu className="h-4 w-4 text-gray-600" />
             </Button>
@@ -1003,19 +1012,21 @@ export function ChatUI() {
 
         {/* Main Content Area with Sidebar */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <div className="hidden h-full flex-none md:flex md:w-72">
-            <SessionSidebar
-              sessions={sessionList}
-              activeSessionId={activeSessionId}
-              onSelect={handleSelectSession}
-              onCreate={handleNewChat}
-              onRename={handleRenameSession}
-              onDelete={handleDeleteSession}
-              onDuplicate={handleDuplicateSession}
-              onTogglePin={handleTogglePin}
-              className="w-full"
-            />
-          </div>
+          {isDesktopSidebarOpen && (
+            <div className="hidden h-full flex-none md:flex md:w-72">
+              <SessionSidebar
+                sessions={sessionList}
+                activeSessionId={activeSessionId}
+                onSelect={handleSelectSession}
+                onCreate={handleNewChat}
+                onRename={handleRenameSession}
+                onDelete={handleDeleteSession}
+                onDuplicate={handleDuplicateSession}
+                onTogglePin={handleTogglePin}
+                className="w-full"
+              />
+            </div>
+          )}
           <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
             <Chat
               messages={displayMessages as any}
