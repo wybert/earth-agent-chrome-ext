@@ -33,47 +33,8 @@ const LANGUAGE_ALIASES: Record<string, Language> = {
 }
 
 const usePrismTheme = () => {
-  const [theme, setTheme] = React.useState<PrismTheme>(themes.github)
-
-  React.useEffect(() => {
-    if (typeof document === "undefined" || typeof window === "undefined") {
-      return
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-
-    const updateTheme = () => {
-      const isDark = document.documentElement.classList.contains("dark") || mediaQuery.matches
-      setTheme(isDark ? themes.nightOwl : themes.github)
-    }
-
-    updateTheme()
-
-    const observer = new MutationObserver(updateTheme)
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    })
-
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener("change", updateTheme)
-    } else {
-      // @ts-ignore - Support older browsers
-      mediaQuery.addListener(updateTheme)
-    }
-
-    return () => {
-      observer.disconnect()
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener("change", updateTheme)
-      } else {
-        // @ts-ignore - Support older browsers
-        mediaQuery.removeListener(updateTheme)
-      }
-    }
-  }, [])
-
-  return theme
+  // Always use dark theme (Night Owl)
+  return themes.nightOwl
 }
 
 const normalizeLanguage = (language?: string): Language => {
@@ -118,7 +79,7 @@ const CodeBlock = ({ code, language }: CodeBlockProps) => {
         {({ className, style, tokens, getLineProps, getTokenProps }: RenderProps) => {
           const preStyle: CSSProperties = {
             ...style,
-            backgroundColor: "transparent",
+            backgroundColor: "#011627",
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
           }
@@ -126,7 +87,7 @@ const CodeBlock = ({ code, language }: CodeBlockProps) => {
           return (
             <pre
               className={cn(
-                "m-0 max-h-[65vh] min-w-0 w-full overflow-auto rounded-lg border bg-background/80 p-4 text-sm leading-6 text-foreground shadow-sm whitespace-pre-wrap break-words break-all",
+                "m-0 max-h-[65vh] min-w-0 w-full overflow-auto rounded-lg border border-zinc-700 bg-[#011627] p-4 text-sm leading-6 shadow-sm whitespace-pre-wrap break-words break-all",
                 className
               )}
               style={preStyle}
