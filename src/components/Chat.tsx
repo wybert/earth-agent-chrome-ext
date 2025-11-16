@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical } from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, Edit2, X } from 'lucide-react';
 // Project uses custom Message type for Chrome extension communication
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
@@ -11,6 +11,7 @@ import AgentTestPanel from './ui/AgentTestPanel';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
+import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
 
 // Define Zod schema for message responses (Restore)
 const MessageContentSchema = z.string().min(1);
@@ -85,9 +86,86 @@ const processImageFile = (file: File): Promise<string> => {
   });
 };
 
-// Type for session data storage (Keep)
-interface ChatSessions {
-  [sessionId: string]: Message[];
+interface ChatSessionMeta {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  lastMessagePreview?: string
+  pinned?: boolean
+}
+
+interface StoredChatSession {
+  id: string
+  meta: ChatSessionMeta
+  messages: Message[]
+}
+
+type ChatSessions = Record<string, StoredChatSession>
+
+const truncateText = (text: string, max = 80) => {
+  if (!text) return ''
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+}
+
+const getLastMessagePreview = (messages: Message[]) => {
+  const last = [...messages].reverse().find((msg) => (msg.content || '').trim().length > 0)
+  return last ? truncateText(last.content || '', 80) : ''
+}
+
+const getSuggestedSessionTitle = (messages: Message[], timestamp: number) => {
+  const firstUser = messages.find((msg) => msg.role === 'user' && (msg.content || '').trim().length > 0)
+  if (firstUser) {
+    const firstLine = firstUser.content?.split('\n')[0] || ''
+    return truncateText(firstLine.trim(), 40) || `Chat ${new Date(timestamp).toLocaleDateString()}`
+  }
+  return `Chat ${new Date(timestamp).toLocaleDateString()}`
+}
+
+const createSessionRecord = (
+  sessionId: string,
+  messages: Message[] = [createWelcomeMessage()],
+  metaOverrides: Partial<ChatSessionMeta> = {}
+): StoredChatSession => {
+  const now = Date.now()
+  const preview = getLastMessagePreview(messages)
+  const meta: ChatSessionMeta = {
+    id: sessionId,
+    title: metaOverrides.title || getSuggestedSessionTitle(messages, now),
+    createdAt: metaOverrides.createdAt ?? now,
+    updatedAt: metaOverrides.updatedAt ?? now,
+    lastMessagePreview: metaOverrides.lastMessagePreview ?? preview,
+    pinned: metaOverrides.pinned ?? false,
+  }
+
+  return {
+    id: sessionId,
+    meta,
+    messages,
+  }
+}
+
+const migrateSessions = (rawSessions: any): ChatSessions => {
+  if (!rawSessions || typeof rawSessions !== 'object') {
+    return {}
+  }
+
+  const migrated: ChatSessions = {}
+  Object.entries(rawSessions as Record<string, any>).forEach(([sessionId, value]) => {
+    if (Array.isArray(value)) {
+      migrated[sessionId] = createSessionRecord(sessionId, value as Message[])
+      return
+    }
+
+    if (value && typeof value === 'object') {
+      const stored = value as Partial<StoredChatSession> & { messages?: Message[] }
+      const messages = Array.isArray(stored.messages) ? stored.messages : []
+      const overrides: Partial<ChatSessionMeta> = stored.meta || {}
+      migrated[sessionId] = createSessionRecord(sessionId, messages, overrides)
+    }
+  })
+
+  return migrated
 }
 
 // Restore original component name and structure
@@ -101,21 +179,7 @@ export function ChatUI() {
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
-  // Add session counter state for better display
-  const [sessionCounter, setSessionCounter] = useState(1);
-
-  // Calculate session display name
-  const getSessionDisplayName = (sessionId: string | null) => {
-    if (!sessionId) return 'Chat';
-    
-    // Extract timestamp from session ID
-    const timestamp = sessionId.split('_')[1];
-    if (!timestamp) return 'Chat';
-    
-    // Use last 6 characters of timestamp for better uniqueness
-    const shortId = timestamp.slice(-6);
-    return `Chat ${shortId}`;
-  };
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Restore local state management
   const [sessions, setSessions] = useState<ChatSessions>({});
@@ -128,6 +192,34 @@ export function ChatUI() {
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const MAX_CONNECTION_ATTEMPTS = 3;
+
+  const persistSessionsState = useCallback((nextSessions: ChatSessions, nextActiveId?: string | null) => {
+    const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: nextSessions };
+    if (typeof nextActiveId !== 'undefined') {
+      payload[ACTIVE_SESSION_ID_KEY] = nextActiveId;
+    }
+    chrome.storage.local.set(payload);
+  }, []);
+
+  const sessionList = useMemo<SidebarSession[]>(() => {
+    return Object.values(sessions)
+      .map((session) => ({
+        id: session.id,
+        title: session.meta.title,
+        preview: session.meta.lastMessagePreview || '',
+        updatedAt: session.meta.updatedAt,
+        pinned: session.meta.pinned,
+      }))
+      .sort((a, b) => {
+        if ((a.pinned ? 1 : 0) !== (b.pinned ? 1 : 0)) {
+          return a.pinned ? -1 : 1;
+        }
+        return b.updatedAt - a.updatedAt;
+      });
+  }, [sessions]);
+
+  const activeSession = activeSessionId ? sessions[activeSessionId] : null;
+  const activeSessionTitle = activeSession?.meta.title || 'Chat';
 
   // Restore API config check useEffect
   useEffect(() => {
@@ -178,34 +270,52 @@ export function ChatUI() {
   // Restore session loading useEffect
   useEffect(() => {
     chrome.storage.local.get([CHAT_SESSIONS_KEY, ACTIVE_SESSION_ID_KEY], (result) => {
-      const loadedSessions: ChatSessions = result[CHAT_SESSIONS_KEY] || {};
-      let currentActiveId: string | null = result[ACTIVE_SESSION_ID_KEY] || null;
-      if (!currentActiveId || Object.keys(loadedSessions).length === 0) {
-        const newSessionId = `session_${Date.now()}`;
-        loadedSessions[newSessionId] = [createWelcomeMessage()];
-        currentActiveId = newSessionId;
-        chrome.storage.local.set({
-          [CHAT_SESSIONS_KEY]: loadedSessions,
-          [ACTIVE_SESSION_ID_KEY]: currentActiveId
-        });
-        console.log("Initialized first chat session:", newSessionId);
+      let loadedSessions = migrateSessions(result[CHAT_SESSIONS_KEY]);
+      if (Object.keys(loadedSessions).length === 0) {
+        const firstId = `session_${Date.now()}`;
+        loadedSessions = {
+          [firstId]: createSessionRecord(firstId),
+        };
       }
+
+      let currentActiveId: string | null = result[ACTIVE_SESSION_ID_KEY] || null;
+      if (!currentActiveId || !loadedSessions[currentActiveId]) {
+        currentActiveId = Object.keys(loadedSessions)[0] || null;
+      }
+
       setSessions(loadedSessions);
       setActiveSessionId(currentActiveId);
-      setMessages(loadedSessions[currentActiveId] || [createWelcomeMessage()]);
-      console.log("Loaded sessions, active ID:", currentActiveId);
+      setMessages(
+        (currentActiveId && loadedSessions[currentActiveId]?.messages) || [createWelcomeMessage()]
+      );
+
+      chrome.storage.local.set({
+        [CHAT_SESSIONS_KEY]: loadedSessions,
+        [ACTIVE_SESSION_ID_KEY]: currentActiveId,
+      });
+
+      console.log("Loaded sessions (v2), active ID:", currentActiveId);
     });
   }, []);
 
   // Restore session saving useEffect
   useEffect(() => {
-    if (activeSessionId && messages.length > 0) {
-      const updatedSessions: ChatSessions = { ...sessions };
-      updatedSessions[activeSessionId] = messages;
-      setSessions(updatedSessions);
-      chrome.storage.local.set({ [CHAT_SESSIONS_KEY]: updatedSessions });
+    if (!activeSessionId) return;
+    setSessions(prev => {
+      const existing = prev[activeSessionId] || createSessionRecord(activeSessionId, messages)
+      const updatedMeta: ChatSessionMeta = {
+        ...existing.meta,
+        updatedAt: Date.now(),
+        lastMessagePreview: getLastMessagePreview(messages),
       }
-  }, [messages, activeSessionId]);
+      const updatedSessions: ChatSessions = {
+        ...prev,
+        [activeSessionId]: { ...existing, meta: updatedMeta, messages },
+      }
+      persistSessionsState(updatedSessions)
+      return updatedSessions
+    })
+  }, [messages, activeSessionId, persistSessionsState])
 
   // Restore port connection useEffect
   useEffect(() => {
@@ -524,7 +634,7 @@ export function ChatUI() {
     setIsLocalLoading(true);
     setError(null);
     
-    const messagesForApi = sessions[activeSessionId]
+    const messagesForApi = sessions[activeSessionId]?.messages
       ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
       .concat(newUserMessage) || [newUserMessage];
     
@@ -624,22 +734,138 @@ export function ChatUI() {
     }
   }, [port]);
 
+  const handleSelectSession = useCallback((sessionId: string) => {
+    if (sessionId === activeSessionId) {
+      setIsMobileSidebarOpen(false);
+      return;
+    }
+    const session = sessions[sessionId];
+    if (!session) return;
+    setActiveSessionId(sessionId);
+    setMessages(session.messages);
+    setInput('');
+    setError(null);
+    setIsLocalLoading(false);
+    chrome.storage.local.set({ [ACTIVE_SESSION_ID_KEY]: sessionId });
+    setIsMobileSidebarOpen(false);
+  }, [sessions, activeSessionId]);
+
+  const handleRenameSession = useCallback((sessionId: string) => {
+    const session = sessions[sessionId];
+    if (!session) return;
+    const nextTitle = window.prompt('Rename conversation', session.meta.title);
+    if (nextTitle === null) return;
+    const normalized = nextTitle.trim();
+    if (!normalized || normalized === session.meta.title) return;
+    setSessions(prev => {
+      const current = prev[sessionId];
+      if (!current) return prev;
+      const updatedSessions: ChatSessions = {
+        ...prev,
+        [sessionId]: {
+          ...current,
+          meta: { ...current.meta, title: normalized, updatedAt: Date.now() },
+        },
+      };
+      persistSessionsState(updatedSessions);
+      return updatedSessions;
+    });
+  }, [sessions, persistSessionsState]);
+
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    const session = sessions[sessionId];
+    if (!session) return;
+    if (!window.confirm(`Delete "${session.meta.title}"? This cannot be undone.`)) return;
+    setSessions(prev => {
+      if (!prev[sessionId]) return prev;
+      const nextSessions: ChatSessions = { ...prev };
+      delete nextSessions[sessionId];
+      let nextActiveId = activeSessionId;
+      if (!nextActiveId || nextActiveId === sessionId) {
+        const remainingIds = Object.keys(nextSessions);
+        if (remainingIds.length === 0) {
+          const fallbackId = `session_${Date.now()}`;
+          nextSessions[fallbackId] = createSessionRecord(fallbackId);
+          nextActiveId = fallbackId;
+        } else {
+          nextActiveId = remainingIds[0];
+        }
+        if (nextActiveId && nextSessions[nextActiveId]) {
+          setActiveSessionId(nextActiveId);
+          setMessages(nextSessions[nextActiveId].messages);
+        }
+      }
+      persistSessionsState(nextSessions, nextActiveId || null);
+      return nextSessions;
+    });
+    setIsMobileSidebarOpen(false);
+  }, [sessions, activeSessionId, persistSessionsState]);
+
+  const handleDuplicateSession = useCallback((sessionId: string) => {
+    const session = sessions[sessionId];
+    if (!session) return;
+    const newSessionId = `session_${Date.now()}`;
+    const clonedMessages = session.messages.map((message, index) => ({
+      ...message,
+      id: `${message.id}-${Date.now()}-${index}`,
+    }));
+    const record = createSessionRecord(newSessionId, clonedMessages, {
+      title: `${session.meta.title} (Copy)`,
+    });
+    setSessions(prev => {
+      const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
+      persistSessionsState(nextSessions, newSessionId);
+      return nextSessions;
+    });
+    setActiveSessionId(newSessionId);
+    setMessages(record.messages);
+    setInput('');
+    setError(null);
+    setIsLocalLoading(false);
+    setIsMobileSidebarOpen(false);
+  }, [sessions, persistSessionsState]);
+
+  const handleTogglePin = useCallback((sessionId: string) => {
+    setSessions(prev => {
+      const current = prev[sessionId];
+      if (!current) return prev;
+      const updatedSessions: ChatSessions = {
+        ...prev,
+        [sessionId]: {
+          ...current,
+          meta: { ...current.meta, pinned: !current.meta.pinned, updatedAt: Date.now() },
+        },
+      };
+      persistSessionsState(updatedSessions);
+      return updatedSessions;
+    });
+  }, [persistSessionsState]);
+
+  const handleClearActiveSession = useCallback(() => {
+    if (!activeSessionId) return;
+    if (!window.confirm('Clear this conversation?')) return;
+    const welcomeMsg = createWelcomeMessage();
+    setMessages([welcomeMsg]);
+    setInput('');
+  }, [activeSessionId]);
+
   // Restore new chat handler
   const handleNewChat = useCallback(() => {
     const newSessionId = `session_${Date.now()}`;
     const welcomeMsg = createWelcomeMessage();
-    const newSessions = { ...sessions, [newSessionId]: [welcomeMsg] };
-    setSessions(newSessions);
+    const record = createSessionRecord(newSessionId, [welcomeMsg]);
+    setSessions(prev => {
+      const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
+      persistSessionsState(nextSessions, newSessionId);
+      return nextSessions;
+    });
     setActiveSessionId(newSessionId);
-    setMessages([welcomeMsg]);
+    setMessages(record.messages);
     setInput('');
     setError(null);
     setIsLocalLoading(false);
-    chrome.storage.local.set({
-      [CHAT_SESSIONS_KEY]: newSessions,
-      [ACTIVE_SESSION_ID_KEY]: newSessionId
-    });
-  }, [sessions]);
+    setIsMobileSidebarOpen(false);
+  }, [persistSessionsState]);
 
   // Restore simple local fallback handler
   const handleLocalSubmit = (e: React.FormEvent) => {
@@ -712,18 +938,56 @@ export function ChatUI() {
   const canRegenerate = messages.some(m => m.role === 'user') && !currentLoading && !fallbackMode && !!port;
 
   return (
-    <Card className="w-full h-full flex flex-col border-0 rounded-none shadow-none overflow-hidden">
-      {/* Fixed Header - Top Toolbar */}
-      <div className="flex-none flex justify-between items-center p-2 px-3 border-b min-w-0">
-        <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-           <Button variant="outline" size="icon" onClick={handleNewChat} aria-label="New Chat" className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="New Chat">
+    <>
+      <Card className="w-full h-full flex flex-col border-0 rounded-none shadow-none overflow-hidden">
+        {/* Fixed Header - Top Toolbar */}
+        <div className="flex-none flex justify-between items-center p-2 px-3 border-b min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              aria-label="Open chats"
+              className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0 md:hidden"
+              title="Open chat list"
+            >
+              <Menu className="h-4 w-4 text-gray-600" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleNewChat}
+              aria-label="New Chat"
+              className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              title="New Chat"
+            >
               <Plus className="h-4 w-4 text-gray-600" />
             </Button>
-            <h2 className="text-sm font-medium truncate" title={activeSessionId || 'Chat'}>
-              {getSessionDisplayName(activeSessionId)}
+            <h2 className="text-sm font-medium truncate" title={activeSessionTitle}>
+              {activeSessionTitle}
             </h2>
-         </div>
-        <div className="flex gap-1 items-center shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Rename chat"
+              className="h-8 w-8 shrink-0"
+              title="Rename chat"
+              onClick={() => activeSessionId && handleRenameSession(activeSessionId)}
+              disabled={!activeSessionId}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex gap-1 items-center shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden sm:inline-flex"
+              onClick={handleClearActiveSession}
+              disabled={!activeSessionId}
+            >
+              Clear
+            </Button>
           <TabStatusIndicator />
           <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
             <Wrench className="h-4 w-4 text-gray-600" />
@@ -737,60 +1001,123 @@ export function ChatUI() {
         </div>
       </div>
 
-      {/* Main Content Area - Chat with fixed input at bottom */}
-      <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
-        <Chat
-          messages={displayMessages as any}
-          input={input}
-          handleInputChange={handleInputChange}
-          handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
-          isGenerating={currentLoading}
-          stop={stop}
-          setMessages={setMessages as any}
-          append={append as any}
-          onRegenerate={handleRegenerate}
-          showRegenerate={canRegenerate}
-          className="h-full"
-        />
+        {/* Main Content Area with Sidebar */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="hidden h-full flex-none md:flex md:w-72">
+            <SessionSidebar
+              sessions={sessionList}
+              activeSessionId={activeSessionId}
+              onSelect={handleSelectSession}
+              onCreate={handleNewChat}
+              onRename={handleRenameSession}
+              onDelete={handleDeleteSession}
+              onDuplicate={handleDuplicateSession}
+              onTogglePin={handleTogglePin}
+              className="w-full"
+            />
+          </div>
+          <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
+            <Chat
+              messages={displayMessages as any}
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
+              isGenerating={currentLoading}
+              stop={stop}
+              setMessages={setMessages as any}
+              append={append as any}
+              onRegenerate={handleRegenerate}
+              showRegenerate={canRegenerate}
+              className="h-full"
+            />
 
-        {/* Error and Fallback Displays - Positioned at bottom above input */}
-        {error && (
-           <Card className="absolute bottom-20 left-2 right-2 p-4 bg-destructive/10 text-destructive border-destructive/50 z-10">
-             <p className="text-sm font-medium">Error</p>
-             <p className="text-sm mt-1">{error.message}</p>
-             {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
+            {/* Error and Fallback Displays - Positioned at bottom above input */}
+            {error && (
+              <Card className="absolute bottom-20 left-2 right-2 p-4 bg-destructive/10 text-destructive border-destructive/50 z-10">
+                <p className="text-sm font-medium">Error</p>
+                <p className="text-sm mt-1">{error.message}</p>
+                {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
                   <Button variant="outline" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-                 <RefreshCw size={14} className="mr-2" /> Retry Connection
+                    <RefreshCw size={14} className="mr-2" /> Retry Connection
                   </Button>
-             )}
-              {!fallbackMode && (
-                  <Button variant="outline" size="sm" onClick={() => { setError(new Error("Switched to Fallback Mode manually.")); setFallbackMode(true); }} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-                   Switch to Fallback Mode
+                )}
+                {!fallbackMode && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setError(new Error("Switched to Fallback Mode manually."));
+                      setFallbackMode(true);
+                    }}
+                    className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20"
+                  >
+                    Switch to Fallback Mode
                   </Button>
-               )}
-           </Card>
-        )}
-        {fallbackMode && (
-           <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
-             <p className="text-sm font-medium">Fallback Mode</p>
-             <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
-             {apiConfigured && (
-               <Button variant="default" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200" disabled={currentLoading || (port !== null && connectionAttempts === 0)}>
-                 <RefreshCw size={14} className="mr-2"/> Reconnect
-               </Button>
-             )}
-             {!apiConfigured && (
-                <Button variant="link" size="sm" onClick={() => setShowSettings(true)} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200">
-                  Configure API Key
-                </Button>
-             )}
-           </Card>
-        )}
-      </div>
+                )}
+              </Card>
+            )}
+            {fallbackMode && (
+              <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
+                <p className="text-sm font-medium">Fallback Mode</p>
+                <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
+                {apiConfigured && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleRetryAPI}
+                    className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200"
+                    disabled={currentLoading || (port !== null && connectionAttempts === 0)}
+                  >
+                    <RefreshCw size={14} className="mr-2" /> Reconnect
+                  </Button>
+                )}
+                {!apiConfigured && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setShowSettings(true)}
+                    className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200"
+                  >
+                    Configure API Key
+                  </Button>
+                )}
+              </Card>
+            )}
+          </div>
+        </div>
 
-      {/* Overlay Panels */}
-      <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
-      <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
-    </Card>
+        {/* Overlay Panels */}
+        <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
+        <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
+      </Card>
+
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileSidebarOpen(false)} />
+          <div className="relative h-full w-72 max-w-full border-r bg-background">
+            <SessionSidebar
+              sessions={sessionList}
+              activeSessionId={activeSessionId}
+              onSelect={handleSelectSession}
+              onCreate={handleNewChat}
+              onRename={handleRenameSession}
+              onDelete={handleDeleteSession}
+              onDuplicate={handleDuplicateSession}
+              onTogglePin={handleTogglePin}
+              className="h-full w-full bg-background shadow-xl"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2"
+              aria-label="Close chat list"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
