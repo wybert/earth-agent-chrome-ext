@@ -180,7 +180,7 @@ export function ChatUI() {
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
 
   // Restore local state management
   const [sessions, setSessions] = useState<ChatSessions>({});

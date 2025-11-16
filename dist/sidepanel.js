@@ -144057,7 +144057,7 @@ function ChatUI() {
     const [fallbackMode, setFallbackMode] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false); // Restore fallback state
     const [isLocalLoading, setIsLocalLoading] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false); // Restore loading state
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
-    const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(true);
+    const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false);
     // Restore local state management
     const [sessions, setSessions] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)({});
     const [activeSessionId, setActiveSessionId] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
