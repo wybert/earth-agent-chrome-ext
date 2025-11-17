@@ -168,7 +168,7 @@ export function MessageInput({
   useEffect(() => {
     if (textAreaRef.current) {
       const currentRef = textAreaRef.current;
-      const maxHeight = Number.MAX_SAFE_INTEGER;
+      const maxHeight = 300; // Maximum height in pixels before scrolling
       const borderWidth = 0;
 
       const borderAdjustment = borderWidth * 2;
@@ -218,7 +218,7 @@ export function MessageInput({
             onPaste={onPaste}
             onKeyDown={onKeyDown}
             className={cn(
-              "z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pr-24 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[60px]",
+              "z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto",
               showFileList && "pb-16",
               className
             )}
@@ -257,7 +257,7 @@ export function MessageInput({
         </div>
       </div>
 
-      <div className="absolute right-3 top-3 z-20 flex gap-2">
+      <div className="absolute right-3 bottom-3 z-20 flex gap-2">
         {showRegenerate && onRegenerate && !isGenerating && (
           <Button
             type="button"
