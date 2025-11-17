@@ -2939,6 +2939,9 @@ body {
 .bottom-20 {
   bottom: 5rem;
 }
+.bottom-3 {
+  bottom: 0.75rem;
+}
 .bottom-4 {
   bottom: 1rem;
 }
@@ -2977,9 +2980,6 @@ body {
 }
 .top-2 {
   top: 0.5rem;
-}
-.top-3 {
-  top: 0.75rem;
 }
 .top-full {
   top: 100%;
@@ -3187,8 +3187,8 @@ body {
 .min-h-0 {
   min-height: 0px;
 }
-.min-h-\\[60px\\] {
-  min-height: 60px;
+.min-h-\\[120px\\] {
+  min-height: 120px;
 }
 .min-h-\\[80px\\] {
   min-height: 80px;
@@ -3883,6 +3883,9 @@ body {
 .pb-1 {
   padding-bottom: 0.25rem;
 }
+.pb-12 {
+  padding-bottom: 3rem;
+}
 .pb-16 {
   padding-bottom: 4rem;
 }
@@ -3906,9 +3909,6 @@ body {
 }
 .pr-2 {
   padding-right: 0.5rem;
-}
-.pr-24 {
-  padding-right: 6rem;
 }
 .pt-0 {
   padding-top: 0px;
@@ -148511,7 +148511,7 @@ function MessageInput({ placeholder = "Ask AI...", className, onKeyDown: onKeyDo
     (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(() => {
         if (textAreaRef.current) {
             const currentRef = textAreaRef.current;
-            const maxHeight = Number.MAX_SAFE_INTEGER;
+            const maxHeight = 300; // Maximum height in pixels before scrolling
             const borderWidth = 0;
             const borderAdjustment = borderWidth * 2;
             let originalHeight = parseFloat(currentRef.dataset.originalHeight || '0');
@@ -148532,7 +148532,7 @@ function MessageInput({ placeholder = "Ask AI...", className, onKeyDown: onKeyDo
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement(RecordingPrompt, { isVisible: isRecording, onStopRecording: stopRecording }),
         react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative flex w-full items-center space-x-2" },
             react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "relative flex-1" },
-                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { "aria-label": "Write your prompt here", placeholder: placeholder || "Type your message...", ref: textAreaRef, onPaste: onPaste, onKeyDown: onKeyDown, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pr-24 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[60px]", showFileList && "pb-16", className), ...(props.allowAttachments
+                react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", { "aria-label": "Write your prompt here", placeholder: placeholder || "Type your message...", ref: textAreaRef, onPaste: onPaste, onKeyDown: onKeyDown, className: (0,_lib_utils__WEBPACK_IMPORTED_MODULE_1__.cn)("z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto", showFileList && "pb-16", className), ...(props.allowAttachments
                         ? (0,remeda__WEBPACK_IMPORTED_MODULE_7__.a)(props, ["allowAttachments", "files", "setFiles"])
                         : (0,remeda__WEBPACK_IMPORTED_MODULE_7__.a)(props, ["allowAttachments"])) }),
                 props.allowAttachments && showFileList && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "absolute inset-x-3 bottom-0 z-20 overflow-x-scroll py-3" },
@@ -148549,7 +148549,7 @@ function MessageInput({ placeholder = "Ask AI...", className, onKeyDown: onKeyDo
                                     });
                                 } }));
                         }))))))),
-        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "absolute right-3 top-3 z-20 flex gap-2" },
+        react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", { className: "absolute right-3 bottom-3 z-20 flex gap-2" },
             showRegenerate && onRegenerate && !isGenerating && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", size: "icon", variant: "outline", className: "h-8 w-8", "aria-label": "Regenerate response", onClick: onRegenerate, title: "Regenerate" },
                 react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], { className: "h-4 w-4" }))),
             props.allowAttachments && (react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_components_ui_button__WEBPACK_IMPORTED_MODULE_4__.Button, { type: "button", size: "icon", variant: "outline", className: "h-8 w-8", "aria-label": "Attach a file", onClick: async () => {
