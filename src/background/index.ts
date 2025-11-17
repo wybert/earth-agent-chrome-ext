@@ -1821,6 +1821,23 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
     }
     
+    // Create callback for tool events
+    const onToolEvent = (event: {
+      type: 'tool_start' | 'tool_finish';
+      toolName?: string;
+      args?: any;
+      result?: any;
+      timestamp: number;
+    }) => {
+      console.log(`🔧 [Background] onToolEvent called:`, event);
+      port.postMessage({
+        type: 'TOOL_EVENT',
+        requestId,
+        event
+      });
+      console.log(`🔧 [Background] TOOL_EVENT message sent to frontend`);
+    };
+
     // Call the new handler which directly processes messages
     // Include Helicone headers if provided in the message
     const response = await handleChatRequest(
@@ -1829,7 +1846,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       apiConfig.provider as any, // Cast to Provider type
       apiConfig.model,
       message.heliconeHeaders,
-      apiConfig.baseURL
+      apiConfig.baseURL,
+      onToolEvent
     );
       
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
@@ -1866,11 +1884,11 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: false });
     console.log(`[${requestId}] Reading text stream...`);
-        
+
     try {
       while (true) {
         const { done, value } = await reader.read();
-        
+
         if (done) {
           console.log(`[${requestId}] Text stream finished.`);
           port.postMessage({
@@ -1879,12 +1897,12 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           });
           break; // Exit loop when stream is done
         }
-        
+
         // Decode the chunk with streaming flag to handle partial UTF-8 sequences
         const chunk = decoder.decode(value, { stream: !done });
-        
+
         if (chunk) { // Avoid sending empty chunks if decoder yields them
-          port.postMessage({ 
+          port.postMessage({
             type: 'CHAT_STREAM_CHUNK',
             requestId,
             chunk: chunk
@@ -1894,10 +1912,10 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     } catch (streamError) {
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       console.error(`[${requestId}] Error reading text stream:`, errorMessage);
-      port.postMessage({ 
+      port.postMessage({
         type: 'ERROR',
         requestId,
-        error: `Stream reading error: ${errorMessage}` 
+        error: `Stream reading error: ${errorMessage}`
       });
     }
 

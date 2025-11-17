@@ -9,6 +9,15 @@ import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
 import { snapshot as browserSnapshot, SnapshotResponse } from '../lib/tools/browser/snapshot';
 
+// Type for tool event callback
+export type ToolEventCallback = (event: {
+  type: 'tool_start' | 'tool_finish';
+  toolName?: string;
+  args?: any;
+  result?: any;
+  timestamp: number;
+}) => void;
+
 // Available providers
 export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
@@ -251,7 +260,8 @@ export async function handleChatRequest(
   provider: Provider,
   model?: string,
   heliconeHeaders?: Record<string, string>,
-  baseURL?: string
+  baseURL?: string,
+  onToolEvent?: ToolEventCallback
 ): Promise<Response> {
   try {
     // Debug log at start of request
@@ -338,18 +348,44 @@ export async function handleChatRequest(
     ];
     
     if (provider === 'openai') {
+      // Validate API key
+      if (!apiKey || apiKey.trim() === '') {
+        console.error(`❌ [Chat Handler] OpenAI API key is missing or empty`);
+        return new Response(JSON.stringify({
+          error: 'OpenAI API key is required',
+          message: 'Please configure your OpenAI API key in the extension settings.'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Validate API key format (OpenAI keys start with sk-)
+      if (!apiKey.startsWith('sk-')) {
+        console.error(`❌ [Chat Handler] Invalid OpenAI API key format. Key should start with 'sk-', got: ${apiKey.substring(0, 10)}...`);
+        return new Response(JSON.stringify({
+          error: 'Invalid OpenAI API key format',
+          message: 'OpenAI API keys should start with "sk-". Please check your API key in settings.'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      console.log(`🔧 [Chat Handler] OpenAI API key validated: ${apiKey.substring(0, 10)}... (length: ${apiKey.length})`);
+
       // Configure OpenAI with Helicone proxy if headers are provided
       const openaiConfig: any = { apiKey };
-      
+
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
         console.log('🔍 [Chat Handler] Configuring OpenAI with Helicone observability');
         openaiConfig.baseURL = 'https://oai.helicone.ai/v1';
         openaiConfig.headers = heliconeHeaders;
       }
-      
+
       llmProvider = createOpenAI(openaiConfig);
       effectiveModel = model || DEFAULT_MODELS.openai;
-      console.log(`Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
+      console.log(`✅ [Chat Handler] Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'anthropic') {
       // Check if the requested model exists in our available model list
       
@@ -653,6 +689,16 @@ export async function handleChatRequest(
         location: z.string().describe('The location to get the weather for'),
       }),
       execute: async ({ location }) => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'weather',
+            args: { location },
+            timestamp: Date.now()
+          });
+        }
+
         // Simulate weather data
         const temperature = 72 + Math.floor(Math.random() * 21) - 10;
         return {
@@ -671,6 +717,16 @@ export async function handleChatRequest(
         datasetQuery: z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
       }),
       execute: async ({ datasetQuery }) => {
+        // Manually send tool_start event since onStepStart is not reliable
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'earthEngineDataset',
+            args: { datasetQuery },
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🌍 [EarthEngineDatasetTool] Tool called with query: "${datasetQuery}"`);
           console.time('EarthEngineDatasetTool execution');
@@ -721,6 +777,16 @@ export async function handleChatRequest(
         code: z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
       }),
       execute: async ({ scriptId, code }) => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'earthEngineScript',
+            args: { scriptId, code: code.substring(0, 100) + '...' },
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🔧 [EarthEngineScriptTool] Tool called to edit script "${scriptId}"`);
           console.time('EarthEngineScriptTool execution');
@@ -857,6 +923,16 @@ export async function handleChatRequest(
         code: z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
       }),
       execute: async ({ code }) => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'earthEngineRunCode',
+            args: { code: code.substring(0, 100) + '...' },
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🏃 [EarthEngineRunCodeTool] Tool called to run code`);
           console.time('EarthEngineRunCodeTool execution');
@@ -989,6 +1065,16 @@ export async function handleChatRequest(
       description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'screenshot',
+            args: {},
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`📸 [ScreenshotTool] Tool called`);
           console.time('ScreenshotTool execution');
@@ -1158,6 +1244,16 @@ export async function handleChatRequest(
       description: 'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'snapshot',
+            args: {},
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log('🔎 [SnapshotTool] Tool called in background');
           console.time('SnapshotTool execution - background part');
@@ -1305,6 +1401,16 @@ export async function handleChatRequest(
         refId: z.string().describe('The aria-ref ID of the element to click.'),
       }),
       execute: async ({ refId }) => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'clickByRefId',
+            args: { refId },
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🖱️ [ClickByRefIdTool] Tool called for refId: ${refId}`);
           console.time('ClickByRefIdTool execution - background part');
@@ -1375,6 +1481,16 @@ export async function handleChatRequest(
       description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'resetMapInspectorConsole',
+            args: {},
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🔄 [ResetMapInspectorConsoleTool] Tool called to reset GEE environment`);
           console.time('ResetMapInspectorConsoleTool execution');
@@ -1497,6 +1613,16 @@ export async function handleChatRequest(
       description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'clearScript',
+            args: {},
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🧹 [ClearScriptTool] Tool called to clear GEE code editor`);
           console.time('ClearScriptTool execution');
@@ -1693,6 +1819,16 @@ export async function handleChatRequest(
         y: z.number().describe('The y-coordinate to click.'),
       }),
       execute: async ({ x, y }) => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'clickByCoordinates',
+            args: { x, y },
+            timestamp: Date.now()
+          });
+        }
+
         try {
           console.log(`🖱️ [ClickByCoordinatesTool] Tool called for coordinates: (${x}, ${y})`);
           console.time('ClickByCoordinatesTool execution - background part');
@@ -1803,7 +1939,7 @@ export async function handleChatRequest(
     
     console.log(`🚀 [Chat Handler] Starting AI stream with provider: ${provider}, model: ${effectiveModel}`);
     console.time('streamText execution');
-    
+
     // Configure stream options based on provider
     let streamOptions: any = {
       model: llmProvider(effectiveModel),
@@ -1814,9 +1950,45 @@ export async function handleChatRequest(
       maxRetries: 3,
       // Add onError callback to capture and log streaming errors
       onError: ({ error }: { error: any }) => {
-        console.error(`❌ [Chat Handler] Streaming error occurred`, error);
-        // We can inspect the error object for more details
-        // This is where we'll see the actual message from the API
+        console.error(`❌ [Chat Handler] Streaming error occurred for ${provider} provider:`, error);
+        console.error(`❌ [Chat Handler] Error type: ${error?.name}`);
+        console.error(`❌ [Chat Handler] Error message: ${error?.message}`);
+        if (error?.cause) {
+          console.error(`❌ [Chat Handler] Error cause:`, error.cause);
+        }
+        if (error?.stack) {
+          console.error(`❌ [Chat Handler] Error stack:`, error.stack);
+        }
+
+        // Log specific information based on error type
+        if (error?.message?.includes('fetch')) {
+          console.error(`❌ [Chat Handler] Network fetch error detected. Possible causes:`);
+          console.error(`   1. Invalid API key`);
+          console.error(`   2. Network connectivity issues`);
+          console.error(`   3. API endpoint unreachable`);
+          console.error(`   4. CORS issues (unlikely for OpenAI)`);
+        }
+      },
+      // Add callbacks to track tool execution for debugging
+      onStepStart: ({ toolCalls }: { toolCalls?: any[] }) => {
+        if (toolCalls && toolCalls.length > 0) {
+          toolCalls.forEach((toolCall: any) => {
+            console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, {
+              args: toolCall.args
+            });
+          });
+        }
+      },
+      onStepFinish: ({ toolCalls, toolResults }: { toolCalls?: any[], toolResults?: any[] }) => {
+        if (toolCalls && toolCalls.length > 0) {
+          toolCalls.forEach((toolCall: any, index: number) => {
+            const result = toolResults?.[index];
+            console.log(`✅ [Tool Finish] ${toolCall.toolName}`, {
+              success: result ? 'completed' : 'no result',
+              resultPreview: result ? (typeof result === 'string' ? result.substring(0, 100) : JSON.stringify(result).substring(0, 100)) : 'none'
+            });
+          });
+        }
       },
     };
     
@@ -1887,46 +2059,74 @@ export async function handleChatRequest(
       k === 'messages' ? '[Messages array]' : (k === 'tools' ? '[Tools object]' : v), 2));
     
     try {
+      // Update callbacks to call onToolEvent if provided
+      if (onToolEvent) {
+        console.log('🔧 [Chat Handler] onToolEvent callback is provided, setting up step callbacks');
+        streamOptions.onStepStart = ({ toolCalls }: { toolCalls?: any[] }) => {
+          console.log('🔧 [Chat Handler] onStepStart called, toolCalls:', toolCalls);
+          if (toolCalls && toolCalls.length > 0) {
+            toolCalls.forEach((toolCall: any) => {
+              const event = {
+                type: 'tool_start' as const,
+                toolName: toolCall.toolName,
+                args: toolCall.args,
+                timestamp: Date.now()
+              };
+              console.log(`🔧 [Chat Handler] Calling onToolEvent with:`, event);
+              onToolEvent(event);
+              console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, { args: toolCall.args });
+            });
+          } else {
+            console.log('🔧 [Chat Handler] onStepStart called but no toolCalls found');
+          }
+        };
+
+        streamOptions.onStepFinish = ({ toolCalls, toolResults }: { toolCalls?: any[], toolResults?: any[] }) => {
+          console.log('🔧 [Chat Handler] onStepFinish called, toolCalls:', toolCalls, 'toolResults:', toolResults);
+          if (toolCalls && toolCalls.length > 0) {
+            toolCalls.forEach((toolCall: any, index: number) => {
+              const result = toolResults?.[index];
+              const event = {
+                type: 'tool_finish' as const,
+                toolName: toolCall.toolName,
+                args: toolCall.args,
+                result: result ? (typeof result === 'string' ? result.substring(0, 200) : 'completed') : undefined,
+                timestamp: Date.now()
+              };
+              console.log(`🔧 [Chat Handler] Calling onToolEvent with:`, event);
+              onToolEvent(event);
+              const resultPreview = result ? (typeof result === 'string' ? result.substring(0, 100) : JSON.stringify(result).substring(0, 100)) : 'none';
+              console.log(`✅ [Tool Finish] ${toolCall.toolName}`, {
+                success: result ? 'completed' : 'no result',
+                resultPreview
+              });
+            });
+          } else {
+            console.log('🔧 [Chat Handler] onStepFinish called but no toolCalls found');
+          }
+        };
+      } else {
+        console.log('🔧 [Chat Handler] onToolEvent callback is NOT provided');
+      }
+
       // Use streamText for AI generation with tools
       // streamText returns the result object synchronously. The async work happens when the stream is consumed.
       const result = streamText(streamOptions);
-      
+
       console.timeEnd('streamText execution');
       console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
-      
+
       // The responsePromise logic has been removed as it is not the standard way to catch streaming errors.
       // The `onError` callback added to streamOptions is the correct and documented approach.
 
       // Debug the result object to see what we got back
       console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
       console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
-      // log the result headers
-      // console.log(`📊 [Chat Handler] Result headers: ${JSON.stringify((await result.response))}`);
-      // console.log(JSON.stringify(result.response.headers, null, 2));
-      
+
       // Expose result to global scope for interactive investigation
       (globalThis as any).lastStreamTextResult = result;
       console.log(`🔍 [Chat Handler] Result object exposed as 'globalThis.lastStreamTextResult' for interactive investigation`);
-      console.log(`🔍 [Chat Handler] Try: globalThis.lastStreamTextResult.textPromise, globalThis.lastStreamTextResult.toolCallsPromise, etc.`);
-      
-      // Verify it was set correctly
-      console.log(`🔍 [Chat Handler] Verification - globalThis.lastStreamTextResult exists:`, typeof (globalThis as any).lastStreamTextResult);
-      console.log(`🔍 [Chat Handler] Verification - Object keys:`, Object.keys((globalThis as any).lastStreamTextResult || {}));
 
-      // If there were tool calls, log them
-      if (result.toolCalls && Array.isArray(result.toolCalls)) {
-        console.log(`🛠️ [Chat Handler] Tool calls made: ${result.toolCalls.length}`);
-        result.toolCalls.forEach((call, idx) => {
-          console.log(`🛠️ [Chat Handler] Tool call ${idx+1}: ${call.name || 'unnamed'}`);
-          if (call.args) {
-            console.log(`🛠️ [Chat Handler] Tool call args: ${JSON.stringify(call.args)}`);
-          }
-          if (call.result) {
-            console.log(`🛠️ [Chat Handler] Tool call result status: ${call.result.success ? 'success' : 'failure'}`);
-          }
-        });
-      }
-      
       // Convert to text stream response
       return result.toTextStreamResponse();
     } catch (streamError: any) {

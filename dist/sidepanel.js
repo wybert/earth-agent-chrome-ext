@@ -144068,6 +144068,9 @@ function ChatUI() {
     const [port, setPort] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null);
     const [connectionAttempts, setConnectionAttempts] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(0);
     const MAX_CONNECTION_ATTEMPTS = 3;
+    // Tool events state for debugging panel
+    const [toolEvents, setToolEvents] = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]);
+    const toolEventsRef = (0,react__WEBPACK_IMPORTED_MODULE_0__.useRef)([]);
     const persistSessionsState = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)((nextSessions, nextActiveId) => {
         const payload = { [CHAT_SESSIONS_KEY]: nextSessions };
         if (typeof nextActiveId !== 'undefined') {
@@ -144352,9 +144355,23 @@ function ChatUI() {
                         if (lastMessageIndex < 0 || !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
                             return prevMessages;
                         }
+                        // Extract tool calls section and text content separately
+                        const currentContent = prevMessages[lastMessageIndex].content || '';
+                        const startMarker = '<!-- TOOL_CALLS -->\n';
+                        const endMarker = '\n<!-- END_TOOL_CALLS -->\n\n';
+                        let toolCallsSection = '';
+                        let textContent = currentContent;
+                        const startIndex = currentContent.indexOf(startMarker);
+                        if (startIndex >= 0) {
+                            const endIndex = currentContent.indexOf(endMarker, startIndex);
+                            if (endIndex >= 0) {
+                                toolCallsSection = currentContent.substring(startIndex, endIndex + endMarker.length);
+                                textContent = currentContent.substring(endIndex + endMarker.length);
+                            }
+                        }
                         const updatedLastMessage = {
                             ...prevMessages[lastMessageIndex],
-                            content: prevMessages[lastMessageIndex].content + response.chunk
+                            content: toolCallsSection + textContent + response.chunk
                         };
                         return [...prevMessages.slice(0, lastMessageIndex), updatedLastMessage];
                     });
@@ -144366,11 +144383,66 @@ function ChatUI() {
                     const lastMessageIndex = prevMessages.length - 1;
                     if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
                         const finalId = response.requestId || prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
-                        const finalizedMessage = { ...prevMessages[lastMessageIndex], id: finalId };
+                        // Keep the tool call information in final message
+                        const content = prevMessages[lastMessageIndex].content || '';
+                        const finalizedMessage = { ...prevMessages[lastMessageIndex], id: finalId, content };
                         return [...prevMessages.slice(0, lastMessageIndex), finalizedMessage];
                     }
                     return prevMessages;
                 });
+                // Clear tool events state (but keep them in the message)
+                toolEventsRef.current = [];
+                setToolEvents([]);
+                break;
+            case 'TOOL_EVENT':
+                // Handle tool execution events - add to message content
+                console.log('🔧 [Chat] TOOL_EVENT received:', response.event);
+                if (response.event) {
+                    // Update tool events ref and state
+                    toolEventsRef.current = [...toolEventsRef.current, response.event];
+                    setToolEvents(toolEventsRef.current);
+                    console.log('🔧 [Chat] Current tool events:', toolEventsRef.current);
+                    // Then update message
+                    setMessages(prevMessages => {
+                        const lastMessageIndex = prevMessages.length - 1;
+                        if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
+                            const currentMessage = prevMessages[lastMessageIndex];
+                            const content = currentMessage.content || '';
+                            // Extract existing tool calls section and text content
+                            const startMarker = '<!-- TOOL_CALLS -->\n';
+                            const endMarker = '\n<!-- END_TOOL_CALLS -->\n\n';
+                            let textContent = content;
+                            const startIndex = content.indexOf(startMarker);
+                            if (startIndex >= 0) {
+                                const endIndex = content.indexOf(endMarker, startIndex);
+                                if (endIndex >= 0) {
+                                    textContent = content.substring(endIndex + endMarker.length);
+                                }
+                            }
+                            // Build tool status section from all events in ref
+                            const toolStatusLines = [];
+                            toolEventsRef.current.forEach(event => {
+                                if (event.type === 'tool_start') {
+                                    toolStatusLines.push(`⚙️ 开始调用: ${event.toolName}`);
+                                }
+                                else if (event.type === 'tool_finish') {
+                                    toolStatusLines.push(`✅ 调用完成: ${event.toolName}`);
+                                }
+                            });
+                            const toolStatus = toolStatusLines.length > 0
+                                ? startMarker + toolStatusLines.join('  \n') + endMarker
+                                : '';
+                            console.log('🔧 [Chat] Tool status to add:', toolStatus);
+                            console.log('🔧 [Chat] Text content:', textContent.substring(0, 100));
+                            const updatedMessage = {
+                                ...currentMessage,
+                                content: toolStatus + textContent
+                            };
+                            return [...prevMessages.slice(0, lastMessageIndex), updatedMessage];
+                        }
+                        return prevMessages;
+                    });
+                }
                 break;
             case 'ERROR':
                 console.error('Background script error:', response.error);
@@ -144503,6 +144575,8 @@ function ChatUI() {
         setInput('');
         setIsLocalLoading(true);
         setError(null);
+        toolEventsRef.current = []; // Clear previous tool events
+        setToolEvents([]);
         const messagesForApi = sessions[activeSessionId]?.messages
             ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
             .concat(newUserMessage) || [newUserMessage];
