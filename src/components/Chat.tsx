@@ -198,6 +198,10 @@ export function ChatUI() {
   const [toolEvents, setToolEvents] = useState<Array<{type: string, toolName?: string, args?: any, result?: any, timestamp: number}>>([]);
   const toolEventsRef = useRef<Array<{type: string, toolName?: string, args?: any, result?: any, timestamp: number}>>([]);
 
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitleText, setEditingTitleText] = useState('');
+
   const persistSessionsState = useCallback((nextSessions: ChatSessions, nextActiveId?: string | null) => {
     const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: nextSessions };
     if (typeof nextActiveId !== 'undefined') {
@@ -837,12 +841,10 @@ export function ChatUI() {
     setIsMobileSidebarOpen(false);
   }, [sessions, activeSessionId]);
 
-  const handleRenameSession = useCallback((sessionId: string) => {
+  const handleRenameSession = useCallback((sessionId: string, newTitle: string) => {
     const session = sessions[sessionId];
     if (!session) return;
-    const nextTitle = window.prompt('Rename conversation', session.meta.title);
-    if (nextTitle === null) return;
-    const normalized = nextTitle.trim();
+    const normalized = newTitle.trim();
     if (!normalized || normalized === session.meta.title) return;
     setSessions(prev => {
       const current = prev[sessionId];
@@ -858,6 +860,28 @@ export function ChatUI() {
       return updatedSessions;
     });
   }, [sessions, persistSessionsState]);
+
+  const startEditingTitle = useCallback(() => {
+    if (!activeSessionId) return;
+    const session = sessions[activeSessionId];
+    if (!session) return;
+    setEditingTitleText(session.meta.title);
+    setIsEditingTitle(true);
+  }, [activeSessionId, sessions]);
+
+  const saveEditingTitle = useCallback(() => {
+    if (!activeSessionId || !editingTitleText.trim()) {
+      setIsEditingTitle(false);
+      return;
+    }
+    handleRenameSession(activeSessionId, editingTitleText);
+    setIsEditingTitle(false);
+  }, [activeSessionId, editingTitleText, handleRenameSession]);
+
+  const cancelEditingTitle = useCallback(() => {
+    setIsEditingTitle(false);
+    setEditingTitleText('');
+  }, []);
 
   const handleDeleteSession = useCallback((sessionId: string) => {
     const session = sessions[sessionId];
@@ -1058,16 +1082,36 @@ export function ChatUI() {
             >
               <Plus className="h-4 w-4 text-gray-600" />
             </Button>
-            <h2 className="text-sm font-medium truncate" title={activeSessionTitle}>
-              {activeSessionTitle}
-            </h2>
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editingTitleText}
+                onChange={(e) => setEditingTitleText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveEditingTitle();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEditingTitle();
+                  }
+                }}
+                onBlur={saveEditingTitle}
+                autoFocus
+                className="flex-1 text-sm font-medium bg-transparent border-b border-primary px-1 focus:outline-none min-w-0"
+              />
+            ) : (
+              <h2 className="text-sm font-medium truncate" title={activeSessionTitle}>
+                {activeSessionTitle}
+              </h2>
+            )}
             <Button
               variant="ghost"
               size="icon"
               aria-label="Rename chat"
               className="h-8 w-8 shrink-0"
               title="Rename chat"
-              onClick={() => activeSessionId && handleRenameSession(activeSessionId)}
+              onClick={startEditingTitle}
               disabled={!activeSessionId}
             >
               <Edit2 className="h-4 w-4" />
