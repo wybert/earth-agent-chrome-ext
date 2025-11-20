@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Check, X, Eye, EyeOff } from 'lucide-react';
+import { Check, X, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 import { Label } from './ui/label';
 
@@ -806,6 +806,38 @@ export function Settings({ onClose }: SettingsProps) {
           <p className="mt-1 text-xs text-gray-500">
             Selected model: <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{selectedModel}</code>
           </p>
+        </div>
+
+        {/* About Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold mb-3">About Earth Agent</h3>
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+            <p className="flex items-center justify-between">
+              <span>Version:</span>
+              <code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">1.0.0</code>
+            </p>
+            <a
+              href="https://github.com/wybert/earth-agent-chrome-ext"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <span>GitHub Repository</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+            <a
+              href="https://github.com/wybert/earth-agent-chrome-ext/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <span>Report an Issue</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+            <p className="pt-2 text-xs">
+              AI-powered assistant for Google Earth Engine
+            </p>
+          </div>
         </div>
       </div>
     </Card>
