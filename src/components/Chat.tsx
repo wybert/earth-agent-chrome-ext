@@ -813,7 +813,27 @@ export function ChatUI() {
       if (!port) return;
       port.postMessage({ type: 'CANCEL_STREAM' });
       setIsLocalLoading(false);
-      setMessages(prev => prev.filter((m) => !m.id.startsWith('assistant-placeholder-')));
+
+      // Keep the partial message that was generated, but finalize it
+      setMessages(prev => {
+        const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
+        if (placeholderIndex !== -1) {
+          const placeholder = prev[placeholderIndex];
+          // Only keep the message if it has content
+          if (placeholder.content && placeholder.content.trim()) {
+            // Convert placeholder to final message (keep the content as-is)
+            const finalMessage = {
+              ...placeholder,
+              id: `cancelled-${Date.now()}`
+            };
+            return [...prev.slice(0, placeholderIndex), finalMessage, ...prev.slice(placeholderIndex + 1)];
+          } else {
+            // If no content was generated, remove the placeholder
+            return prev.filter((m) => !m.id.startsWith('assistant-placeholder-'));
+          }
+        }
+        return prev;
+      });
   }, [port]);
 
   // Restore append (if needed, though likely unused with port logic)
