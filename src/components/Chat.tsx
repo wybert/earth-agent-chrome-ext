@@ -202,6 +202,9 @@ export function ChatUI() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitleText, setEditingTitleText] = useState('');
 
+  // Agent mode state (ask = read-only, do = full actions)
+  const [agentMode, setAgentMode] = useState<'ask' | 'do'>('ask');
+
   const persistSessionsState = useCallback((nextSessions: ChatSessions, nextActiveId?: string | null) => {
     const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: nextSessions };
     if (typeof nextActiveId !== 'undefined') {
@@ -749,13 +752,15 @@ export function ChatUI() {
         messages: messagesForApi,
         attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
         provider: provider,
-        model: model
+        model: model,
+        mode: agentMode
       };
-      
+
       console.log(`🔧 [Chat] Full message payload being sent:`, {
         type: messagePayload.type,
         provider: messagePayload.provider,
         model: messagePayload.model,
+        mode: messagePayload.mode,
         messageLength: messagePayload.message?.length || 0,
         messagesCount: messagePayload.messages?.length || 0,
         hasAttachments: !!messagePayload.attachments
@@ -769,7 +774,7 @@ export function ChatUI() {
       
       port.postMessage(messagePayload);
     });
-  }, [input, isLocalLoading, port, activeSessionId, sessions]);
+  }, [input, isLocalLoading, port, activeSessionId, sessions, agentMode]);
 
   // Restore regenerate handler
   const handleRegenerate = useCallback(() => {
@@ -1196,6 +1201,8 @@ export function ChatUI() {
               append={append as any}
               onRegenerate={handleRegenerate}
               showRegenerate={canRegenerate}
+              mode={agentMode}
+              onModeChange={setAgentMode}
               className="h-full"
             />
 

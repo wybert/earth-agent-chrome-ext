@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { FilePreview } from "@/components/ui/file-preview"
 import { InterruptPrompt } from "@/components/ui/interrupt-prompt"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 interface MessageInputBaseProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -23,6 +24,8 @@ interface MessageInputBaseProps
   transcribeAudio?: (blob: Blob) => Promise<string>
   onRegenerate?: () => void
   showRegenerate?: boolean
+  mode?: 'ask' | 'do'
+  onModeChange?: (mode: 'ask' | 'do') => void
 }
 
 interface MessageInputWithoutAttachmentProps extends MessageInputBaseProps {
@@ -50,6 +53,8 @@ export function MessageInput({
   transcribeAudio,
   onRegenerate,
   showRegenerate = false,
+  mode = 'ask',
+  onModeChange,
   ...props
 }: MessageInputProps) {
   const [isDragging, setIsDragging] = useState(false)
@@ -257,7 +262,24 @@ export function MessageInput({
         </div>
       </div>
 
-      <div className="absolute right-3 bottom-3 z-20 flex gap-2">
+      <div className="absolute left-3 right-3 bottom-3 z-20 flex justify-between items-center">
+        {/* Left side - Mode selector */}
+        <div>
+          {onModeChange && (
+            <Select value={mode} onValueChange={(value) => onModeChange(value as 'ask' | 'do')}>
+              <SelectTrigger className="h-8 w-auto px-3 text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                <span>{mode === 'ask' ? 'Ask' : 'Do'}</span>
+              </SelectTrigger>
+              <SelectContent side="top">
+                <SelectItem value="ask">Ask</SelectItem>
+                <SelectItem value="do">Do</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* Right side - Action buttons */}
+        <div className="flex gap-2">
         {showRegenerate && onRegenerate && !isGenerating && (
           <Button
             type="button"
@@ -338,6 +360,7 @@ export function MessageInput({
             <ArrowUp className="h-5 w-5" />
           </Button>
         )}
+        </div>
       </div>
 
       {props.allowAttachments && <FileUploadOverlay isDragging={isDragging} />}

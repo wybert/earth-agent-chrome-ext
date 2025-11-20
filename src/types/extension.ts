@@ -35,4 +35,5 @@ export interface ExtensionMessage {
   attachments?: Array<{ type: string; mimeType?: string; data: string }>; // Support for image attachments
   hasMultiModal?: boolean; // Flag to indicate multi-modal content
   sender?: string;
+  mode?: 'ask' | 'do'; // Agent mode: ask (read-only) or do (full actions)
 }
