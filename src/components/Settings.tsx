@@ -62,6 +62,8 @@ const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
     'gemini-pro-latest',
     'gemini-flash-latest',
     'gemini-flash-lite-latest',
+    // Gemini 3 Pro Series (Latest with thinking)
+    'gemini-3-pro-preview',
     // Gemini 2.5 Pro Series (Most Capable)
     'gemini-2.5-pro',
     'gemini-2.5-pro-preview-06-05',
@@ -147,6 +149,8 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'gemini-pro-latest': 'Gemini Pro (Latest)',
   'gemini-flash-latest': 'Gemini Flash (Latest)',
   'gemini-flash-lite-latest': 'Gemini Flash-Lite (Latest)',
+  // Gemini 3 Pro Series
+  'gemini-3-pro-preview': 'Gemini 3 Pro Preview (Thinking)',
   // Gemini 2.5 Pro Series
   'gemini-2.5-pro': 'Gemini 2.5 Pro (Recommended)',
   'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
