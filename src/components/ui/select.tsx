@@ -87,7 +87,7 @@ const SelectContent = ({ children, side = 'bottom' }: SelectContentProps) => {
         onClick={() => setIsOpen(false)}
       />
       <div className={cn(
-        "absolute left-0 z-50 min-w-full w-32 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto dark:bg-gray-800 dark:border-gray-600",
+        "absolute left-0 z-50 min-w-full w-32 bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto",
         positionClasses
       )}>
         {children}
@@ -103,8 +103,8 @@ const SelectItem = ({ value, children }: SelectItemProps) => {
   return (
     <div
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-gray-100 dark:hover:bg-gray-700 focus:bg-gray-100 dark:focus:bg-gray-700",
-        isSelected && "bg-gray-100 dark:bg-gray-700"
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm text-gray-200 outline-none hover:bg-gray-700/50 focus:bg-gray-700/50",
+        isSelected && "bg-gray-700/50"
       )}
       onClick={() => {
         onValueChange?.(value)
