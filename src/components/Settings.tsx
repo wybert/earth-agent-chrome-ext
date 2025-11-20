@@ -357,60 +357,70 @@ export function Settings({ onClose }: SettingsProps) {
       // For OpenAI, we'll test with a simple models.list call
       if (provider === 'openai') {
         // First check if the API key is valid by listing models
-        const response = await fetch('https://api.openai.com/v1/models', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('OpenAI Connection test result:', result);
-          
-          // Then test if the selected model is valid with a simple completion
-          if (model) {
-            try {
-              const modelTestResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${key}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  model: model,
-                  messages: [{ role: 'user', content: 'Hello, please respond with "Model test successful"' }],
-                  max_tokens: 20
-                })
-              });
-              
-              if (modelTestResponse.ok) {
-                console.log(`Model test successful for ${model}`);
-                setConnectionStatus('success');
-              } else {
-                const errorData = await modelTestResponse.json();
-                console.error(`Model ${model} test failed:`, errorData);
-                setConnectionStatus('error');
-              }
-            } catch (modelError) {
-              console.error(`Error testing model ${model}:`, modelError);
-              setConnectionStatus('error');
-            }
-          } else {
+        try {
+          const response = await fetch('https://api.openai.com/v1/models', {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${key}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('OpenAI Connection test result:', result);
+
+            // API key is valid if we can list models
+            // Mark as success immediately - don't test specific model to avoid API charges
             setConnectionStatus('success');
+
+            // Optional: Test specific model (commented out to avoid API charges)
+            /*
+            if (model) {
+              try {
+                const modelTestResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    model: model,
+                    messages: [{ role: 'user', content: 'Hello, please respond with "Model test successful"' }],
+                    max_tokens: 20
+                  })
+                });
+
+                if (modelTestResponse.ok) {
+                  console.log(`Model test successful for ${model}`);
+                } else {
+                  const errorData = await modelTestResponse.json();
+                  console.warn(`Model ${model} test failed (but API key is valid):`, errorData);
+                }
+              } catch (modelError) {
+                console.warn(`Error testing model ${model} (but API key is valid):`, modelError);
+              }
+            }
+            */
+          } else {
+            console.error('OpenAI API connection failed:', response.statusText);
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Error details:', errorData);
+            setConnectionStatus('error');
           }
-        } else {
-          console.error('OpenAI API connection failed:', response.statusText);
+        } catch (networkError) {
+          console.error('OpenAI API network error:', networkError);
           setConnectionStatus('error');
         }
       } 
       // For Anthropic, we'll check if the API key format is valid (usually starts with 'sk-ant-')
       else if (provider === 'anthropic') {
-        // Validate Anthropic API key format (usually starts with 'sk-ant-')
-        if (key.startsWith('sk-ant-') && key.length > 20) {
-          console.log('Anthropic API key format looks valid');
-          
+        // Validate Anthropic API key format - more relaxed validation
+        // Anthropic keys usually start with 'sk-ant-' but format may vary
+        if (key && key.trim().length > 20) {
+          console.log('Anthropic API key format looks valid (length check passed)');
+          console.log(`API key length: ${key.length}, starts with: ${key.substring(0, 7)}`);
+
           // If a model was selected, we could test it with a minimal API call
           // Note: This is commented out to avoid unnecessary API charges
           // Uncomment this for production if desired
@@ -430,7 +440,7 @@ export function Settings({ onClose }: SettingsProps) {
                   max_tokens: 20
                 })
               });
-              
+
               if (modelTestResponse.ok) {
                 console.log(`Model test successful for ${model}`);
                 setConnectionStatus('success');
@@ -449,17 +459,19 @@ export function Settings({ onClose }: SettingsProps) {
           */
           setConnectionStatus('success');
         } else {
-          console.error('Anthropic API key format looks invalid');
+          console.error('Anthropic API key looks invalid - too short or empty');
           setConnectionStatus('error');
         }
       }
       // For Google, we'll check if the API key format is valid
       else if (provider === 'google') {
-        // Validate Google API key format (usually starts with 'AIza' and is 39 characters long)
-        if (key.startsWith('AIza') && key.length === 39) {
-          console.log('Google API key format looks valid');
-          
-          // We could test with a simple API call but for now just validate format
+        // Validate Google API key format - more relaxed validation
+        // Google API keys can have different formats (AIza*, or other formats for Gemini)
+        if (key && key.trim().length >= 20) {
+          console.log('Google API key format looks valid (length check passed)');
+          console.log(`API key length: ${key.length}, starts with: ${key.substring(0, 4)}`);
+
+          // We could test with a simple API call but for now just validate that key exists
           // Note: This is commented out to avoid unnecessary API charges
           // Uncomment this for production if desired
           /*
@@ -472,7 +484,7 @@ export function Settings({ onClose }: SettingsProps) {
                   'Content-Type': 'application/json'
                 }
               });
-              
+
               if (modelTestResponse.ok) {
                 console.log(`Google API connection test successful`);
                 setConnectionStatus('success');
@@ -491,7 +503,7 @@ export function Settings({ onClose }: SettingsProps) {
           */
           setConnectionStatus('success');
         } else {
-          console.error('Google API key format looks invalid');
+          console.error('Google API key looks invalid - too short or empty');
           setConnectionStatus('error');
         }
       }
