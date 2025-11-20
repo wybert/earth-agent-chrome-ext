@@ -265,11 +265,12 @@ export async function handleChatRequest(
   model?: string,
   heliconeHeaders?: Record<string, string>,
   baseURL?: string,
-  onToolEvent?: ToolEventCallback
+  onToolEvent?: ToolEventCallback,
+  mode: 'ask' | 'do' = 'ask'
 ): Promise<Response> {
   try {
     // Debug log at start of request
-    console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}`);
+    console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}, mode: ${mode}`);
     
     if (!apiKey && provider !== 'ollama') {
       console.error(`❌ [Chat Handler] API key not configured for ${provider}`);
@@ -2025,42 +2026,32 @@ export async function handleChatRequest(
       },
     };
     
-    // Add tools conditionally - temporarily disable for Ollama to test 403 issue
-    if (provider !== 'ollama') {
-      console.log(`🛠️ [Chat Handler] Adding tools for ${provider} provider`);
-      streamOptions.tools = {
-        weather: weatherTool,
-        earthEngineDataset: earthEngineDatasetTool,
-        earthEngineScript: earthEngineScriptTool,
-        earthEngineRunCode: earthEngineRunCodeTool,
-        screenshot: screenshotTool,
-        snapshot: snapshotTool,
-        clickByRefId: clickByRefIdTool,
-        clickByCoordinates: clickByCoordinatesTool,
-        resetMapInspectorConsole: resetMapInspectorConsoleTool,
-        clearScript: clearScriptTool
-      };
-      streamOptions.toolChoice = 'auto';
-      streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
-    } else if (provider === 'ollama') {
-      console.log(`🛠️ [Chat Handler] Re-enabling tools for Ollama (CORS issue resolved)`);
-      streamOptions.tools = {
-        weather: weatherTool,
-        earthEngineDataset: earthEngineDatasetTool,
-        earthEngineScript: earthEngineScriptTool,
-        earthEngineRunCode: earthEngineRunCodeTool,
-        screenshot: screenshotTool,
-        snapshot: snapshotTool,
-        clickByRefId: clickByRefIdTool,
-        clickByCoordinates: clickByCoordinatesTool,
-        resetMapInspectorConsole: resetMapInspectorConsoleTool,
-        clearScript: clearScriptTool
-      };
-      streamOptions.toolChoice = 'auto';
-      streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
-    } else {
-      console.log(`🛠️ [Chat Handler] No tools configured for provider: ${provider}`);
-    }
+    // Configure tools based on mode
+    // Ask mode: read-only tools (discuss, analyze, plan)
+    // Do mode: all tools including write operations (create, edit, run)
+    const readOnlyTools = {
+      weather: weatherTool,
+      earthEngineDataset: earthEngineDatasetTool,
+      screenshot: screenshotTool,
+      snapshot: snapshotTool,
+      clickByRefId: clickByRefIdTool,
+      clickByCoordinates: clickByCoordinatesTool,
+    };
+
+    const writeTools = {
+      earthEngineScript: earthEngineScriptTool,
+      earthEngineRunCode: earthEngineRunCodeTool,
+      resetMapInspectorConsole: resetMapInspectorConsoleTool,
+      clearScript: clearScriptTool
+    };
+
+    // Determine which tools to use based on mode
+    const toolsToUse = mode === 'ask' ? readOnlyTools : { ...readOnlyTools, ...writeTools };
+
+    console.log(`🛠️ [Chat Handler] Adding tools for ${provider} provider in ${mode} mode (${Object.keys(toolsToUse).length} tools)`);
+    streamOptions.tools = toolsToUse;
+    streamOptions.toolChoice = 'auto';
+    streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
     
     // For Anthropic models, add special headers for browser usage
     if (provider === 'anthropic') {

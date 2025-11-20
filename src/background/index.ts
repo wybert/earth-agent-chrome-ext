@@ -1870,6 +1870,9 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
     // Call the new handler which directly processes messages
     // Include Helicone headers if provided in the message
+    const mode = message.mode || 'ask'; // Default to ask mode if not specified
+    console.log(`[${requestId}] Agent mode: ${mode}`);
+
     const response = await handleChatRequest(
       conversationMessages,
       apiConfig.apiKey,
@@ -1877,7 +1880,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       apiConfig.model,
       message.heliconeHeaders,
       apiConfig.baseURL,
-      onToolEvent
+      onToolEvent,
+      mode
     );
       
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
