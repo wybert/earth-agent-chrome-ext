@@ -412,10 +412,11 @@ export function ChatUI() {
 
   // Restore background message handler
   const handleResponse = (response: any) => {
-    setIsLocalLoading(false);
+    // Don't set isLocalLoading to false here - it should only be set to false
+    // when streaming actually ends (CHAT_STREAM_END) or there's an error
     setError(null);
     setFallbackMode(false);
-    
+
     // Remove verbose logging of every chunk message
     // Only log non-stream chunks for debugging
     if (response.type !== 'CHAT_STREAM_CHUNK') {
