@@ -8,6 +8,7 @@ import { createOllama } from 'ollama-ai-provider';
 import { z } from 'zod';
 import { getDocumentation } from '../lib/tools/context7';
 import { snapshot as browserSnapshot, SnapshotResponse } from '../lib/tools/browser/snapshot';
+import { createResilientFetch } from '../utils/resilientFetch';
 
 // Type for tool event callback
 export type ToolEventCallback = (event: {
@@ -29,6 +30,9 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
   qwen: 'qwen-max-latest',
   ollama: 'phi3'
 };
+
+const NETWORK_RETRY_ATTEMPTS = 3;
+const NETWORK_RETRY_BASE_DELAY_MS = 700;
 
 /**
  * Smart tab selection: Chooses the most relevant GEE tab from multiple options
@@ -375,7 +379,14 @@ export async function handleChatRequest(
       console.log(`🔧 [Chat Handler] OpenAI API key validated: ${apiKey.substring(0, 10)}... (length: ${apiKey.length})`);
 
       // Configure OpenAI with Helicone proxy if headers are provided
-      const openaiConfig: any = { apiKey };
+      const openaiConfig: any = {
+        apiKey,
+        fetch: createResilientFetch({
+          label: 'ChatHandler:OpenAI',
+          maxAttempts: NETWORK_RETRY_ATTEMPTS,
+          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+        })
+      };
 
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
         console.log('🔍 [Chat Handler] Configuring OpenAI with Helicone observability');
@@ -401,8 +412,13 @@ export async function handleChatRequest(
       // Create the Anthropic provider with optional Helicone configuration
       const anthropicConfig: any = {
         apiKey,
-        // Use our custom fetch to handle CORS issues
-        fetch: corsProxyFetch,
+        // Use our custom fetch wrapped with retries to handle CORS and transient failures
+        fetch: createResilientFetch({
+          label: 'ChatHandler:Anthropic',
+          fetchImpl: corsProxyFetch,
+          maxAttempts: NETWORK_RETRY_ATTEMPTS,
+          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+        }),
       };
       
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
@@ -441,6 +457,11 @@ export async function handleChatRequest(
       // Create the Google provider
       const googleConfig: any = {
         apiKey,
+        fetch: createResilientFetch({
+          label: 'ChatHandler:Google',
+          maxAttempts: NETWORK_RETRY_ATTEMPTS,
+          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+        }),
         // Add baseURL to help with debugging
         // Note: AI SDK Google provider uses the default Google AI API endpoint
       };
@@ -495,7 +516,12 @@ export async function handleChatRequest(
       // Create the Qwen provider with the specified base URL
       const qwenConfig: any = {
         apiKey,
-        baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+        baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        fetch: createResilientFetch({
+          label: 'ChatHandler:Qwen',
+          maxAttempts: NETWORK_RETRY_ATTEMPTS,
+          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+        }),
       };
       
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
@@ -574,12 +600,19 @@ export async function handleChatRequest(
           throw error;
         }
       };
+
+      const resilientOllamaFetch = createResilientFetch({
+        label: 'ChatHandler:Ollama',
+        fetchImpl: ollamaFetch,
+        maxAttempts: NETWORK_RETRY_ATTEMPTS,
+        baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+      });
       
       // Create the Ollama provider with the specified base URL
       const ollamaConfig: any = {
         baseURL: ollamaBaseURL,
         // Use our custom fetch for Ollama requests
-        fetch: ollamaFetch
+        fetch: resilientOllamaFetch
       };
       
       // Add the API key only if it exists and is not empty
