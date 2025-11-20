@@ -22,6 +22,12 @@ const sidePanelPorts = new Map<string, chrome.runtime.Port>();
 // Store information about loaded content scripts
 const contentScriptTabs = new Map<number, boolean>();
 
+// Track cancelled request IDs
+const cancelledRequests = new Map<string, boolean>();
+
+// Map ports to their active request IDs
+const activeRequestsByPort = new Map<chrome.runtime.Port, string>();
+
 // Timing constants
 const CONTENT_SCRIPT_PING_TIMEOUT = 5000; // 5 seconds
 const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
@@ -1592,9 +1598,13 @@ chrome.runtime.onConnect.addListener((newPort) => {
           break;
 
         case 'CANCEL_STREAM':
-          // User cancelled the stream - don't send any error message
+          // User cancelled the stream - mark the active request as cancelled
           console.log('Stream cancelled by user');
-          // The frontend already handles cleanup, so we just acknowledge silently
+          const activeRequestId = activeRequestsByPort.get(newPort);
+          if (activeRequestId) {
+            console.log(`Marking request ${activeRequestId} as cancelled`);
+            cancelledRequests.set(activeRequestId, true);
+          }
           break;
 
         default:
@@ -1624,8 +1634,13 @@ chrome.runtime.onConnect.addListener((newPort) => {
           break;
 
         case 'CANCEL_STREAM':
-          // User cancelled the stream - don't send any error message
+          // User cancelled the stream - mark the active request as cancelled
           console.log('Agent test stream cancelled by user');
+          const agentTestRequestId = activeRequestsByPort.get(newPort);
+          if (agentTestRequestId) {
+            console.log(`Marking agent test request ${agentTestRequestId} as cancelled`);
+            cancelledRequests.set(agentTestRequestId, true);
+          }
           break;
 
         default:
@@ -1679,6 +1694,10 @@ chrome.runtime.onConnect.addListener((newPort) => {
 // Helper function to handle chat messages
 async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   const requestId = `req_${Date.now()}`;
+
+  // Track this request ID for this port so we can cancel it if needed
+  activeRequestsByPort.set(port, requestId);
+
   console.log(`[${requestId}] Handling chat message...`);
   console.log(`[${requestId}] Message type: ${message.type}`);
   
@@ -1898,6 +1917,14 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
     try {
       while (true) {
+        // Check if this request was cancelled
+        if (cancelledRequests.get(requestId)) {
+          console.log(`[${requestId}] Request was cancelled, stopping stream.`);
+          // Clean up the reader
+          await reader.cancel();
+          break;
+        }
+
         const { done, value } = await reader.read();
 
         if (done) {
@@ -1928,16 +1955,30 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         requestId,
         error: `Stream reading error: ${errorMessage}`
       });
+    } finally {
+      // Clean up: remove the request from tracking maps
+      console.log(`[${requestId}] Cleaning up request tracking`);
+      cancelledRequests.delete(requestId);
+      if (activeRequestsByPort.get(port) === requestId) {
+        activeRequestsByPort.delete(port);
+      }
     }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[${requestId}] Chat processing error:`, errorMessage);
-    port.postMessage({ 
+    port.postMessage({
       type: 'ERROR',
       requestId,
-      error: `Chat handler error: ${errorMessage}` 
+      error: `Chat handler error: ${errorMessage}`
     });
+  } finally {
+    // Clean up request tracking if not already cleaned up
+    console.log(`[${requestId}] Final cleanup of request tracking`);
+    cancelledRequests.delete(requestId);
+    if (activeRequestsByPort.get(port) === requestId) {
+      activeRequestsByPort.delete(port);
+    }
   }
 }
 
