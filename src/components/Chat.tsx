@@ -588,7 +588,13 @@ export function ChatUI() {
         break;
       case 'ERROR':
         console.error('Background script error:', response.error);
-        
+
+        // Ignore "Unknown message type" errors - these are likely from CANCEL_STREAM race conditions
+        if (response.error && typeof response.error === 'string' && response.error.includes('Unknown message type')) {
+          console.log('Ignoring "Unknown message type" error (likely from cancelled stream)');
+          break;
+        }
+
         // Check if it's an Ollama CORS error and provide helpful UI feedback
         let errorMessage = `API Error: ${response.error || 'Unknown error.'}`;
         try {

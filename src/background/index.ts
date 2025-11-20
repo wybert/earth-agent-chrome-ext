@@ -1590,7 +1590,13 @@ chrome.runtime.onConnect.addListener((newPort) => {
           console.log('Received PING from side panel, responding with PONG');
           newPort.postMessage({ type: 'PONG', timestamp: Date.now() });
           break;
-          
+
+        case 'CANCEL_STREAM':
+          // User cancelled the stream - don't send any error message
+          console.log('Stream cancelled by user');
+          // The frontend already handles cleanup, so we just acknowledge silently
+          break;
+
         default:
           console.warn('Unknown side panel message type:', message.type);
           newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
@@ -1616,7 +1622,12 @@ chrome.runtime.onConnect.addListener((newPort) => {
           // Handle chat messages from agent test panel
           handleChatMessage(message, newPort);
           break;
-          
+
+        case 'CANCEL_STREAM':
+          // User cancelled the stream - don't send any error message
+          console.log('Agent test stream cancelled by user');
+          break;
+
         default:
           console.warn('Unknown agent test message type:', message.type);
           newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
