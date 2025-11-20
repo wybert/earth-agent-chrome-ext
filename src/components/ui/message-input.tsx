@@ -43,7 +43,7 @@ type MessageInputProps =
   | MessageInputWithAttachmentsProps
 
 export function MessageInput({
-  placeholder = "Ask AI...",
+  placeholder,
   className,
   onKeyDown: onKeyDownProp,
   submitOnEnter = true,
@@ -57,6 +57,10 @@ export function MessageInput({
   onModeChange,
   ...props
 }: MessageInputProps) {
+  // Set placeholder based on mode
+  const defaultPlaceholder = mode === 'ask' ? 'Ask a question...' : 'What would you like me to do?';
+  const effectivePlaceholder = placeholder || defaultPlaceholder;
+
   const [isDragging, setIsDragging] = useState(false)
   const [showInterruptPrompt, setShowInterruptPrompt] = useState(false)
 
@@ -218,7 +222,7 @@ export function MessageInput({
         <div className="relative flex-1">
           <textarea
             aria-label="Write your prompt here"
-            placeholder={placeholder || "Type your message..."}
+            placeholder={effectivePlaceholder}
             ref={textAreaRef as RefObject<HTMLTextAreaElement>}
             onPaste={onPaste}
             onKeyDown={onKeyDown}
