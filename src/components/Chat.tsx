@@ -338,9 +338,38 @@ export function ChatUI() {
     let currentPort: chrome.runtime.Port | null = null;
     let reconnectTimer: NodeJS.Timeout | null = null;
     let isActive = true;
-    
+    let isConnecting = false; // Connection lock to prevent race conditions
+    let messageListener: ((response: any) => void) | null = null;
+
     const connectToBackground = () => {
-      if (!isActive) return;
+      if (!isActive || isConnecting) {
+        console.log('Skipping connection attempt: isActive=%s, isConnecting=%s', isActive, isConnecting);
+        return;
+      }
+
+      isConnecting = true;
+
+      // Clear any pending reconnection timer
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+
+      // Clean up old port if exists
+      const oldPort = currentPort;
+      if (oldPort) {
+        try {
+          if (messageListener) {
+            oldPort.onMessage.removeListener(messageListener);
+          }
+          oldPort.disconnect();
+        } catch (e) {
+          console.warn('Error cleaning up old port:', e);
+        }
+        currentPort = null;
+        messageListener = null;
+      }
+
       try {
         console.log('Connecting to background script...');
         currentPort = chrome.runtime.connect({ name: 'sidepanel' });
@@ -349,11 +378,30 @@ export function ChatUI() {
         setFallbackMode(false);
         setError(null);
 
-        currentPort.onMessage.addListener(handleResponseWrapper);
+        // Create new message listener for this connection
+        messageListener = (response: any) => {
+          if (isActive) {
+            handleResponse(response);
+          }
+        };
+
+        currentPort.onMessage.addListener(messageListener);
         currentPort.onDisconnect.addListener(() => {
           console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
+
+          // Clean up this connection's listener
+          if (currentPort && messageListener) {
+            try {
+              currentPort.onMessage.removeListener(messageListener);
+            } catch (e) {
+              console.warn('Error removing message listener:', e);
+            }
+          }
+
           setPort(prevPort => (prevPort === currentPort ? null : prevPort));
-          if (isActive) {
+          isConnecting = false; // Release lock on disconnect
+
+          if (isActive && !isConnecting) {
              if (chrome.runtime.lastError) {
                 console.error('Disconnect error:', chrome.runtime.lastError.message);
                 setError(new Error(`Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`));
@@ -371,14 +419,17 @@ export function ChatUI() {
                    }
                 });
              } else {
-               console.log('Port disconnected normally.');
+               console.log('Port disconnected normally, will reconnect...');
                reconnectTimer = setTimeout(connectToBackground, 500);
             }
           }
         });
+
         console.log('Connected to background script');
         currentPort.postMessage({ type: 'PING' });
+        isConnecting = false; // Release lock after successful connection
       } catch (error: any) {
+        isConnecting = false; // Release lock on error
         if (isActive) {
         console.error('Failed to connect to background script:', error);
            setError(new Error(`Failed to connect: ${error.message}. Using Fallback Mode.`));
@@ -386,21 +437,30 @@ export function ChatUI() {
         }
       }
     };
-    
-    const handleResponseWrapper = (response: any) => {
-      if (isActive) {
-        handleResponse(response);
-      }
-    };
 
     connectToBackground();
     return () => {
       isActive = false;
+      isConnecting = false;
       console.log('ChatUI unmounting, disconnecting port...');
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (currentPort) {
-          currentPort.disconnect();
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
+
+      if (currentPort) {
+        try {
+          if (messageListener) {
+            currentPort.onMessage.removeListener(messageListener);
+          }
+          currentPort.disconnect();
+        } catch (e) {
+          console.warn('Error during cleanup:', e);
+        }
+        currentPort = null;
+      }
+
       setPort(null);
     };
   }, [connectionAttempts]); // Restore dependency
