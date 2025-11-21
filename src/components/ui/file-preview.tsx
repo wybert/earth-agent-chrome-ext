@@ -75,7 +75,7 @@ const CustomImagePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
         <span className="mb-1 truncate text-muted-foreground text-center">
           {fileName || 'Image attachment'}
         </span>
-        {imageData ? (
+        {imageData && imageData !== '' ? (
           <img
             alt={`Attachment ${fileName}`}
             className="w-full h-20 rounded-sm border bg-muted object-cover"
@@ -137,12 +137,17 @@ const ImageFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
         <span className="mb-1 truncate text-muted-foreground text-center">
           {fileName}
         </span>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          alt={`Attachment ${fileName}`}
-          className="w-full h-20 rounded-sm border bg-muted object-cover"
-          src={imageUrl}
-        />
+        {imageUrl && imageUrl !== '' ? (
+          <img
+            alt={`Attachment ${fileName}`}
+            className="w-full h-20 rounded-sm border bg-muted object-cover"
+            src={imageUrl}
+          />
+        ) : (
+          <div className="w-full h-20 flex items-center justify-center rounded-sm border bg-muted">
+            <ImageIcon className="h-6 w-6 text-foreground" />
+          </div>
+        )}
 
         {onRemove ? (
           <button
