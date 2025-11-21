@@ -43,6 +43,9 @@ const ChatResponseSchema = z.object({
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
 const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+
+// Session management limits
+const MAX_SESSIONS = 50; // Maximum number of chat sessions to keep
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
@@ -206,13 +209,51 @@ export function ChatUI() {
   // Agent mode state (ask = read-only, do = full actions)
   const [agentMode, setAgentMode] = useState<'ask' | 'do'>('ask');
 
+  // Clean up old sessions if exceeding MAX_SESSIONS limit
+  const cleanupOldSessions = useCallback((sessions: ChatSessions): ChatSessions => {
+    const sessionArray = Object.values(sessions);
+
+    // If we're under the limit, no cleanup needed
+    if (sessionArray.length <= MAX_SESSIONS) {
+      return sessions;
+    }
+
+    console.log(`Session limit exceeded: ${sessionArray.length}/${MAX_SESSIONS}. Cleaning up old sessions...`);
+
+    // Sort sessions: pinned first, then by updatedAt (newest first)
+    const sortedSessions = sessionArray.sort((a, b) => {
+      // Pinned sessions always come first
+      if (a.meta.pinned && !b.meta.pinned) return -1;
+      if (!a.meta.pinned && b.meta.pinned) return 1;
+      // Then sort by update time (newest first)
+      return b.meta.updatedAt - a.meta.updatedAt;
+    });
+
+    // Keep the first MAX_SESSIONS (which includes all pinned + newest unpinned)
+    const sessionsToKeep = sortedSessions.slice(0, MAX_SESSIONS);
+    const removedCount = sessionArray.length - sessionsToKeep.length;
+
+    console.log(`Removed ${removedCount} old unpinned session(s)`);
+
+    // Convert back to Record format
+    const cleanedSessions: ChatSessions = {};
+    sessionsToKeep.forEach(session => {
+      cleanedSessions[session.id] = session;
+    });
+
+    return cleanedSessions;
+  }, []);
+
   const persistSessionsState = useCallback((nextSessions: ChatSessions, nextActiveId?: string | null) => {
-    const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: nextSessions };
+    // Clean up old sessions before persisting
+    const cleanedSessions = cleanupOldSessions(nextSessions);
+
+    const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: cleanedSessions };
     if (typeof nextActiveId !== 'undefined') {
       payload[ACTIVE_SESSION_ID_KEY] = nextActiveId;
     }
     chrome.storage.local.set(payload);
-  }, []);
+  }, [cleanupOldSessions]);
 
   const sessionList = useMemo<SidebarSession[]>(() => {
     return Object.values(sessions)
@@ -294,6 +335,9 @@ export function ChatUI() {
         };
       }
 
+      // Apply session limit cleanup on load
+      loadedSessions = cleanupOldSessions(loadedSessions);
+
       let currentActiveId: string | null = result[ACTIVE_SESSION_ID_KEY] || null;
       if (!currentActiveId || !loadedSessions[currentActiveId]) {
         currentActiveId = Object.keys(loadedSessions)[0] || null;
@@ -310,9 +354,9 @@ export function ChatUI() {
         [ACTIVE_SESSION_ID_KEY]: currentActiveId,
       });
 
-      console.log("Loaded sessions (v2), active ID:", currentActiveId);
+      console.log("Loaded sessions (v2), active ID:", currentActiveId, "Total sessions:", Object.keys(loadedSessions).length);
     });
-  }, []);
+  }, [cleanupOldSessions]);
 
   // Restore session saving useEffect
   useEffect(() => {
