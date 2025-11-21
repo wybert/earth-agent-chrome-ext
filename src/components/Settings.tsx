@@ -139,11 +139,7 @@ export function Settings({ onClose }: SettingsProps) {
   };
 
   const handleClearContext = () => {
-    if (projectName || projectContext) {
-      const confirmed = window.confirm('Are you sure you want to clear the project context? This action cannot be undone.');
-      if (!confirmed) return;
-    }
-
+    // Clear project context without confirmation
     setProjectName('');
     setProjectContext('');
 
