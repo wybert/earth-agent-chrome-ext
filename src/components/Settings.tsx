@@ -11,7 +11,6 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
-const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const PROJECT_NAME_STORAGE_KEY = 'earth_engine_project_name';
 const PROJECT_CONTEXT_STORAGE_KEY = 'earth_engine_project_context';
@@ -26,7 +25,6 @@ export function Settings({ onClose }: SettingsProps) {
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
   const [googleApiKey, setGoogleApiKey] = useState('');
   const [qwenApiKey, setQwenApiKey] = useState('');
-  const [ollamaApiKey, setOllamaApiKey] = useState('');
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState('http://localhost:11434/api');
 
   // Show/hide API keys
@@ -34,7 +32,6 @@ export function Settings({ onClose }: SettingsProps) {
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showGoogleKey, setShowGoogleKey] = useState(false);
   const [showQwenKey, setShowQwenKey] = useState(false);
-  const [showOllamaKey, setShowOllamaKey] = useState(false);
 
   // Status
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -54,14 +51,12 @@ export function Settings({ onClose }: SettingsProps) {
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
-      OLLAMA_API_KEY_STORAGE_KEY,
       OLLAMA_BASE_URL_STORAGE_KEY
     ], (result) => {
       setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '');
       setAnthropicApiKey(result[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
       setGoogleApiKey(result[GOOGLE_API_KEY_STORAGE_KEY] || '');
       setQwenApiKey(result[QWEN_API_KEY_STORAGE_KEY] || '');
-      setOllamaApiKey(result[OLLAMA_API_KEY_STORAGE_KEY] || '');
       setOllamaBaseUrl(result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api');
     });
 
@@ -89,7 +84,7 @@ export function Settings({ onClose }: SettingsProps) {
     } else if (provider === 'qwen') {
       storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
     } else if (provider === 'ollama') {
-      storageData[OLLAMA_API_KEY_STORAGE_KEY] = apiKey;
+      // Ollama doesn't use API keys, only save Base URL
       storageData[OLLAMA_BASE_URL_STORAGE_KEY] = ollamaBaseUrl;
     }
 
@@ -166,7 +161,8 @@ export function Settings({ onClose }: SettingsProps) {
       <div className="space-y-4 overflow-y-auto flex-1 px-1 -mx-1">
         {/* API Keys Section */}
         <div className="pt-2">
-          <h3 className="text-sm font-semibold mb-3">API Keys</h3>
+          <h3 className="text-sm font-semibold mb-1">API Keys</h3>
+          <p className="text-xs text-gray-500 mb-3">Your API keys are stored securely in Chrome's synced storage and are never sent to our servers.</p>
 
           <div className="space-y-4">
             {/* OpenAI */}
@@ -275,26 +271,7 @@ export function Settings({ onClose }: SettingsProps) {
 
             {/* Ollama */}
             <div>
-              <label className="text-sm mb-1 block">Ollama API Key (Optional)</label>
-              <div className="flex gap-2 mb-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showOllamaKey ? 'text' : 'password'}
-                    value={ollamaApiKey}
-                    onChange={(e) => setOllamaApiKey(e.target.value)}
-                    placeholder="Optional for local instances"
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-0 px-3 flex items-center"
-                    onClick={() => setShowOllamaKey(!showOllamaKey)}
-                  >
-                    {showOllamaKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <label className="text-sm mb-1 block">Base URL</label>
+              <label className="text-sm mb-1 block">Ollama Base URL</label>
               <div className="flex gap-2">
                 <Input
                   type="text"
@@ -303,13 +280,10 @@ export function Settings({ onClose }: SettingsProps) {
                   placeholder="http://localhost:11434/api"
                   className="flex-1"
                 />
-                <Button onClick={() => handleSaveApiKey('ollama', ollamaApiKey)}>
+                <Button onClick={() => handleSaveApiKey('ollama', '')}>
                   Save
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                For local Ollama instances, API key is usually not required. Default: http://localhost:11434/api
-              </p>
             </div>
 
             {/* Status Messages */}
@@ -324,17 +298,16 @@ export function Settings({ onClose }: SettingsProps) {
                 <X className="h-4 w-4 mr-1" /> {saveMessage}
               </div>
             )}
-
-            <div className="text-xs text-gray-500">
-              <p>Your API keys are stored securely in Chrome's synced storage and are never sent to our servers.</p>
-              <p className="mt-1">Model selection is available in the chat interface. Different models have varying capabilities, speeds, and costs.</p>
-            </div>
           </div>
         </div>
 
         {/* Project Context Section */}
         <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold mb-3">Project Context</h3>
+          <h3 className="text-sm font-semibold mb-1">Project Context</h3>
+          <div className="text-xs text-gray-500 mb-3">
+            <p>ℹ️ These instructions will be applied to every chat message.</p>
+            <p className="mt-1">Stored locally on this device (not synced across devices).</p>
+          </div>
 
           <div className="space-y-4">
             <div>
@@ -394,12 +367,6 @@ Examples:
                 <X className="h-4 w-4 mr-1" /> Error saving project context
               </div>
             )}
-
-            <div className="text-xs text-gray-500 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
-              <p className="font-semibold mb-1">ℹ️ About Project Context</p>
-              <p>These instructions will be applied to every chat message.</p>
-              <p className="mt-1">Stored locally on this device (not synced across devices).</p>
-            </div>
           </div>
         </div>
 
@@ -432,6 +399,15 @@ Examples:
             <p className="pt-2 text-xs">
               AI-powered assistant for Google Earth Engine
             </p>
+          </div>
+
+          {/* Logo */}
+          <div className="flex justify-center mt-6">
+            <img
+              src="/assets/icon.svg"
+              alt="Earth Agent Logo"
+              className="w-24 h-24 opacity-80 dark:opacity-70"
+            />
           </div>
         </div>
       </div>
