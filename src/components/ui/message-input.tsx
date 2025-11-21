@@ -84,6 +84,13 @@ export function MessageInput({
     return MODEL_DISPLAY_NAMES[modelId] || modelId
   }
 
+  // Get display name without parentheses for button
+  const getModelDisplayNameShort = (modelId: string) => {
+    const fullName = MODEL_DISPLAY_NAMES[modelId] || modelId
+    // Remove everything in parentheses including the parentheses
+    return fullName.replace(/\s*\([^)]*\)/g, '').trim()
+  }
+
   // Get provider name for display
   const getProviderDisplayName = (provider: string) => {
     const names: Record<string, string> = {
@@ -331,10 +338,10 @@ export function MessageInput({
         <div className="flex gap-2 items-center">
           {onModeChange && (
             <Select value={mode} onValueChange={(value) => onModeChange(value as 'ask' | 'do')}>
-              <SelectTrigger className="h-8 w-auto px-3 text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+              <SelectTrigger className="h-7 w-12 px-1.5 text-[11px] border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                 <span>{mode === 'ask' ? 'Ask' : 'Do'}</span>
               </SelectTrigger>
-              <SelectContent side="top">
+              <SelectContent side="top" className="w-28">
                 <SelectItem value="ask">Ask</SelectItem>
                 <SelectItem value="do">Do</SelectItem>
               </SelectContent>
@@ -342,8 +349,8 @@ export function MessageInput({
           )}
           {model && onModelChange && (
             <Select value={model} onValueChange={handleModelChange}>
-              <SelectTrigger className="h-8 w-auto min-w-[180px] px-3 text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                <span className="truncate">{getModelDisplayName(model)}</span>
+              <SelectTrigger className="h-7 w-auto min-w-[130px] max-w-[160px] px-1.5 text-[11px] border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                <span className="truncate">{getModelDisplayNameShort(model)}</span>
               </SelectTrigger>
               <SelectContent side="top" className="max-h-80 w-64">
                 {allModelsGrouped.map(({ provider: providerKey, models }, groupIndex) => (
@@ -373,12 +380,12 @@ export function MessageInput({
             type="button"
             size="icon"
             variant="outline"
-            className="h-8 w-8"
+            className="h-7 w-7"
             aria-label="Regenerate response"
             onClick={onRegenerate}
             title="Regenerate"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
           </Button>
         )}
         {props.allowAttachments && (
@@ -386,43 +393,43 @@ export function MessageInput({
             type="button"
             size="icon"
             variant="outline"
-            className="h-8 w-8"
+            className="h-7 w-7"
             aria-label="Attach a file"
             onClick={async () => {
               const files = await showFileUploadDialog()
               addFiles(files)
             }}
           >
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-3.5 w-3.5" />
           </Button>
         )}
         {isSpeechSupported && (
           <AnimatePresence>
             {isRecording ? (
               <motion.div
-                className="h-8 w-8"
+                className="h-7 w-7"
               >
                 <Button
                   type="button"
                   variant="outline"
-                  className={cn("h-8 w-8", isListening && "text-primary")}
+                  className={cn("h-7 w-7", isListening && "text-primary")}
                   aria-label="Voice input"
                   size="icon"
                   onClick={toggleListening}
                 >
-                  <Mic size={16} />
+                  <Mic size={14} />
                 </Button>
               </motion.div>
             ) : (
           <Button
             type="button"
             variant="outline"
-            className={cn("h-8 w-8", isListening && "text-primary")}
+            className={cn("h-7 w-7", isListening && "text-primary")}
             aria-label="Voice input"
             size="icon"
             onClick={toggleListening}
           >
-                <Mic size={16} />
+                <Mic size={14} />
           </Button>
             )}
           </AnimatePresence>
@@ -431,21 +438,21 @@ export function MessageInput({
           <Button
             type="button"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7"
             aria-label="Stop generating"
             onClick={stop}
           >
-            <Square className="h-3 w-3 animate-pulse" fill="currentColor" />
+            <Square className="h-2.5 w-2.5 animate-pulse" fill="currentColor" />
           </Button>
         ) : (
           <Button
             type="submit"
             size="icon"
-            className="h-8 w-8 transition-opacity"
+            className="h-7 w-7 transition-opacity"
             aria-label="Send message"
             disabled={props.value === "" || isGenerating}
           >
-            <ArrowUp className="h-5 w-5" />
+            <ArrowUp className="h-4 w-4" />
           </Button>
         )}
         </div>
