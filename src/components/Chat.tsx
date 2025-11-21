@@ -585,11 +585,14 @@ export function ChatUI() {
               }
             }
 
-            const updatedLastMessage = {
+            // Performance optimization: Create new array only with modified last message
+            // This avoids unnecessary re-creation of the entire array on every chunk
+            const newMessages = prevMessages.slice(); // Shallow copy
+            newMessages[lastMessageIndex] = {
               ...prevMessages[lastMessageIndex],
               content: toolCallsSection + textContent + response.chunk
             };
-             return [...prevMessages.slice(0, lastMessageIndex), updatedLastMessage];
+            return newMessages;
           });
         }
         break;
@@ -601,8 +604,10 @@ export function ChatUI() {
             const finalId = response.requestId || prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
             // Keep the tool call information in final message
             const content = prevMessages[lastMessageIndex].content || '';
-            const finalizedMessage = { ...prevMessages[lastMessageIndex], id: finalId, content };
-            return [...prevMessages.slice(0, lastMessageIndex), finalizedMessage];
+            // Performance optimization: Use slice() + direct assignment instead of spread operator
+            const newMessages = prevMessages.slice();
+            newMessages[lastMessageIndex] = { ...prevMessages[lastMessageIndex], id: finalId, content };
+            return newMessages;
           }
           return prevMessages;
         });
@@ -657,11 +662,13 @@ export function ChatUI() {
               console.log('🔧 [Chat] Tool status to add:', toolStatus);
               console.log('🔧 [Chat] Text content:', textContent.substring(0, 100));
 
-              const updatedMessage = {
+              // Performance optimization: Use slice() + direct assignment
+              const newMessages = prevMessages.slice();
+              newMessages[lastMessageIndex] = {
                 ...currentMessage,
                 content: toolStatus + textContent
               };
-              return [...prevMessages.slice(0, lastMessageIndex), updatedMessage];
+              return newMessages;
             }
             return prevMessages;
           });
