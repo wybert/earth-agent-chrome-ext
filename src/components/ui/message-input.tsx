@@ -281,51 +281,54 @@ export function MessageInput({
         onStopRecording={stopRecording}
       />
 
-      <div className="relative flex w-full items-center space-x-2">
-        <div className="relative flex-1">
-          <textarea
-            aria-label="Write your prompt here"
-            placeholder={effectivePlaceholder}
-            ref={textAreaRef as RefObject<HTMLTextAreaElement>}
-            onPaste={onPaste}
-            onKeyDown={onKeyDown}
-            className={cn(
-              "z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto",
-              showFileList && "pb-16",
-              className
-            )}
-            {...(props.allowAttachments
-              ? omit(props, ["allowAttachments", "files", "setFiles"])
-              : omit(props, ["allowAttachments"]))}
-          />
+      <div className="relative flex w-full flex-col">
+        {/* File attachments preview - above the input */}
+        {props.allowAttachments && showFileList && (
+          <div className="mb-2 overflow-x-auto">
+            <div className="flex space-x-3 p-2">
+              <AnimatePresence mode="popLayout">
+                {props.files?.map((file) => {
+                  return (
+                    <FilePreview
+                      key={file.name + String(file.lastModified)}
+                      file={file}
+                      onRemove={() => {
+                        props.setFiles((files) => {
+                          if (!files) return null
 
-          {props.allowAttachments && showFileList && (
-            <div className="absolute inset-x-3 bottom-0 z-20 overflow-x-scroll py-3">
-              <div className="flex space-x-3">
-                <AnimatePresence mode="popLayout">
-                  {props.files?.map((file) => {
-                    return (
-                      <FilePreview
-                        key={file.name + String(file.lastModified)}
-                        file={file}
-                        onRemove={() => {
-                          props.setFiles((files) => {
-                            if (!files) return null
-
-                            const filtered = Array.from(files).filter(
-                              (f) => f !== file
-                            )
-                            if (filtered.length === 0) return null
-                            return filtered
-                          })
-                        }}
-                      />
-                    )
-                  })}
-                </AnimatePresence>
-              </div>
+                          const filtered = Array.from(files).filter(
+                            (f) => f !== file
+                          )
+                          if (filtered.length === 0) return null
+                          return filtered
+                        })
+                      }}
+                    />
+                  )
+                })}
+              </AnimatePresence>
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Input area */}
+        <div className="relative flex w-full items-center space-x-2">
+          <div className="relative flex-1">
+            <textarea
+              aria-label="Write your prompt here"
+              placeholder={effectivePlaceholder}
+              ref={textAreaRef as RefObject<HTMLTextAreaElement>}
+              onPaste={onPaste}
+              onKeyDown={onKeyDown}
+              className={cn(
+                "z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto",
+                className
+              )}
+              {...(props.allowAttachments
+                ? omit(props, ["allowAttachments", "files", "setFiles"])
+                : omit(props, ["allowAttachments"]))}
+            />
+          </div>
         </div>
       </div>
 
