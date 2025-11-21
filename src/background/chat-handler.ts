@@ -24,7 +24,7 @@ export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
 // Default models configuration
 export const DEFAULT_MODELS: Record<Provider, string> = {
-  openai: 'gpt-5.1',
+  openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.5-pro',
   qwen: 'qwen-max-latest',
@@ -293,65 +293,7 @@ export async function handleChatRequest(
     // Setup LLM provider
     let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI> | ReturnType<typeof createQwen> | ReturnType<typeof createOllama>;
     let effectiveModel: string;
-    
-    // Define available models for validation
-    const anthropicModels = [
-      'claude-sonnet-4-5-20250929',
-      'claude-haiku-4-5-20251001',
-      'claude-opus-4-1-20250805',
-      'claude-opus-4-20250514',
-      'claude-sonnet-4-20250514'
-    ];
 
-    const googleModels = [
-      'gemini-pro-latest',
-      'gemini-flash-latest',
-      'gemini-flash-lite-latest',
-      'gemini-2.5-pro',
-      'gemini-2.5-pro-preview-06-05',
-      'gemini-2.5-pro-preview-05-06',
-      'gemini-2.5-pro-preview-03-25',
-      'gemini-2.5-flash',
-      'gemini-2.5-flash-preview-05-20',
-      'gemini-2.5-flash-preview-09-2025',
-      'gemini-2.5-flash-lite',
-      'gemini-2.5-flash-lite-preview-06-17',
-      'gemini-2.5-flash-lite-preview-09-2025'
-    ];
-    
-    const qwenModels = [
-      'qwen-max-latest',
-      'qwen-max',
-      'qwen-plus-latest',
-      'qwen-plus',
-      'qwen-turbo-latest',
-      'qwen-turbo',
-      'qwen-vl-max',
-      'qwen2.5-72b-instruct',
-      'qwen2.5-14b-instruct-1m',
-      'qwen2.5-vl-72b-instruct'
-    ];
-    
-    const ollamaModels = [
-      'phi3',
-      'llama3.3:70b',
-      'llama3.3',
-      'llama3.2:90b',
-      'llama3.2:70b',
-      'llama3.2',
-      'llama3.1:70b',
-      'llama3.1',
-      'mistral',
-      'codellama',
-      'deepseek-coder-v2',
-      'qwen2.5',
-      'gemma2',
-      'llava',
-      'llava-llama3',
-      'llava-phi3',
-      'moondream'
-    ];
-    
     if (provider === 'openai') {
       // Validate API key
       if (!apiKey || apiKey.trim() === '') {
@@ -399,17 +341,8 @@ export async function handleChatRequest(
       effectiveModel = model || DEFAULT_MODELS.openai;
       console.log(`✅ [Chat Handler] Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'anthropic') {
-      // Check if the requested model exists in our available model list
-      
-      // Use the requested model if it's in our list, otherwise use the default
-      let selectedModel = model;
-      if (!selectedModel || !anthropicModels.includes(selectedModel)) {
-        console.log(`⚠️ [Chat Handler] Requested Claude model "${model}" not found in available models. Using default.`);
-        selectedModel = DEFAULT_MODELS.anthropic;
-      }
-      
-      effectiveModel = selectedModel;
-      
+      effectiveModel = model || DEFAULT_MODELS.anthropic;
+
       // Create the Anthropic provider with optional Helicone configuration
       const anthropicConfig: any = {
         apiKey,
@@ -435,15 +368,8 @@ export async function handleChatRequest(
       
       console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'google') {
-      // Use the requested model if it's in our list, otherwise use the default
-      let selectedModel = model;
-      if (!selectedModel || !googleModels.includes(selectedModel)) {
-        console.log(`⚠️ [Chat Handler] Requested Google model "${model}" not found in available models. Using default.`);
-        selectedModel = DEFAULT_MODELS.google;
-      }
-      
-      effectiveModel = selectedModel;
-      
+      effectiveModel = model || DEFAULT_MODELS.google;
+
       // Validate API key format for Google
       if (!apiKey || !apiKey.startsWith('AIza') || apiKey.length !== 39) {
         console.error(`❌ [Chat Handler] Invalid Google API key format. Expected format: AIzaXXX... (39 characters), got: ${apiKey ? apiKey.substring(0, 10) + '...' : 'empty'}`);
@@ -494,15 +420,8 @@ export async function handleChatRequest(
       
       console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'qwen') {
-      // Use the requested model if it's in our list, otherwise use the default
-      let selectedModel = model;
-      if (!selectedModel || !qwenModels.includes(selectedModel)) {
-        console.log(`⚠️ [Chat Handler] Requested Qwen model "${model}" not found in available models. Using default.`);
-        selectedModel = DEFAULT_MODELS.qwen;
-      }
-      
-      effectiveModel = selectedModel;
-      
+      effectiveModel = model || DEFAULT_MODELS.qwen;
+
       // Validate API key for Qwen (should be a DashScope API key)
       if (!apiKey || apiKey.trim() === '') {
         console.error(`❌ [Chat Handler] Qwen API key is missing or empty`);
@@ -1975,6 +1894,9 @@ export async function handleChatRequest(
     console.time('streamText execution');
 
     // Configure stream options based on provider
+    // Create a shared error container that can be accessed from both onError and the stream
+    let streamError: { message: string } | null = null;
+
     let streamOptions: any = {
       model: llmProvider(effectiveModel),
       // Temporarily remove system prompt for Ollama to match curl format
@@ -1982,11 +1904,17 @@ export async function handleChatRequest(
       messages: formattedMessages,
       temperature: 0.7,
       maxRetries: 3,
-      // Add onError callback to capture and log streaming errors
+      // Add onError callback to capture streaming errors and store them
       onError: ({ error }: { error: any }) => {
         console.error(`❌ [Chat Handler] Streaming error occurred for ${provider} provider:`, error);
         console.error(`❌ [Chat Handler] Error type: ${error?.name}`);
         console.error(`❌ [Chat Handler] Error message: ${error?.message}`);
+
+        // Store the error so we can include it in the response
+        streamError = {
+          message: error?.message || String(error)
+        };
+
         if (error?.cause) {
           console.error(`❌ [Chat Handler] Error cause:`, error.cause);
         }
@@ -2068,7 +1996,6 @@ export async function handleChatRequest(
     if (provider === 'google') {
       console.log(`🔧 [Chat Handler] Using Google provider with API key length: ${apiKey.length}`);
       console.log(`🔧 [Chat Handler] Google model being used: ${effectiveModel}`);
-      console.log(`🔧 [Chat Handler] Google available models: ${googleModels.join(', ')}`);
     }
     
     // For Ollama provider, add specific logging (now using normal AI SDK flow)
@@ -2140,19 +2067,54 @@ export async function handleChatRequest(
       console.timeEnd('streamText execution');
       console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
 
-      // The responsePromise logic has been removed as it is not the standard way to catch streaming errors.
-      // The `onError` callback added to streamOptions is the correct and documented approach.
+      // Create a custom stream that wraps the AI SDK stream and catches errors
+      const encoder = new TextEncoder();
+      const customErrorHandlingStream = new ReadableStream({
+        async start(controller) {
+          try {
+            // Get the original text stream
+            const originalStream = result.toTextStreamResponse().body;
+            if (!originalStream) {
+              throw new Error('No response body from toTextStreamResponse');
+            }
 
-      // Debug the result object to see what we got back
-      console.log(`📊 [Chat Handler] Result type: ${typeof result}`);
-      console.log(`📊 [Chat Handler] Result keys: ${Object.keys(result).join(', ')}`);
+            const reader = originalStream.getReader();
+            const decoder = new TextDecoder();
 
-      // Expose result to global scope for interactive investigation
-      (globalThis as any).lastStreamTextResult = result;
-      console.log(`🔍 [Chat Handler] Result object exposed as 'globalThis.lastStreamTextResult' for interactive investigation`);
+            // Read from the original stream
+            while (true) {
+              const { done, value } = await reader.read();
 
-      // Convert to text stream response
-      return result.toTextStreamResponse();
+              if (done) {
+                // Before closing, check if there was an error captured by onError
+                if (streamError) {
+                  console.log(`❌ [Chat Handler] Sending captured error to frontend:`, streamError.message);
+                  const errorChunk = encoder.encode(`error:${JSON.stringify({ error: streamError.message })}\n`);
+                  controller.enqueue(errorChunk);
+                }
+                controller.close();
+                break;
+              }
+
+              // Forward the chunk
+              controller.enqueue(value);
+            }
+          } catch (error: any) {
+            // If an error occurs during streaming, send it to the frontend
+            console.error(`❌ [Chat Handler] Stream error caught:`, error);
+
+            // Create an error message in the stream format
+            const errorMessage = error?.message || String(error);
+            const errorChunk = encoder.encode(`error:${JSON.stringify({ error: errorMessage })}\n`);
+            controller.enqueue(errorChunk);
+            controller.close();
+          }
+        }
+      });
+
+      return new Response(customErrorHandlingStream, {
+        headers: result.toTextStreamResponse().headers
+      });
     } catch (streamError: any) {
       console.timeEnd('streamText execution');
       // This block will catch errors during the *initial setup* of the stream,

@@ -602,23 +602,50 @@ export function ChatUI() {
           break;
         }
 
-        // Check if it's an Ollama CORS error and provide helpful UI feedback
-        let errorMessage = `API Error: ${response.error || 'Unknown error.'}`;
+        // Parse and format error message for better user experience
+        let errorMessage = response.error || 'Unknown error';
+        let userFriendlyMessage = '';
+
         try {
-          if (typeof response.error === 'string' && response.error.includes('Ollama CORS Configuration Required')) {
-            const errorData = JSON.parse(response.error);
-            errorMessage = `🚨 Ollama CORS Issue Detected!\n\n${errorData.message}\n\n💡 Solution:\n${errorData.solution}\n\n🔧 Alternative:\n${errorData.alternativeSolution}`;
+          // Check for specific error types and provide helpful guidance
+          if (typeof errorMessage === 'string') {
+            // Ollama CORS error
+            if (errorMessage.includes('Ollama CORS Configuration Required')) {
+              const errorData = JSON.parse(errorMessage);
+              userFriendlyMessage = `🚨 **Ollama CORS Issue**\n\n${errorData.message}\n\n**💡 Solution:**\n${errorData.solution}\n\n**🔧 Alternative:**\n${errorData.alternativeSolution}`;
+            }
+            // Model not found errors
+            else if (errorMessage.toLowerCase().includes('model') && (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('does not exist') || errorMessage.toLowerCase().includes('invalid model'))) {
+              userFriendlyMessage = `❌ **Model Error**\n\nThe selected model is not available or doesn't exist.\n\n**Possible causes:**\n• Model name is incorrect\n• Your API key doesn't have access to this model\n• Model has been deprecated or renamed\n\n**What to do:**\n1. Check the model name in the dropdown menu\n2. Verify your API key has access to this model\n3. Try selecting a different model\n\n**Error details:** ${errorMessage}`;
+            }
+            // Rate limit errors
+            else if (errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('429')) {
+              userFriendlyMessage = `⏱️ **Rate Limit Exceeded**\n\nYou've exceeded the API rate limit or quota.\n\n**What to do:**\n• Wait a few minutes and try again\n• Check your API usage dashboard\n• Consider upgrading your API plan\n\n**Error details:** ${errorMessage}`;
+            }
+            // Authentication errors
+            else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('invalid api key') || errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('401')) {
+              userFriendlyMessage = `🔑 **Authentication Error**\n\nYour API key is invalid or has expired.\n\n**What to do:**\n1. Go to Settings (⚙️ icon)\n2. Check your API key is correct\n3. Generate a new API key if needed\n\n**Error details:** ${errorMessage}`;
+            }
+            // Permission errors
+            else if (errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('access denied') || errorMessage.toLowerCase().includes('forbidden') || errorMessage.toLowerCase().includes('403')) {
+              userFriendlyMessage = `🚫 **Permission Error**\n\nYour API key doesn't have permission for this operation.\n\n**What to do:**\n• Verify your API key has the required permissions\n• Check if your account has access to this feature/model\n• Contact your API provider if issues persist\n\n**Error details:** ${errorMessage}`;
+            }
+            // Generic API errors
+            else {
+              userFriendlyMessage = `❌ **API Error**\n\n${errorMessage}\n\n**What to do:**\n• Check your internet connection\n• Verify your API settings\n• Try again in a moment`;
+            }
           }
-        } catch {
-          // Use original error message if parsing fails
+        } catch (parseError) {
+          // If parsing fails, use the original error message
+          userFriendlyMessage = `❌ **Error**\n\n${errorMessage}`;
         }
-        
-        setError(new Error(errorMessage));
+
+        setError(new Error(userFriendlyMessage));
         setIsLocalLoading(false);
         const errorAssistantMessage: Message = {
           id: response.requestId || (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Sorry, I encountered an error: ${response.error}.`
+          content: userFriendlyMessage
         };
         setMessages(prev => {
             const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
@@ -1215,30 +1242,7 @@ export function ChatUI() {
             />
 
             {/* Error and Fallback Displays - Positioned at bottom above input */}
-            {error && (
-              <Card className="absolute bottom-20 left-2 right-2 p-4 bg-destructive/10 text-destructive border-destructive/50 z-10">
-                <p className="text-sm font-medium">Error</p>
-                <p className="text-sm mt-1">{error.message}</p>
-                {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
-                  <Button variant="outline" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-                    <RefreshCw size={14} className="mr-2" /> Retry Connection
-                  </Button>
-                )}
-                {!fallbackMode && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setError(new Error("Switched to Fallback Mode manually."));
-                      setFallbackMode(true);
-                    }}
-                    className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20"
-                  >
-                    Switch to Fallback Mode
-                  </Button>
-                )}
-              </Card>
-            )}
+            {/* Removed duplicate error display - errors are now shown as assistant messages in the chat */}
             {fallbackMode && (
               <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
                 <p className="text-sm font-medium">Fallback Mode</p>
