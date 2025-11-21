@@ -15,6 +15,22 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { AVAILABLE_MODELS, MODEL_DISPLAY_NAMES, type ApiProvider } from "@/constants/models"
 
+// File upload validation constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILES_COUNT = 10 // Maximum 10 files
+const ALLOWED_FILE_TYPES = [
+  // Images
+  'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml',
+  // Documents
+  'text/plain', 'text/csv', 'text/markdown',
+  'application/pdf',
+  'application/json',
+  // Code files
+  'text/javascript', 'application/javascript',
+  'text/html', 'text/css',
+  'application/x-python', 'text/x-python',
+]
+
 interface MessageInputBaseProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   value: string
@@ -68,6 +84,7 @@ export function MessageInput({
 
   const [isDragging, setIsDragging] = useState(false)
   const [showInterruptPrompt, setShowInterruptPrompt] = useState(false)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   // Get all models grouped by provider
   const allModelsGrouped = Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => ({
@@ -148,18 +165,70 @@ export function MessageInput({
     }
   }, [isGenerating])
 
+  // Clear file error after 5 seconds
+  useEffect(() => {
+    if (fileError) {
+      const timer = setTimeout(() => setFileError(null), 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [fileError])
+
+  const validateFiles = (files: File[], currentFiles: File[] | null): { valid: File[], error: string | null } => {
+    const currentCount = currentFiles?.length || 0
+    const totalCount = currentCount + files.length
+
+    // Check total file count
+    if (totalCount > MAX_FILES_COUNT) {
+      return {
+        valid: [],
+        error: `Maximum ${MAX_FILES_COUNT} files allowed. You're trying to add ${files.length} file(s) but already have ${currentCount}.`
+      }
+    }
+
+    const validFiles: File[] = []
+    const errors: string[] = []
+
+    for (const file of files) {
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB.`)
+        continue
+      }
+
+      // Check file type
+      if (!ALLOWED_FILE_TYPES.includes(file.type) && file.type !== '') {
+        errors.push(`"${file.name}" type (${file.type}) is not supported.`)
+        continue
+      }
+
+      // File is valid
+      validFiles.push(file)
+    }
+
+    return {
+      valid: validFiles,
+      error: errors.length > 0 ? errors.join(' ') : null
+    }
+  }
+
   const addFiles = (files: File[] | null) => {
-    if (props.allowAttachments) {
+    if (props.allowAttachments && files && files.length > 0) {
       props.setFiles((currentFiles) => {
-        if (currentFiles === null) {
-          return files
+        const { valid, error } = validateFiles(files, currentFiles)
+
+        if (error) {
+          setFileError(error)
         }
 
-        if (files === null) {
+        if (valid.length === 0) {
           return currentFiles
         }
 
-        return [...currentFiles, ...files]
+        if (currentFiles === null) {
+          return valid
+        }
+
+        return [...currentFiles, ...valid]
       })
     }
   }
@@ -282,6 +351,32 @@ export function MessageInput({
       />
 
       <div className="relative flex w-full flex-col">
+        {/* File upload error message */}
+        <AnimatePresence>
+          {fileError && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-2 rounded-lg bg-destructive/10 border border-destructive/20 px-3 py-2"
+            >
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                <div className="flex-1 text-sm text-destructive">
+                  {fileError}
+                </div>
+                <button
+                  onClick={() => setFileError(null)}
+                  className="text-destructive hover:text-destructive/80 transition-colors"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* File attachments preview - above the input */}
         {props.allowAttachments && showFileList && (
           <div className="mb-2 overflow-x-auto">
@@ -521,7 +616,8 @@ function showFileUploadDialog() {
 
   input.type = "file"
   input.multiple = true
-  input.accept = "*/*"
+  // Set accepted file types based on ALLOWED_FILE_TYPES
+  input.accept = ALLOWED_FILE_TYPES.join(',')
   input.click()
 
   return new Promise<File[] | null>((resolve) => {
