@@ -172,12 +172,13 @@ export function Chat({
 
   const messageOptions = useCallback(
     (message: Message) => {
+      const isUserMessage = message.role === "user";
       return {
         message: message,
         actions: (
         <>
             <CopyButton content={message.content ?? ""} />
-            {onRateResponse ? (
+            {onRateResponse && !isUserMessage ? (
               <>
           <Button
             size="icon"

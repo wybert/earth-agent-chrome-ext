@@ -39,7 +39,7 @@ function BubbleMessage({
   actions,
 }: BubbleMessageProps) {
     return (
-    <div className={cn("group/message relative w-fit max-w-full")}>
+    <div className={cn("group/message w-fit max-w-full flex flex-col gap-1")}>
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -56,19 +56,20 @@ function BubbleMessage({
         style={{ originX: isUser ? 1 : 0 }}
             className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "break-words overflow-wrap-anywhere w-full max-w-full relative",
+          "break-words overflow-wrap-anywhere w-full max-w-full",
           isUser && "sm:max-w-[600px]"
         )}
       >
         <MarkdownRenderer content={content} />
-        {actions ? (
-          <div className={cn(
-            "absolute bottom-1 right-1 flex space-x-0.5 rounded-md border bg-background/95 backdrop-blur-sm p-0.5 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100 shadow-sm scale-75"
-          )}>
-            {actions}
-          </div>
-        ) : null}
       </motion.div>
+      {actions ? (
+        <div className={cn(
+          "flex space-x-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100",
+          isUser ? "mr-1 self-end" : "ml-1"
+        )}>
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }
