@@ -1,7 +1,7 @@
 import React from 'react'
 import { useEffect, useRef, useState, type ChangeEventHandler, type KeyboardEventHandler, type RefObject } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { ArrowUp, Info, Loader2, Mic, Paperclip, RefreshCw, Square, X } from "lucide-react"
+import { ArrowUp, Info, Loader2, Mic, Paperclip, Square, X } from "lucide-react"
 import { omit } from "remeda"
 
 import { cn } from "@/lib/utils"
@@ -23,8 +23,6 @@ interface MessageInputBaseProps
   isGenerating: boolean
   enableInterrupt?: boolean
   transcribeAudio?: (blob: Blob) => Promise<string>
-  onRegenerate?: () => void
-  showRegenerate?: boolean
   mode?: 'ask' | 'do'
   onModeChange?: (mode: 'ask' | 'do') => void
   provider?: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'
@@ -56,8 +54,6 @@ export function MessageInput({
   isGenerating,
   enableInterrupt = true,
   transcribeAudio,
-  onRegenerate,
-  showRegenerate = false,
   mode = 'ask',
   onModeChange,
   provider,
@@ -375,19 +371,6 @@ export function MessageInput({
 
         {/* Right side - Action buttons */}
         <div className="flex gap-2">
-        {showRegenerate && onRegenerate && !isGenerating && (
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            className="h-7 w-7"
-            aria-label="Regenerate response"
-            onClick={onRegenerate}
-            title="Regenerate"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        )}
         {props.allowAttachments && (
           <Button
             type="button"

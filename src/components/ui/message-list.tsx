@@ -14,7 +14,7 @@ interface MessageListProps {
   isTyping?: boolean
   messageOptions?:
     | AdditionalMessageOptions
-    | ((message: Message) => AdditionalMessageOptions)
+    | ((message: Message, index: number) => AdditionalMessageOptions)
   isGenerating?: boolean
 }
 
@@ -35,7 +35,7 @@ export function MessageList({
       {messages.map((message, index) => {
         const additionalOptions =
           typeof messageOptions === "function"
-            ? messageOptions(message)
+            ? messageOptions(message, index)
             : messageOptions
 
         return (

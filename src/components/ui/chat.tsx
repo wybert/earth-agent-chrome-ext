@@ -171,28 +171,50 @@ export function Chat({
   }, [stop, setMessages, messagesRef])
 
   const messageOptions = useCallback(
-    (message: Message) => {
+    (message: Message, index: number) => {
       const isUserMessage = message.role === "user";
+      // Check if this is the last assistant message
+      const isLastAssistantMessage = message.role === "assistant" &&
+        index === messages.length - 1;
+
       return {
         message: message,
         actions: (
         <>
             <CopyButton content={message.content ?? ""} />
+            {!isUserMessage && onRegenerate && isLastAssistantMessage && showRegenerate ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={onRegenerate}
+                aria-label="Regenerate response"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <path d="M21 2v6h-6"/>
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                  <path d="M3 22v-6h6"/>
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
+              </Button>
+            ) : null}
             {onRateResponse && !isUserMessage ? (
               <>
           <Button
             size="icon"
             variant="ghost"
+            className="h-6 w-6"
             onClick={() => onRateResponse(message.id, "thumbs-up")}
           >
-                  <ThumbsUp size={16} />
+                  <ThumbsUp className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
             variant="ghost"
+            className="h-6 w-6"
             onClick={() => onRateResponse(message.id, "thumbs-down")}
           >
-                  <ThumbsDown size={16} />
+                  <ThumbsDown className="h-4 w-4" />
           </Button>
         </>
             ) : null}
@@ -200,7 +222,7 @@ export function Chat({
       ),
       };
     },
-    [onRateResponse]
+    [onRateResponse, onRegenerate, showRegenerate, messages.length]
   );
 
   // Provide default empty strings for potentially undefined props
@@ -247,8 +269,6 @@ export function Chat({
             stop={handleStop}
             isGenerating={isGenerating}
             transcribeAudio={transcribeAudio}
-            onRegenerate={onRegenerate}
-            showRegenerate={showRegenerate}
             mode={mode}
             onModeChange={onModeChange}
             provider={provider}
