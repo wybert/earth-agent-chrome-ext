@@ -274,9 +274,9 @@ export async function handleChatRequest(
     
     if (!apiKey && provider !== 'ollama') {
       console.error(`❌ [Chat Handler] API key not configured for ${provider}`);
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         error: 'API key not configured',
-        message: 'Please set your API key in the extension settings' 
+        message: 'Please set your API key in the extension settings'
       }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
@@ -288,6 +288,19 @@ export async function handleChatRequest(
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Load project context from storage
+    let projectContext = '';
+    try {
+      const storageResult = await chrome.storage.local.get(['earth_engine_project_context']);
+      projectContext = storageResult['earth_engine_project_context'] || '';
+      if (projectContext) {
+        console.log(`📋 [Chat Handler] Loaded project context (${projectContext.length} characters)`);
+      }
+    } catch (error) {
+      console.error('❌ [Chat Handler] Error loading project context:', error);
+      // Continue without project context if there's an error
     }
 
     // Setup LLM provider
@@ -1897,10 +1910,24 @@ export async function handleChatRequest(
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
 
+    // Build final system prompt by combining base prompt with project context
+    let finalSystemPrompt = GEE_SYSTEM_PROMPT;
+    if (projectContext && projectContext.trim()) {
+      finalSystemPrompt = `${GEE_SYSTEM_PROMPT}
+
+## Project-Specific Context
+
+${projectContext}`;
+      console.log(`📋 [Chat Handler] Using combined system prompt with project context (${projectContext.length} chars)`);
+      console.log(`📋 [Chat Handler] Full system prompt:\n${finalSystemPrompt}`);
+    } else {
+      console.log(`📋 [Chat Handler] Using base system prompt (no project context)`);
+    }
+
     let streamOptions: any = {
       model: llmProvider(effectiveModel),
       // Temporarily remove system prompt for Ollama to match curl format
-      ...(provider !== 'ollama' && { system: GEE_SYSTEM_PROMPT }),
+      ...(provider !== 'ollama' && { system: finalSystemPrompt }),
       messages: formattedMessages,
       temperature: 0.7,
       maxRetries: 3,
