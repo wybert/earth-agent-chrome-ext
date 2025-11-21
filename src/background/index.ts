@@ -1944,11 +1944,28 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         const chunk = decoder.decode(value, { stream: !done });
 
         if (chunk) { // Avoid sending empty chunks if decoder yields them
-          port.postMessage({
-            type: 'CHAT_STREAM_CHUNK',
-            requestId,
-            chunk: chunk
-          });
+          // Check if this is an error message from the stream
+          if (chunk.startsWith('error:')) {
+            try {
+              const errorData = JSON.parse(chunk.substring(6)); // Remove 'error:' prefix
+              console.error(`[${requestId}] Received error from stream:`, errorData.error);
+              port.postMessage({
+                type: 'ERROR',
+                requestId,
+                error: errorData.error
+              });
+              break; // Stop processing the stream after error
+            } catch (parseError) {
+              console.error(`[${requestId}] Failed to parse error message:`, chunk);
+            }
+          } else {
+            // Normal chunk, forward to frontend
+            port.postMessage({
+              type: 'CHAT_STREAM_CHUNK',
+              requestId,
+              chunk: chunk
+            });
+          }
         }
       }
     } catch (streamError) {
