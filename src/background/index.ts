@@ -674,22 +674,35 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           
           // Get the active tab
           const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          
-          if (!tabs || tabs.length === 0) {
+
+          if (!tabs || tabs.length === 0 || !tabs[0]) {
             sendResponse({
               success: false,
               error: 'No active tab found'
             });
             return;
           }
-          
+
+          const activeTab = tabs[0];
+          if (!activeTab.windowId) {
+            sendResponse({
+              success: false,
+              error: 'Active tab has no window ID'
+            });
+            return;
+          }
+
           // Take the screenshot
           try {
-            const dataUrl = await chrome.tabs.captureVisibleTab(tabs[0].windowId, {
+            const dataUrl = await chrome.tabs.captureVisibleTab(activeTab.windowId, {
               format: 'png',
               quality: 100
             });
-            
+
+            if (!dataUrl) {
+              throw new Error('Screenshot capture returned empty data');
+            }
+
             console.log('Screenshot captured successfully');
             sendResponse({
               success: true,
@@ -698,9 +711,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
           } catch (captureError) {
             console.error('Error capturing screenshot:', captureError);
+            const errorMessage = captureError instanceof Error ? captureError.message : String(captureError);
             sendResponse({
               success: false,
-              error: `Error capturing screenshot: ${captureError instanceof Error ? captureError.message : String(captureError)}`
+              error: `Error capturing screenshot: ${errorMessage}. This may happen if the tab is not fully loaded, is a Chrome internal page (like chrome://, chrome-extension://), or if the extension lacks permissions.`
             });
           }
         } catch (error) {
@@ -1132,14 +1146,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             }
           });
           
-          if (!results || results.length === 0) {
+          if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
               error: 'Failed to execute snapshot script'
             });
             return;
           }
-          
+
           const result = results[0].result;
           console.log('Accessibility snapshot captured successfully');
           sendResponse(result);
@@ -1273,14 +1287,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             args: [selector, text]
           });
 
-          if (!results || results.length === 0) {
+          if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
               error: 'No result from script execution'
             });
             return;
           }
-          
+
           // Return the result
           sendResponse(results[0].result);
         } catch (error) {
@@ -1406,14 +1420,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             args: [selector, limit]
           });
 
-          if (!results || results.length === 0) {
+          if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
               error: 'No result from script execution'
             });
             return;
           }
-          
+
           // Return the result
           sendResponse(results[0].result);
         } catch (error) {
