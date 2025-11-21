@@ -176,6 +176,7 @@ export function ChatUI() {
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
@@ -236,20 +237,22 @@ export function ChatUI() {
   // Restore API config check useEffect
   useEffect(() => {
     chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY, 
+      API_KEY_STORAGE_KEY,
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
       OLLAMA_API_KEY_STORAGE_KEY,
-      API_PROVIDER_STORAGE_KEY
+      API_PROVIDER_STORAGE_KEY,
+      MODEL_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-      
+      const model = result[MODEL_STORAGE_KEY] || '';
+
       // Determine if an API key is configured for the selected provider
       let hasKey = false;
       let currentKey = '';
-      
+
       if (provider === 'openai') {
         currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
@@ -267,12 +270,13 @@ export function ChatUI() {
         hasKey = true; // Ollama doesn't require an API key for local instances
         console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
       }
-      
+
       const hasApiKey = hasKey;
       setApiConfigured(hasApiKey);
       setApiKey(currentKey);
       setApiProvider(provider as any);
-      
+      setSelectedModel(model);
+
       if (!hasKey) {
         setShowSettings(true);
       }
@@ -1203,6 +1207,10 @@ export function ChatUI() {
               showRegenerate={canRegenerate}
               mode={agentMode}
               onModeChange={setAgentMode}
+              provider={apiProvider}
+              model={selectedModel}
+              onProviderChange={setApiProvider}
+              onModelChange={setSelectedModel}
               className="h-full"
             />
 

@@ -38,6 +38,10 @@ interface ChatPropsBase {
   showRegenerate?: boolean
   mode?: 'ask' | 'do'
   onModeChange?: (mode: 'ask' | 'do') => void
+  provider?: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'
+  model?: string
+  onProviderChange?: (provider: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama') => void
+  onModelChange?: (model: string) => void
 }
 
 interface ChatPropsWithoutSuggestions extends ChatPropsBase {
@@ -69,6 +73,10 @@ export function Chat({
   showRegenerate,
   mode,
   onModeChange,
+  provider,
+  model,
+  onProviderChange,
+  onModelChange,
   ...props
 }: ChatProps) {
   const lastMessage = messages.at(-1)
@@ -242,6 +250,10 @@ export function Chat({
             showRegenerate={showRegenerate}
             mode={mode}
             onModeChange={onModeChange}
+            provider={provider}
+            model={model}
+            onProviderChange={onProviderChange}
+            onModelChange={onModelChange}
           />
         )}
       </ChatForm>
