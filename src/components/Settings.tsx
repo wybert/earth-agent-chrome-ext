@@ -17,6 +17,8 @@ const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+const PROJECT_NAME_STORAGE_KEY = 'earth_engine_project_name';
+const PROJECT_CONTEXT_STORAGE_KEY = 'earth_engine_project_context';
 
 interface SettingsProps {
   onClose: () => void;
@@ -31,11 +33,14 @@ export function Settings({ onClose }: SettingsProps) {
   const [showApiKey, setShowApiKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [projectName, setProjectName] = useState('');
+  const [projectContext, setProjectContext] = useState('');
+  const [contextSaveStatus, setContextSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Load saved API key on component mount
   useEffect(() => {
     chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY, 
+      API_KEY_STORAGE_KEY,
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
@@ -75,6 +80,15 @@ export function Settings({ onClose }: SettingsProps) {
       } else {
         setSelectedModel(DEFAULT_MODELS[savedProvider]);
       }
+    });
+
+    // Load project context from local storage
+    chrome.storage.local.get([
+      PROJECT_NAME_STORAGE_KEY,
+      PROJECT_CONTEXT_STORAGE_KEY
+    ], (result) => {
+      setProjectName(result[PROJECT_NAME_STORAGE_KEY] || '');
+      setProjectContext(result[PROJECT_CONTEXT_STORAGE_KEY] || '');
     });
   }, []);
 
@@ -423,16 +437,63 @@ export function Settings({ onClose }: SettingsProps) {
     }
   };
 
+  const handleSaveContext = () => {
+    // Validate character limit
+    if (projectContext.length > 2000) {
+      setContextSaveStatus('error');
+      setTimeout(() => setContextSaveStatus('idle'), 3000);
+      return;
+    }
+
+    // Save to local storage
+    chrome.storage.local.set({
+      [PROJECT_NAME_STORAGE_KEY]: projectName,
+      [PROJECT_CONTEXT_STORAGE_KEY]: projectContext
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving project context:', chrome.runtime.lastError);
+        setContextSaveStatus('error');
+      } else {
+        setContextSaveStatus('success');
+      }
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setContextSaveStatus('idle');
+      }, 3000);
+    });
+  };
+
+  const handleClearContext = () => {
+    if (projectName || projectContext) {
+      const confirmed = window.confirm('Are you sure you want to clear the project context? This action cannot be undone.');
+      if (!confirmed) return;
+    }
+
+    setProjectName('');
+    setProjectContext('');
+
+    // Clear from storage
+    chrome.storage.local.set({
+      [PROJECT_NAME_STORAGE_KEY]: '',
+      [PROJECT_CONTEXT_STORAGE_KEY]: ''
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error clearing project context:', chrome.runtime.lastError);
+      }
+    });
+  };
+
   return (
-    <Card className="p-4 w-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">LLM API Settings</h2>
+    <Card className="p-4 w-full h-full flex flex-col overflow-hidden">
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
+        <h2 className="text-lg font-semibold">Settings</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-y-auto flex-1 pr-2">
         {connectionStatus === 'success' && (
           <div className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-2 text-green-800 dark:text-green-300">
             <p><strong>Active Configuration:</strong></p>
@@ -589,6 +650,77 @@ export function Settings({ onClose }: SettingsProps) {
           <p className="mt-1">
             <strong>Model selection:</strong> You can select models directly from the chat interface. Different models have varying capabilities, speeds, and costs.
           </p>
+        </div>
+
+        {/* Project Context Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold mb-3">Project Context</h3>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm mb-1 block">Project Name</label>
+              <Input
+                type="text"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Enter project name (optional)"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm mb-1 block">Custom Instructions</label>
+              <textarea
+                value={projectContext}
+                onChange={(e) => setProjectContext(e.target.value)}
+                placeholder="Add project-specific context that will be included in every message...
+
+Examples:
+- Project background and goals
+- Custom terminology and definitions
+- Preferred coding styles or conventions
+- Domain-specific knowledge"
+                className="w-full h-[120px] px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                maxLength={2000}
+              />
+              <div className="flex items-center justify-between mt-1">
+                <span className={`text-xs ${projectContext.length > 1900 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'}`}>
+                  {projectContext.length}/2000 characters
+                </span>
+                {projectContext.length > 2000 && (
+                  <span className="text-xs text-red-600 dark:text-red-400">
+                    Character limit exceeded
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleSaveContext} disabled={projectContext.length > 2000}>
+                Save Context
+              </Button>
+              <Button onClick={handleClearContext} variant="outline" disabled={!projectName && !projectContext}>
+                Clear
+              </Button>
+            </div>
+
+            {contextSaveStatus === 'success' && (
+              <div className="text-sm flex items-center text-green-600">
+                <Check className="h-4 w-4 mr-1" /> Project context saved successfully
+              </div>
+            )}
+
+            {contextSaveStatus === 'error' && (
+              <div className="text-sm flex items-center text-red-600">
+                <X className="h-4 w-4 mr-1" /> Error saving project context
+              </div>
+            )}
+
+            <div className="text-xs text-gray-500 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+              <p className="font-semibold mb-1">ℹ️ About Project Context</p>
+              <p>These instructions will be applied to every chat message.</p>
+              <p className="mt-1">Stored locally on this device (not synced across devices).</p>
+            </div>
+          </div>
         </div>
 
         {/* About Section */}
