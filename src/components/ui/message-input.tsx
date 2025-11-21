@@ -13,6 +13,7 @@ import { FilePreview } from "@/components/ui/file-preview"
 import { InterruptPrompt } from "@/components/ui/interrupt-prompt"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { AVAILABLE_MODELS, MODEL_DISPLAY_NAMES, type ApiProvider } from "@/constants/models"
 
 interface MessageInputBaseProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -26,6 +27,10 @@ interface MessageInputBaseProps
   showRegenerate?: boolean
   mode?: 'ask' | 'do'
   onModeChange?: (mode: 'ask' | 'do') => void
+  provider?: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'
+  model?: string
+  onProviderChange?: (provider: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama') => void
+  onModelChange?: (model: string) => void
 }
 
 interface MessageInputWithoutAttachmentProps extends MessageInputBaseProps {
@@ -55,6 +60,10 @@ export function MessageInput({
   showRegenerate = false,
   mode = 'ask',
   onModeChange,
+  provider,
+  model,
+  onProviderChange,
+  onModelChange,
   ...props
 }: MessageInputProps) {
   // Set placeholder based on mode
@@ -63,6 +72,57 @@ export function MessageInput({
 
   const [isDragging, setIsDragging] = useState(false)
   const [showInterruptPrompt, setShowInterruptPrompt] = useState(false)
+
+  // Get all models grouped by provider
+  const allModelsGrouped = Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => ({
+    provider: providerKey as ApiProvider,
+    models: models
+  }))
+
+  // Get display name for model
+  const getModelDisplayName = (modelId: string) => {
+    return MODEL_DISPLAY_NAMES[modelId] || modelId
+  }
+
+  // Get provider name for display
+  const getProviderDisplayName = (provider: string) => {
+    const names: Record<string, string> = {
+      'openai': 'OpenAI',
+      'anthropic': 'Anthropic',
+      'google': 'Google',
+      'qwen': 'Qwen',
+      'ollama': 'Ollama'
+    }
+    return names[provider] || provider
+  }
+
+  // Find which provider a model belongs to
+  const findProviderForModel = (modelId: string): ApiProvider | null => {
+    for (const [providerKey, models] of Object.entries(AVAILABLE_MODELS)) {
+      if (models.includes(modelId)) {
+        return providerKey as ApiProvider
+      }
+    }
+    return null
+  }
+
+  // Handle model change and save to storage
+  const handleModelChange = (newModel: string) => {
+    onModelChange?.(newModel)
+    // Find the provider for this model and update both
+    const newProvider = findProviderForModel(newModel)
+    if (newProvider && onProviderChange) {
+      onProviderChange(newProvider)
+      // Save both to Chrome storage
+      chrome.storage.sync.set({
+        earth_engine_llm_model: newModel,
+        earth_engine_llm_provider: newProvider
+      })
+    } else {
+      // Just save the model
+      chrome.storage.sync.set({ earth_engine_llm_model: newModel })
+    }
+  }
 
   const {
     isListening,
@@ -267,8 +327,8 @@ export function MessageInput({
       </div>
 
       <div className="absolute left-3 right-3 bottom-3 z-20 flex justify-between items-center">
-        {/* Left side - Mode selector */}
-        <div>
+        {/* Left side - Mode and Model selectors */}
+        <div className="flex gap-2 items-center">
           {onModeChange && (
             <Select value={mode} onValueChange={(value) => onModeChange(value as 'ask' | 'do')}>
               <SelectTrigger className="h-8 w-auto px-3 text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
@@ -277,6 +337,30 @@ export function MessageInput({
               <SelectContent side="top">
                 <SelectItem value="ask">Ask</SelectItem>
                 <SelectItem value="do">Do</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {model && onModelChange && (
+            <Select value={model} onValueChange={handleModelChange}>
+              <SelectTrigger className="h-8 w-auto min-w-[180px] px-3 text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                <span className="truncate">{getModelDisplayName(model)}</span>
+              </SelectTrigger>
+              <SelectContent side="top" className="max-h-80 w-64">
+                {allModelsGrouped.map(({ provider: providerKey, models }, groupIndex) => (
+                  <React.Fragment key={providerKey}>
+                    {groupIndex > 0 && (
+                      <div className="border-t border-gray-600 my-1" />
+                    )}
+                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      {getProviderDisplayName(providerKey)}
+                    </div>
+                    {models.map((modelId) => (
+                      <SelectItem key={modelId} value={modelId}>
+                        {getModelDisplayName(modelId)}
+                      </SelectItem>
+                    ))}
+                  </React.Fragment>
+                ))}
               </SelectContent>
             </Select>
           )}

@@ -15,6 +15,7 @@ interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 interface SelectContentProps {
   children: React.ReactNode
   side?: 'top' | 'bottom'
+  className?: string
 }
 
 interface SelectItemProps {
@@ -71,7 +72,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 )
 SelectTrigger.displayName = "SelectTrigger"
 
-const SelectContent = ({ children, side = 'bottom' }: SelectContentProps) => {
+const SelectContent = ({ children, side = 'bottom', className }: SelectContentProps) => {
   const { isOpen, setIsOpen } = React.useContext(SelectContext)
 
   if (!isOpen) return null
@@ -87,8 +88,9 @@ const SelectContent = ({ children, side = 'bottom' }: SelectContentProps) => {
         onClick={() => setIsOpen(false)}
       />
       <div className={cn(
-        "absolute left-0 z-50 min-w-full w-32 bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto",
-        positionClasses
+        "absolute left-0 z-50 min-w-full bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto",
+        positionClasses,
+        className
       )}>
         {children}
       </div>

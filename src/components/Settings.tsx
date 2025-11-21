@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Check, X, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 import { Label } from './ui/label';
+import { AVAILABLE_MODELS, MODEL_DISPLAY_NAMES, DEFAULT_MODELS, type ApiProvider } from '@/constants/models';
 
 // Key for storing API key in Chrome Storage
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
@@ -16,182 +17,6 @@ const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
-
-type ApiProvider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
-
-// Available models for each provider
-const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
-  openai: [
-    // GPT-5.1 Series (Latest)
-    'gpt-5.1',
-    'gpt-5.1-2025-11-13',
-    'gpt-5.1-chat-latest',
-    'gpt-5.1-codex',
-    'gpt-5.1-codex-mini',
-    // GPT-5 Series
-    'gpt-5',
-    'gpt-5-2025-08-07',
-    'gpt-5-chat-latest',
-    'gpt-5-pro',
-    'gpt-5-pro-2025-10-06',
-    'gpt-5-mini',
-    'gpt-5-mini-2025-08-07',
-    'gpt-5-nano',
-    'gpt-5-nano-2025-08-07',
-    'gpt-5-codex',
-    // GPT-4o Series
-    'gpt-4o',
-    'gpt-4o-2024-05-13',
-    'gpt-4o-2024-08-06',
-    'gpt-4o-2024-11-20',
-    'gpt-4o-mini',
-    'gpt-4o-mini-2024-07-18'
-  ],
-  anthropic: [
-    // Claude 4.5 Series (Latest)
-    'claude-sonnet-4-5-20250929',
-    'claude-haiku-4-5-20251001',
-    // Claude 4.1 Series
-    'claude-opus-4-1-20250805',
-    // Claude 4 Series
-    'claude-opus-4-20250514',
-    'claude-sonnet-4-20250514'
-  ],
-  google: [
-    // Latest Aliases (Auto-updated)
-    'gemini-pro-latest',
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
-    // Gemini 3 Pro Series (Latest with thinking)
-    'gemini-3-pro-preview',
-    // Gemini 2.5 Pro Series (Most Capable)
-    'gemini-2.5-pro',
-    'gemini-2.5-pro-preview-06-05',
-    'gemini-2.5-pro-preview-05-06',
-    'gemini-2.5-pro-preview-03-25',
-    // Gemini 2.5 Flash Series (Balanced)
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-preview-05-20',
-    'gemini-2.5-flash-preview-09-2025',
-    // Gemini 2.5 Flash-Lite Series (Fast)
-    'gemini-2.5-flash-lite',
-    'gemini-2.5-flash-lite-preview-06-17',
-    'gemini-2.5-flash-lite-preview-09-2025'
-  ],
-  qwen: [
-    'qwen-max-latest',
-    'qwen-max',
-    'qwen-plus-latest', 
-    'qwen-plus',
-    'qwen-turbo-latest',
-    'qwen-turbo',
-    'qwen-vl-max',
-    'qwen2.5-72b-instruct',
-    'qwen2.5-14b-instruct-1m',
-    'qwen2.5-vl-72b-instruct'
-  ],
-  ollama: [
-    'phi3',
-    'llama3.3:70b',
-    'llama3.3',
-    'llama3.2:90b',
-    'llama3.2:70b',
-    'llama3.2',
-    'llama3.1:70b',
-    'llama3.1',
-    'mistral',
-    'codellama',
-    'deepseek-coder-v2',
-    'qwen2.5',
-    'gemma2',
-    'llava',
-    'llava-llama3',
-    'llava-phi3',
-    'moondream'
-  ]
-};
-
-// Human-readable model names
-const MODEL_DISPLAY_NAMES: Record<string, string> = {
-  // GPT-5.1 Series
-  'gpt-5.1': 'GPT-5.1 (Recommended)',
-  'gpt-5.1-2025-11-13': 'GPT-5.1 (November 2025)',
-  'gpt-5.1-chat-latest': 'GPT-5.1 Chat (Latest)',
-  'gpt-5.1-codex': 'GPT-5.1 Codex',
-  'gpt-5.1-codex-mini': 'GPT-5.1 Codex Mini',
-  // GPT-5 Series
-  'gpt-5': 'GPT-5',
-  'gpt-5-2025-08-07': 'GPT-5 (August 2025)',
-  'gpt-5-chat-latest': 'GPT-5 Chat (Latest)',
-  'gpt-5-pro': 'GPT-5 Pro',
-  'gpt-5-pro-2025-10-06': 'GPT-5 Pro (October 2025)',
-  'gpt-5-mini': 'GPT-5 Mini (Fast)',
-  'gpt-5-mini-2025-08-07': 'GPT-5 Mini (August 2025)',
-  'gpt-5-nano': 'GPT-5 Nano (Ultra Fast)',
-  'gpt-5-nano-2025-08-07': 'GPT-5 Nano (August 2025)',
-  'gpt-5-codex': 'GPT-5 Codex',
-  // GPT-4o Series
-  'gpt-4o': 'GPT-4o',
-  'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
-  'gpt-4o-2024-08-06': 'GPT-4o (August 2024)',
-  'gpt-4o-2024-11-20': 'GPT-4o (November 2024)',
-  'gpt-4o-mini': 'GPT-4o Mini',
-  'gpt-4o-mini-2024-07-18': 'GPT-4o Mini (July 2024)',
-  // Claude 4.5 Series
-  'claude-sonnet-4-5-20250929': 'Claude Sonnet 4.5 (Recommended)',
-  'claude-haiku-4-5-20251001': 'Claude Haiku 4.5 (Fast)',
-  // Claude 4.1 Series
-  'claude-opus-4-1-20250805': 'Claude Opus 4.1',
-  // Claude 4 Series
-  'claude-opus-4-20250514': 'Claude Opus 4',
-  'claude-sonnet-4-20250514': 'Claude Sonnet 4',
-  // Latest Aliases
-  'gemini-pro-latest': 'Gemini Pro (Latest)',
-  'gemini-flash-latest': 'Gemini Flash (Latest)',
-  'gemini-flash-lite-latest': 'Gemini Flash-Lite (Latest)',
-  // Gemini 3 Pro Series
-  'gemini-3-pro-preview': 'Gemini 3 Pro Preview (Thinking)',
-  // Gemini 2.5 Pro Series
-  'gemini-2.5-pro': 'Gemini 2.5 Pro (Recommended)',
-  'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
-  'gemini-2.5-pro-preview-05-06': 'Gemini 2.5 Pro Preview (May 6)',
-  'gemini-2.5-pro-preview-03-25': 'Gemini 2.5 Pro Preview (March 25)',
-  // Gemini 2.5 Flash Series
-  'gemini-2.5-flash': 'Gemini 2.5 Flash',
-  'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash Preview (May 20)',
-  'gemini-2.5-flash-preview-09-2025': 'Gemini 2.5 Flash Preview (Sep 2025)',
-  // Gemini 2.5 Flash-Lite Series
-  'gemini-2.5-flash-lite': 'Gemini 2.5 Flash-Lite (Fast)',
-  'gemini-2.5-flash-lite-preview-06-17': 'Gemini 2.5 Flash-Lite Preview (June 17)',
-  'gemini-2.5-flash-lite-preview-09-2025': 'Gemini 2.5 Flash-Lite Preview (Sep 2025)',
-  'qwen-max-latest': 'Qwen-Max (Latest)',
-  'qwen-max': 'Qwen-Max',
-  'qwen-plus-latest': 'Qwen-Plus (Latest)',
-  'qwen-plus': 'Qwen-Plus',
-  'qwen-turbo-latest': 'Qwen-Turbo (Latest)',
-  'qwen-turbo': 'Qwen-Turbo',
-  'qwen-vl-max': 'Qwen-VL-Max',
-  'qwen2.5-72b-instruct': 'Qwen2.5-72B-Instruct',
-  'qwen2.5-14b-instruct-1m': 'Qwen2.5-14B-Instruct-1M',
-  'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct',
-  'phi3': 'Phi-3 (Recommended)',
-  'llama3.3:70b': 'Llama 3.3 70B',
-  'llama3.3': 'Llama 3.3',
-  'llama3.2:90b': 'Llama 3.2 90B',
-  'llama3.2:70b': 'Llama 3.2 70B',
-  'llama3.2': 'Llama 3.2',
-  'llama3.1:70b': 'Llama 3.1 70B',
-  'llama3.1': 'Llama 3.1',
-  'mistral': 'Mistral',
-  'codellama': 'Code Llama',
-  'deepseek-coder-v2': 'DeepSeek Coder V2',
-  'qwen2.5': 'Qwen 2.5',
-  'gemma2': 'Gemma 2',
-  'llava': 'LLaVA (Vision)',
-  'llava-llama3': 'LLaVA Llama3 (Vision)',
-  'llava-phi3': 'LLaVA Phi3 (Vision)',
-  'moondream': 'Moondream (Vision)'
-};
 
 interface SettingsProps {
   onClose: () => void;
@@ -243,15 +68,12 @@ export function Settings({ onClose }: SettingsProps) {
         setOllamaBaseUrl(ollamaUrl);
       }
 
-      // Load saved model or default to first model for the provider
+      // Load saved model or default model for the provider
       const savedModel = result[MODEL_STORAGE_KEY] as string || '';
-      if (savedProvider === 'ollama') {
-        // For Ollama, use saved model or default to phi3
-        setSelectedModel(savedModel || 'phi3');
-      } else if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
+      if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
         setSelectedModel(savedModel);
       } else {
-        setSelectedModel(AVAILABLE_MODELS[savedProvider][0]);
+        setSelectedModel(DEFAULT_MODELS[savedProvider]);
       }
     });
   }, []);
@@ -290,15 +112,12 @@ export function Settings({ onClose }: SettingsProps) {
       // When provider changes, check if current model is valid for new provider
       const currentSavedModel = result[MODEL_STORAGE_KEY] as string || '';
       
-      if (provider === 'ollama') {
-        // For Ollama, use saved model or default to phi3
-        setSelectedModel(currentSavedModel || 'phi3');
-      } else if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
+      if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
         // Keep current model if it's valid for the new provider (rare case)
         setSelectedModel(currentSavedModel);
       } else {
-        // Otherwise default to first model for the new provider
-        setSelectedModel(AVAILABLE_MODELS[provider][0]);
+        // Otherwise default to the default model for the new provider
+        setSelectedModel(DEFAULT_MODELS[provider]);
       }
     });
   }, [provider]);
@@ -695,38 +514,6 @@ export function Settings({ onClose }: SettingsProps) {
           </div>
         )}
 
-        <div>
-          <label className="text-sm mb-1 block">
-            {provider === 'ollama' ? 'Enter Model ID' : 'Select Model'}
-          </label>
-          {provider === 'ollama' ? (
-            <div>
-              <Input
-                type="text"
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                placeholder="Enter Ollama model ID (e.g., llama3.2, phi3, mistral)"
-                className="mb-2"
-              />
-              <p className="text-xs text-gray-500 mb-4">
-                Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2
-              </p>
-            </div>
-          ) : (
-            <select 
-              className="w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-            >
-              {AVAILABLE_MODELS[provider].map((modelId) => (
-                <option key={modelId} value={modelId}>
-                  {MODEL_DISPLAY_NAMES[modelId] || modelId}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        
         {provider !== 'ollama' && (
           <div>
             <label className="text-sm mb-1 block">API Key</label>
@@ -800,11 +587,7 @@ export function Settings({ onClose }: SettingsProps) {
               : 'For Ollama, API key is usually not required for local instances. Configure base URL above.'}
           </p>
           <p className="mt-1">
-            <strong>Model selection:</strong> Different models have varying capabilities, speeds, and costs.
-            More powerful models may offer better results but could be slower or more expensive to use.
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Selected model: <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{selectedModel}</code>
+            <strong>Model selection:</strong> You can select models directly from the chat interface. Different models have varying capabilities, speeds, and costs.
           </p>
         </div>
 
