@@ -340,6 +340,7 @@ export function ChatUI() {
     let isActive = true;
     let isConnecting = false; // Connection lock to prevent race conditions
     let messageListener: ((response: any) => void) | null = null;
+    let disconnectListener: (() => void) | null = null;
 
     const connectToBackground = () => {
       if (!isActive || isConnecting) {
@@ -362,12 +363,16 @@ export function ChatUI() {
           if (messageListener) {
             oldPort.onMessage.removeListener(messageListener);
           }
+          if (disconnectListener) {
+            oldPort.onDisconnect.removeListener(disconnectListener);
+          }
           oldPort.disconnect();
         } catch (e) {
           console.warn('Error cleaning up old port:', e);
         }
         currentPort = null;
         messageListener = null;
+        disconnectListener = null;
       }
 
       try {
@@ -386,7 +391,9 @@ export function ChatUI() {
         };
 
         currentPort.onMessage.addListener(messageListener);
-        currentPort.onDisconnect.addListener(() => {
+
+        // Create and store disconnect listener reference
+        disconnectListener = () => {
           console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
 
           // Clean up this connection's listener
@@ -423,7 +430,9 @@ export function ChatUI() {
                reconnectTimer = setTimeout(connectToBackground, 500);
             }
           }
-        });
+        };
+
+        currentPort.onDisconnect.addListener(disconnectListener);
 
         console.log('Connected to background script');
         currentPort.postMessage({ type: 'PING' });
@@ -454,11 +463,16 @@ export function ChatUI() {
           if (messageListener) {
             currentPort.onMessage.removeListener(messageListener);
           }
+          if (disconnectListener) {
+            currentPort.onDisconnect.removeListener(disconnectListener);
+          }
           currentPort.disconnect();
         } catch (e) {
           console.warn('Error during cleanup:', e);
         }
         currentPort = null;
+        messageListener = null;
+        disconnectListener = null;
       }
 
       setPort(null);
