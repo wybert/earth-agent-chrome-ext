@@ -1240,6 +1240,183 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
       },
     });
 
+    // Define Get Console Output tool
+    const getConsoleOutputTool = tool({
+      description: 'Read all output from the Google Earth Engine console, including print() statements, data, and error messages. Use this to verify code execution results.',
+      inputSchema: z.object({}), // No parameters needed
+      execute: async () => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'getConsoleOutput',
+            args: {},
+            timestamp: Date.now()
+          });
+        }
+
+        try {
+          console.log(`📋 [GetConsoleOutputTool] Tool called to read GEE console`);
+          console.time('GetConsoleOutputTool execution');
+
+          // Validate Chrome APIs
+          const apiValidation = validateChromeAPIs();
+          if (!apiValidation.success) {
+            console.warn(`❌ [GetConsoleOutputTool] ${apiValidation.error}`);
+            return {
+              success: false,
+              error: apiValidation.error,
+              suggestion: 'This tool requires running in a Chrome extension background script context'
+            };
+          }
+
+          // Find the Earth Engine tab
+          const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+              resolve(tabs || []);
+            });
+          });
+
+          if (earthEngineTabs.length === 0) {
+            console.warn('❌ [GetConsoleOutputTool] No Earth Engine tab found');
+            return {
+              success: false,
+              error: 'No Google Earth Engine tab found',
+              suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
+            };
+          }
+
+          // Smart tab selection: prefer active or recently used tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+          const tabId = selectedTab?.id;
+          if (!tabId) {
+            console.warn('❌ [GetConsoleOutputTool] Invalid Earth Engine tab');
+            return {
+              success: false,
+              error: 'Invalid Earth Engine tab',
+              suggestion: "Please reload your Earth Engine tab and try again"
+            };
+          }
+
+          // Ensure content script is ready
+          const scriptReady = await ensureContentScript(tabId);
+          if (!scriptReady.success) {
+            console.error('❌ [GetConsoleOutputTool] Content script not available:', scriptReady.error);
+            return {
+              success: false,
+              error: scriptReady.error || 'Content script not available',
+              suggestion: 'Try refreshing the Earth Engine tab'
+            };
+          }
+
+          // Send message to content script to get console output
+          console.log('📋 [GetConsoleOutputTool] Requesting console output from content script...');
+          const result: any = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { type: 'GET_CONSOLE_OUTPUT' }, (response) => {
+              if (chrome.runtime.lastError) {
+                resolve({
+                  success: false,
+                  error: chrome.runtime.lastError.message || 'Error communicating with content script'
+                });
+              } else {
+                resolve(response || { success: false, error: 'No response from content script' });
+              }
+            });
+          });
+
+          console.timeEnd('GetConsoleOutputTool execution');
+
+          if (!result.success) {
+            console.warn(`❌ [GetConsoleOutputTool] Failed to get console output:`, result.error);
+            return {
+              success: false,
+              error: result.error || 'Failed to read console output',
+              suggestion: 'Make sure the Earth Engine editor is loaded and you have run some code'
+            };
+          }
+
+          console.log(`✅ [GetConsoleOutputTool] Successfully read ${result.count} console entries`);
+          return {
+            success: true,
+            outputs: result.outputs || [],
+            count: result.count || 0,
+            message: result.message || `Read ${result.count} console entries`
+          };
+
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ [GetConsoleOutputTool] Error:`, error);
+          console.timeEnd('GetConsoleOutputTool execution');
+          return {
+            success: false,
+            error: `Error reading GEE console: ${errorMessage}`,
+            suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
+          };
+        }
+      },
+      toModelOutput: (result: any) => {
+        if (!result.success) {
+          return {
+            type: 'content',
+            value: [{
+              type: 'text',
+              text: `❌ Failed to read console: ${result.error}${result.suggestion ? '\n\nSuggestion: ' + result.suggestion : ''}`
+            }]
+          };
+        }
+
+        if (result.count === 0) {
+          return {
+            type: 'content',
+            value: [{
+              type: 'text',
+              text: '📋 Console is empty. No output to display. Run some code first (e.g., print("Hello World")).'
+            }]
+          };
+        }
+
+        // Format console outputs with chart detection
+        const formattedOutputs = result.outputs.map((output: any, i: number) => {
+          let icon = 'ℹ️';
+          if (output.type === 'error') {
+            icon = '❌';
+          } else if (output.type === 'warning') {
+            icon = '⚠️';
+          } else if (output.type === 'chart') {
+            icon = '📊';
+          }
+
+          let formattedLine = `${i + 1}. ${icon} ${output.message}`;
+
+          // Add extra info for charts
+          if (output.hasVisualContent) {
+            if (output.visualElementType) {
+              formattedLine += `\n   Type: ${output.visualElementType}`;
+            }
+            if (output.chartDescription) {
+              formattedLine += `\n   Description: ${output.chartDescription}`;
+            }
+          }
+
+          return formattedLine;
+        }).join('\n');
+
+        // Check if any charts were detected
+        const chartCount = result.outputs.filter((o: any) => o.type === 'chart').length;
+        const chartNote = chartCount > 0
+          ? `\n\n💡 Tip: ${chartCount} chart(s) detected. Use the screenshot tool to capture and view the visualizations.`
+          : '';
+
+        return {
+          type: 'content',
+          value: [{
+            type: 'text',
+            text: `📋 Console Output (${result.count} entries):\n\n${formattedOutputs}${chartNote}`
+          }]
+        };
+      },
+    });
+
     // Define Get Script tool
     const getScriptTool = tool({
       description: 'Read the current JavaScript code from the Google Earth Engine code editor. Use this tool to see what code is currently in the editor before making modifications.',
@@ -1380,6 +1557,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
     resetMapInspectorConsoleTool,
     clearScriptTool,
     clickByCoordinatesTool,
+    getConsoleOutputTool,
     getScriptTool
   };
 }

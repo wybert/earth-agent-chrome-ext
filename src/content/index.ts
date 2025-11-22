@@ -210,6 +210,10 @@ function setupPingResponse() {
         handleGetScript(sendResponse);
         return true; // Will respond asynchronously
 
+      case 'GET_CONSOLE_OUTPUT':
+        handleGetConsoleOutput(sendResponse);
+        return true; // Will respond asynchronously
+
       case 'GET_MAP_LAYERS':
         handleGetMapLayers(sendResponse);
         return true; // Will respond asynchronously
@@ -1104,6 +1108,155 @@ async function handleGetScript(sendResponse: (response: any) => void) {
     sendResponse({
       success: false,
       error: `Error getting Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Handles getting all console output from the Earth Engine console
+ */
+async function handleGetConsoleOutput(sendResponse: (response: any) => void) {
+  console.log('Handling get console output message');
+
+  try {
+    // Find the EE-CONSOLE element
+    const eeConsole = document.querySelector('ee-console');
+
+    if (!eeConsole) {
+      console.warn('EE-CONSOLE element not found');
+      sendResponse({
+        success: false,
+        error: 'Console element not found. Make sure you are on the Google Earth Engine code editor page.'
+      });
+      return;
+    }
+
+    // Get all console log entries (they are direct children in light DOM)
+    const consoleLogElements = eeConsole.querySelectorAll('ee-console-log');
+
+    if (consoleLogElements.length === 0) {
+      console.log('No console output found');
+      sendResponse({
+        success: true,
+        outputs: [],
+        count: 0,
+        message: 'Console is empty. Run some code to see output.'
+      });
+      return;
+    }
+
+    // Parse each console log entry
+    const outputs: Array<{
+      type: string,
+      message: string,
+      index: number,
+      hasVisualContent?: boolean,
+      visualElementType?: string,
+      chartDescription?: string
+    }> = [];
+    consoleLogElements.forEach((logElement, index) => {
+      try {
+        // GEE console entries can have multiple child divs when print() has multiple arguments
+        // e.g., print('Number:', 42) creates two children: one for 'Number:' and one for '42'
+        // We need to get the full textContent and clean it up properly
+
+        let message = logElement.textContent || '';
+
+        // Remove the "JSON" button text that appears at the start
+        message = message.replace(/^JSON/, '').trim();
+
+        // Alternative method: get text from all .trivial divs if available
+        // This handles cases where content is split across multiple divs
+        const trivialDivs = logElement.querySelectorAll('.trivial');
+        if (trivialDivs.length > 0) {
+          const trivialTexts: string[] = [];
+          trivialDivs.forEach(div => {
+            const text = div.textContent?.trim();
+            if (text) {
+              trivialTexts.push(text);
+            }
+          });
+          if (trivialTexts.length > 0) {
+            message = trivialTexts.join(' ');
+          }
+        }
+
+        // Detect visual content (charts, images, etc.)
+        const visualElements = logElement.querySelectorAll('canvas, svg, img, iframe, [class*="chart"]');
+        let hasVisualContent = false;
+        let visualElementType: 'canvas' | 'svg' | 'img' | 'iframe' | 'unknown' | undefined;
+        let chartDescription: string | undefined;
+
+        if (visualElements.length > 0) {
+          hasVisualContent = true;
+
+          // Determine the visual element type
+          if (logElement.querySelector('canvas')) {
+            visualElementType = 'canvas';
+          } else if (logElement.querySelector('svg')) {
+            visualElementType = 'svg';
+          } else if (logElement.querySelector('img')) {
+            visualElementType = 'img';
+          } else if (logElement.querySelector('iframe')) {
+            visualElementType = 'iframe';
+          } else {
+            visualElementType = 'unknown';
+          }
+
+          // Try to get chart description from title or heading elements
+          const titleElement = logElement.querySelector('[class*="title"], h3, h4, h5, .chart-title');
+          if (titleElement && titleElement.textContent) {
+            chartDescription = titleElement.textContent.trim();
+          }
+
+          // Add a hint to the message
+          message = message + ' [📊 Chart/visualization detected - use screenshot tool to view details]';
+        }
+
+        // Detect the type based on class names or content
+        let type: 'info' | 'error' | 'warning' | 'log' | 'chart' = 'log';
+
+        if (hasVisualContent) {
+          type = 'chart';
+        } else if (logElement.classList.contains('error') || message.toLowerCase().includes('error')) {
+          type = 'error';
+        } else if (logElement.classList.contains('warning') || message.toLowerCase().includes('warning')) {
+          type = 'warning';
+        } else {
+          type = 'info';
+        }
+
+        outputs.push({
+          type,
+          message,
+          index,
+          ...(hasVisualContent && { hasVisualContent }),
+          ...(visualElementType && { visualElementType }),
+          ...(chartDescription && { chartDescription })
+        });
+
+      } catch (parseError) {
+        console.warn(`Error parsing console log entry ${index}:`, parseError);
+        outputs.push({
+          type: 'error',
+          message: `[Parse Error] Could not read console entry ${index}`,
+          index
+        });
+      }
+    });
+
+    console.log(`Successfully read ${outputs.length} console outputs`);
+    sendResponse({
+      success: true,
+      outputs,
+      count: outputs.length
+    });
+
+  } catch (error) {
+    console.error('Error getting console output:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting console output: ${error instanceof Error ? error.message : String(error)}`
     });
   }
 }

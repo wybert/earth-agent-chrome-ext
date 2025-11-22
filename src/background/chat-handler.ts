@@ -591,6 +591,7 @@ ${projectContext}`;
       resetMapInspectorConsoleTool,
       clearScriptTool,
       clickByCoordinatesTool,
+      getConsoleOutputTool,
       getScriptTool
     } = createAITools(onToolEvent);
 
@@ -601,6 +602,7 @@ ${projectContext}`;
       snapshot: snapshotTool,
       clickByRefId: clickByRefIdTool,
       clickByCoordinates: clickByCoordinatesTool,
+      getConsoleOutput: getConsoleOutputTool,
       getScript: getScriptTool,
     };
 
