@@ -1240,6 +1240,134 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
       },
     });
 
+    // Define Get Script tool
+    const getScriptTool = tool({
+      description: 'Read the current JavaScript code from the Google Earth Engine code editor. Use this tool to see what code is currently in the editor before making modifications.',
+      inputSchema: z.object({}), // No parameters needed
+      execute: async () => {
+        // Manually send tool_start event
+        if (onToolEvent) {
+          onToolEvent({
+            type: 'tool_start',
+            toolName: 'getScript',
+            args: {},
+            timestamp: Date.now()
+          });
+        }
+
+        try {
+          console.log(`📖 [GetScriptTool] Tool called to read GEE code editor`);
+          console.time('GetScriptTool execution');
+
+          // Validate Chrome APIs
+          const apiValidation = validateChromeAPIs();
+          if (!apiValidation.success) {
+            console.warn(`❌ [GetScriptTool] ${apiValidation.error}`);
+            return {
+              success: false,
+              error: apiValidation.error,
+              suggestion: 'This tool requires running in a Chrome extension background script context'
+            };
+          }
+
+          // Find the Earth Engine tab
+          const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+            chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+              resolve(tabs || []);
+            });
+          });
+
+          if (earthEngineTabs.length === 0) {
+            console.warn('❌ [GetScriptTool] No Earth Engine tab found');
+            return {
+              success: false,
+              error: 'No Google Earth Engine tab found',
+              suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
+            };
+          }
+
+          // Smart tab selection: prefer active or recently used tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+          const tabId = selectedTab?.id;
+          if (!tabId) {
+            console.warn('❌ [GetScriptTool] Invalid Earth Engine tab');
+            return {
+              success: false,
+              error: 'Invalid Earth Engine tab',
+              suggestion: "Please reload your Earth Engine tab and try again"
+            };
+          }
+
+          // Ensure content script is ready
+          const scriptReady = await ensureContentScript(tabId);
+          if (!scriptReady.success) {
+            console.error('❌ [GetScriptTool] Content script not available:', scriptReady.error);
+            return {
+              success: false,
+              error: scriptReady.error || 'Content script not available',
+              suggestion: 'Try refreshing the Earth Engine tab'
+            };
+          }
+
+          // Send message to content script to get the script
+          console.log('📖 [GetScriptTool] Requesting script content from content script...');
+          const result: any = await new Promise((resolve) => {
+            chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (response) => {
+              if (chrome.runtime.lastError) {
+                resolve({
+                  success: false,
+                  error: chrome.runtime.lastError.message || 'Error communicating with content script'
+                });
+              } else {
+                resolve(response || { success: false, error: 'No response from content script' });
+              }
+            });
+          });
+
+          console.timeEnd('GetScriptTool execution');
+
+          if (!result.success) {
+            console.warn(`❌ [GetScriptTool] Failed to get script:`, result.error);
+            return {
+              success: false,
+              error: result.error || 'Failed to read script from editor',
+              suggestion: 'Make sure the Earth Engine editor is loaded and the code editor is visible'
+            };
+          }
+
+          console.log(`✅ [GetScriptTool] Successfully read script: ${result.lineCount} lines, ${result.content?.length || 0} characters`);
+          return {
+            success: true,
+            content: result.content || '',
+            lineCount: result.lineCount || 0,
+            method: result.method,
+            message: `Successfully read ${result.lineCount} lines of code from the Earth Engine editor`
+          };
+
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ [GetScriptTool] Error:`, error);
+          console.timeEnd('GetScriptTool execution');
+          return {
+            success: false,
+            error: `Error reading GEE code editor: ${errorMessage}`,
+            suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
+          };
+        }
+      },
+      toModelOutput: (result: any) => {
+        return {
+          type: 'content',
+          value: [{
+            type: 'text',
+            text: result.success
+              ? `✅ Current script content (${result.lineCount} lines):\n\n\`\`\`javascript\n${result.content}\n\`\`\``
+              : `❌ Failed to read script: ${result.error}${result.suggestion ? '\n\nSuggestion: ' + result.suggestion : ''}`
+          }]
+        };
+      },
+    });
+
   // Return all tools
   return {
     weatherTool,
@@ -1251,6 +1379,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
     clickByRefIdTool,
     resetMapInspectorConsoleTool,
     clearScriptTool,
-    clickByCoordinatesTool
+    clickByCoordinatesTool,
+    getScriptTool
   };
 }

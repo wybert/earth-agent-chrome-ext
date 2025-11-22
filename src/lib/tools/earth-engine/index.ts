@@ -35,6 +35,7 @@ export { default as checkConsole } from './checkConsole';
 export { default as getTasks } from './getTasks';
 export { default as editScript } from './editScript';
 export { default as getMapLayers } from './getMapLayers';
+export { default as getScript } from './getScript';
 
 // Also export the types for better type checking
 export type { 
@@ -62,4 +63,8 @@ export type {
 export type {
   GetMapLayersResponse,
   MapLayer
-} from './getMapLayers'; 
+} from './getMapLayers';
+
+export type {
+  GetScriptResponse
+} from './getScript'; 
