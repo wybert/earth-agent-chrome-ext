@@ -205,7 +205,11 @@ function setupPingResponse() {
       case 'EDIT_SCRIPT':
         handleEditScript(message, sendResponse);
         return true; // Will respond asynchronously
-        
+
+      case 'GET_SCRIPT':
+        handleGetScript(sendResponse);
+        return true; // Will respond asynchronously
+
       case 'GET_MAP_LAYERS':
         handleGetMapLayers(sendResponse);
         return true; // Will respond asynchronously
@@ -859,9 +863,247 @@ async function handleEditScript(message: any, sendResponse: (response: any) => v
     
   } catch (error) {
     console.error('Error editing Earth Engine script:', error);
-    sendResponse({ 
-      success: false, 
-      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}` 
+    sendResponse({
+      success: false,
+      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Handles getting the current script content from the Earth Engine code editor
+ */
+async function handleGetScript(sendResponse: (response: any) => void) {
+  console.log('Handling get script message');
+
+  try {
+    let scriptContent = '';
+    let successMethod = '';
+    let contentFound = false;
+
+    console.log('Attempting to read Earth Engine editor content...');
+
+    // METHOD 1: Direct Ace editor access - try multiple paths
+    try {
+      console.log('METHOD 1: Attempting direct Ace editor access...');
+
+      // Try different potential paths to find the Ace editor instance
+      const editorPaths = [
+        // Try standard AceEditor global
+        () => (window as any).ace,
+
+        // Try to find the editor in the page scope
+        () => Array.from(document.querySelectorAll('.ace_editor')).map(
+          el => (el as any).__ace_editor__ || (el as any).env?.editor
+        ).find(editor => editor),
+
+        // Try from CodeMirror if it's used instead
+        () => {
+          const cmElements = document.querySelectorAll('.CodeMirror');
+          if (cmElements.length > 0) {
+            return Array.from(cmElements).map(el => (el as any).CodeMirror).find(cm => cm);
+          }
+          return null;
+        },
+
+        // Try to find editor in Google Earth Engine specific objects
+        () => (window as any).ee?.Editor?.ace,
+        () => (window as any).ee?.data?.aceEditor,
+        () => (window as any).code?.editor?.aceEditor,
+
+        // Last resort - try to scan the entire window object for anything that looks like an editor
+        () => {
+          const foundEditors = [];
+          for (const key in window) {
+            try {
+              const obj = (window as any)[key];
+              if (obj && typeof obj === 'object' &&
+                  (obj.getValue || obj.getSession || obj.edit)) {
+                foundEditors.push(obj);
+              }
+            } catch (e) {
+              // Ignore errors from security restrictions
+            }
+          }
+          return foundEditors[0]; // Return the first one we find
+        }
+      ];
+
+      // Try each path until we find an editor
+      let editor = null;
+      for (const getEditor of editorPaths) {
+        try {
+          const potentialEditor = getEditor();
+          if (potentialEditor) {
+            editor = potentialEditor;
+            console.log('Found potential editor:', editor);
+            break;
+          }
+        } catch (e) {
+          // Continue to the next method
+          console.log('Editor path attempt failed:', e);
+        }
+      }
+
+      if (editor) {
+        // Try different methods to get content based on what API the editor exposes
+        const getMethods = [
+          // Standard Ace editor API
+          () => {
+            if (editor.getValue) {
+              return editor.getValue();
+            }
+            return null;
+          },
+
+          // Some editors have a getContent method
+          () => {
+            if (editor.getContent) {
+              return editor.getContent();
+            }
+            return null;
+          },
+
+          // Session-based access
+          () => {
+            if (editor.getSession && editor.getSession().getValue) {
+              return editor.getSession().getValue();
+            }
+            return null;
+          },
+
+          // CodeMirror API
+          () => {
+            if (editor.doc && editor.doc.getValue) {
+              return editor.doc.getValue();
+            }
+            return null;
+          }
+        ];
+
+        for (const getMethod of getMethods) {
+          try {
+            const content = getMethod();
+            if (content !== null && content !== undefined) {
+              scriptContent = content;
+              contentFound = true;
+              successMethod = 'Direct editor API';
+              console.log('Successfully read editor content via direct API');
+              break;
+            }
+          } catch (e) {
+            // Try the next method
+            console.log('Editor get method failed:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing Ace editor directly:', error);
+    }
+
+    // METHOD 2: DOM Manipulation - Read from editor pre elements
+    if (!contentFound) {
+      try {
+        console.log('METHOD 2: Attempting DOM reading...');
+
+        // Find the pre elements in the editor
+        const editorPres = document.querySelectorAll('.ace_editor .ace_text-layer');
+        if (editorPres.length > 0) {
+          console.log(`Found ${editorPres.length} text layer elements in the editor`);
+
+          // Get text content from the text layer
+          const textLayer = editorPres[0];
+          scriptContent = textLayer.textContent || '';
+
+          contentFound = true;
+          successMethod = 'DOM text layer reading';
+          console.log('Successfully read editor content via DOM text layer');
+        } else {
+          // Try alternative: read from all .ace_line elements
+          const aceLines = document.querySelectorAll('.ace_editor .ace_line');
+          if (aceLines.length > 0) {
+            console.log(`Found ${aceLines.length} ace_line elements`);
+            scriptContent = Array.from(aceLines)
+              .map(line => line.textContent || '')
+              .join('\n');
+
+            contentFound = true;
+            successMethod = 'DOM ace_line reading';
+            console.log('Successfully read editor content via ace_line elements');
+          } else {
+            console.log('No text layer or ace_line elements found in the editor');
+          }
+        }
+      } catch (error) {
+        console.error('Error using DOM reading:', error);
+      }
+    }
+
+    // METHOD 3: Read from hidden textarea
+    if (!contentFound) {
+      try {
+        console.log('METHOD 3: Searching for hidden textarea...');
+
+        // Look for textareas that might be connected to the editor
+        const textareas = document.querySelectorAll('textarea');
+        console.log(`Found ${textareas.length} textareas in the document`);
+
+        for (const textarea of Array.from(textareas)) {
+          try {
+            // Check if this might be an editor textarea
+            if (textarea.classList.contains('ace_text-input') ||
+                textarea.style.position === 'absolute' ||
+                textarea.style.opacity === '0' ||
+                textarea.style.height === '1px' ||
+                textarea.parentElement?.classList.contains('ace_editor')) {
+
+              console.log('Found potential editor textarea:', textarea);
+
+              const content = textarea.value;
+              if (content && content.length > 0) {
+                scriptContent = content;
+                contentFound = true;
+                successMethod = 'Hidden textarea';
+                console.log('Successfully read editor content via hidden textarea');
+                break;
+              }
+            }
+          } catch (e) {
+            console.log('Error reading from a textarea:', e);
+          }
+        }
+      } catch (error) {
+        console.error('Error reading hidden textarea:', error);
+      }
+    }
+
+    // If all methods failed, return error
+    if (!contentFound) {
+      console.error('All methods for reading editor content failed');
+      sendResponse({
+        success: false,
+        error: 'Failed to read editor content. Could not access the Earth Engine Code Editor.'
+      });
+      return;
+    }
+
+    // Count lines in the script
+    const lineCount = scriptContent.split('\n').length;
+
+    // Return success with the script content
+    console.log(`Editor content read successfully using method: ${successMethod}, ${lineCount} lines`);
+    sendResponse({
+      success: true,
+      content: scriptContent,
+      lineCount: lineCount,
+      method: successMethod
+    });
+
+  } catch (error) {
+    console.error('Error getting Earth Engine script:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
     });
   }
 }
