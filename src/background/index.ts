@@ -1,4 +1,5 @@
-import { handleChatRequest, selectBestEarthEngineTab } from './chat-handler';
+import { handleChatRequest } from './chat-handler';
+import { selectBestEarthEngineTab } from '../lib/utils';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
