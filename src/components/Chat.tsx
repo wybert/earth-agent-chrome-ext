@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, Edit2, X } from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, Edit2, X, HelpCircle } from 'lucide-react';
 // Project uses custom Message type for Chrome extension communication
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
@@ -1321,6 +1321,16 @@ export function ChatUI() {
           </Button>
           <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
             <FlaskConical className="h-4 w-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => window.open('https://github.com/wybert/earth-agent-chrome-ext', '_blank')}
+            aria-label="Help"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+            title="Help"
+          >
+            <HelpCircle className="h-4 w-4 text-gray-600" />
           </Button>
           <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Settings">
             <SettingsIcon className="h-4 w-4 text-gray-600" />
