@@ -92,6 +92,22 @@ The chat handler uses `streamText()` with tool definitions to enable the AI to:
 - Query Earth Engine documentation via Context7
 - Inspect maps and console output
 
+### AI Mode System
+
+The extension supports two operational modes with different capabilities:
+
+1. **Ask Mode (Read-Only)**: Analysis and guidance mode with limited tools
+   - Can query documentation, check console, inspect map, take screenshots
+   - Cannot modify or execute code
+   - System prompt: `GEE_ASK_MODE_PROMPT` from `src/lib/prompts/gee-prompts.ts`
+
+2. **Do Mode (Full Access)**: Full execution mode with all tools
+   - All Ask mode capabilities plus code editing and execution
+   - Can insert/modify code, run scripts, clear editor, reset environment
+   - System prompt: `GEE_DO_MODE_PROMPT` from `src/lib/prompts/gee-prompts.ts`
+
+Mode-specific prompts ensure the AI understands its current capabilities and limitations.
+
 ### Tool Implementation Pattern
 
 Tools are organized in three categories under `src/lib/tools/`:
@@ -116,9 +132,15 @@ Tools are organized in three categories under `src/lib/tools/`:
    - `resolveLibraryId.ts`: Resolve Context7 library IDs
    - `agentTools.ts`: AI-friendly wrappers
 
+4. **AI Tools** (`ai-tools.ts`):
+   - Centralized location for all Vercel AI SDK tool definitions
+   - Uses factory pattern: `createAITools(onToolEvent)` returns all 10 AI tools
+   - Includes tools for: weather, datasets, script editing, code execution, screenshots, snapshots, clicking, and environment reset
+   - Leverages helper functions from `src/lib/utils.ts` for tab selection, content script injection, and API validation
+
 Each tool typically has:
 - A base implementation that works from UI/content contexts
-- An AI tool wrapper defined in `chat-handler.ts` using Vercel AI SDK's `tool()` function
+- An AI tool wrapper defined in `src/lib/tools/ai-tools.ts` using Vercel AI SDK's `tool()` function
 - Environment detection via `detectEnvironment()` to handle different execution contexts
 
 ## Project Structure
@@ -127,19 +149,26 @@ Each tool typically has:
 src/
 ├── background/         # Background service worker
 │   ├── index.ts       # Main message listener and routing
-│   └── chat-handler.ts # AI provider integration and tool definitions
+│   └── chat-handler.ts # AI provider integration (806 lines, refactored)
 ├── content/           # Content script for Earth Engine pages
 │   └── index.ts
 ├── sidepanel/         # React UI entry point
 │   └── index.tsx
 ├── components/        # React components
-│   ├── Chat.tsx       # Main chat component
+│   ├── Chat.tsx       # Main chat component with Help button
 │   ├── Settings.tsx   # Provider/model configuration
 │   ├── EarthEngineAgent.tsx
 │   └── ui/           # Reusable UI components (shadcn/ui based)
 ├── lib/
-│   ├── tools/        # Tool implementations
-│   ├── utils.ts      # Shared utilities (detectEnvironment, etc.)
+│   ├── prompts/
+│   │   └── gee-prompts.ts  # All system prompts (Ask/Do modes)
+│   ├── tools/
+│   │   ├── ai-tools.ts     # All AI SDK tool definitions (1,256 lines)
+│   │   ├── earth-engine/   # EE-specific tool implementations
+│   │   ├── browser/        # Browser interaction tools
+│   │   └── context7/       # Documentation query tools
+│   ├── utils.ts      # Shared utilities (255 lines: detectEnvironment,
+│   │                 # tab selection, content script injection, resilient fetch)
 │   └── audio-utils.ts
 ├── hooks/            # React hooks
 ├── types/            # TypeScript type definitions
@@ -148,6 +177,15 @@ src/
 ├── assets/           # Icons and images
 └── manifest.json     # Chrome extension manifest
 ```
+
+### Code Organization Philosophy
+
+The project follows a **single-file pattern** for better maintainability:
+- **One prompts file** (`gee-prompts.ts`): All system prompts in one place
+- **One AI tools file** (`ai-tools.ts`): All Vercel AI SDK tool definitions together
+- **One utils file** (`utils.ts`): All shared helper functions centralized
+
+This approach reduces file fragmentation while maintaining clear separation of concerns.
 
 ## Key Implementation Details
 
@@ -207,11 +245,15 @@ The extension includes two testing panels:
 
 1. Create tool implementation in appropriate `src/lib/tools/` subdirectory
 2. Export from corresponding `index.ts`
-3. Create AI tool wrapper in `agentTools.ts` (simplified interface)
-4. Define tool in `chat-handler.ts` using Vercel AI SDK's `tool()` function with:
-   - Zod schema for parameters
-   - Clear description for the AI
-   - Execute block that handles background→content messaging if needed
+3. Add AI tool definition in `src/lib/tools/ai-tools.ts`:
+   - Add new tool using Vercel AI SDK's `tool()` function
+   - Define Zod schema for parameters
+   - Write clear description for the AI
+   - Implement execute block (use helper functions from `utils.ts` if needed)
+   - Add tool to the return object of `createAITools()`
+4. Import and use the tool in `chat-handler.ts`:
+   - Destructure the new tool from `createAITools(onToolEvent)`
+   - Add to appropriate tools array (askModeTools or all tools)
 
 ### Debugging Tool Execution
 
@@ -219,6 +261,29 @@ The extension includes two testing panels:
 - Check content script console: Open DevTools on Earth Engine tab
 - Use `console.log()` statements - they appear in respective consoles
 - For `window is not defined` errors: Tool is being called from wrong context (see Messaging Architecture)
+
+### Helper Functions in utils.ts
+
+The `src/lib/utils.ts` file provides essential helper functions used across the extension:
+
+1. **`selectBestEarthEngineTab(tabs)`**: Smart tab selection with priority order
+   - Active tab in current window → Any active tab → Most recently accessed → First tab
+   - Used by AI tools to choose the correct Earth Engine tab when multiple are open
+
+2. **`ensureContentScript(tabId)`**: Content script readiness check
+   - Pings content script, injects if not loaded
+   - Returns `{success: boolean, error?: string}`
+   - Used before sending messages to Earth Engine tabs
+
+3. **`validateChromeAPIs()`**: Chrome API availability check
+   - Validates `chrome.tabs` and `chrome.scripting` APIs
+   - Returns `{success: boolean, error?: string}`
+   - Used by tools to fail gracefully in wrong execution contexts
+
+4. **`createResilientFetch(options)`**: Network retry mechanism
+   - Exponential backoff for failed requests
+   - Configurable retry logic for errors and HTTP responses
+   - Used for Anthropic API calls and other external requests
 
 ## TypeScript Configuration
 

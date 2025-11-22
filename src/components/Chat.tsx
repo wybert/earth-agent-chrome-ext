@@ -955,19 +955,20 @@ export function ChatUI() {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
         const model = result[MODEL_STORAGE_KEY] || '';
         
-        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}`);
-        
+        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}, mode: ${agentMode}`);
+
         const messagePayload: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
           message: lastUserMessage.content,
           messages: messagesForApi,
           provider: provider,
-          model: model
+          model: model,
+          mode: agentMode
         };
         port.postMessage(messagePayload);
       });
     }
-  }, [messages, isLocalLoading, port, activeSessionId]);
+  }, [messages, isLocalLoading, port, activeSessionId, agentMode]);
 
   // Restore stop handler
   const stop = useCallback(() => {
