@@ -254,6 +254,10 @@ function setupPingResponse() {
         }
         return true; // Will respond asynchronously
 
+      case 'GET_MAP_INFO':
+        handleGetMapInfo(sendResponse);
+        return true; // Will respond asynchronously
+
       default:
         console.warn(`Unknown message type: ${message.type}`);
         sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -495,26 +499,132 @@ function handleCheckConsole(sendResponse: (response: any) => void) {
 /**
  * Handles inspecting the map at specific coordinates
  */
-function handleInspectMap(coordinates: {lat: number, lng: number} | undefined, sendResponse: (response: any) => void) {
+async function handleInspectMap(coordinates: {lat: number, lng: number} | undefined, sendResponse: (response: any) => void) {
   try {
-    if (!coordinates) {
+    console.log(`🔍 [InspectMap] Reading Inspector panel data`);
+    if (coordinates) {
+      console.log(`🔍 [InspectMap] Coordinates provided: lat=${coordinates.lat}, lng=${coordinates.lng}`);
+    }
+
+    // Check if Inspector panel exists and has data
+    const inspectPanel = document.querySelector('.inspect-panel');
+
+    if (!inspectPanel) {
+      console.error('❌ [InspectMap] Inspector panel not found');
       sendResponse({
         success: false,
-        error: 'No coordinates provided'
+        error: 'Inspector panel not found. Please ensure the Inspector tab is activated in Earth Engine.'
       });
       return;
     }
-    
-    // This is a placeholder - actual implementation would need to interact with Earth Engine map
-    // and might require injecting code to use the Map.onClick() or similar Earth Engine API
+
+    console.log('✅ [InspectMap] Inspector panel found');
+
+    // Check if Inspector has data
+    const panelText = inspectPanel.textContent || '';
+    console.log(`📄 [InspectMap] Panel text preview: "${panelText.substring(0, 100)}..."`);
+
+    if (panelText.includes('Click on the map')) {
+      console.warn('⚠️ [InspectMap] Inspector is empty');
+      sendResponse({
+        success: false,
+        error: 'Inspector is empty. Please manually click on the map at the location you want to inspect, then try again.'
+      });
+      return;
+    }
+
+    // Extract coordinate information from the Inspector
+    const pointHeader = inspectPanel.querySelector('.explorer .header');
+    const pointText = pointHeader?.textContent || '';
+    console.log(`📍 [InspectMap] Point header text: "${pointText}"`);
+
+    const pointMatch = pointText.match(/Point\s*\(([-\d.]+),\s*([-\d.]+)\)/);
+    const inspectedCoords = pointMatch ? {
+      lng: parseFloat(pointMatch[1]),
+      lat: parseFloat(pointMatch[2])
+    } : null;
+
+    if (!inspectedCoords) {
+      console.warn('⚠️ [InspectMap] Could not extract coordinates from Inspector');
+      sendResponse({
+        success: false,
+        error: 'Could not read coordinates from Inspector. Please click on the map first.'
+      });
+      return;
+    }
+
+    console.log(`📍 [InspectMap] Extracted coordinates: lng=${inspectedCoords.lng}, lat=${inspectedCoords.lat}`);
+
+    // If coordinates were provided, verify they match (with some tolerance for zoom level differences)
+    if (coordinates) {
+      const latDiff = Math.abs(coordinates.lat - inspectedCoords.lat);
+      const lngDiff = Math.abs(coordinates.lng - inspectedCoords.lng);
+      const tolerance = 0.1; // roughly 10km at equator
+
+      if (latDiff > tolerance || lngDiff > tolerance) {
+        console.warn(`⚠️ [InspectMap] Coordinate mismatch - requested (${coordinates.lng}, ${coordinates.lat}), found (${inspectedCoords.lng}, ${inspectedCoords.lat})`);
+        sendResponse({
+          success: false,
+          error: `Inspector shows data for coordinates (${inspectedCoords.lng}, ${inspectedCoords.lat}), which is different from requested coordinates (${coordinates.lng}, ${coordinates.lat}). Please click on the map at the desired location first.`,
+          data: {
+            requestedCoordinates: coordinates,
+            inspectedCoordinates: inspectedCoords
+          }
+        });
+        return;
+      }
+    }
+
+    // Extract pixel values from all layers
+    const layers: any[] = [];
+    const inspectViews = inspectPanel.querySelectorAll('.inspect-view');
+    console.log(`🎨 [InspectMap] Found ${inspectViews.length} inspect views`);
+
+    inspectViews.forEach((view, viewIndex) => {
+      const layerLabel = view.querySelector('.header .label')?.textContent?.trim() || 'Unknown Layer';
+      const layerMessage = view.querySelector('.header .message')?.textContent?.trim() || '';
+
+      console.log(`🎨 [InspectMap] View ${viewIndex + 1}: "${layerLabel}" - ${layerMessage}`);
+
+      // Extract pixel values
+      const values: Record<string, any> = {};
+      const trivialElements = view.querySelectorAll('.trivial');
+
+      trivialElements.forEach((trivial) => {
+        const labelEl = trivial.querySelector('.label span');
+        const label = labelEl?.textContent?.trim() || '';
+        const valueText = trivial.textContent?.replace(label + ':', '').trim() || '';
+
+        // Try to parse as number
+        const numValue = parseFloat(valueText);
+        values[label] = isNaN(numValue) ? valueText : numValue;
+
+        console.log(`  📊 [InspectMap] ${label}: ${values[label]}`);
+      });
+
+      if (Object.keys(values).length > 0) {
+        layers.push({
+          name: layerLabel,
+          type: layerMessage,
+          values
+        });
+      }
+    });
+
+    console.log(`✅ [InspectMap] Successfully extracted ${layers.length} layers`);
+
     sendResponse({
       success: true,
       data: {
-        location: coordinates,
-        message: 'Map inspection not fully implemented yet. This is a placeholder response.'
+        requestedCoordinates: coordinates,
+        inspectedCoordinates: inspectedCoords,
+        layers,
+        layerCount: layers.length
       }
     });
+
   } catch (error) {
+    console.error('Error in handleInspectMap:', error);
     sendResponse({
       success: false,
       error: `Error inspecting map: ${error instanceof Error ? error.message : String(error)}`
@@ -1656,6 +1766,54 @@ async function handleClickByRefId(refId: string, sendResponse: (response: any) =
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Error clicking element with refId '${refId}':`, error);
     sendResponse({ success: false, error: `Error clicking element: ${errorMessage}`, refId });
+  }
+}
+
+/**
+ * Get map information including bounds, center point, and viewport dimensions
+ */
+function handleGetMapInfo(sendResponse: (response: any) => void) {
+  console.log('Content script: Handling GET_MAP_INFO');
+  try {
+    const mapElement = document.querySelector('.ui-map') as HTMLElement;
+
+    if (!mapElement) {
+      sendResponse({
+        success: false,
+        error: 'Map element not found. Please ensure you are on the Earth Engine Code Editor page.'
+      });
+      return;
+    }
+
+    const rect = mapElement.getBoundingClientRect();
+
+    const mapInfo = {
+      mapBounds: {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height
+      },
+      centerPoint: {
+        x: rect.x + rect.width / 2,
+        y: rect.y + rect.height / 2
+      },
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      }
+    };
+
+    sendResponse({
+      success: true,
+      data: mapInfo
+    });
+  } catch (error) {
+    console.error('Error getting map info:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting map info: ${error instanceof Error ? error.message : String(error)}`
+    });
   }
 }
 

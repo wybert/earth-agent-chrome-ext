@@ -1545,6 +1545,293 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
       },
     });
 
+  // Define Inspect Map tool
+  // Define Get Map Info tool
+  const getMapInfoTool = tool({
+    description: 'Get information about the Google Earth Engine map including its screen bounds, center point coordinates, and viewport dimensions. Useful for programmatic map interactions and determining where to click on the map.',
+    inputSchema: z.object({}),
+    execute: async () => {
+      // Manually send tool_start event
+      if (onToolEvent) {
+        onToolEvent({
+          type: 'tool_start',
+          toolName: 'getMapInfo',
+          args: {},
+          timestamp: Date.now()
+        });
+      }
+
+      try {
+        console.log(`🗺️ [GetMapInfoTool] Getting map information...`);
+        console.time('GetMapInfoTool execution');
+
+        // Validate Chrome APIs
+        const apiValidation = validateChromeAPIs();
+        if (!apiValidation.success) {
+          console.warn(`❌ [GetMapInfoTool] ${apiValidation.error}`);
+          return {
+            success: false,
+            error: apiValidation.error
+          };
+        }
+
+        // Find the Earth Engine tab
+        const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+          chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+            resolve(tabs || []);
+          });
+        });
+
+        if (earthEngineTabs.length === 0) {
+          console.warn('❌ [GetMapInfoTool] No Earth Engine tab found');
+          return {
+            success: false,
+            error: 'No Google Earth Engine tab found'
+          };
+        }
+
+        const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+        const tabId = selectedTab?.id;
+        if (!tabId) {
+          console.warn('❌ [GetMapInfoTool] Invalid Earth Engine tab');
+          return {
+            success: false,
+            error: 'Invalid Earth Engine tab'
+          };
+        }
+
+        // Ensure content script is loaded
+        const contentScriptReady = await ensureContentScript(tabId);
+        if (!contentScriptReady.success) {
+          console.warn(`❌ [GetMapInfoTool] ${contentScriptReady.error}`);
+          return {
+            success: false,
+            error: contentScriptReady.error
+          };
+        }
+
+        // Send message to content script to get map info
+        const result: any = await new Promise((resolve) => {
+          chrome.tabs.sendMessage(tabId, { type: 'GET_MAP_INFO' }, (response) => {
+            if (chrome.runtime.lastError) {
+              resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
+            } else {
+              resolve(response || { success: false, error: 'No response from content script' });
+            }
+          });
+        });
+
+        console.timeEnd('GetMapInfoTool execution');
+
+        if (!result.success) {
+          console.warn(`❌ [GetMapInfoTool] Failed:`, result.error);
+          return result;
+        }
+
+        console.log(`✅ [GetMapInfoTool] Map center: (${result.data.centerPoint.x}, ${result.data.centerPoint.y}), size: ${result.data.mapBounds.width}x${result.data.mapBounds.height}`);
+        return result;
+
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [GetMapInfoTool] Error:`, error);
+        console.timeEnd('GetMapInfoTool execution');
+        return {
+          success: false,
+          error: `Error getting map info: ${errorMessage}`
+        };
+      }
+    },
+    toModelOutput: (result: any) => {
+      if (!result.success) {
+        return {
+          type: 'content',
+          value: [{
+            type: 'text',
+            text: `❌ Failed to get map info: ${result.error}`
+          }]
+        };
+      }
+
+      const data = result.data;
+      const output = `✅ Map Information:
+
+**Map Bounds:**
+- Position: (${data.mapBounds.x}, ${data.mapBounds.y})
+- Size: ${data.mapBounds.width}px × ${data.mapBounds.height}px
+
+**Center Point:**
+- X: ${data.centerPoint.x}px
+- Y: ${data.centerPoint.y}px
+
+**Viewport:**
+- Width: ${data.viewport.width}px
+- Height: ${data.viewport.height}px
+
+To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${data.centerPoint.y})`;
+
+      return {
+        type: 'content',
+        value: [{ type: 'text', text: output }]
+      };
+    },
+  });
+
+  // Define Get Inspector Output tool (renamed from inspectMapTool for consistency)
+  const getInspectorOutputTool = tool({
+    description: 'Read pixel values from the Google Earth Engine Inspector panel. IMPORTANT: This tool reads EXISTING Inspector data - the user must manually click on the map at the desired location BEFORE calling this tool. The tool will verify that the Inspector coordinates match the requested coordinates (within tolerance) and extract all layer values.',
+    inputSchema: z.object({
+      coordinates: z.object({
+        lat: z.number().describe('Latitude of the location to inspect'),
+        lng: z.number().describe('Longitude of the location to inspect')
+      }).optional().describe('Optional coordinates to verify against Inspector data. If provided, tool will check that Inspector shows data for these coordinates (within ~10km tolerance).')
+    }),
+    execute: async ({ coordinates }) => {
+      // Manually send tool_start event
+      if (onToolEvent) {
+        onToolEvent({
+          type: 'tool_start',
+          toolName: 'getInspectorOutput',
+          args: { coordinates },
+          timestamp: Date.now()
+        });
+      }
+
+      try {
+        console.log(`🔍 [InspectMapTool] Tool called${coordinates ? ` with coordinates: lat=${coordinates.lat}, lng=${coordinates.lng}` : ' without coordinates'}`);
+        console.time('InspectMapTool execution');
+
+        // Validate Chrome APIs
+        const apiValidation = validateChromeAPIs();
+        if (!apiValidation.success) {
+          console.warn(`❌ [InspectMapTool] ${apiValidation.error}`);
+          return {
+            success: false,
+            error: apiValidation.error,
+            suggestion: 'This tool requires running in a Chrome extension background script context'
+          };
+        }
+
+        // Find the Earth Engine tab
+        const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+          chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+            resolve(tabs || []);
+          });
+        });
+
+        if (earthEngineTabs.length === 0) {
+          console.warn('❌ [InspectMapTool] No Earth Engine tab found');
+          return {
+            success: false,
+            error: 'No Google Earth Engine tab found',
+            suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
+          };
+        }
+
+        // Smart tab selection: prefer active or recently used tab
+        const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+        const tabId = selectedTab?.id;
+        if (!tabId) {
+          console.warn('❌ [InspectMapTool] Invalid Earth Engine tab');
+          return {
+            success: false,
+            error: 'Invalid Earth Engine tab',
+            suggestion: "Please reload your Earth Engine tab and try again"
+          };
+        }
+
+        console.log(`🔍 [InspectMapTool] Found Earth Engine tab: ${tabId}`);
+
+        // Ensure content script is loaded
+        const contentScriptReady = await ensureContentScript(tabId);
+        if (!contentScriptReady.success) {
+          console.warn(`❌ [InspectMapTool] ${contentScriptReady.error}`);
+          return {
+            success: false,
+            error: contentScriptReady.error,
+            suggestion: 'Try refreshing the Earth Engine tab and ensure the extension has permission'
+          };
+        }
+
+        // Send message to content script to read Inspector data
+        const result: any = await new Promise((resolve) => {
+          chrome.tabs.sendMessage(tabId, { type: 'INSPECT_MAP', coordinates }, (response) => {
+            if (chrome.runtime.lastError) {
+              resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
+            } else {
+              resolve(response || { success: false, error: 'No response from content script' });
+            }
+          });
+        });
+
+        console.timeEnd('InspectMapTool execution');
+
+        if (!result.success) {
+          console.warn(`❌ [InspectMapTool] Failed to inspect map:`, result.error);
+          return {
+            success: false,
+            error: result.error || 'Failed to read Inspector data',
+            suggestion: result.error?.includes('Inspector is empty')
+              ? 'Make sure to manually click on the map at the desired location first, then try again'
+              : result.error?.includes('different from requested')
+              ? 'Click on the map at the correct location first'
+              : 'Ensure the Inspector tab is activated and you have clicked on the map',
+            data: result.data
+          };
+        }
+
+        console.log(`✅ [InspectMapTool] Successfully read Inspector data: ${result.data?.layerCount || 0} layers at (${result.data?.inspectedCoordinates?.lng}, ${result.data?.inspectedCoordinates?.lat})`);
+        return {
+          success: true,
+          data: result.data,
+          message: `Successfully read ${result.data?.layerCount || 0} layers from Inspector at coordinates (${result.data?.inspectedCoordinates?.lng}, ${result.data?.inspectedCoordinates?.lat})`
+        };
+
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [InspectMapTool] Error:`, error);
+        console.timeEnd('InspectMapTool execution');
+        return {
+          success: false,
+          error: `Error reading Inspector: ${errorMessage}`,
+          suggestion: 'Try clicking on the map manually and running the tool again'
+        };
+      }
+    },
+    toModelOutput: (result: any) => {
+      if (!result.success) {
+        return {
+          type: 'content',
+          value: [{
+            type: 'text',
+            text: `❌ Failed to inspect map: ${result.error}${result.suggestion ? '\n\nSuggestion: ' + result.suggestion : ''}`
+          }]
+        };
+      }
+
+      const data = result.data;
+      let output = `✅ Inspector Data at (${data.inspectedCoordinates.lng}, ${data.inspectedCoordinates.lat}):\n\n`;
+
+      if (data.layerCount === 0) {
+        output += 'No layers found in Inspector.';
+      } else {
+        data.layers.forEach((layer: any, i: number) => {
+          output += `**Layer ${i + 1}: ${layer.name}**\n`;
+          output += `Type: ${layer.type}\n`;
+          output += 'Values:\n';
+          Object.entries(layer.values).forEach(([key, value]) => {
+            output += `  - ${key}: ${value}\n`;
+          });
+          output += '\n';
+        });
+      }
+
+      return {
+        type: 'content',
+        value: [{ type: 'text', text: output }]
+      };
+    },
+  });
+
   // Return all tools
   return {
     weatherTool,
@@ -1558,6 +1845,8 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
     clearScriptTool,
     clickByCoordinatesTool,
     getConsoleOutputTool,
-    getScriptTool
+    getScriptTool,
+    getMapInfoTool,
+    getInspectorOutputTool
   };
 }

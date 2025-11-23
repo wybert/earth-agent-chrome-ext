@@ -592,7 +592,9 @@ ${projectContext}`;
       clearScriptTool,
       clickByCoordinatesTool,
       getConsoleOutputTool,
-      getScriptTool
+      getScriptTool,
+      getMapInfoTool,
+      getInspectorOutputTool
     } = createAITools(onToolEvent);
 
     const readOnlyTools = {
@@ -604,6 +606,8 @@ ${projectContext}`;
       clickByCoordinates: clickByCoordinatesTool,
       getConsoleOutput: getConsoleOutputTool,
       getScript: getScriptTool,
+      getMapInfo: getMapInfoTool,
+      getInspectorOutput: getInspectorOutputTool,
     };
 
     const writeTools = {
