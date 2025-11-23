@@ -11,6 +11,7 @@ import { hover, type HoverParams, type HoverResponse } from './hover';
 import { screenshot, type ScreenshotResponse } from './screenshot';
 import { clickByRef, type ClickByRefParams } from './clickByRef';
 import { clickBySelector, type ClickBySelectorParams, type ClickBySelectorResponse } from './clickBySelector';
+import { getMapInfo, type GetMapInfoResult, type MapInfo } from './getMapInfo';
 
 // Export all tools
 export {
@@ -23,7 +24,8 @@ export {
   typeText,
   hover,
   screenshot,
-  clickByRef
+  clickByRef,
+  getMapInfo
 };
 
 export type {
@@ -41,7 +43,11 @@ export type {
   HoverParams,
   HoverResponse,
   ScreenshotResponse,
-  ClickByRefParams
+  ClickByRefParams,
+  ClickBySelectorParams,
+  ClickBySelectorResponse,
+  GetMapInfoResult,
+  MapInfo
 };
 
 // Main export of all browser tools
@@ -54,5 +60,6 @@ export default {
   typeText,
   hover,
   screenshot,
-  clickByRef
+  clickByRef,
+  getMapInfo
 };
