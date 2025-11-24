@@ -15,20 +15,22 @@ function showClickIndicator(x: number, y: number): void {
   if (typeof document === 'undefined') return;
 
   const indicator = document.createElement('div');
+  indicator.className = 'earth-agent-click-indicator';
   indicator.style.cssText = `
     position: fixed;
     left: ${x}px;
     top: ${y}px;
-    width: 20px;
-    height: 20px;
-    margin-left: -10px;
-    margin-top: -10px;
-    background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,0,0,0.4) 50%, transparent 70%);
-    border: 3px solid red;
+    width: 32px;
+    height: 32px;
+    margin-left: -16px;
+    margin-top: -16px;
+    background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, rgba(255,0,0,0.6) 40%, rgba(255,100,100,0.3) 70%, transparent 100%);
+    border: 4px solid #ff0000;
     border-radius: 50%;
     pointer-events: none;
     z-index: 2147483647;
-    animation: clickPulse 0.6s ease-out;
+    box-shadow: 0 0 20px rgba(255,0,0,0.8), 0 0 40px rgba(255,0,0,0.4);
+    animation: clickPulse 2s ease-in-out;
   `;
 
   // Add keyframe animation
@@ -38,15 +40,23 @@ function showClickIndicator(x: number, y: number): void {
     style.textContent = `
       @keyframes clickPulse {
         0% {
-          transform: scale(0.5);
+          transform: scale(0.3);
+          opacity: 0;
+        }
+        10% {
+          transform: scale(1.3);
           opacity: 1;
         }
         50% {
-          transform: scale(1.2);
+          transform: scale(1);
+          opacity: 0.9;
+        }
+        90% {
+          transform: scale(1.1);
           opacity: 0.8;
         }
         100% {
-          transform: scale(1);
+          transform: scale(0.8);
           opacity: 0;
         }
       }
@@ -56,10 +66,10 @@ function showClickIndicator(x: number, y: number): void {
 
   document.body.appendChild(indicator);
 
-  // Remove indicator after animation completes
+  // Remove indicator after animation completes (2 seconds)
   setTimeout(() => {
     indicator.remove();
-  }, 600);
+  }, 2000);
 }
 
 export interface ClickResponse {
@@ -630,20 +640,22 @@ async function handleBackgroundScriptClick(params: ClickParams): Promise<ClickRe
             // Show visual indicator at click location
             const showClickIndicator = (x: number, y: number) => {
               const indicator = document.createElement('div');
+              indicator.className = 'earth-agent-click-indicator';
               indicator.style.cssText = `
                 position: fixed;
                 left: ${x}px;
                 top: ${y}px;
-                width: 20px;
-                height: 20px;
-                margin-left: -10px;
-                margin-top: -10px;
-                background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,0,0,0.4) 50%, transparent 70%);
-                border: 3px solid red;
+                width: 32px;
+                height: 32px;
+                margin-left: -16px;
+                margin-top: -16px;
+                background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, rgba(255,0,0,0.6) 40%, rgba(255,100,100,0.3) 70%, transparent 100%);
+                border: 4px solid #ff0000;
                 border-radius: 50%;
                 pointer-events: none;
                 z-index: 2147483647;
-                animation: clickPulse 0.6s ease-out;
+                box-shadow: 0 0 20px rgba(255,0,0,0.8), 0 0 40px rgba(255,0,0,0.4);
+                animation: clickPulse 2s ease-in-out;
               `;
 
               // Add keyframe animation
@@ -653,15 +665,23 @@ async function handleBackgroundScriptClick(params: ClickParams): Promise<ClickRe
                 style.textContent = `
                   @keyframes clickPulse {
                     0% {
-                      transform: scale(0.5);
+                      transform: scale(0.3);
+                      opacity: 0;
+                    }
+                    10% {
+                      transform: scale(1.3);
                       opacity: 1;
                     }
                     50% {
-                      transform: scale(1.2);
+                      transform: scale(1);
+                      opacity: 0.9;
+                    }
+                    90% {
+                      transform: scale(1.1);
                       opacity: 0.8;
                     }
                     100% {
-                      transform: scale(1);
+                      transform: scale(0.8);
                       opacity: 0;
                     }
                   }
@@ -671,10 +691,10 @@ async function handleBackgroundScriptClick(params: ClickParams): Promise<ClickRe
 
               document.body.appendChild(indicator);
 
-              // Remove indicator after animation completes
+              // Remove indicator after animation completes (2 seconds)
               setTimeout(() => {
                 indicator.remove();
-              }, 600);
+              }, 2000);
             };
 
             showClickIndicator(centerX, centerY);
