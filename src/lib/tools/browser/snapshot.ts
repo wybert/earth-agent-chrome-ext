@@ -104,6 +104,9 @@ async function captureDirectSnapshot(): Promise<SnapshotResponse> {
     
     // Format as YAML similar to playwright-mcp
     const yamlContent = formatAsYaml(accessibilityTree);
+
+    // After generating the snapshot, clean up the DOM by removing the added attributes
+    cleanupAccessibilityTree(accessibilityTree);
     
     // Create the complete markdown response matching playwright-mcp format
     const snapshot = [
@@ -544,4 +547,19 @@ function formatAsYaml(nodes: AccessibilityNode[], indent: string = ''): string {
   }
   
   return lines.join('\n');
+}
+
+/**
+ * Recursively traverses the accessibility tree and removes the 'aria-ref' attribute
+ * from the DOM elements.
+ */
+function cleanupAccessibilityTree(nodes: AccessibilityNode[]) {
+  for (const node of nodes) {
+    if (node.element && node.ref) {
+      node.element.removeAttribute('aria-ref');
+    }
+    if (node.children) {
+      cleanupAccessibilityTree(node.children);
+    }
+  }
 }
