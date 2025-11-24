@@ -326,3 +326,4 @@ git tag v1.0.0
 git push origin v1.0.0
 # GitHub Actions will build, test, and create release
 ```
+- remeber to use chrome devtools mcp when you need interact with gee, and when you need run code in gee console
