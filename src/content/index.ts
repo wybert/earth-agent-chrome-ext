@@ -12,6 +12,82 @@ interface Message {
 import { GetMapLayersResponse, MapLayer } from '@/lib/tools/earth-engine/getMapLayers';
 import { snapshot, SnapshotResponse } from '@/lib/tools/browser/snapshot';
 
+/**
+ * Shows a visual indicator (red pulse) at the click location
+ */
+function showClickIndicator(x: number, y: number): void {
+  try {
+    console.log(`[showClickIndicator] Creating indicator at (${x}, ${y})`);
+
+    // Check if document.body is available
+    if (!document.body) {
+      console.warn('[showClickIndicator] document.body not available, waiting for it...');
+      // Wait for body to be available
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => showClickIndicator(x, y), { once: true });
+        return;
+      }
+      console.error('[showClickIndicator] document.body still not available after check');
+      return;
+    }
+
+    const indicator = document.createElement('div');
+    indicator.className = 'earth-agent-click-indicator';
+    indicator.style.cssText = `
+      position: fixed;
+      left: ${x}px;
+      top: ${y}px;
+      width: 20px;
+      height: 20px;
+      margin-left: -10px;
+      margin-top: -10px;
+      background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,0,0,0.4) 50%, transparent 70%);
+      border: 3px solid red;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 2147483647;
+      animation: clickPulse 0.6s ease-out;
+    `;
+
+    // Add keyframe animation
+    if (!document.getElementById('click-indicator-style')) {
+      const style = document.createElement('style');
+      style.id = 'click-indicator-style';
+      style.textContent = `
+        @keyframes clickPulse {
+          0% {
+            transform: scale(0.5);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.8;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+      console.log('[showClickIndicator] Added animation styles');
+    }
+
+    document.body.appendChild(indicator);
+    console.log('[showClickIndicator] Indicator appended to body');
+
+    // Remove indicator after animation completes
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.remove();
+        console.log('[showClickIndicator] Indicator removed after animation');
+      }
+    }, 600);
+  } catch (error) {
+    console.error('[showClickIndicator] Error creating indicator:', error);
+  }
+}
+
 // Singleton pattern to prevent multiple content script instances
 const CONTENT_SCRIPT_ID = 'earth-engine-ai-assistant-content-script';
 const INSTANCE_TIMESTAMP = Date.now();
@@ -1710,6 +1786,9 @@ async function handleExecuteClickByCoordinates(x: number, y: number, sendRespons
     }
 
     console.log(`[Content Script] Element at (${x},${y}):`, elementAtPoint);
+
+    // Show visual indicator at click location
+    showClickIndicator(x, y);
 
     // Create and dispatch mouse events to simulate a click
     // A simpler event sequence to avoid triggering double-click-like behavior (e.g., zoom)
