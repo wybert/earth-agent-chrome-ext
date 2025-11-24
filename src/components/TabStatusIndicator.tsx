@@ -102,38 +102,31 @@ export function TabStatusIndicator() {
   let statusIcon = '🔴';
   let tooltipTitle = 'No GEE Tab';
   let tooltipDetails: string[] = [];
+  let showLink = false;
 
   if (status.hasGEETab) {
     if (status.isActiveTab) {
       statusIcon = '🟢';
-      tooltipTitle = 'Active GEE Tab';
-      tooltipDetails.push(`✓ Agent is targeting your active tab`);
+      tooltipTitle = 'Connected';
+      tooltipDetails.push(`Targeting active tab`);
     } else {
       statusIcon = '🟡';
-      tooltipTitle = 'GEE Tab (Not Active)';
-      tooltipDetails.push(`⚠ Agent is targeting a different tab`);
+      tooltipTitle = 'Not Active';
+      tooltipDetails.push(`Targeting different tab`);
     }
 
-    // Add target tab info
-    if (status.selectedTabTitle) {
-      tooltipDetails.push(`Target: ${status.selectedTabTitle}`);
-    }
+    // Add tab ID (concise)
     if (status.selectedTabId) {
-      tooltipDetails.push(`Tab ID: ${status.selectedTabId}`);
+      tooltipDetails.push(`ID: ${status.selectedTabId}`);
     }
 
-    // Add active tab info if different
-    if (!status.isActiveTab && status.activeTabTitle) {
-      tooltipDetails.push(`Active: ${status.activeTabTitle}`);
-    }
-
-    // Add total tabs count
+    // Add total tabs count if multiple
     if (status.totalGEETabs !== undefined && status.totalGEETabs > 1) {
-      tooltipDetails.push(`Total GEE tabs: ${status.totalGEETabs}`);
+      tooltipDetails.push(`${status.totalGEETabs} GEE tabs open`);
     }
   } else {
-    tooltipDetails.push('No Google Earth Engine tab found');
-    tooltipDetails.push('Please open code.earthengine.google.com');
+    tooltipDetails.push('No GEE tab found');
+    showLink = true;
   }
 
   return (
@@ -144,23 +137,34 @@ export function TabStatusIndicator() {
       </div>
 
       {/* Tooltip - appears on hover */}
-      <div className="absolute right-0 top-10 w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-        <div className="bg-popover text-popover-foreground rounded-lg shadow-xl border border-border p-3">
+      <div className="absolute left-1/2 -translate-x-1/2 top-10 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none group-hover:pointer-events-auto">
+        <div className="bg-popover text-popover-foreground rounded-lg shadow-xl border border-border p-2.5">
           {/* Arrow */}
-          <div className="absolute -top-2 right-4 w-4 h-4 bg-popover border-l border-t border-border transform rotate-45"></div>
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-popover border-l border-t border-border transform rotate-45"></div>
 
           {/* Content */}
           <div className="relative">
-            <div className="font-semibold text-sm mb-2 flex items-center gap-2">
-              <span className="text-lg">{statusIcon}</span>
-              {tooltipTitle}
+            <div className="font-semibold text-sm mb-1.5 flex items-center gap-1.5">
+              <span className="text-base">{statusIcon}</span>
+              <span>{tooltipTitle}</span>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {tooltipDetails.map((detail, index) => (
-                <div key={index} className="text-xs text-muted-foreground leading-relaxed">
+                <div key={index} className="text-xs text-muted-foreground leading-snug">
                   {detail}
                 </div>
               ))}
+              {showLink && (
+                <a
+                  href="https://code.earthengine.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Open GEE →
+                </a>
+              )}
             </div>
           </div>
         </div>
