@@ -723,16 +723,21 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
     (inspectPanel as HTMLElement).scrollTop = (inspectPanel as HTMLElement).scrollHeight;
     await new Promise(resolve => setTimeout(resolve, 300));
 
-    // Step 2: Expand all collapsed sections
+    // Step 2: Expand all collapsed sections by actually clicking them
     const allCollapsedZippies = inspectPanel.querySelectorAll('.zippy.collapsed');
-    console.log(`🔓 [InspectMap] Expanding ${allCollapsedZippies.length} collapsed sections`);
+    console.log(`🔓 [InspectMap] Found ${allCollapsedZippies.length} collapsed sections to expand`);
+
     allCollapsedZippies.forEach(zippy => {
-      zippy.classList.remove('collapsed');
-      zippy.classList.add('expanded');
-      zippy.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+      const header = zippy.querySelector('.header');
+      if (header) {
+        const headerText = header.textContent?.trim() || '';
+        console.log(`  🖱️ [InspectMap] Clicking to expand: "${headerText.substring(0, 50)}"`);
+        (header as HTMLElement).click();
+      }
     });
 
-    await new Promise(resolve => setTimeout(resolve, 300));
+    // Wait for content to load after clicking
+    await new Promise(resolve => setTimeout(resolve, 500));
     (inspectPanel as HTMLElement).scrollTop = (inspectPanel as HTMLElement).scrollHeight;
     await new Promise(resolve => setTimeout(resolve, 300));
 
