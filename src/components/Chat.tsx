@@ -12,6 +12,7 @@ import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
 import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
+import { DEFAULT_MODELS } from '@/constants/models';
 
 // Define Zod schema for message responses (Restore)
 const MessageContentSchema = z.string().min(1);
@@ -288,7 +289,8 @@ export function ChatUI() {
       MODEL_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-      const model = result[MODEL_STORAGE_KEY] || '';
+      // Use default model for provider if no model is stored
+      const model = result[MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
 
       // Determine if an API key is configured for the selected provider
       let hasKey = false;
@@ -317,6 +319,11 @@ export function ChatUI() {
       setApiKey(currentKey);
       setApiProvider(provider as any);
       setSelectedModel(model);
+
+      // Save the default model to storage if none was set
+      if (!result[MODEL_STORAGE_KEY]) {
+        chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
+      }
 
       if (!hasKey) {
         setShowSettings(true);
@@ -1188,20 +1195,23 @@ export function ChatUI() {
     return <Settings onClose={() => {
       setShowSettings(false);
       chrome.storage.sync.get([
-        API_KEY_STORAGE_KEY, 
+        API_KEY_STORAGE_KEY,
         OPENAI_API_KEY_STORAGE_KEY,
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
         QWEN_API_KEY_STORAGE_KEY,
         OLLAMA_API_KEY_STORAGE_KEY,
-        API_PROVIDER_STORAGE_KEY
+        API_PROVIDER_STORAGE_KEY,
+        MODEL_STORAGE_KEY
       ], (result) => {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-        
+        // Use default model for provider if no model is stored
+        const model = result[MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
+
         // Determine if an API key is configured for the selected provider
         let hasKey = false;
         let currentKey = '';
-        
+
         if (provider === 'openai') {
           currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
@@ -1218,10 +1228,16 @@ export function ChatUI() {
           currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
           hasKey = true; // Ollama doesn't require an API key for local instances
         }
-        
+
         setApiConfigured(hasKey);
         setApiKey(currentKey);
         setApiProvider(provider as any);
+        setSelectedModel(model);
+
+        // Save the default model to storage if none was set
+        if (!result[MODEL_STORAGE_KEY]) {
+          chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
+        }
         
         if (hasKey && fallbackMode) {
           handleRetryAPI();
