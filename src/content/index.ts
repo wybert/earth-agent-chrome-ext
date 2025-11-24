@@ -497,23 +497,123 @@ function handleCheckConsole(sendResponse: (response: any) => void) {
 }
 
 /**
+ * Recursively extract Inspector tree structure as JSON
+ * This handles GEE's nested explorer UI elements
+ */
+function extractInspectorTreeAsJSON(explorer: Element): any {
+  // Handle simple leaf nodes
+  if (explorer.classList.contains('simple')) {
+    const trivial = explorer.querySelector('.trivial');
+    if (trivial) {
+      const label = trivial.querySelector('.label span')?.textContent || '';
+      const fullText = trivial.textContent || '';
+      let value = fullText.replace(label + ':', '').trim();
+
+      // Try to parse as JSON array
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          return value;
+        }
+      }
+
+      // Try to parse as number
+      const numValue = parseFloat(value);
+      return isNaN(numValue) ? value : numValue;
+    }
+    return null;
+  }
+
+  // Handle complex nodes with zippies
+  const zippy = explorer.querySelector(':scope > .zippy');
+  if (!zippy) return null;
+
+  const header = zippy.querySelector('.header');
+  const body = zippy.querySelector('.body');
+  if (!header) return null;
+
+  const headerText = header.textContent || '';
+
+  // Check if body is empty - extract value from header
+  if (!body || body.children.length === 0) {
+    const colonIndex = headerText.indexOf(':');
+    if (colonIndex > -1) {
+      let value = headerText.substring(colonIndex + 1).trim();
+
+      // Special case: Parse band summary format like '"maximum", float, EPSG:4326, 2x1 px'
+      const bandSummaryMatch = value.match(/^"([^"]+)",\s*(\w+),\s*(EPSG:\d+),\s*(\d+)x(\d+)\s*px$/);
+      if (bandSummaryMatch) {
+        return {
+          id: bandSummaryMatch[1],
+          data_type: bandSummaryMatch[2],
+          crs: bandSummaryMatch[3],
+          dimensions: [parseInt(bandSummaryMatch[4]), parseInt(bandSummaryMatch[5])]
+        };
+      }
+
+      // Try to parse as JSON array
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          return value;
+        }
+      }
+
+      // Try to parse as number
+      const numValue = parseFloat(value);
+      return isNaN(numValue) ? value : numValue;
+    }
+    return headerText;
+  }
+
+  // Body has children - check if it's a List or Object
+  const bodyExplorers = body.querySelectorAll(':scope > .explorer');
+
+  // List: numbered items (0:, 1:, 2:, etc.)
+  const isListLike = Array.from(bodyExplorers).every((exp, idx) => {
+    const expHeader = exp.querySelector('.zippy > .header')?.textContent || '';
+    return expHeader.startsWith(`${idx}:`);
+  });
+
+  if (isListLike && bodyExplorers.length > 0) {
+    return Array.from(bodyExplorers).map(exp => extractInspectorTreeAsJSON(exp));
+  }
+
+  // Object: key-value pairs
+  const result: Record<string, any> = {};
+  bodyExplorers.forEach(exp => {
+    const expHeader = exp.querySelector('.zippy > .header')?.textContent || '';
+    const colonIndex = expHeader.indexOf(':');
+
+    if (colonIndex > -1) {
+      const key = expHeader.substring(0, colonIndex).trim();
+      const value = extractInspectorTreeAsJSON(exp);
+      result[key] = value;
+    }
+  });
+
+  return Object.keys(result).length > 0 ? result : headerText;
+}
+
+/**
  * Handles inspecting the map at specific coordinates
  */
 async function handleInspectMap(coordinates: {lat: number, lng: number} | undefined, sendResponse: (response: any) => void) {
   try {
     console.log(`🔍 [InspectMap] Reading Inspector panel data`);
     if (coordinates) {
-      console.log(`🔍 [InspectMap] Coordinates provided: lat=${coordinates.lat}, lng=${coordinates.lng}`);
+      console.log(`🔍 [InspectMap] Requested coordinates: lat=${coordinates.lat}, lng=${coordinates.lng}`);
     }
 
-    // Check if Inspector panel exists and has data
+    // Check if Inspector panel exists
     const inspectPanel = document.querySelector('.inspect-panel');
-
     if (!inspectPanel) {
       console.error('❌ [InspectMap] Inspector panel not found');
       sendResponse({
         success: false,
-        error: 'Inspector panel not found. Please ensure the Inspector tab is activated in Earth Engine.'
+        error: 'Inspector panel not found. Please ensure the Inspector tab is open in Earth Engine.'
       });
       return;
     }
@@ -533,11 +633,32 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
       return;
     }
 
-    // Extract coordinate information from the Inspector
+    // Step 1: Scroll to trigger lazy loading
+    console.log(`📜 [InspectMap] Scrolling to trigger lazy loading`);
+    (inspectPanel as HTMLElement).scrollTop = (inspectPanel as HTMLElement).scrollHeight;
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Step 2: Expand all collapsed sections
+    const allCollapsedZippies = inspectPanel.querySelectorAll('.zippy.collapsed');
+    console.log(`🔓 [InspectMap] Expanding ${allCollapsedZippies.length} collapsed sections`);
+    allCollapsedZippies.forEach(zippy => {
+      zippy.classList.remove('collapsed');
+      zippy.classList.add('expanded');
+      zippy.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 300));
+    (inspectPanel as HTMLElement).scrollTop = (inspectPanel as HTMLElement).scrollHeight;
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Step 3: Extract Point information (first explorer)
+    const pointExplorer = inspectPanel.querySelector(':scope > .explorer');
+    const pointData = pointExplorer ? extractInspectorTreeAsJSON(pointExplorer) : null;
+    console.log(`📍 [InspectMap] Point data:`, pointData);
+
+    // Extract coordinates from point header for validation
     const pointHeader = inspectPanel.querySelector('.explorer .header');
     const pointText = pointHeader?.textContent || '';
-    console.log(`📍 [InspectMap] Point header text: "${pointText}"`);
-
     const pointMatch = pointText.match(/Point\s*\(([-\d.]+),\s*([-\d.]+)\)/);
     const inspectedCoords = pointMatch ? {
       lng: parseFloat(pointMatch[1]),
@@ -555,7 +676,7 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
 
     console.log(`📍 [InspectMap] Extracted coordinates: lng=${inspectedCoords.lng}, lat=${inspectedCoords.lat}`);
 
-    // If coordinates were provided, verify they match (with some tolerance for zoom level differences)
+    // Verify coordinates match if provided
     if (coordinates) {
       const latDiff = Math.abs(coordinates.lat - inspectedCoords.lat);
       const lngDiff = Math.abs(coordinates.lng - inspectedCoords.lng);
@@ -575,52 +696,55 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
       }
     }
 
-    // Extract pixel values from all layers
-    const layers: any[] = [];
-    const inspectViews = inspectPanel.querySelectorAll('.inspect-view');
-    console.log(`🎨 [InspectMap] Found ${inspectViews.length} inspect views`);
-
-    inspectViews.forEach((view, viewIndex) => {
-      const layerLabel = view.querySelector('.header .label')?.textContent?.trim() || 'Unknown Layer';
-      const layerMessage = view.querySelector('.header .message')?.textContent?.trim() || '';
-
-      console.log(`🎨 [InspectMap] View ${viewIndex + 1}: "${layerLabel}" - ${layerMessage}`);
-
-      // Extract pixel values
-      const values: Record<string, any> = {};
-      const trivialElements = view.querySelectorAll('.trivial');
-
-      trivialElements.forEach((trivial) => {
-        const labelEl = trivial.querySelector('.label span');
-        const label = labelEl?.textContent?.trim() || '';
-        const valueText = trivial.textContent?.replace(label + ':', '').trim() || '';
-
-        // Try to parse as number
-        const numValue = parseFloat(valueText);
-        values[label] = isNaN(numValue) ? valueText : numValue;
-
-        console.log(`  📊 [InspectMap] ${label}: ${values[label]}`);
-      });
-
-      if (Object.keys(values).length > 0) {
-        layers.push({
-          name: layerLabel,
-          type: layerMessage,
-          values
-        });
-      }
+    // Step 4: Extract Pixels section
+    const pixelsSection = Array.from(inspectPanel.querySelectorAll('.inspect-view.inspect-image'));
+    const pixelsData = pixelsSection.map((section) => {
+      const explorer = section.querySelector('.explorer');
+      const header = explorer?.querySelector('.header');
+      const layerName = header?.querySelector('.label span')?.textContent || 'Unknown';
+      const data = explorer ? extractInspectorTreeAsJSON(explorer) : null;
+      return { layerName, data };
     });
 
-    console.log(`✅ [InspectMap] Successfully extracted ${layers.length} layers`);
+    // Step 5: Extract Objects section (includes EPSG and all metadata)
+    const objectsSection = Array.from(inspectPanel.querySelectorAll('.inspect-view.inspect-object'));
+    const objectsData = objectsSection.map((section) => {
+      const explorer = section.querySelector('.explorer');
+      const header = explorer?.querySelector('.header');
+      const layerName = header?.querySelector('.label span')?.textContent || 'Unknown';
+      const data = explorer ? extractInspectorTreeAsJSON(explorer) : null;
+      return { layerName, data };
+    });
+
+    console.log(`✅ [InspectMap] Successfully extracted complete Inspector data`);
+    console.log(`   - Point data: ${pointData ? 'Yes' : 'No'}`);
+    console.log(`   - Pixels sections: ${pixelsData.length}`);
+    console.log(`   - Objects sections: ${objectsData.length}`);
+
+    // Check if Objects section is empty and provide helpful suggestion
+    let suggestion = undefined;
+    if (objectsData.length === 0 || objectsData.every(obj => !obj.data || Object.keys(obj.data).length === 0)) {
+      suggestion = 'Objects section appears empty or not expanded. To get CRS/EPSG information, manually click on "Objects" in the Inspector panel to expand it, then call this tool again.';
+      console.warn('⚠️ [InspectMap] ' + suggestion);
+    }
 
     sendResponse({
       success: true,
       data: {
         requestedCoordinates: coordinates,
         inspectedCoordinates: inspectedCoords,
-        layers,
-        layerCount: layers.length
-      }
+        point: pointData,
+        pixels: pixelsData,
+        objects: objectsData,
+        // Legacy format for backward compatibility
+        layers: pixelsData.map(p => ({
+          name: p.layerName,
+          type: typeof p.data === 'object' ? 'Image' : 'Unknown',
+          values: typeof p.data === 'object' ? p.data : { value: p.data }
+        })),
+        layerCount: pixelsData.length
+      },
+      suggestion
     });
 
   } catch (error) {

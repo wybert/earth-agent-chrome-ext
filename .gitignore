@@ -37,3 +37,6 @@ playwright-mcp
 webpack.prod.config.js
 *.zip
 dist.zip
+
+# MCP servers
+mcp/
