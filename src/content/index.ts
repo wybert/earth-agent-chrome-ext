@@ -1588,8 +1588,8 @@ async function handleExecuteClickByCoordinates(x: number, y: number, sendRespons
     console.log(`[Content Script] Element at (${x},${y}):`, elementAtPoint);
 
     // Create and dispatch mouse events to simulate a click
-    // Standard sequence: pointerdown, mousedown, pointerup, mouseup, click
-    const eventSequence = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+    // A simpler event sequence to avoid triggering double-click-like behavior (e.g., zoom)
+    const eventSequence = ['mousedown', 'mouseup', 'click'];
 
     for (const eventType of eventSequence) {
       const event = new MouseEvent(eventType, {
