@@ -1678,7 +1678,14 @@ To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${dat
 
   // Define Get Inspector Output tool (renamed from inspectMapTool for consistency)
   const getInspectorOutputTool = tool({
-    description: 'Read pixel values from the Google Earth Engine Inspector panel. IMPORTANT: This tool reads EXISTING Inspector data - the user must manually click on the map at the desired location BEFORE calling this tool. The tool will verify that the Inspector coordinates match the requested coordinates (within tolerance) and extract all layer values.',
+    description: `Get complete information from the Google Earth Engine Inspector panel including Point data, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.).
+
+IMPORTANT REQUIREMENTS:
+1. User must manually click on the map at the desired location to populate the Inspector panel
+2. User must manually expand the Objects section in the Inspector panel (click on "Objects" to expand it)
+3. Once expanded, this tool will extract all visible data including EPSG, CRS transform, data type, dimensions, origin, and properties
+
+The Objects section uses on-demand rendering and will NOT appear unless manually expanded by the user. If you need CRS/EPSG information, explicitly ask the user to expand the Objects section before calling this tool.`,
     inputSchema: z.object({
       coordinates: z.object({
         lat: z.number().describe('Latitude of the location to inspect'),
@@ -1811,18 +1818,47 @@ To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${dat
       const data = result.data;
       let output = `✅ Inspector Data at (${data.inspectedCoordinates.lng}, ${data.inspectedCoordinates.lat}):\n\n`;
 
-      if (data.layerCount === 0) {
-        output += 'No layers found in Inspector.';
-      } else {
-        data.layers.forEach((layer: any, i: number) => {
-          output += `**Layer ${i + 1}: ${layer.name}**\n`;
-          output += `Type: ${layer.type}\n`;
-          output += 'Values:\n';
-          Object.entries(layer.values).forEach(([key, value]) => {
-            output += `  - ${key}: ${value}\n`;
-          });
-          output += '\n';
+      // Include Point information
+      if (data.point) {
+        output += `**Point Information:**\n`;
+        Object.entries(data.point).forEach(([key, value]) => {
+          output += `  - ${key}: ${value}\n`;
         });
+        output += '\n';
+      }
+
+      // Include Pixels section
+      if (data.pixels && data.pixels.length > 0) {
+        output += `**Pixel Values:**\n`;
+        data.pixels.forEach((pixel: any, i: number) => {
+          output += `  Layer ${i + 1}: ${pixel.layerName}\n`;
+          if (pixel.data !== null && pixel.data !== undefined) {
+            if (typeof pixel.data === 'object') {
+              output += `    ${JSON.stringify(pixel.data, null, 2).split('\n').join('\n    ')}\n`;
+            } else {
+              output += `    Value: ${pixel.data}\n`;
+            }
+          }
+        });
+        output += '\n';
+      }
+
+      // Include Objects section (with EPSG data)
+      if (data.objects && data.objects.length > 0) {
+        output += `**Object Metadata (includes CRS/EPSG):**\n`;
+        data.objects.forEach((obj: any, i: number) => {
+          output += `  Layer ${i + 1}: ${obj.layerName}\n`;
+          if (obj.data) {
+            const jsonStr = JSON.stringify(obj.data, null, 2);
+            output += `    ${jsonStr.split('\n').join('\n    ')}\n`;
+          }
+        });
+        output += '\n';
+      }
+
+      // Add suggestion if Objects section is empty
+      if (result.suggestion) {
+        output += `\n⚠️ **Note:** ${result.suggestion}\n`;
       }
 
       return {
