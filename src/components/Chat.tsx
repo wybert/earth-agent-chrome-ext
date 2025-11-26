@@ -5,7 +5,7 @@ import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, 
 // Project uses custom Message type for Chrome extension communication
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
-import { Message, ExtensionMessage } from '../types/extension';
+import { Message, ExtensionMessage, Provider } from '../types/extension';
 import ToolsTestPanel from './ui/ToolsTestPanel';
 import AgentTestPanel from './ui/AgentTestPanel';
 import { TabStatusIndicator } from './TabStatusIndicator';
@@ -179,7 +179,7 @@ export function ChatUI() {
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'>('openai');
+  const [apiProvider, setApiProvider] = useState<Provider>('openai');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state

@@ -16,6 +16,7 @@ import { CopyButton } from "@/components/ui/copy-button"
 import { MessageInput } from "@/components/ui/message-input"
 import { MessageList } from "@/components/ui/message-list"
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
+import type { Provider } from "@/types/extension"
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -38,9 +39,9 @@ interface ChatPropsBase {
   showRegenerate?: boolean
   mode?: 'ask' | 'do'
   onModeChange?: (mode: 'ask' | 'do') => void
-  provider?: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'
+  provider?: Provider
   model?: string
-  onProviderChange?: (provider: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama') => void
+  onProviderChange?: (provider: Provider) => void
   onModelChange?: (model: string) => void
 }
 

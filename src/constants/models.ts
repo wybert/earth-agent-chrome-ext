@@ -117,3 +117,6 @@ export const DEFAULT_MODELS: Record<ApiProvider, string> = {
   qwen: 'qwen-max-latest',
   ollama: 'llama3.3'
 };
+
+// Storage key for OpenAI Compatible provider configurations
+export const OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY = 'earth_engine_openai_compatible_configs';

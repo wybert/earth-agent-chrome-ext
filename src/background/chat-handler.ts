@@ -1,5 +1,5 @@
 import { ModelMessage, streamText, tool, TextPart, ImagePart, FilePart, stepCountIs } from 'ai';
-import type { Message } from '../types/extension';
+import type { Message, Provider, BuiltInProvider, OpenAICompatibleConfig } from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -8,15 +8,13 @@ import { createOllama } from 'ollama-ai-provider';
 import { createResilientFetch } from '../lib/utils';
 import { GEE_ASK_MODE_PROMPT, GEE_DO_MODE_PROMPT, GEE_SYSTEM_PROMPT } from '../lib/prompts/gee-prompts';
 import { createAITools, type ToolEventCallback } from '../lib/tools/ai-tools';
+import { OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '../constants/models';
 
-// Re-export ToolEventCallback for backwards compatibility
-export type { ToolEventCallback };
+// Re-export ToolEventCallback and Provider for backwards compatibility
+export type { ToolEventCallback, Provider };
 
-// Available providers
-export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
-
-// Default models configuration
-export const DEFAULT_MODELS: Record<Provider, string> = {
+// Default models configuration (for built-in providers only)
+export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.5-pro',
@@ -437,6 +435,72 @@ export async function handleChatRequest(
       }
       
       console.log(`Using Ollama provider with model: ${effectiveModel} at ${ollamaBaseURL} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+    } else if (provider.startsWith('custom:')) {
+      // Handle custom OpenAI Compatible providers
+      const configId = provider.replace('custom:', '');
+      console.log(`🔧 [Chat Handler] Processing custom provider request: ${configId}`);
+
+      try {
+        // Load custom provider config from storage
+        const storageResult = await chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]);
+        const configs: OpenAICompatibleConfig[] = storageResult[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+        const customConfig = configs.find(c => c.id === configId);
+
+        if (!customConfig) {
+          console.error(`❌ [Chat Handler] Custom provider config not found: ${configId}`);
+          return new Response(JSON.stringify({
+            error: 'Custom provider configuration not found',
+            message: 'The selected custom provider no longer exists. Please check your settings.'
+          }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        if (!customConfig.enabled) {
+          console.error(`❌ [Chat Handler] Custom provider is disabled: ${customConfig.name}`);
+          return new Response(JSON.stringify({
+            error: 'Custom provider is disabled',
+            message: `The provider "${customConfig.name}" is currently disabled. Please enable it in settings.`
+          }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
+        console.log(`✅ [Chat Handler] Found custom provider config: ${customConfig.name}`);
+
+        // Use the custom provider's configuration
+        const customOpenAIConfig: any = {
+          apiKey: customConfig.apiKey,
+          baseURL: customConfig.baseURL,
+          fetch: createResilientFetch({
+            label: `ChatHandler:Custom:${customConfig.name}`,
+            maxAttempts: NETWORK_RETRY_ATTEMPTS,
+            baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+          })
+        };
+
+        // Add Helicone headers if provided
+        if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
+          console.log(`🔍 [Chat Handler] Configuring custom provider "${customConfig.name}" with Helicone observability`);
+          customOpenAIConfig.headers = heliconeHeaders;
+        }
+
+        llmProvider = createOpenAI(customOpenAIConfig);
+        effectiveModel = model || customConfig.modelName;
+
+        console.log(`✅ [Chat Handler] Using custom provider "${customConfig.name}" with model: ${effectiveModel} at ${customConfig.baseURL}${heliconeHeaders ? ' (with Helicone)' : ''}`);
+      } catch (error) {
+        console.error(`❌ [Chat Handler] Error loading custom provider config:`, error);
+        return new Response(JSON.stringify({
+          error: 'Failed to load custom provider configuration',
+          message: error instanceof Error ? error.message : String(error)
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
