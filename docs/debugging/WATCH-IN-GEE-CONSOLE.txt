@@ -1,0 +1,34 @@
+📋 USAGE INSTRUCTIONS FOR inspectMap TOOL
+
+⚠️ IMPORTANT: inspectMap reads EXISTING Inspector data
+It does NOT simulate clicks automatically.
+
+USAGE WORKFLOW:
+===============
+1. Open Earth Engine Code Editor (https://code.earthengine.google.com)
+2. Activate the Inspector tab (right side panel)
+3. Manually click on the map at the location you want to inspect
+4. THEN run inspectMap tool from the extension
+
+Expected logs in GEE console (F12):
+====================================
+🔍 [InspectMap] Reading Inspector panel data
+🔍 [InspectMap] Coordinates provided: lat=42.3844, lng=-71.0987
+✅ [InspectMap] Inspector panel found
+📄 [InspectMap] Panel text preview: "Point (-71.118, 42.3713)..."
+📍 [InspectMap] Point header text: "Point (-71.118, 42.3713) at 306m/px"
+📍 [InspectMap] Extracted coordinates: lng=-71.118, lat=42.3713
+🎨 [InspectMap] Found 1 inspect views
+🎨 [InspectMap] View 1: "VIIRS Nighttime Lights 2020 (Boston): " - Image (1 band)
+  📊 [InspectMap] maximum: 97.16571807861328
+✅ [InspectMap] Successfully extracted 1 layers
+
+WHAT IF INSPECTOR IS EMPTY:
+============================
+Error: "Inspector is empty. Please manually click on the map..."
+Solution: Click on the map first, then run the tool again
+
+WHAT IF COORDINATES DON'T MATCH:
+=================================
+Error: "Inspector shows data for coordinates (X, Y), which is different from requested..."
+Solution: Click on the correct location on the map first

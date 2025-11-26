@@ -14,7 +14,7 @@ interface MessageListProps {
   isTyping?: boolean
   messageOptions?:
     | AdditionalMessageOptions
-    | ((message: Message) => AdditionalMessageOptions)
+    | ((message: Message, index: number) => AdditionalMessageOptions)
   isGenerating?: boolean
 }
 
@@ -31,11 +31,11 @@ export function MessageList({
 
   return (
     <ScrollArea className="flex-1 overflow-y-auto">
-      <div className="container flex flex-col gap-4 px-4 py-4">
+      <div className="w-full flex flex-col gap-4 px-2 sm:px-4 py-4">
       {messages.map((message, index) => {
         const additionalOptions =
           typeof messageOptions === "function"
-            ? messageOptions(message)
+            ? messageOptions(message, index)
             : messageOptions
 
         return (

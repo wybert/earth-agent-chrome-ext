@@ -14,6 +14,8 @@ interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 interface SelectContentProps {
   children: React.ReactNode
+  side?: 'top' | 'bottom'
+  className?: string
 }
 
 interface SelectItemProps {
@@ -70,18 +72,26 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
 )
 SelectTrigger.displayName = "SelectTrigger"
 
-const SelectContent = ({ children }: SelectContentProps) => {
+const SelectContent = ({ children, side = 'bottom', className }: SelectContentProps) => {
   const { isOpen, setIsOpen } = React.useContext(SelectContext)
-  
+
   if (!isOpen) return null
-  
+
+  const positionClasses = side === 'top'
+    ? 'bottom-full mb-1'
+    : 'top-full mt-1'
+
   return (
     <>
-      <div 
+      <div
         className="fixed inset-0 z-40"
         onClick={() => setIsOpen(false)}
       />
-      <div className="absolute top-full left-0 z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+      <div className={cn(
+        "absolute left-0 z-50 min-w-full bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-md shadow-lg max-h-60 overflow-auto",
+        positionClasses,
+        className
+      )}>
         {children}
       </div>
     </>
@@ -95,20 +105,20 @@ const SelectItem = ({ value, children }: SelectItemProps) => {
   return (
     <div
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none hover:bg-gray-100 focus:bg-gray-100",
-        isSelected && "bg-gray-100"
+        "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm text-gray-200 outline-none hover:bg-gray-700/50 focus:bg-gray-700/50",
+        isSelected && "bg-gray-700/50"
       )}
       onClick={() => {
         onValueChange?.(value)
         setIsOpen(false)
       }}
     >
+      {children}
       {isSelected && (
-        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
           <Check className="h-4 w-4" />
         </span>
       )}
-      {children}
     </div>
   )
 }

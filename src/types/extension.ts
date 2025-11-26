@@ -9,13 +9,29 @@ export interface MessagePart {
 }
 
 export interface Message {
-  id?: string;
+  id: string; // Required for AI SDK 5.0 compatibility
   role: string;
   content?: string;
   parts?: MessagePart[];
 }
 
-export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+// Built-in providers
+export type BuiltInProvider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+
+// Custom provider format: 'custom:{uuid}'
+export type Provider = BuiltInProvider | `custom:${string}`;
+
+// OpenAI Compatible provider configuration
+export interface OpenAICompatibleConfig {
+  id: string;              // Unique identifier (UUID)
+  name: string;            // User-provided name (e.g., "DeepSeek", "Together AI")
+  baseURL: string;         // API endpoint URL
+  apiKey: string;          // API key for this provider
+  modelName: string;       // Default model name to use
+  enabled: boolean;        // Whether this config is currently active
+  createdAt: number;       // Creation timestamp
+  updatedAt: number;       // Last update timestamp
+}
 
 export interface ExtensionMessage {
   type: string;
@@ -35,4 +51,5 @@ export interface ExtensionMessage {
   attachments?: Array<{ type: string; mimeType?: string; data: string }>; // Support for image attachments
   hasMultiModal?: boolean; // Flag to indicate multi-modal content
   sender?: string;
+  mode?: 'ask' | 'do'; // Agent mode: ask (read-only) or do (full actions)
 }

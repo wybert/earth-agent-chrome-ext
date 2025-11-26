@@ -15,8 +15,8 @@
     --popover-foreground: 240 10% 3.9%;
     
     /* Modern primary color - a vibrant blue */
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 217 84% 61%;
+    --primary-foreground: 0 0% 100%;
     
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -41,7 +41,7 @@
     /* Input and border styles */
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 221.2 83.2% 53.3%;
+    --ring: 217 84% 61%;
     
     /* Border radius for consistent component styling */
     --radius: 0.5rem;
@@ -57,8 +57,8 @@
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
     
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 217 84% 61%;
+    --primary-foreground: 0 0% 100%;
     
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -80,7 +80,7 @@
     
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
-    --ring: 217.2 91.2% 59.8%;
+    --ring: 217 84% 61%;
   }
 }
 
@@ -89,16 +89,23 @@
     @apply border-border;
   }
   
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    min-width: 320px;
   }
-  
+
   /* Improve default focus styles */
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2;
   }
-  
+
   /* Smooth scrolling for better UX */
   html {
     scroll-behavior: smooth;
@@ -116,5 +123,67 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+  .word-break-break-word {
+    word-break: break-word;
+  }
+}
+
+/* KaTeX math formula styles */
+@layer base {
+  /* Inline math - force wrapping */
+  .katex {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Block display math - scroll if too long */
+  .katex-display {
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100% !important;
+    margin: 1em 0 !important;
+  }
+
+  /* Inline math in paragraphs and lists */
+  p .katex,
+  li .katex {
+    display: inline !important;
+    max-width: 100% !important;
+    word-break: break-word !important;
+  }
+
+  /* Math HTML wrapper */
+  .katex-html {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Math elements should be able to break */
+  .katex .mord,
+  .katex .mbin,
+  .katex .mrel,
+  .katex .mopen,
+  .katex .mclose,
+  .katex .mpunct {
+    white-space: normal !important;
+  }
+
+  /* Mobile optimization */
+  @media (max-width: 640px) {
+    .katex {
+      font-size: 0.9em !important;
+    }
+
+    .katex-display {
+      font-size: 0.85em !important;
+      padding: 0.5em 0 !important;
+    }
   }
 } 

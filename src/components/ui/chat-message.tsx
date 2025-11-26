@@ -13,7 +13,7 @@ const chatBubbleVariants = cva(
     variants: {
       isUser: {
         true: "bg-primary text-primary-foreground",
-        false: "bg-muted text-muted-foreground",
+        false: "bg-transparent text-foreground",
       },
       animation: {
         none: "",
@@ -39,7 +39,7 @@ function BubbleMessage({
   actions,
 }: BubbleMessageProps) {
     return (
-    <div className={cn("group/message relative")}>
+    <div className={cn("group/message w-fit max-w-full flex flex-col gap-1")}>
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -56,16 +56,20 @@ function BubbleMessage({
         style={{ originX: isUser ? 1 : 0 }}
             className={cn(
           chatBubbleVariants({ isUser, animation }),
-          "break-words"
+          "break-words overflow-wrap-anywhere w-full max-w-full",
+          isUser && "sm:max-w-[600px]"
         )}
       >
         <MarkdownRenderer content={content} />
-        {actions ? (
-          <div className="absolute -bottom-4 right-2 flex space-x-1 rounded-lg border bg-background p-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100">
-            {actions}
-          </div>
-        ) : null}
       </motion.div>
+      {actions ? (
+        <div className={cn(
+          "flex space-x-1 text-foreground opacity-0 transition-opacity group-hover/message:opacity-100",
+          isUser ? "mr-1 self-end" : "ml-1"
+        )}>
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -111,18 +115,22 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
     return null
   }
 
+  // Render avatar component
+  const avatar = (
+    <div
+      className={cn(
+        "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow",
+        isUser ? "bg-background" : "bg-primary text-primary-foreground"
+      )}
+    >
+      <Icon className="h-5 w-5" />
+    </div>
+  );
+
   return (
     <div className={cn("group flex items-start gap-3", isUser && "justify-end")}>
       <div
-        className={cn(
-          "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow",
-          isUser ? "bg-background" : "bg-primary text-primary-foreground"
-        )}
-      >
-        <Icon className="h-5 w-5" />
-    </div>
-      <div
-        className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}
+        className={cn("flex flex-col gap-2 flex-1 min-w-0", isUser ? "items-end" : "items-start")}
       >
         {content && !message.parts?.length ? (
           <BubbleMessage content={content} isUser={isUser} actions={actions} />

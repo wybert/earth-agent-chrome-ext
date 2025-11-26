@@ -1,4 +1,5 @@
 import { handleChatRequest } from './chat-handler';
+import { selectBestEarthEngineTab } from '../lib/utils';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
@@ -22,6 +23,12 @@ const sidePanelPorts = new Map<string, chrome.runtime.Port>();
 // Store information about loaded content scripts
 const contentScriptTabs = new Map<number, boolean>();
 
+// Track cancelled request IDs
+const cancelledRequests = new Map<string, boolean>();
+
+// Map ports to their active request IDs
+const activeRequestsByPort = new Map<chrome.runtime.Port, string>();
+
 // Timing constants
 const CONTENT_SCRIPT_PING_TIMEOUT = 5000; // 5 seconds
 const TAB_ACTION_RETRY_DELAY = 1000; // 1 second
@@ -40,19 +47,60 @@ const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
-  // Only open side panel if we're on the Earth Engine Code Editor
-  if (tab.url?.startsWith('https://code.earthengine.google.com/')) {
-    // Open the side panel
-    await chrome.sidePanel.open({ windowId: tab.windowId });
-    await chrome.sidePanel.setOptions({
-      enabled: true,
-      path: 'sidepanel.html'
+  console.log('Extension icon clicked, current tab URL:', tab.url);
+  console.log('Tab details:', { id: tab.id, url: tab.url, windowId: tab.windowId });
+
+  // First, immediately open the side panel (this preserves user gesture)
+  chrome.sidePanel.setOptions({
+    enabled: true,
+    path: 'sidepanel.html'
+  }, () => {
+    // Open side panel in the current window
+    if (tab.windowId) {
+      chrome.sidePanel.open({ windowId: tab.windowId }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('Failed to open side panel:', chrome.runtime.lastError);
+        } else {
+          console.log('Side panel opened successfully');
+        }
+      });
+    }
+  });
+
+  // Check if we need to create or switch to Earth Engine tab
+  const isOnEarthEngine = tab.url?.startsWith('https://code.earthengine.google.com/');
+  console.log('Is on Earth Engine?', isOnEarthEngine);
+
+  if (!isOnEarthEngine) {
+    console.log('Not on Earth Engine, checking for existing tabs...');
+
+    // Check if there's already an Earth Engine tab
+    const earthEngineTabs = await chrome.tabs.query({
+      url: "https://code.earthengine.google.com/*"
     });
+
+    console.log('Found', earthEngineTabs.length, 'existing Earth Engine tabs');
+
+    if (earthEngineTabs.length > 0) {
+      // Switch to existing tab
+      const targetTab = earthEngineTabs[0];
+      console.log('Switching to existing Earth Engine tab:', targetTab.id);
+      await chrome.tabs.update(targetTab.id!, { active: true });
+      if (targetTab.windowId) {
+        await chrome.windows.update(targetTab.windowId, { focused: true });
+      }
+    } else {
+      // Create new tab
+      console.log('Creating new Earth Engine tab');
+      chrome.tabs.create({
+        url: 'https://code.earthengine.google.com/',
+        active: true
+      }, (newTab) => {
+        console.log('New tab created:', newTab.id);
+      });
+    }
   } else {
-    // If not on Earth Engine, create a new tab with Earth Engine
-    await chrome.tabs.create({
-      url: 'https://code.earthengine.google.com/'
-    });
+    console.log('Already on Earth Engine tab, nothing to do');
   }
 });
 
@@ -627,22 +675,35 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           
           // Get the active tab
           const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          
-          if (!tabs || tabs.length === 0) {
+
+          if (!tabs || tabs.length === 0 || !tabs[0]) {
             sendResponse({
               success: false,
               error: 'No active tab found'
             });
             return;
           }
-          
+
+          const activeTab = tabs[0];
+          if (!activeTab.windowId) {
+            sendResponse({
+              success: false,
+              error: 'Active tab has no window ID'
+            });
+            return;
+          }
+
           // Take the screenshot
           try {
-            const dataUrl = await chrome.tabs.captureVisibleTab(tabs[0].windowId, {
+            const dataUrl = await chrome.tabs.captureVisibleTab(activeTab.windowId, {
               format: 'png',
               quality: 100
             });
-            
+
+            if (!dataUrl) {
+              throw new Error('Screenshot capture returned empty data');
+            }
+
             console.log('Screenshot captured successfully');
             sendResponse({
               success: true,
@@ -651,9 +712,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
           } catch (captureError) {
             console.error('Error capturing screenshot:', captureError);
+            const errorMessage = captureError instanceof Error ? captureError.message : String(captureError);
             sendResponse({
               success: false,
-              error: `Error capturing screenshot: ${captureError instanceof Error ? captureError.message : String(captureError)}`
+              error: `Error capturing screenshot: ${errorMessage}. This may happen if the tab is not fully loaded, is a Chrome internal page (like chrome://, chrome-extension://), or if the extension lacks permissions.`
             });
           }
         } catch (error) {
@@ -1085,14 +1147,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             }
           });
           
-          if (!results || results.length === 0) {
+          if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
               error: 'Failed to execute snapshot script'
             });
             return;
           }
-          
+
           const result = results[0].result;
           console.log('Accessibility snapshot captured successfully');
           sendResponse(result);
@@ -1226,14 +1288,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             args: [selector, text]
           });
 
-          if (!results || results.length === 0) {
+          if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
               error: 'No result from script execution'
             });
             return;
           }
-          
+
           // Return the result
           sendResponse(results[0].result);
         } catch (error) {
@@ -1359,14 +1421,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             args: [selector, limit]
           });
 
-          if (!results || results.length === 0) {
+          if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
               error: 'No result from script execution'
             });
             return;
           }
-          
+
           // Return the result
           sendResponse(results[0].result);
         } catch (error) {
@@ -1449,7 +1511,71 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-    
+
+    case 'GET_TARGET_TAB_STATUS':
+      // Get information about which GEE tab would be targeted
+      (async () => {
+        try {
+          console.log('Getting target tab status...');
+
+          // Query for all GEE tabs
+          const earthEngineTabs = await chrome.tabs.query({
+            url: "*://code.earthengine.google.com/*"
+          });
+
+          if (!earthEngineTabs || earthEngineTabs.length === 0) {
+            sendResponse({
+              success: true,
+              hasGEETab: false,
+              message: 'No Google Earth Engine tab found'
+            });
+            return;
+          }
+
+          // Get the currently active tab
+          const activeTabs = await chrome.tabs.query({
+            active: true,
+            currentWindow: true
+          });
+          const activeTab = activeTabs && activeTabs.length > 0 ? activeTabs[0] : null;
+
+          // Select the best tab
+          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+
+          if (!selectedTab) {
+            sendResponse({
+              success: true,
+              hasGEETab: false,
+              message: 'No valid Google Earth Engine tab found'
+            });
+            return;
+          }
+
+          // Check if the selected tab is the active tab
+          const isActiveTab = activeTab?.id === selectedTab.id;
+
+          sendResponse({
+            success: true,
+            hasGEETab: true,
+            selectedTabId: selectedTab.id,
+            selectedTabTitle: selectedTab.title,
+            selectedTabUrl: selectedTab.url,
+            isActiveTab: isActiveTab,
+            activeTabId: activeTab?.id,
+            activeTabTitle: activeTab?.title,
+            activeTabUrl: activeTab?.url,
+            totalGEETabs: earthEngineTabs.length
+          });
+        } catch (error) {
+          console.error('Error getting target tab status:', error);
+          sendResponse({
+            success: false,
+            error: `Error getting target tab status: ${error instanceof Error ? error.message : String(error)}`
+          });
+        }
+      })();
+      return true; // Will respond asynchronously
+
     default:
       console.warn(`Unknown message type received in background: ${message.type}`);
       sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -1485,7 +1611,17 @@ chrome.runtime.onConnect.addListener((newPort) => {
           console.log('Received PING from side panel, responding with PONG');
           newPort.postMessage({ type: 'PONG', timestamp: Date.now() });
           break;
-          
+
+        case 'CANCEL_STREAM':
+          // User cancelled the stream - mark the active request as cancelled
+          console.log('Stream cancelled by user');
+          const activeRequestId = activeRequestsByPort.get(newPort);
+          if (activeRequestId) {
+            console.log(`Marking request ${activeRequestId} as cancelled`);
+            cancelledRequests.set(activeRequestId, true);
+          }
+          break;
+
         default:
           console.warn('Unknown side panel message type:', message.type);
           newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
@@ -1511,7 +1647,17 @@ chrome.runtime.onConnect.addListener((newPort) => {
           // Handle chat messages from agent test panel
           handleChatMessage(message, newPort);
           break;
-          
+
+        case 'CANCEL_STREAM':
+          // User cancelled the stream - mark the active request as cancelled
+          console.log('Agent test stream cancelled by user');
+          const agentTestRequestId = activeRequestsByPort.get(newPort);
+          if (agentTestRequestId) {
+            console.log(`Marking agent test request ${agentTestRequestId} as cancelled`);
+            cancelledRequests.set(agentTestRequestId, true);
+          }
+          break;
+
         default:
           console.warn('Unknown agent test message type:', message.type);
           newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
@@ -1563,6 +1709,10 @@ chrome.runtime.onConnect.addListener((newPort) => {
 // Helper function to handle chat messages
 async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   const requestId = `req_${Date.now()}`;
+
+  // Track this request ID for this port so we can cancel it if needed
+  activeRequestsByPort.set(port, requestId);
+
   console.log(`[${requestId}] Handling chat message...`);
   console.log(`[${requestId}] Message type: ${message.type}`);
   
@@ -1716,15 +1866,37 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
     }
     
+    // Create callback for tool events
+    const onToolEvent = (event: {
+      type: 'tool_start' | 'tool_finish';
+      toolName?: string;
+      args?: any;
+      result?: any;
+      timestamp: number;
+    }) => {
+      console.log(`🔧 [Background] onToolEvent called:`, event);
+      port.postMessage({
+        type: 'TOOL_EVENT',
+        requestId,
+        event
+      });
+      console.log(`🔧 [Background] TOOL_EVENT message sent to frontend`);
+    };
+
     // Call the new handler which directly processes messages
     // Include Helicone headers if provided in the message
+    const mode = message.mode || 'ask'; // Default to ask mode if not specified
+    console.log(`[${requestId}] Agent mode: ${mode}`);
+
     const response = await handleChatRequest(
       conversationMessages,
       apiConfig.apiKey,
       apiConfig.provider as any, // Cast to Provider type
       apiConfig.model,
       message.heliconeHeaders,
-      apiConfig.baseURL
+      apiConfig.baseURL,
+      onToolEvent,
+      mode
     );
       
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
@@ -1761,11 +1933,19 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: false });
     console.log(`[${requestId}] Reading text stream...`);
-        
+
     try {
       while (true) {
+        // Check if this request was cancelled
+        if (cancelledRequests.get(requestId)) {
+          console.log(`[${requestId}] Request was cancelled, stopping stream.`);
+          // Clean up the reader
+          await reader.cancel();
+          break;
+        }
+
         const { done, value } = await reader.read();
-        
+
         if (done) {
           console.log(`[${requestId}] Text stream finished.`);
           port.postMessage({
@@ -1774,36 +1954,67 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           });
           break; // Exit loop when stream is done
         }
-        
+
         // Decode the chunk with streaming flag to handle partial UTF-8 sequences
         const chunk = decoder.decode(value, { stream: !done });
-        
+
         if (chunk) { // Avoid sending empty chunks if decoder yields them
-          port.postMessage({ 
-            type: 'CHAT_STREAM_CHUNK',
-            requestId,
-            chunk: chunk
-          });
+          // Check if this is an error message from the stream
+          if (chunk.startsWith('error:')) {
+            try {
+              const errorData = JSON.parse(chunk.substring(6)); // Remove 'error:' prefix
+              console.error(`[${requestId}] Received error from stream:`, errorData.error);
+              port.postMessage({
+                type: 'ERROR',
+                requestId,
+                error: errorData.error
+              });
+              break; // Stop processing the stream after error
+            } catch (parseError) {
+              console.error(`[${requestId}] Failed to parse error message:`, chunk);
+            }
+          } else {
+            // Normal chunk, forward to frontend
+            port.postMessage({
+              type: 'CHAT_STREAM_CHUNK',
+              requestId,
+              chunk: chunk
+            });
+          }
         }
       }
     } catch (streamError) {
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       console.error(`[${requestId}] Error reading text stream:`, errorMessage);
-      port.postMessage({ 
+      port.postMessage({
         type: 'ERROR',
         requestId,
-        error: `Stream reading error: ${errorMessage}` 
+        error: `Stream reading error: ${errorMessage}`
       });
+    } finally {
+      // Clean up: remove the request from tracking maps
+      console.log(`[${requestId}] Cleaning up request tracking`);
+      cancelledRequests.delete(requestId);
+      if (activeRequestsByPort.get(port) === requestId) {
+        activeRequestsByPort.delete(port);
+      }
     }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[${requestId}] Chat processing error:`, errorMessage);
-    port.postMessage({ 
+    port.postMessage({
       type: 'ERROR',
       requestId,
-      error: `Chat handler error: ${errorMessage}` 
+      error: `Chat handler error: ${errorMessage}`
     });
+  } finally {
+    // Clean up request tracking if not already cleaned up
+    console.log(`[${requestId}] Final cleanup of request tracking`);
+    cancelledRequests.delete(requestId);
+    if (activeRequestsByPort.get(port) === requestId) {
+      activeRequestsByPort.delete(port);
+    }
   }
 }
 

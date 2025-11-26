@@ -1,14 +1,18 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical } from 'lucide-react';
-import type { Message } from 'ai'; // Keep this type
+import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, Edit2, X, HelpCircle } from 'lucide-react';
+// Project uses custom Message type for Chrome extension communication
+// AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
-import { ExtensionMessage } from '../types/extension'; // Restore this type
+import { Message, ExtensionMessage, Provider } from '../types/extension';
 import ToolsTestPanel from './ui/ToolsTestPanel';
 import AgentTestPanel from './ui/AgentTestPanel';
+import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
+import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
+import { DEFAULT_MODELS } from '@/constants/models';
 
 // Define Zod schema for message responses (Restore)
 const MessageContentSchema = z.string().min(1);
@@ -40,6 +44,9 @@ const ChatResponseSchema = z.object({
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
 const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
+
+// Session management limits
+const MAX_SESSIONS = 50; // Maximum number of chat sessions to keep
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
@@ -83,9 +90,86 @@ const processImageFile = (file: File): Promise<string> => {
   });
 };
 
-// Type for session data storage (Keep)
-interface ChatSessions {
-  [sessionId: string]: Message[];
+interface ChatSessionMeta {
+  id: string
+  title: string
+  createdAt: number
+  updatedAt: number
+  lastMessagePreview?: string
+  pinned?: boolean
+}
+
+interface StoredChatSession {
+  id: string
+  meta: ChatSessionMeta
+  messages: Message[]
+}
+
+type ChatSessions = Record<string, StoredChatSession>
+
+const truncateText = (text: string, max = 80) => {
+  if (!text) return ''
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text
+}
+
+const getLastMessagePreview = (messages: Message[]) => {
+  const last = [...messages].reverse().find((msg) => (msg.content || '').trim().length > 0)
+  return last ? truncateText(last.content || '', 80) : ''
+}
+
+const getSuggestedSessionTitle = (messages: Message[], timestamp: number) => {
+  const firstUser = messages.find((msg) => msg.role === 'user' && (msg.content || '').trim().length > 0)
+  if (firstUser) {
+    const firstLine = firstUser.content?.split('\n')[0] || ''
+    return truncateText(firstLine.trim(), 40) || `Chat ${new Date(timestamp).toLocaleDateString()}`
+  }
+  return `Chat ${new Date(timestamp).toLocaleDateString()}`
+}
+
+const createSessionRecord = (
+  sessionId: string,
+  messages: Message[] = [createWelcomeMessage()],
+  metaOverrides: Partial<ChatSessionMeta> = {}
+): StoredChatSession => {
+  const now = Date.now()
+  const preview = getLastMessagePreview(messages)
+  const meta: ChatSessionMeta = {
+    id: sessionId,
+    title: metaOverrides.title || getSuggestedSessionTitle(messages, now),
+    createdAt: metaOverrides.createdAt ?? now,
+    updatedAt: metaOverrides.updatedAt ?? now,
+    lastMessagePreview: metaOverrides.lastMessagePreview ?? preview,
+    pinned: metaOverrides.pinned ?? false,
+  }
+
+  return {
+    id: sessionId,
+    meta,
+    messages,
+  }
+}
+
+const migrateSessions = (rawSessions: any): ChatSessions => {
+  if (!rawSessions || typeof rawSessions !== 'object') {
+    return {}
+  }
+
+  const migrated: ChatSessions = {}
+  Object.entries(rawSessions as Record<string, any>).forEach(([sessionId, value]) => {
+    if (Array.isArray(value)) {
+      migrated[sessionId] = createSessionRecord(sessionId, value as Message[])
+      return
+    }
+
+    if (value && typeof value === 'object') {
+      const stored = value as Partial<StoredChatSession> & { messages?: Message[] }
+      const messages = Array.isArray(stored.messages) ? stored.messages : []
+      const overrides: Partial<ChatSessionMeta> = stored.meta || {}
+      migrated[sessionId] = createSessionRecord(sessionId, messages, overrides)
+    }
+  })
+
+  return migrated
 }
 
 // Restore original component name and structure
@@ -95,25 +179,13 @@ export function ChatUI() {
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [apiProvider, setApiProvider] = useState<'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'>('openai');
+  const [apiProvider, setApiProvider] = useState<Provider>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>('');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
 
-  // Add session counter state for better display
-  const [sessionCounter, setSessionCounter] = useState(1);
-
-  // Calculate session display name
-  const getSessionDisplayName = (sessionId: string | null) => {
-    if (!sessionId) return 'Chat';
-    
-    // Extract timestamp from session ID
-    const timestamp = sessionId.split('_')[1];
-    if (!timestamp) return 'Chat';
-    
-    // Use last 6 characters of timestamp for better uniqueness
-    const shortId = timestamp.slice(-6);
-    return `Chat ${shortId}`;
-  };
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
 
   // Restore local state management
   const [sessions, setSessions] = useState<ChatSessions>({});
@@ -127,23 +199,103 @@ export function ChatUI() {
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const MAX_CONNECTION_ATTEMPTS = 3;
 
+  // Tool events state for debugging panel
+  const [toolEvents, setToolEvents] = useState<Array<{type: string, toolName?: string, args?: any, result?: any, timestamp: number}>>([]);
+  const toolEventsRef = useRef<Array<{type: string, toolName?: string, args?: any, result?: any, timestamp: number}>>([]);
+
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editingTitleText, setEditingTitleText] = useState('');
+
+  // Agent mode state (ask = read-only, do = full actions)
+  const [agentMode, setAgentMode] = useState<'ask' | 'do'>('ask');
+
+  // Clean up old sessions if exceeding MAX_SESSIONS limit
+  const cleanupOldSessions = useCallback((sessions: ChatSessions): ChatSessions => {
+    const sessionArray = Object.values(sessions);
+
+    // If we're under the limit, no cleanup needed
+    if (sessionArray.length <= MAX_SESSIONS) {
+      return sessions;
+    }
+
+    console.log(`Session limit exceeded: ${sessionArray.length}/${MAX_SESSIONS}. Cleaning up old sessions...`);
+
+    // Sort sessions: pinned first, then by updatedAt (newest first)
+    const sortedSessions = sessionArray.sort((a, b) => {
+      // Pinned sessions always come first
+      if (a.meta.pinned && !b.meta.pinned) return -1;
+      if (!a.meta.pinned && b.meta.pinned) return 1;
+      // Then sort by update time (newest first)
+      return b.meta.updatedAt - a.meta.updatedAt;
+    });
+
+    // Keep the first MAX_SESSIONS (which includes all pinned + newest unpinned)
+    const sessionsToKeep = sortedSessions.slice(0, MAX_SESSIONS);
+    const removedCount = sessionArray.length - sessionsToKeep.length;
+
+    console.log(`Removed ${removedCount} old unpinned session(s)`);
+
+    // Convert back to Record format
+    const cleanedSessions: ChatSessions = {};
+    sessionsToKeep.forEach(session => {
+      cleanedSessions[session.id] = session;
+    });
+
+    return cleanedSessions;
+  }, []);
+
+  const persistSessionsState = useCallback((nextSessions: ChatSessions, nextActiveId?: string | null) => {
+    // Clean up old sessions before persisting
+    const cleanedSessions = cleanupOldSessions(nextSessions);
+
+    const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: cleanedSessions };
+    if (typeof nextActiveId !== 'undefined') {
+      payload[ACTIVE_SESSION_ID_KEY] = nextActiveId;
+    }
+    chrome.storage.local.set(payload);
+  }, [cleanupOldSessions]);
+
+  const sessionList = useMemo<SidebarSession[]>(() => {
+    return Object.values(sessions)
+      .map((session) => ({
+        id: session.id,
+        title: session.meta.title,
+        preview: session.meta.lastMessagePreview || '',
+        updatedAt: session.meta.updatedAt,
+        pinned: session.meta.pinned,
+      }))
+      .sort((a, b) => {
+        if ((a.pinned ? 1 : 0) !== (b.pinned ? 1 : 0)) {
+          return a.pinned ? -1 : 1;
+        }
+        return b.updatedAt - a.updatedAt;
+      });
+  }, [sessions]);
+
+  const activeSession = activeSessionId ? sessions[activeSessionId] : null;
+  const activeSessionTitle = activeSession?.meta.title || 'Chat';
+
   // Restore API config check useEffect
   useEffect(() => {
     chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY, 
+      API_KEY_STORAGE_KEY,
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
       OLLAMA_API_KEY_STORAGE_KEY,
-      API_PROVIDER_STORAGE_KEY
+      API_PROVIDER_STORAGE_KEY,
+      MODEL_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-      
+      // Use default model for provider if no model is stored
+      const model = result[MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
+
       // Determine if an API key is configured for the selected provider
       let hasKey = false;
       let currentKey = '';
-      
+
       if (provider === 'openai') {
         currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
@@ -161,12 +313,18 @@ export function ChatUI() {
         hasKey = true; // Ollama doesn't require an API key for local instances
         console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
       }
-      
+
       const hasApiKey = hasKey;
       setApiConfigured(hasApiKey);
       setApiKey(currentKey);
       setApiProvider(provider as any);
-      
+      setSelectedModel(model);
+
+      // Save the default model to storage if none was set
+      if (!result[MODEL_STORAGE_KEY]) {
+        chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
+      }
+
       if (!hasKey) {
         setShowSettings(true);
       }
@@ -176,43 +334,98 @@ export function ChatUI() {
   // Restore session loading useEffect
   useEffect(() => {
     chrome.storage.local.get([CHAT_SESSIONS_KEY, ACTIVE_SESSION_ID_KEY], (result) => {
-      const loadedSessions: ChatSessions = result[CHAT_SESSIONS_KEY] || {};
-      let currentActiveId: string | null = result[ACTIVE_SESSION_ID_KEY] || null;
-      if (!currentActiveId || Object.keys(loadedSessions).length === 0) {
-        const newSessionId = `session_${Date.now()}`;
-        loadedSessions[newSessionId] = [createWelcomeMessage()];
-        currentActiveId = newSessionId;
-        chrome.storage.local.set({
-          [CHAT_SESSIONS_KEY]: loadedSessions,
-          [ACTIVE_SESSION_ID_KEY]: currentActiveId
-        });
-        console.log("Initialized first chat session:", newSessionId);
+      let loadedSessions = migrateSessions(result[CHAT_SESSIONS_KEY]);
+      if (Object.keys(loadedSessions).length === 0) {
+        const firstId = `session_${Date.now()}`;
+        loadedSessions = {
+          [firstId]: createSessionRecord(firstId),
+        };
       }
+
+      // Apply session limit cleanup on load
+      loadedSessions = cleanupOldSessions(loadedSessions);
+
+      let currentActiveId: string | null = result[ACTIVE_SESSION_ID_KEY] || null;
+      if (!currentActiveId || !loadedSessions[currentActiveId]) {
+        currentActiveId = Object.keys(loadedSessions)[0] || null;
+      }
+
       setSessions(loadedSessions);
       setActiveSessionId(currentActiveId);
-      setMessages(loadedSessions[currentActiveId] || [createWelcomeMessage()]);
-      console.log("Loaded sessions, active ID:", currentActiveId);
+      setMessages(
+        (currentActiveId && loadedSessions[currentActiveId]?.messages) || [createWelcomeMessage()]
+      );
+
+      chrome.storage.local.set({
+        [CHAT_SESSIONS_KEY]: loadedSessions,
+        [ACTIVE_SESSION_ID_KEY]: currentActiveId,
+      });
+
+      console.log("Loaded sessions (v2), active ID:", currentActiveId, "Total sessions:", Object.keys(loadedSessions).length);
     });
-  }, []);
+  }, [cleanupOldSessions]);
 
   // Restore session saving useEffect
   useEffect(() => {
-    if (activeSessionId && messages.length > 0) {
-      const updatedSessions: ChatSessions = { ...sessions };
-      updatedSessions[activeSessionId] = messages;
-      setSessions(updatedSessions);
-      chrome.storage.local.set({ [CHAT_SESSIONS_KEY]: updatedSessions });
+    if (!activeSessionId) return;
+    setSessions(prev => {
+      const existing = prev[activeSessionId] || createSessionRecord(activeSessionId, messages)
+      const updatedMeta: ChatSessionMeta = {
+        ...existing.meta,
+        updatedAt: Date.now(),
+        lastMessagePreview: getLastMessagePreview(messages),
       }
-  }, [messages, activeSessionId]);
+      const updatedSessions: ChatSessions = {
+        ...prev,
+        [activeSessionId]: { ...existing, meta: updatedMeta, messages },
+      }
+      persistSessionsState(updatedSessions)
+      return updatedSessions
+    })
+  }, [messages, activeSessionId, persistSessionsState])
 
   // Restore port connection useEffect
   useEffect(() => {
     let currentPort: chrome.runtime.Port | null = null;
     let reconnectTimer: NodeJS.Timeout | null = null;
     let isActive = true;
-    
+    let isConnecting = false; // Connection lock to prevent race conditions
+    let messageListener: ((response: any) => void) | null = null;
+    let disconnectListener: (() => void) | null = null;
+
     const connectToBackground = () => {
-      if (!isActive) return;
+      if (!isActive || isConnecting) {
+        console.log('Skipping connection attempt: isActive=%s, isConnecting=%s', isActive, isConnecting);
+        return;
+      }
+
+      isConnecting = true;
+
+      // Clear any pending reconnection timer
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+
+      // Clean up old port if exists
+      const oldPort = currentPort;
+      if (oldPort) {
+        try {
+          if (messageListener) {
+            oldPort.onMessage.removeListener(messageListener);
+          }
+          if (disconnectListener) {
+            oldPort.onDisconnect.removeListener(disconnectListener);
+          }
+          oldPort.disconnect();
+        } catch (e) {
+          console.warn('Error cleaning up old port:', e);
+        }
+        currentPort = null;
+        messageListener = null;
+        disconnectListener = null;
+      }
+
       try {
         console.log('Connecting to background script...');
         currentPort = chrome.runtime.connect({ name: 'sidepanel' });
@@ -221,11 +434,32 @@ export function ChatUI() {
         setFallbackMode(false);
         setError(null);
 
-        currentPort.onMessage.addListener(handleResponseWrapper);
-        currentPort.onDisconnect.addListener(() => {
-          console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
-          setPort(prevPort => (prevPort === currentPort ? null : prevPort));
+        // Create new message listener for this connection
+        messageListener = (response: any) => {
           if (isActive) {
+            handleResponse(response);
+          }
+        };
+
+        currentPort.onMessage.addListener(messageListener);
+
+        // Create and store disconnect listener reference
+        disconnectListener = () => {
+          console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
+
+          // Clean up this connection's listener
+          if (currentPort && messageListener) {
+            try {
+              currentPort.onMessage.removeListener(messageListener);
+            } catch (e) {
+              console.warn('Error removing message listener:', e);
+            }
+          }
+
+          setPort(prevPort => (prevPort === currentPort ? null : prevPort));
+          isConnecting = false; // Release lock on disconnect
+
+          if (isActive && !isConnecting) {
              if (chrome.runtime.lastError) {
                 console.error('Disconnect error:', chrome.runtime.lastError.message);
                 setError(new Error(`Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`));
@@ -243,14 +477,19 @@ export function ChatUI() {
                    }
                 });
              } else {
-               console.log('Port disconnected normally.');
+               console.log('Port disconnected normally, will reconnect...');
                reconnectTimer = setTimeout(connectToBackground, 500);
             }
           }
-        });
+        };
+
+        currentPort.onDisconnect.addListener(disconnectListener);
+
         console.log('Connected to background script');
         currentPort.postMessage({ type: 'PING' });
+        isConnecting = false; // Release lock after successful connection
       } catch (error: any) {
+        isConnecting = false; // Release lock on error
         if (isActive) {
         console.error('Failed to connect to background script:', error);
            setError(new Error(`Failed to connect: ${error.message}. Using Fallback Mode.`));
@@ -258,21 +497,35 @@ export function ChatUI() {
         }
       }
     };
-    
-    const handleResponseWrapper = (response: any) => {
-      if (isActive) {
-        handleResponse(response);
-      }
-    };
 
     connectToBackground();
     return () => {
       isActive = false;
+      isConnecting = false;
       console.log('ChatUI unmounting, disconnecting port...');
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (currentPort) {
-          currentPort.disconnect();
+
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
       }
+
+      if (currentPort) {
+        try {
+          if (messageListener) {
+            currentPort.onMessage.removeListener(messageListener);
+          }
+          if (disconnectListener) {
+            currentPort.onDisconnect.removeListener(disconnectListener);
+          }
+          currentPort.disconnect();
+        } catch (e) {
+          console.warn('Error during cleanup:', e);
+        }
+        currentPort = null;
+        messageListener = null;
+        disconnectListener = null;
+      }
+
       setPort(null);
     };
   }, [connectionAttempts]); // Restore dependency
@@ -291,10 +544,11 @@ export function ChatUI() {
 
   // Restore background message handler
   const handleResponse = (response: any) => {
-    setIsLocalLoading(false);
+    // Don't set isLocalLoading to false here - it should only be set to false
+    // when streaming actually ends (CHAT_STREAM_END) or there's an error
     setError(null);
     setFallbackMode(false);
-    
+
     // Remove verbose logging of every chunk message
     // Only log non-stream chunks for debugging
     if (response.type !== 'CHAT_STREAM_CHUNK') {
@@ -364,11 +618,32 @@ export function ChatUI() {
              if (lastMessageIndex < 0 || !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
               return prevMessages;
             }
-            const updatedLastMessage = {
+
+            // Extract tool calls section and text content separately
+            const currentContent = prevMessages[lastMessageIndex].content || '';
+            const startMarker = '<!-- TOOL_CALLS -->\n';
+            const endMarker = '\n<!-- END_TOOL_CALLS -->\n\n';
+
+            let toolCallsSection = '';
+            let textContent = currentContent;
+
+            const startIndex = currentContent.indexOf(startMarker);
+            if (startIndex >= 0) {
+              const endIndex = currentContent.indexOf(endMarker, startIndex);
+              if (endIndex >= 0) {
+                toolCallsSection = currentContent.substring(startIndex, endIndex + endMarker.length);
+                textContent = currentContent.substring(endIndex + endMarker.length);
+              }
+            }
+
+            // Performance optimization: Create new array only with modified last message
+            // This avoids unnecessary re-creation of the entire array on every chunk
+            const newMessages = prevMessages.slice(); // Shallow copy
+            newMessages[lastMessageIndex] = {
               ...prevMessages[lastMessageIndex],
-              content: prevMessages[lastMessageIndex].content + response.chunk
+              content: toolCallsSection + textContent + response.chunk
             };
-             return [...prevMessages.slice(0, lastMessageIndex), updatedLastMessage];
+            return newMessages;
           });
         }
         break;
@@ -378,32 +653,131 @@ export function ChatUI() {
             const lastMessageIndex = prevMessages.length - 1;
           if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
             const finalId = response.requestId || prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
-            const finalizedMessage = { ...prevMessages[lastMessageIndex], id: finalId };
-            return [...prevMessages.slice(0, lastMessageIndex), finalizedMessage];
+            // Keep the tool call information in final message
+            const content = prevMessages[lastMessageIndex].content || '';
+            // Performance optimization: Use slice() + direct assignment instead of spread operator
+            const newMessages = prevMessages.slice();
+            newMessages[lastMessageIndex] = { ...prevMessages[lastMessageIndex], id: finalId, content };
+            return newMessages;
           }
           return prevMessages;
         });
+        // Clear tool events state (but keep them in the message)
+        toolEventsRef.current = [];
+        setToolEvents([]);
+        break;
+      case 'TOOL_EVENT':
+        // Handle tool execution events - add to message content
+        console.log('🔧 [Chat] TOOL_EVENT received:', response.event);
+        if (response.event) {
+          // Update tool events ref and state
+          toolEventsRef.current = [...toolEventsRef.current, response.event];
+          setToolEvents(toolEventsRef.current);
+
+          console.log('🔧 [Chat] Current tool events:', toolEventsRef.current);
+
+          // Then update message
+          setMessages(prevMessages => {
+            const lastMessageIndex = prevMessages.length - 1;
+            if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
+              const currentMessage = prevMessages[lastMessageIndex];
+              const content = currentMessage.content || '';
+
+              // Extract existing tool calls section and text content
+              const startMarker = '<!-- TOOL_CALLS -->\n';
+              const endMarker = '\n<!-- END_TOOL_CALLS -->\n\n';
+
+              let textContent = content;
+              const startIndex = content.indexOf(startMarker);
+              if (startIndex >= 0) {
+                const endIndex = content.indexOf(endMarker, startIndex);
+                if (endIndex >= 0) {
+                  textContent = content.substring(endIndex + endMarker.length);
+                }
+              }
+
+              // Build tool status section from all events in ref
+              const toolStatusLines: string[] = [];
+              toolEventsRef.current.forEach(event => {
+                if (event.type === 'tool_start') {
+                  toolStatusLines.push(`⚙️ 开始调用: ${event.toolName}`);
+                } else if (event.type === 'tool_finish') {
+                  toolStatusLines.push(`✅ 调用完成: ${event.toolName}`);
+                }
+              });
+
+              const toolStatus = toolStatusLines.length > 0
+                ? startMarker + toolStatusLines.join('  \n') + endMarker
+                : '';
+
+              console.log('🔧 [Chat] Tool status to add:', toolStatus);
+              console.log('🔧 [Chat] Text content:', textContent.substring(0, 100));
+
+              // Performance optimization: Use slice() + direct assignment
+              const newMessages = prevMessages.slice();
+              newMessages[lastMessageIndex] = {
+                ...currentMessage,
+                content: toolStatus + textContent
+              };
+              return newMessages;
+            }
+            return prevMessages;
+          });
+        }
         break;
       case 'ERROR':
         console.error('Background script error:', response.error);
-        
-        // Check if it's an Ollama CORS error and provide helpful UI feedback
-        let errorMessage = `API Error: ${response.error || 'Unknown error.'}`;
-        try {
-          if (typeof response.error === 'string' && response.error.includes('Ollama CORS Configuration Required')) {
-            const errorData = JSON.parse(response.error);
-            errorMessage = `🚨 Ollama CORS Issue Detected!\n\n${errorData.message}\n\n💡 Solution:\n${errorData.solution}\n\n🔧 Alternative:\n${errorData.alternativeSolution}`;
-          }
-        } catch {
-          // Use original error message if parsing fails
+
+        // Ignore "Unknown message type" errors - these are likely from CANCEL_STREAM race conditions
+        if (response.error && typeof response.error === 'string' && response.error.includes('Unknown message type')) {
+          console.log('Ignoring "Unknown message type" error (likely from cancelled stream)');
+          break;
         }
-        
-        setError(new Error(errorMessage));
+
+        // Parse and format error message for better user experience
+        let errorMessage = response.error || 'Unknown error';
+        let userFriendlyMessage = '';
+
+        try {
+          // Check for specific error types and provide helpful guidance
+          if (typeof errorMessage === 'string') {
+            // Ollama CORS error
+            if (errorMessage.includes('Ollama CORS Configuration Required')) {
+              const errorData = JSON.parse(errorMessage);
+              userFriendlyMessage = `🚨 **Ollama CORS Issue**\n\n${errorData.message}\n\n**💡 Solution:**\n${errorData.solution}\n\n**🔧 Alternative:**\n${errorData.alternativeSolution}`;
+            }
+            // Model not found errors
+            else if (errorMessage.toLowerCase().includes('model') && (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('does not exist') || errorMessage.toLowerCase().includes('invalid model'))) {
+              userFriendlyMessage = `❌ **Model Error**\n\nThe selected model is not available or doesn't exist.\n\n**Possible causes:**\n• Model name is incorrect\n• Your API key doesn't have access to this model\n• Model has been deprecated or renamed\n\n**What to do:**\n1. Check the model name in the dropdown menu\n2. Verify your API key has access to this model\n3. Try selecting a different model\n\n**Error details:** ${errorMessage}`;
+            }
+            // Rate limit errors
+            else if (errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('429')) {
+              userFriendlyMessage = `⏱️ **Rate Limit Exceeded**\n\nYou've exceeded the API rate limit or quota.\n\n**What to do:**\n• Wait a few minutes and try again\n• Check your API usage dashboard\n• Consider upgrading your API plan\n\n**Error details:** ${errorMessage}`;
+            }
+            // Authentication errors
+            else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('invalid api key') || errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('401')) {
+              userFriendlyMessage = `🔑 **Authentication Error**\n\nYour API key is invalid or has expired.\n\n**What to do:**\n1. Go to Settings (⚙️ icon)\n2. Check your API key is correct\n3. Generate a new API key if needed\n\n**Error details:** ${errorMessage}`;
+            }
+            // Permission errors
+            else if (errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('access denied') || errorMessage.toLowerCase().includes('forbidden') || errorMessage.toLowerCase().includes('403')) {
+              userFriendlyMessage = `🚫 **Permission Error**\n\nYour API key doesn't have permission for this operation.\n\n**What to do:**\n• Verify your API key has the required permissions\n• Check if your account has access to this feature/model\n• Contact your API provider if issues persist\n\n**Error details:** ${errorMessage}`;
+            }
+            // Generic API errors
+            else {
+              userFriendlyMessage = `❌ **API Error**\n\n${errorMessage}\n\n**What to do:**\n• Check your internet connection\n• Verify your API settings\n• Try again in a moment`;
+            }
+          }
+        } catch (parseError) {
+          // If parsing fails, use the original error message
+          userFriendlyMessage = `❌ **Error**\n\n${errorMessage}`;
+        }
+
+        setError(new Error(userFriendlyMessage));
         setIsLocalLoading(false);
         const errorAssistantMessage: Message = {
           id: response.requestId || (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Sorry, I encountered an error: ${response.error}.`
+          content: userFriendlyMessage
         };
         setMessages(prev => {
             const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
@@ -521,8 +895,10 @@ export function ChatUI() {
     setInput('');
     setIsLocalLoading(true);
     setError(null);
+    toolEventsRef.current = []; // Clear previous tool events
+    setToolEvents([]);
     
-    const messagesForApi = sessions[activeSessionId]
+    const messagesForApi = sessions[activeSessionId]?.messages
       ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
       .concat(newUserMessage) || [newUserMessage];
     
@@ -539,13 +915,15 @@ export function ChatUI() {
         messages: messagesForApi,
         attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
         provider: provider,
-        model: model
+        model: model,
+        mode: agentMode
       };
-      
+
       console.log(`🔧 [Chat] Full message payload being sent:`, {
         type: messagePayload.type,
         provider: messagePayload.provider,
         model: messagePayload.model,
+        mode: messagePayload.mode,
         messageLength: messagePayload.message?.length || 0,
         messagesCount: messagePayload.messages?.length || 0,
         hasAttachments: !!messagePayload.attachments
@@ -559,7 +937,7 @@ export function ChatUI() {
       
       port.postMessage(messagePayload);
     });
-  }, [input, isLocalLoading, port, activeSessionId, sessions]);
+  }, [input, isLocalLoading, port, activeSessionId, sessions, agentMode]);
 
   // Restore regenerate handler
   const handleRegenerate = useCallback(() => {
@@ -584,26 +962,47 @@ export function ChatUI() {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
         const model = result[MODEL_STORAGE_KEY] || '';
         
-        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}`);
-        
+        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}, mode: ${agentMode}`);
+
         const messagePayload: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
           message: lastUserMessage.content,
           messages: messagesForApi,
           provider: provider,
-          model: model
+          model: model,
+          mode: agentMode
         };
         port.postMessage(messagePayload);
       });
     }
-  }, [messages, isLocalLoading, port, activeSessionId]);
+  }, [messages, isLocalLoading, port, activeSessionId, agentMode]);
 
   // Restore stop handler
   const stop = useCallback(() => {
       if (!port) return;
       port.postMessage({ type: 'CANCEL_STREAM' });
       setIsLocalLoading(false);
-      setMessages(prev => prev.filter((m) => !m.id.startsWith('assistant-placeholder-')));
+
+      // Keep the partial message that was generated, but finalize it
+      setMessages(prev => {
+        const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
+        if (placeholderIndex !== -1) {
+          const placeholder = prev[placeholderIndex];
+          // Only keep the message if it has content
+          if (placeholder.content && placeholder.content.trim()) {
+            // Convert placeholder to final message (keep the content as-is)
+            const finalMessage = {
+              ...placeholder,
+              id: `cancelled-${Date.now()}`
+            };
+            return [...prev.slice(0, placeholderIndex), finalMessage, ...prev.slice(placeholderIndex + 1)];
+          } else {
+            // If no content was generated, remove the placeholder
+            return prev.filter((m) => !m.id.startsWith('assistant-placeholder-'));
+          }
+        }
+        return prev;
+      });
   }, [port]);
 
   // Restore append (if needed, though likely unused with port logic)
@@ -622,22 +1021,158 @@ export function ChatUI() {
     }
   }, [port]);
 
+  const handleSelectSession = useCallback((sessionId: string) => {
+    if (sessionId === activeSessionId) {
+      setIsMobileSidebarOpen(false);
+      return;
+    }
+    const session = sessions[sessionId];
+    if (!session) return;
+    setActiveSessionId(sessionId);
+    setMessages(session.messages);
+    setInput('');
+    setError(null);
+    setIsLocalLoading(false);
+    chrome.storage.local.set({ [ACTIVE_SESSION_ID_KEY]: sessionId });
+    setIsMobileSidebarOpen(false);
+  }, [sessions, activeSessionId]);
+
+  const handleRenameSession = useCallback((sessionId: string, newTitle: string) => {
+    const session = sessions[sessionId];
+    if (!session) return;
+    const normalized = newTitle.trim();
+    if (!normalized || normalized === session.meta.title) return;
+    setSessions(prev => {
+      const current = prev[sessionId];
+      if (!current) return prev;
+      const updatedSessions: ChatSessions = {
+        ...prev,
+        [sessionId]: {
+          ...current,
+          meta: { ...current.meta, title: normalized, updatedAt: Date.now() },
+        },
+      };
+      persistSessionsState(updatedSessions);
+      return updatedSessions;
+    });
+  }, [sessions, persistSessionsState]);
+
+  const startEditingTitle = useCallback(() => {
+    if (!activeSessionId) return;
+    const session = sessions[activeSessionId];
+    if (!session) return;
+    setEditingTitleText(session.meta.title);
+    setIsEditingTitle(true);
+  }, [activeSessionId, sessions]);
+
+  const saveEditingTitle = useCallback(() => {
+    if (!activeSessionId || !editingTitleText.trim()) {
+      setIsEditingTitle(false);
+      return;
+    }
+    handleRenameSession(activeSessionId, editingTitleText);
+    setIsEditingTitle(false);
+  }, [activeSessionId, editingTitleText, handleRenameSession]);
+
+  const cancelEditingTitle = useCallback(() => {
+    setIsEditingTitle(false);
+    setEditingTitleText('');
+  }, []);
+
+  const handleDeleteSession = useCallback((sessionId: string) => {
+    const session = sessions[sessionId];
+    if (!session) return;
+    if (!window.confirm(`Delete "${session.meta.title}"? This cannot be undone.`)) return;
+    setSessions(prev => {
+      if (!prev[sessionId]) return prev;
+      const nextSessions: ChatSessions = { ...prev };
+      delete nextSessions[sessionId];
+      let nextActiveId = activeSessionId;
+      if (!nextActiveId || nextActiveId === sessionId) {
+        const remainingIds = Object.keys(nextSessions);
+        if (remainingIds.length === 0) {
+          const fallbackId = `session_${Date.now()}`;
+          nextSessions[fallbackId] = createSessionRecord(fallbackId);
+          nextActiveId = fallbackId;
+        } else {
+          nextActiveId = remainingIds[0];
+        }
+        if (nextActiveId && nextSessions[nextActiveId]) {
+          setActiveSessionId(nextActiveId);
+          setMessages(nextSessions[nextActiveId].messages);
+        }
+      }
+      persistSessionsState(nextSessions, nextActiveId || null);
+      return nextSessions;
+    });
+    setIsMobileSidebarOpen(false);
+  }, [sessions, activeSessionId, persistSessionsState]);
+
+  const handleDuplicateSession = useCallback((sessionId: string) => {
+    const session = sessions[sessionId];
+    if (!session) return;
+    const newSessionId = `session_${Date.now()}`;
+    const clonedMessages = session.messages.map((message, index) => ({
+      ...message,
+      id: `${message.id}-${Date.now()}-${index}`,
+    }));
+    const record = createSessionRecord(newSessionId, clonedMessages, {
+      title: `${session.meta.title} (Copy)`,
+    });
+    setSessions(prev => {
+      const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
+      persistSessionsState(nextSessions, newSessionId);
+      return nextSessions;
+    });
+    setActiveSessionId(newSessionId);
+    setMessages(record.messages);
+    setInput('');
+    setError(null);
+    setIsLocalLoading(false);
+    setIsMobileSidebarOpen(false);
+  }, [sessions, persistSessionsState]);
+
+  const handleTogglePin = useCallback((sessionId: string) => {
+    setSessions(prev => {
+      const current = prev[sessionId];
+      if (!current) return prev;
+      const updatedSessions: ChatSessions = {
+        ...prev,
+        [sessionId]: {
+          ...current,
+          meta: { ...current.meta, pinned: !current.meta.pinned, updatedAt: Date.now() },
+        },
+      };
+      persistSessionsState(updatedSessions);
+      return updatedSessions;
+    });
+  }, [persistSessionsState]);
+
+  const handleClearActiveSession = useCallback(() => {
+    if (!activeSessionId) return;
+    if (!window.confirm('Clear this conversation?')) return;
+    const welcomeMsg = createWelcomeMessage();
+    setMessages([welcomeMsg]);
+    setInput('');
+  }, [activeSessionId]);
+
   // Restore new chat handler
   const handleNewChat = useCallback(() => {
     const newSessionId = `session_${Date.now()}`;
     const welcomeMsg = createWelcomeMessage();
-    const newSessions = { ...sessions, [newSessionId]: [welcomeMsg] };
-    setSessions(newSessions);
+    const record = createSessionRecord(newSessionId, [welcomeMsg]);
+    setSessions(prev => {
+      const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
+      persistSessionsState(nextSessions, newSessionId);
+      return nextSessions;
+    });
     setActiveSessionId(newSessionId);
-    setMessages([welcomeMsg]);
+    setMessages(record.messages);
     setInput('');
     setError(null);
     setIsLocalLoading(false);
-    chrome.storage.local.set({
-      [CHAT_SESSIONS_KEY]: newSessions,
-      [ACTIVE_SESSION_ID_KEY]: newSessionId
-    });
-  }, [sessions]);
+    setIsMobileSidebarOpen(false);
+  }, [persistSessionsState]);
 
   // Restore simple local fallback handler
   const handleLocalSubmit = (e: React.FormEvent) => {
@@ -660,20 +1195,23 @@ export function ChatUI() {
     return <Settings onClose={() => {
       setShowSettings(false);
       chrome.storage.sync.get([
-        API_KEY_STORAGE_KEY, 
+        API_KEY_STORAGE_KEY,
         OPENAI_API_KEY_STORAGE_KEY,
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
         QWEN_API_KEY_STORAGE_KEY,
         OLLAMA_API_KEY_STORAGE_KEY,
-        API_PROVIDER_STORAGE_KEY
+        API_PROVIDER_STORAGE_KEY,
+        MODEL_STORAGE_KEY
       ], (result) => {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-        
+        // Use default model for provider if no model is stored
+        const model = result[MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
+
         // Determine if an API key is configured for the selected provider
         let hasKey = false;
         let currentKey = '';
-        
+
         if (provider === 'openai') {
           currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
@@ -690,10 +1228,16 @@ export function ChatUI() {
           currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
           hasKey = true; // Ollama doesn't require an API key for local instances
         }
-        
+
         setApiConfigured(hasKey);
         setApiKey(currentKey);
         setApiProvider(provider as any);
+        setSelectedModel(model);
+
+        // Save the default model to storage if none was set
+        if (!result[MODEL_STORAGE_KEY]) {
+          chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
+        }
         
         if (hasKey && fallbackMode) {
           handleRetryAPI();
@@ -710,84 +1254,209 @@ export function ChatUI() {
   const canRegenerate = messages.some(m => m.role === 'user') && !currentLoading && !fallbackMode && !!port;
 
   return (
-    <Card className="w-full h-full grid grid-rows-[auto,1fr,auto] border-0 rounded-none shadow-none overflow-hidden">
-      <div className="flex justify-between items-center p-2 px-3 border-b">
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="icon" onClick={handleNewChat} aria-label="New Chat" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="New Chat">
-              <Plus className="h-5 w-5 text-gray-600" />
+    <>
+      <Card className="w-full h-full flex flex-col border-0 rounded-none shadow-none overflow-hidden">
+        {/* Fixed Header - Top Toolbar */}
+        <div className="flex-none flex justify-between items-center p-2 px-3 border-b min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                // Check if we're on desktop (md breakpoint is 768px)
+                const isDesktop = window.innerWidth >= 768;
+                if (isDesktop) {
+                  setIsDesktopSidebarOpen(!isDesktopSidebarOpen);
+                } else {
+                  setIsMobileSidebarOpen(true);
+                }
+              }}
+              aria-label="Toggle chat list"
+              className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              title="Toggle chat list"
+            >
+              <Menu className="h-4 w-4 text-gray-600" />
             </Button>
-            <h2 className="text-base font-medium truncate" title={activeSessionId || 'Chat'}>
-              {getSessionDisplayName(activeSessionId)}
-            </h2>
-         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
-            <Wrench className="h-5 w-5 text-gray-600" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
-            <FlaskConical className="h-5 w-5 text-gray-600" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="Settings">
-            <SettingsIcon className="h-5 w-5 text-gray-600" />
-          </Button>
-          {canRegenerate && (
-            <Button variant="outline" size="icon" onClick={handleRegenerate} aria-label="Regenerate response" className="aspect-square bg-gray-200 hover:bg-gray-300 w-10 h-10 p-0 border-0" title="Regenerate">
-              <RefreshCw className="h-5 w-5 text-gray-600" />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleNewChat}
+              aria-label="New Chat"
+              className="shrink-0 aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              title="New Chat"
+            >
+              <Plus className="h-4 w-4 text-gray-600" />
             </Button>
-          )}
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editingTitleText}
+                onChange={(e) => setEditingTitleText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveEditingTitle();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEditingTitle();
+                  }
+                }}
+                onBlur={saveEditingTitle}
+                autoFocus
+                className="flex-1 text-sm font-medium bg-transparent border-b border-primary px-1 focus:outline-none min-w-0"
+              />
+            ) : (
+              <h2 className="text-sm font-medium truncate" title={activeSessionTitle}>
+                {activeSessionTitle}
+              </h2>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Rename chat"
+              className="h-8 w-8 shrink-0"
+              title="Rename chat"
+              onClick={startEditingTitle}
+              disabled={!activeSessionId}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex gap-1 items-center shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="hidden sm:inline-flex"
+              onClick={handleClearActiveSession}
+              disabled={!activeSessionId}
+            >
+              Clear
+            </Button>
+          <TabStatusIndicator />
+          <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
+            <Wrench className="h-4 w-4 text-gray-600" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
+            <FlaskConical className="h-4 w-4 text-gray-600" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => window.open('https://github.com/wybert/earth-agent-chrome-ext', '_blank')}
+            aria-label="Help"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+            title="Help"
+          >
+            <HelpCircle className="h-4 w-4 text-gray-600" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Settings">
+            <SettingsIcon className="h-4 w-4 text-gray-600" />
+          </Button>
         </div>
       </div>
-      
-      <div className="flex-1 overflow-hidden">
-        <Chat
-          messages={displayMessages as any} // Keep cast for now
-          input={input}
-          handleInputChange={handleInputChange}
-          handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
-          isGenerating={currentLoading}
-          stop={stop}
-          setMessages={setMessages as any}
-          append={append as any} // Pass append even if unused by Chat component itself
-          className="h-full"
-        />
-              </div>
 
-      {/* Restore Error and Fallback Displays */}
-      {error && (
-         <Card className="p-4 m-2 bg-destructive/10 text-destructive border-destructive/50">
-           <p className="text-sm font-medium">Error</p>
-           <p className="text-sm mt-1">{error.message}</p>
-           {!fallbackMode && port === null && connectionAttempts <= MAX_CONNECTION_ATTEMPTS && (
-                <Button variant="outline" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-               <RefreshCw size={14} className="mr-2" /> Retry Connection
-                </Button>
-           )}
-            {!fallbackMode && (
-                <Button variant="outline" size="sm" onClick={() => { setError(new Error("Switched to Fallback Mode manually.")); setFallbackMode(true); }} className="mt-2 rounded-md border-destructive/50 text-destructive hover:bg-destructive/20">
-                 Switch to Fallback Mode
-                </Button>
-             )}
-         </Card>
+        {/* Main Content Area with Sidebar */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {isDesktopSidebarOpen && (
+            <div className="hidden h-full flex-none md:flex md:w-72">
+              <SessionSidebar
+                sessions={sessionList}
+                activeSessionId={activeSessionId}
+                onSelect={handleSelectSession}
+                onCreate={handleNewChat}
+                onRename={handleRenameSession}
+                onDelete={handleDeleteSession}
+                onDuplicate={handleDuplicateSession}
+                onTogglePin={handleTogglePin}
+                className="w-full"
+              />
+            </div>
           )}
-      {fallbackMode && (
-         <Card className="p-4 m-2 bg-yellow-100 border-yellow-300 text-yellow-800">
-           <p className="text-sm font-medium">Fallback Mode</p>
-           <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
-           {apiConfigured && (
-             <Button variant="default" size="sm" onClick={handleRetryAPI} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200" disabled={currentLoading || (port !== null && connectionAttempts === 0)}>
-               <RefreshCw size={14} className="mr-2"/> Reconnect
-             </Button>
-           )}
-           {!apiConfigured && (
-              <Button variant="link" size="sm" onClick={() => setShowSettings(true)} className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200">
-                Configure API Key
-              </Button>
-           )}
-         </Card>
-       )}
+          <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
+            <Chat
+              messages={displayMessages as any}
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
+              isGenerating={currentLoading}
+              stop={stop}
+              setMessages={setMessages as any}
+              append={append as any}
+              onRegenerate={handleRegenerate}
+              showRegenerate={canRegenerate}
+              mode={agentMode}
+              onModeChange={setAgentMode}
+              provider={apiProvider}
+              model={selectedModel}
+              onProviderChange={setApiProvider}
+              onModelChange={setSelectedModel}
+              className="h-full"
+            />
 
-      <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
-      <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
-    </Card>
+            {/* Error and Fallback Displays - Positioned at bottom above input */}
+            {/* Removed duplicate error display - errors are now shown as assistant messages in the chat */}
+            {fallbackMode && (
+              <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
+                <p className="text-sm font-medium">Fallback Mode</p>
+                <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
+                {apiConfigured && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleRetryAPI}
+                    className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200"
+                    disabled={currentLoading || (port !== null && connectionAttempts === 0)}
+                  >
+                    <RefreshCw size={14} className="mr-2" /> Reconnect
+                  </Button>
+                )}
+                {!apiConfigured && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => setShowSettings(true)}
+                    className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200"
+                  >
+                    Configure API Key
+                  </Button>
+                )}
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Overlay Panels */}
+        <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
+        <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
+      </Card>
+
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileSidebarOpen(false)} />
+          <div className="relative h-full w-72 max-w-full border-r bg-background">
+            <SessionSidebar
+              sessions={sessionList}
+              activeSessionId={activeSessionId}
+              onSelect={handleSelectSession}
+              onCreate={handleNewChat}
+              onRename={handleRenameSession}
+              onDelete={handleDeleteSession}
+              onDuplicate={handleDuplicateSession}
+              onTogglePin={handleTogglePin}
+              className="h-full w-full bg-background shadow-xl"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2"
+              aria-label="Close chat list"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

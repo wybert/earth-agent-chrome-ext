@@ -12,6 +12,91 @@ interface Message {
 import { GetMapLayersResponse, MapLayer } from '@/lib/tools/earth-engine/getMapLayers';
 import { snapshot, SnapshotResponse } from '@/lib/tools/browser/snapshot';
 
+/**
+ * Shows a visual indicator (red pulse) at the click location
+ */
+function showClickIndicator(x: number, y: number): void {
+  try {
+    console.log(`[showClickIndicator] Creating indicator at (${x}, ${y})`);
+
+    // Check if document.body is available
+    if (!document.body) {
+      console.warn('[showClickIndicator] document.body not available, waiting for it...');
+      // Wait for body to be available
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => showClickIndicator(x, y), { once: true });
+        return;
+      }
+      console.error('[showClickIndicator] document.body still not available after check');
+      return;
+    }
+
+    const indicator = document.createElement('div');
+    indicator.className = 'earth-agent-click-indicator';
+    indicator.style.cssText = `
+      position: fixed;
+      left: ${x}px;
+      top: ${y}px;
+      width: 32px;
+      height: 32px;
+      margin-left: -16px;
+      margin-top: -16px;
+      background: radial-gradient(circle, rgba(255,0,0,0.9) 0%, rgba(255,0,0,0.6) 40%, rgba(255,100,100,0.3) 70%, transparent 100%);
+      border: 4px solid #ff0000;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 2147483647;
+      box-shadow: 0 0 20px rgba(255,0,0,0.8), 0 0 40px rgba(255,0,0,0.4);
+      animation: clickPulse 2s ease-in-out;
+    `;
+
+    // Add keyframe animation
+    if (!document.getElementById('click-indicator-style')) {
+      const style = document.createElement('style');
+      style.id = 'click-indicator-style';
+      style.textContent = `
+        @keyframes clickPulse {
+          0% {
+            transform: scale(0.3);
+            opacity: 0;
+          }
+          10% {
+            transform: scale(1.3);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1);
+            opacity: 0.9;
+          }
+          90% {
+            transform: scale(1.1);
+            opacity: 0.8;
+          }
+          100% {
+            transform: scale(0.8);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+      console.log('[showClickIndicator] Added animation styles');
+    }
+
+    document.body.appendChild(indicator);
+    console.log('[showClickIndicator] Indicator appended to body');
+
+    // Remove indicator after animation completes (2 seconds)
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.remove();
+        console.log('[showClickIndicator] Indicator removed after animation');
+      }
+    }, 2000);
+  } catch (error) {
+    console.error('[showClickIndicator] Error creating indicator:', error);
+  }
+}
+
 // Singleton pattern to prevent multiple content script instances
 const CONTENT_SCRIPT_ID = 'earth-engine-ai-assistant-content-script';
 const INSTANCE_TIMESTAMP = Date.now();
@@ -205,7 +290,15 @@ function setupPingResponse() {
       case 'EDIT_SCRIPT':
         handleEditScript(message, sendResponse);
         return true; // Will respond asynchronously
-        
+
+      case 'GET_SCRIPT':
+        handleGetScript(sendResponse);
+        return true; // Will respond asynchronously
+
+      case 'GET_CONSOLE_OUTPUT':
+        handleGetConsoleOutput(sendResponse);
+        return true; // Will respond asynchronously
+
       case 'GET_MAP_LAYERS':
         handleGetMapLayers(sendResponse);
         return true; // Will respond asynchronously
@@ -244,6 +337,10 @@ function setupPingResponse() {
         } else {
           sendResponse({ success: false, error: 'refId not provided in payload for CLICK_BY_REF_ID' });
         }
+        return true; // Will respond asynchronously
+
+      case 'GET_MAP_INFO':
+        handleGetMapInfo(sendResponse);
         return true; // Will respond asynchronously
 
       default:
@@ -368,22 +465,53 @@ if (periodicCheckIntervalId === undefined) { // Ensure it's not set multiple tim
 }
 
 /**
- * Handles the RUN_CODE message by clicking the run button in the Earth Engine editor
+ * Handles the RUN_CODE message by inserting code and clicking the run button in the Earth Engine editor
  */
 async function handleRunCode(code: string, sendResponse: (response: any) => void) {
   try {
-    console.log('Handling RUN_CODE message, clicking run button');
-    
-    // Find the run button by its class and title attributes
-    // GEE editor has a button with class "goog-button run-button" and title "Run script (Ctrl+Enter)"
+    console.log('Handling RUN_CODE message with code:', code.substring(0, 100) + '...');
+
+    // Step 1: First insert the code into the editor
+    if (code && code.trim().length > 0) {
+      console.log('Inserting code into editor before running...');
+
+      // Use the same logic as handleEditScript to insert code
+      const insertResult = await new Promise<{success: boolean, error?: string}>((resolve) => {
+        handleEditScript({
+          type: 'EDIT_SCRIPT',
+          scriptId: 'current',
+          content: code
+        }, (response: any) => {
+          resolve(response);
+        });
+      });
+
+      if (!insertResult.success) {
+        console.error('Failed to insert code:', insertResult.error);
+        sendResponse({
+          success: false,
+          error: `Failed to insert code into editor: ${insertResult.error}`
+        });
+        return;
+      }
+
+      console.log('Code inserted successfully, waiting before running...');
+      // Wait a bit longer to ensure code is fully inserted and editor is ready
+      await new Promise(resolve => setTimeout(resolve, 800));
+    } else {
+      console.log('No code provided, will just click run button on existing code');
+    }
+
+    // Step 2: Find and click the run button
+    console.log('Looking for run button...');
     const runButton = document.querySelector('button.goog-button.run-button[title="Run script (Ctrl+Enter)"]');
-    
+
     if (!runButton) {
       // Fallback to alternative selectors if the specific one fails
-      const fallbackButton = document.querySelector('.run-button') || 
+      const fallbackButton = document.querySelector('.run-button') ||
                             document.querySelector('button[title*="Run script"]') ||
                             document.querySelector('button.goog-button[value="Run"]');
-      
+
       if (!fallbackButton) {
         console.error('Run button not found');
         sendResponse({
@@ -392,20 +520,21 @@ async function handleRunCode(code: string, sendResponse: (response: any) => void
         });
         return;
       }
-      
+
       console.log('Using fallback run button selector');
       (fallbackButton as HTMLElement).click();
     } else {
-      // Click the run button
+      console.log('Clicking run button');
       (runButton as HTMLElement).click();
     }
-    
+
     // Wait for a short time to allow the button state to change
     setTimeout(() => {
       // We successfully clicked the button
+      console.log('Run button clicked successfully');
       sendResponse({
         success: true,
-        result: 'Run button clicked successfully'
+        result: 'Code inserted and run button clicked successfully'
       });
     }, 500);
   } catch (error) {
@@ -453,28 +582,263 @@ function handleCheckConsole(sendResponse: (response: any) => void) {
 }
 
 /**
+ * Recursively extract Inspector tree structure as JSON
+ * This handles GEE's nested explorer UI elements
+ */
+function extractInspectorTreeAsJSON(explorer: Element): any {
+  // Handle simple leaf nodes
+  if (explorer.classList.contains('simple')) {
+    const trivial = explorer.querySelector('.trivial');
+    if (trivial) {
+      const label = trivial.querySelector('.label span')?.textContent || '';
+      const fullText = trivial.textContent || '';
+      let value = fullText.replace(label + ':', '').trim();
+
+      // Try to parse as JSON array
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          return value;
+        }
+      }
+
+      // Try to parse as number
+      const numValue = parseFloat(value);
+      return isNaN(numValue) ? value : numValue;
+    }
+    return null;
+  }
+
+  // Handle complex nodes with zippies
+  const zippy = explorer.querySelector(':scope > .zippy');
+  if (!zippy) return null;
+
+  const header = zippy.querySelector('.header');
+  const body = zippy.querySelector('.body');
+  if (!header) return null;
+
+  const headerText = header.textContent || '';
+
+  // Check if body is empty - extract value from header
+  if (!body || body.children.length === 0) {
+    const colonIndex = headerText.indexOf(':');
+    if (colonIndex > -1) {
+      let value = headerText.substring(colonIndex + 1).trim();
+
+      // Special case: Parse band summary format like '"maximum", float, EPSG:4326, 2x1 px'
+      const bandSummaryMatch = value.match(/^"([^"]+)",\s*(\w+),\s*(EPSG:\d+),\s*(\d+)x(\d+)\s*px$/);
+      if (bandSummaryMatch) {
+        return {
+          id: bandSummaryMatch[1],
+          data_type: bandSummaryMatch[2],
+          crs: bandSummaryMatch[3],
+          dimensions: [parseInt(bandSummaryMatch[4]), parseInt(bandSummaryMatch[5])]
+        };
+      }
+
+      // Try to parse as JSON array
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          return value;
+        }
+      }
+
+      // Try to parse as number
+      const numValue = parseFloat(value);
+      return isNaN(numValue) ? value : numValue;
+    }
+    return headerText;
+  }
+
+  // Body has children - check if it's a List or Object
+  const bodyExplorers = body.querySelectorAll(':scope > .explorer');
+
+  // List: numbered items (0:, 1:, 2:, etc.)
+  const isListLike = Array.from(bodyExplorers).every((exp, idx) => {
+    const expHeader = exp.querySelector('.zippy > .header')?.textContent || '';
+    return expHeader.startsWith(`${idx}:`);
+  });
+
+  if (isListLike && bodyExplorers.length > 0) {
+    return Array.from(bodyExplorers).map(exp => extractInspectorTreeAsJSON(exp));
+  }
+
+  // Object: key-value pairs
+  const result: Record<string, any> = {};
+  bodyExplorers.forEach(exp => {
+    const expHeader = exp.querySelector('.zippy > .header')?.textContent || '';
+    const colonIndex = expHeader.indexOf(':');
+
+    if (colonIndex > -1) {
+      const key = expHeader.substring(0, colonIndex).trim();
+      const value = extractInspectorTreeAsJSON(exp);
+      result[key] = value;
+    }
+  });
+
+  return Object.keys(result).length > 0 ? result : headerText;
+}
+
+/**
  * Handles inspecting the map at specific coordinates
  */
-function handleInspectMap(coordinates: {lat: number, lng: number} | undefined, sendResponse: (response: any) => void) {
+async function handleInspectMap(coordinates: {lat: number, lng: number} | undefined, sendResponse: (response: any) => void) {
   try {
-    if (!coordinates) {
+    console.log(`🔍 [InspectMap] Reading Inspector panel data`);
+    if (coordinates) {
+      console.log(`🔍 [InspectMap] Requested coordinates: lat=${coordinates.lat}, lng=${coordinates.lng}`);
+    }
+
+    // Check if Inspector panel exists
+    const inspectPanel = document.querySelector('.inspect-panel');
+    if (!inspectPanel) {
+      console.error('❌ [InspectMap] Inspector panel not found');
       sendResponse({
         success: false,
-        error: 'No coordinates provided'
+        error: 'Inspector panel not found. Please ensure the Inspector tab is open in Earth Engine.'
       });
       return;
     }
-    
-    // This is a placeholder - actual implementation would need to interact with Earth Engine map
-    // and might require injecting code to use the Map.onClick() or similar Earth Engine API
+
+    console.log('✅ [InspectMap] Inspector panel found');
+
+    // Check if Inspector has data
+    const panelText = inspectPanel.textContent || '';
+    console.log(`📄 [InspectMap] Panel text preview: "${panelText.substring(0, 100)}..."`);
+
+    if (panelText.includes('Click on the map')) {
+      console.warn('⚠️ [InspectMap] Inspector is empty');
+      sendResponse({
+        success: false,
+        error: 'Inspector is empty. Please manually click on the map at the location you want to inspect, then try again.'
+      });
+      return;
+    }
+
+    // Step 1: Scroll to trigger lazy loading
+    console.log(`📜 [InspectMap] Scrolling to trigger lazy loading`);
+    (inspectPanel as HTMLElement).scrollTop = (inspectPanel as HTMLElement).scrollHeight;
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Step 2: Expand all collapsed sections by actually clicking them
+    const allCollapsedZippies = inspectPanel.querySelectorAll('.zippy.collapsed');
+    console.log(`🔓 [InspectMap] Found ${allCollapsedZippies.length} collapsed sections to expand`);
+
+    allCollapsedZippies.forEach(zippy => {
+      const header = zippy.querySelector('.header');
+      if (header) {
+        const headerText = header.textContent?.trim() || '';
+        console.log(`  🖱️ [InspectMap] Clicking to expand: "${headerText.substring(0, 50)}"`);
+        (header as HTMLElement).click();
+      }
+    });
+
+    // Wait for content to load after clicking
+    await new Promise(resolve => setTimeout(resolve, 500));
+    (inspectPanel as HTMLElement).scrollTop = (inspectPanel as HTMLElement).scrollHeight;
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Step 3: Extract Point information (first explorer)
+    const pointExplorer = inspectPanel.querySelector(':scope > .explorer');
+    const pointData = pointExplorer ? extractInspectorTreeAsJSON(pointExplorer) : null;
+    console.log(`📍 [InspectMap] Point data:`, pointData);
+
+    // Extract coordinates from point header for validation
+    const pointHeader = inspectPanel.querySelector('.explorer .header');
+    const pointText = pointHeader?.textContent || '';
+    const pointMatch = pointText.match(/Point\s*\(([-\d.]+),\s*([-\d.]+)\)/);
+    const inspectedCoords = pointMatch ? {
+      lng: parseFloat(pointMatch[1]),
+      lat: parseFloat(pointMatch[2])
+    } : null;
+
+    if (!inspectedCoords) {
+      console.warn('⚠️ [InspectMap] Could not extract coordinates from Inspector');
+      sendResponse({
+        success: false,
+        error: 'Could not read coordinates from Inspector. Please click on the map first.'
+      });
+      return;
+    }
+
+    console.log(`📍 [InspectMap] Extracted coordinates: lng=${inspectedCoords.lng}, lat=${inspectedCoords.lat}`);
+
+    // Verify coordinates match if provided
+    if (coordinates) {
+      const latDiff = Math.abs(coordinates.lat - inspectedCoords.lat);
+      const lngDiff = Math.abs(coordinates.lng - inspectedCoords.lng);
+      const tolerance = 0.1; // roughly 10km at equator
+
+      if (latDiff > tolerance || lngDiff > tolerance) {
+        console.warn(`⚠️ [InspectMap] Coordinate mismatch - requested (${coordinates.lng}, ${coordinates.lat}), found (${inspectedCoords.lng}, ${inspectedCoords.lat})`);
+        sendResponse({
+          success: false,
+          error: `Inspector shows data for coordinates (${inspectedCoords.lng}, ${inspectedCoords.lat}), which is different from requested coordinates (${coordinates.lng}, ${coordinates.lat}). Please click on the map at the desired location first.`,
+          data: {
+            requestedCoordinates: coordinates,
+            inspectedCoordinates: inspectedCoords
+          }
+        });
+        return;
+      }
+    }
+
+    // Step 4: Extract Pixels section
+    const pixelsSection = Array.from(inspectPanel.querySelectorAll('.inspect-view.inspect-image'));
+    const pixelsData = pixelsSection.map((section) => {
+      const explorer = section.querySelector('.explorer');
+      const header = explorer?.querySelector('.header');
+      const layerName = header?.querySelector('.label span')?.textContent || 'Unknown';
+      const data = explorer ? extractInspectorTreeAsJSON(explorer) : null;
+      return { layerName, data };
+    });
+
+    // Step 5: Extract Objects section (includes EPSG and all metadata)
+    const objectsSection = Array.from(inspectPanel.querySelectorAll('.inspect-view.inspect-object'));
+    const objectsData = objectsSection.map((section) => {
+      const explorer = section.querySelector('.explorer');
+      const header = explorer?.querySelector('.header');
+      const layerName = header?.querySelector('.label span')?.textContent || 'Unknown';
+      const data = explorer ? extractInspectorTreeAsJSON(explorer) : null;
+      return { layerName, data };
+    });
+
+    console.log(`✅ [InspectMap] Successfully extracted complete Inspector data`);
+    console.log(`   - Point data: ${pointData ? 'Yes' : 'No'}`);
+    console.log(`   - Pixels sections: ${pixelsData.length}`);
+    console.log(`   - Objects sections: ${objectsData.length}`);
+
+    // Check if Objects section is empty and provide helpful suggestion
+    let suggestion = undefined;
+    if (objectsData.length === 0 || objectsData.every(obj => !obj.data || Object.keys(obj.data).length === 0)) {
+      suggestion = 'Objects section appears empty or not expanded. To get CRS/EPSG information, manually click on "Objects" in the Inspector panel to expand it, then call this tool again.';
+      console.warn('⚠️ [InspectMap] ' + suggestion);
+    }
+
     sendResponse({
       success: true,
       data: {
-        location: coordinates,
-        message: 'Map inspection not fully implemented yet. This is a placeholder response.'
-      }
+        requestedCoordinates: coordinates,
+        inspectedCoordinates: inspectedCoords,
+        point: pointData,
+        pixels: pixelsData,
+        objects: objectsData,
+        // Legacy format for backward compatibility
+        layers: pixelsData.map(p => ({
+          name: p.layerName,
+          type: typeof p.data === 'object' ? 'Image' : 'Unknown',
+          values: typeof p.data === 'object' ? p.data : { value: p.data }
+        })),
+        layerCount: pixelsData.length
+      },
+      suggestion
     });
+
   } catch (error) {
+    console.error('Error in handleInspectMap:', error);
     sendResponse({
       success: false,
       error: `Error inspecting map: ${error instanceof Error ? error.message : String(error)}`
@@ -827,9 +1191,396 @@ async function handleEditScript(message: any, sendResponse: (response: any) => v
     
   } catch (error) {
     console.error('Error editing Earth Engine script:', error);
-    sendResponse({ 
-      success: false, 
-      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}` 
+    sendResponse({
+      success: false,
+      error: `Error editing Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Handles getting the current script content from the Earth Engine code editor
+ */
+async function handleGetScript(sendResponse: (response: any) => void) {
+  console.log('Handling get script message');
+
+  try {
+    let scriptContent = '';
+    let successMethod = '';
+    let contentFound = false;
+
+    console.log('Attempting to read Earth Engine editor content...');
+
+    // METHOD 1: Direct Ace editor access - try multiple paths
+    try {
+      console.log('METHOD 1: Attempting direct Ace editor access...');
+
+      // Try different potential paths to find the Ace editor instance
+      const editorPaths = [
+        // Try standard AceEditor global
+        () => (window as any).ace,
+
+        // Try to find the editor in the page scope
+        () => Array.from(document.querySelectorAll('.ace_editor')).map(
+          el => (el as any).__ace_editor__ || (el as any).env?.editor
+        ).find(editor => editor),
+
+        // Try from CodeMirror if it's used instead
+        () => {
+          const cmElements = document.querySelectorAll('.CodeMirror');
+          if (cmElements.length > 0) {
+            return Array.from(cmElements).map(el => (el as any).CodeMirror).find(cm => cm);
+          }
+          return null;
+        },
+
+        // Try to find editor in Google Earth Engine specific objects
+        () => (window as any).ee?.Editor?.ace,
+        () => (window as any).ee?.data?.aceEditor,
+        () => (window as any).code?.editor?.aceEditor,
+
+        // Last resort - try to scan the entire window object for anything that looks like an editor
+        () => {
+          const foundEditors = [];
+          for (const key in window) {
+            try {
+              const obj = (window as any)[key];
+              if (obj && typeof obj === 'object' &&
+                  (obj.getValue || obj.getSession || obj.edit)) {
+                foundEditors.push(obj);
+              }
+            } catch (e) {
+              // Ignore errors from security restrictions
+            }
+          }
+          return foundEditors[0]; // Return the first one we find
+        }
+      ];
+
+      // Try each path until we find an editor
+      let editor = null;
+      for (const getEditor of editorPaths) {
+        try {
+          const potentialEditor = getEditor();
+          if (potentialEditor) {
+            editor = potentialEditor;
+            console.log('Found potential editor:', editor);
+            break;
+          }
+        } catch (e) {
+          // Continue to the next method
+          console.log('Editor path attempt failed:', e);
+        }
+      }
+
+      if (editor) {
+        // Try different methods to get content based on what API the editor exposes
+        const getMethods = [
+          // Standard Ace editor API
+          () => {
+            if (editor.getValue) {
+              return editor.getValue();
+            }
+            return null;
+          },
+
+          // Some editors have a getContent method
+          () => {
+            if (editor.getContent) {
+              return editor.getContent();
+            }
+            return null;
+          },
+
+          // Session-based access
+          () => {
+            if (editor.getSession && editor.getSession().getValue) {
+              return editor.getSession().getValue();
+            }
+            return null;
+          },
+
+          // CodeMirror API
+          () => {
+            if (editor.doc && editor.doc.getValue) {
+              return editor.doc.getValue();
+            }
+            return null;
+          }
+        ];
+
+        for (const getMethod of getMethods) {
+          try {
+            const content = getMethod();
+            if (content !== null && content !== undefined) {
+              scriptContent = content;
+              contentFound = true;
+              successMethod = 'Direct editor API';
+              console.log('Successfully read editor content via direct API');
+              break;
+            }
+          } catch (e) {
+            // Try the next method
+            console.log('Editor get method failed:', e);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error accessing Ace editor directly:', error);
+    }
+
+    // METHOD 2: DOM Manipulation - Read from editor pre elements
+    if (!contentFound) {
+      try {
+        console.log('METHOD 2: Attempting DOM reading...');
+
+        // Find the pre elements in the editor
+        const editorPres = document.querySelectorAll('.ace_editor .ace_text-layer');
+        if (editorPres.length > 0) {
+          console.log(`Found ${editorPres.length} text layer elements in the editor`);
+
+          // Get text content from the text layer
+          const textLayer = editorPres[0];
+          scriptContent = textLayer.textContent || '';
+
+          contentFound = true;
+          successMethod = 'DOM text layer reading';
+          console.log('Successfully read editor content via DOM text layer');
+        } else {
+          // Try alternative: read from all .ace_line elements
+          const aceLines = document.querySelectorAll('.ace_editor .ace_line');
+          if (aceLines.length > 0) {
+            console.log(`Found ${aceLines.length} ace_line elements`);
+            scriptContent = Array.from(aceLines)
+              .map(line => line.textContent || '')
+              .join('\n');
+
+            contentFound = true;
+            successMethod = 'DOM ace_line reading';
+            console.log('Successfully read editor content via ace_line elements');
+          } else {
+            console.log('No text layer or ace_line elements found in the editor');
+          }
+        }
+      } catch (error) {
+        console.error('Error using DOM reading:', error);
+      }
+    }
+
+    // METHOD 3: Read from hidden textarea
+    if (!contentFound) {
+      try {
+        console.log('METHOD 3: Searching for hidden textarea...');
+
+        // Look for textareas that might be connected to the editor
+        const textareas = document.querySelectorAll('textarea');
+        console.log(`Found ${textareas.length} textareas in the document`);
+
+        for (const textarea of Array.from(textareas)) {
+          try {
+            // Check if this might be an editor textarea
+            if (textarea.classList.contains('ace_text-input') ||
+                textarea.style.position === 'absolute' ||
+                textarea.style.opacity === '0' ||
+                textarea.style.height === '1px' ||
+                textarea.parentElement?.classList.contains('ace_editor')) {
+
+              console.log('Found potential editor textarea:', textarea);
+
+              const content = textarea.value;
+              if (content && content.length > 0) {
+                scriptContent = content;
+                contentFound = true;
+                successMethod = 'Hidden textarea';
+                console.log('Successfully read editor content via hidden textarea');
+                break;
+              }
+            }
+          } catch (e) {
+            console.log('Error reading from a textarea:', e);
+          }
+        }
+      } catch (error) {
+        console.error('Error reading hidden textarea:', error);
+      }
+    }
+
+    // If all methods failed, return error
+    if (!contentFound) {
+      console.error('All methods for reading editor content failed');
+      sendResponse({
+        success: false,
+        error: 'Failed to read editor content. Could not access the Earth Engine Code Editor.'
+      });
+      return;
+    }
+
+    // Count lines in the script
+    const lineCount = scriptContent.split('\n').length;
+
+    // Return success with the script content
+    console.log(`Editor content read successfully using method: ${successMethod}, ${lineCount} lines`);
+    sendResponse({
+      success: true,
+      content: scriptContent,
+      lineCount: lineCount,
+      method: successMethod
+    });
+
+  } catch (error) {
+    console.error('Error getting Earth Engine script:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting Earth Engine script: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Handles getting all console output from the Earth Engine console
+ */
+async function handleGetConsoleOutput(sendResponse: (response: any) => void) {
+  console.log('Handling get console output message');
+
+  try {
+    // Find the EE-CONSOLE element
+    const eeConsole = document.querySelector('ee-console');
+
+    if (!eeConsole) {
+      console.warn('EE-CONSOLE element not found');
+      sendResponse({
+        success: false,
+        error: 'Console element not found. Make sure you are on the Google Earth Engine code editor page.'
+      });
+      return;
+    }
+
+    // Get all console log entries (they are direct children in light DOM)
+    const consoleLogElements = eeConsole.querySelectorAll('ee-console-log');
+
+    if (consoleLogElements.length === 0) {
+      console.log('No console output found');
+      sendResponse({
+        success: true,
+        outputs: [],
+        count: 0,
+        message: 'Console is empty. Run some code to see output.'
+      });
+      return;
+    }
+
+    // Parse each console log entry
+    const outputs: Array<{
+      type: string,
+      message: string,
+      index: number,
+      hasVisualContent?: boolean,
+      visualElementType?: string,
+      chartDescription?: string
+    }> = [];
+    consoleLogElements.forEach((logElement, index) => {
+      try {
+        // GEE console entries can have multiple child divs when print() has multiple arguments
+        // e.g., print('Number:', 42) creates two children: one for 'Number:' and one for '42'
+        // We need to get the full textContent and clean it up properly
+
+        let message = logElement.textContent || '';
+
+        // Remove the "JSON" button text that appears at the start
+        message = message.replace(/^JSON/, '').trim();
+
+        // Alternative method: get text from all .trivial divs if available
+        // This handles cases where content is split across multiple divs
+        const trivialDivs = logElement.querySelectorAll('.trivial');
+        if (trivialDivs.length > 0) {
+          const trivialTexts: string[] = [];
+          trivialDivs.forEach(div => {
+            const text = div.textContent?.trim();
+            if (text) {
+              trivialTexts.push(text);
+            }
+          });
+          if (trivialTexts.length > 0) {
+            message = trivialTexts.join(' ');
+          }
+        }
+
+        // Detect visual content (charts, images, etc.)
+        const visualElements = logElement.querySelectorAll('canvas, svg, img, iframe, [class*="chart"]');
+        let hasVisualContent = false;
+        let visualElementType: 'canvas' | 'svg' | 'img' | 'iframe' | 'unknown' | undefined;
+        let chartDescription: string | undefined;
+
+        if (visualElements.length > 0) {
+          hasVisualContent = true;
+
+          // Determine the visual element type
+          if (logElement.querySelector('canvas')) {
+            visualElementType = 'canvas';
+          } else if (logElement.querySelector('svg')) {
+            visualElementType = 'svg';
+          } else if (logElement.querySelector('img')) {
+            visualElementType = 'img';
+          } else if (logElement.querySelector('iframe')) {
+            visualElementType = 'iframe';
+          } else {
+            visualElementType = 'unknown';
+          }
+
+          // Try to get chart description from title or heading elements
+          const titleElement = logElement.querySelector('[class*="title"], h3, h4, h5, .chart-title');
+          if (titleElement && titleElement.textContent) {
+            chartDescription = titleElement.textContent.trim();
+          }
+
+          // Add a hint to the message
+          message = message + ' [📊 Chart/visualization detected - use screenshot tool to view details]';
+        }
+
+        // Detect the type based on class names or content
+        let type: 'info' | 'error' | 'warning' | 'log' | 'chart' = 'log';
+
+        if (hasVisualContent) {
+          type = 'chart';
+        } else if (logElement.classList.contains('error') || message.toLowerCase().includes('error')) {
+          type = 'error';
+        } else if (logElement.classList.contains('warning') || message.toLowerCase().includes('warning')) {
+          type = 'warning';
+        } else {
+          type = 'info';
+        }
+
+        outputs.push({
+          type,
+          message,
+          index,
+          ...(hasVisualContent && { hasVisualContent }),
+          ...(visualElementType && { visualElementType }),
+          ...(chartDescription && { chartDescription })
+        });
+
+      } catch (parseError) {
+        console.warn(`Error parsing console log entry ${index}:`, parseError);
+        outputs.push({
+          type: 'error',
+          message: `[Parse Error] Could not read console entry ${index}`,
+          index
+        });
+      }
+    });
+
+    console.log(`Successfully read ${outputs.length} console outputs`);
+    sendResponse({
+      success: true,
+      outputs,
+      count: outputs.length
+    });
+
+  } catch (error) {
+    console.error('Error getting console output:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting console output: ${error instanceof Error ? error.message : String(error)}`
     });
   }
 }
@@ -1050,9 +1801,12 @@ async function handleExecuteClickByCoordinates(x: number, y: number, sendRespons
 
     console.log(`[Content Script] Element at (${x},${y}):`, elementAtPoint);
 
+    // Show visual indicator at click location
+    showClickIndicator(x, y);
+
     // Create and dispatch mouse events to simulate a click
-    // Standard sequence: pointerdown, mousedown, pointerup, mouseup, click
-    const eventSequence = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
+    // A simpler event sequence to avoid triggering double-click-like behavior (e.g., zoom)
+    const eventSequence = ['mousedown', 'mouseup', 'click'];
 
     for (const eventType of eventSequence) {
       const event = new MouseEvent(eventType, {
@@ -1229,6 +1983,54 @@ async function handleClickByRefId(refId: string, sendResponse: (response: any) =
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`Error clicking element with refId '${refId}':`, error);
     sendResponse({ success: false, error: `Error clicking element: ${errorMessage}`, refId });
+  }
+}
+
+/**
+ * Get map information including bounds, center point, and viewport dimensions
+ */
+function handleGetMapInfo(sendResponse: (response: any) => void) {
+  console.log('Content script: Handling GET_MAP_INFO');
+  try {
+    const mapElement = document.querySelector('.ui-map') as HTMLElement;
+
+    if (!mapElement) {
+      sendResponse({
+        success: false,
+        error: 'Map element not found. Please ensure you are on the Earth Engine Code Editor page.'
+      });
+      return;
+    }
+
+    const rect = mapElement.getBoundingClientRect();
+
+    const mapInfo = {
+      mapBounds: {
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height
+      },
+      centerPoint: {
+        x: rect.x + rect.width / 2,
+        y: rect.y + rect.height / 2
+      },
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
+      }
+    };
+
+    sendResponse({
+      success: true,
+      data: mapInfo
+    });
+  } catch (error) {
+    console.error('Error getting map info:', error);
+    sendResponse({
+      success: false,
+      error: `Error getting map info: ${error instanceof Error ? error.message : String(error)}`
+    });
   }
 }
 
