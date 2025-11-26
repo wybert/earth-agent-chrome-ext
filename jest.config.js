@@ -5,10 +5,14 @@ const config = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
+  testEnvironment: 'jsdom',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  setupFiles: ['./src/lib/tools/context7/__tests__/setupTests.js'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+  },
+  setupFiles: ['<rootDir>/tests/setupTests.js'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/?(*.)+(spec|test).ts'],
   verbose: true,
 };
 
-module.exports = config; 
+module.exports = config;
