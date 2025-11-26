@@ -11,10 +11,19 @@ node_modules/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+*.zip
 
 # Editor directories and files
-.idea
-.vscode
+.idea/
+.vscode/
+.cursor/
+.gemini-clipboard/
 *.suo
 *.ntvs*
 *.njsproj
@@ -23,17 +32,39 @@ node_modules/
 
 # OS specific
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Task files
-# tasks.json
-# tasks/ 
-Browser MCP
-cline-main
-dist
-package-lock.json
-playwright-mcp
+# Chrome Extension specific
+*.crx
+*.pem
+web-ext-artifacts/
 
-# Build artifacts
-webpack.prod.config.js
-*.zip
-dist.zip
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Python (for scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Debug files (optional - comment out if you want to track them)
+# scripts/debug/test-*.js
+# docs/debugging/*.txt
+
+# External MCP servers (not our source code)
+# Uncomment if these are external dependencies:
+# mcp/browser-mcp/
+# mcp/playwright-mcp/

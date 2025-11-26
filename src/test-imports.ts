@@ -1,5 +1,5 @@
 import { OpenAI } from '@langchain/openai';
-import type { Message } from 'ai/react';
+import type { UIMessage } from '@ai-sdk/react';
 
 // Simple test function to ensure imports are working
 async function testImports() {
@@ -8,14 +8,18 @@ async function testImports() {
         modelName: 'gpt-3.5-turbo',
         temperature: 0
     });
-    
-    // Test Message type from AI SDK
-    const message: Message = {
+
+    // Test UIMessage type from AI SDK 5.0
+    // Note: UIMessage no longer has 'content', only 'parts'
+    const message: UIMessage = {
         id: '1',
         role: 'user',
-        content: 'Hello'
+        parts: [{
+            type: 'text',
+            text: 'Hello'
+        }]
     };
-    
+
     console.log('Basic imports working correctly!');
     return { success: true, message };
 }

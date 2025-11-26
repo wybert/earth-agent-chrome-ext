@@ -59,15 +59,10 @@ const App = () => {
   }, []);
 
   return (
-    <div className="container px-2 py-4 flex flex-col h-full max-w-[98%] mx-auto">
-      {/* <div className="header mb-2">
-        <h1 className="text-xl font-bold">Earth Engine AI Assistant</h1>
-      </div> */}
-      <div className="content flex-1 w-full">
-        <ChatErrorBoundary>
-          <ChatUI />
-        </ChatErrorBoundary>
-      </div>
+    <div className="w-full h-full overflow-hidden">
+      <ChatErrorBoundary>
+        <ChatUI />
+      </ChatErrorBoundary>
     </div>
   );
 };

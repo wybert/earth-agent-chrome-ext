@@ -2,286 +2,82 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Check, X, Eye, EyeOff } from 'lucide-react';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
-import { Label } from './ui/label';
+import { Check, X, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { type ApiProvider } from '@/constants/models';
+import { OpenAICompatibleSection } from './OpenAICompatibleSection';
 
-// Key for storing API key in Chrome Storage
+// Storage keys
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
-const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
-const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
-
-type ApiProvider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
-
-// Available models for each provider
-const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
-  openai: [
-    'gpt-4o', 
-    'gpt-4o-2024-05-13',
-    'gpt-4o-2024-08-06',
-    'gpt-4o-2024-11-20',
-    'gpt-4o-mini',
-    'gpt-4o-mini-2024-07-18',
-    'o4-mini',
-    'o4-mini-2025-04-16',
-    'gpt-4.5-preview',
-    'gpt-4.1',
-    'gpt-4.1-mini',
-    'gpt-4-turbo',
-    'gpt-4-turbo-2024-04-09',
-    'gpt-4-0125-preview',
-    'gpt-4-1106-preview',
-    'gpt-4',
-    'gpt-3.5-turbo',
-    'gpt-3.5-turbo-0125',
-    'gpt-3.5-turbo-1106'
-  ],
-  anthropic: [
-    'claude-opus-4-20250514',
-    'claude-sonnet-4-20250514',
-    'claude-3-7-sonnet-20250219',
-    'claude-3-5-sonnet-20241022',
-    'claude-3-5-haiku-20241022',
-    'claude-3-5-sonnet-20240620'
-  ],
-  google: [
-    'gemini-2.5-pro-preview-06-05',
-    'gemini-2.5-flash-preview-05-20',
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-pro',
-    'gemini-1.5-pro-latest',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash-8b',
-    'gemini-1.5-flash-8b-latest'
-  ],
-  qwen: [
-    'qwen-max-latest',
-    'qwen-max',
-    'qwen-plus-latest', 
-    'qwen-plus',
-    'qwen-turbo-latest',
-    'qwen-turbo',
-    'qwen-vl-max',
-    'qwen2.5-72b-instruct',
-    'qwen2.5-14b-instruct-1m',
-    'qwen2.5-vl-72b-instruct'
-  ],
-  ollama: [
-    'phi3',
-    'llama3.3:70b',
-    'llama3.3',
-    'llama3.2:90b',
-    'llama3.2:70b',
-    'llama3.2',
-    'llama3.1:70b',
-    'llama3.1',
-    'mistral',
-    'codellama',
-    'deepseek-coder-v2',
-    'qwen2.5',
-    'gemma2',
-    'llava',
-    'llava-llama3',
-    'llava-phi3',
-    'moondream'
-  ]
-};
-
-// Human-readable model names
-const MODEL_DISPLAY_NAMES: Record<string, string> = {
-  'gpt-4o': 'GPT-4o (Recommended)',
-  'gpt-4o-2024-05-13': 'GPT-4o (May 2024)',
-  'gpt-4o-2024-08-06': 'GPT-4o (August 2024)',
-  'gpt-4o-2024-11-20': 'GPT-4o (November 2024)',
-  'gpt-4o-mini': 'GPT-4o Mini (Fast)',
-  'gpt-4o-mini-2024-07-18': 'GPT-4o Mini (July 2024)',
-  'o4-mini': 'O4 Mini (Latest)',
-  'o4-mini-2025-04-16': 'O4 Mini (April 2025)',
-  'gpt-4.5-preview': 'GPT-4.5 Preview (Latest)',
-  'gpt-4.1': 'GPT-4.1',
-  'gpt-4.1-mini': 'GPT-4.1 Mini',
-  'gpt-4-turbo': 'GPT-4 Turbo',
-  'gpt-4-turbo-2024-04-09': 'GPT-4 Turbo (April 2024)',
-  'gpt-4-0125-preview': 'GPT-4 Turbo (January 2024)',
-  'gpt-4-1106-preview': 'GPT-4 Turbo Preview',
-  'gpt-4': 'GPT-4',
-  'gpt-3.5-turbo': 'GPT-3.5 Turbo',
-  'gpt-3.5-turbo-0125': 'GPT-3.5 Turbo (January 2024)',
-  'gpt-3.5-turbo-1106': 'GPT-3.5 Turbo (November 2023)',
-  'claude-opus-4-20250514': 'Claude Opus 4 (Latest)',
-  'claude-sonnet-4-20250514': 'Claude Sonnet 4 (Latest)',
-  'claude-3-7-sonnet-20250219': 'Claude 3.7 Sonnet',
-  'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet (New)',
-  'claude-3-5-haiku-20241022': 'Claude 3.5 Haiku',
-  'claude-3-5-sonnet-20240620': 'Claude 3.5 Sonnet (Old)',
-  'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro Preview (June 5)',
-  'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash Preview (May 20)',
-  'gemini-2.0-flash': 'Gemini 2.0 Flash',
-  'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
-  'gemini-1.5-pro': 'Gemini 1.5 Pro',
-  'gemini-1.5-pro-latest': 'Gemini 1.5 Pro (Latest)',
-  'gemini-1.5-flash': 'Gemini 1.5 Flash',
-  'gemini-1.5-flash-latest': 'Gemini 1.5 Flash (Latest)',
-  'gemini-1.5-flash-8b': 'Gemini 1.5 Flash 8B',
-  'gemini-1.5-flash-8b-latest': 'Gemini 1.5 Flash 8B (Latest)',
-  'qwen-max-latest': 'Qwen-Max (Latest)',
-  'qwen-max': 'Qwen-Max',
-  'qwen-plus-latest': 'Qwen-Plus (Latest)',
-  'qwen-plus': 'Qwen-Plus',
-  'qwen-turbo-latest': 'Qwen-Turbo (Latest)',
-  'qwen-turbo': 'Qwen-Turbo',
-  'qwen-vl-max': 'Qwen-VL-Max',
-  'qwen2.5-72b-instruct': 'Qwen2.5-72B-Instruct',
-  'qwen2.5-14b-instruct-1m': 'Qwen2.5-14B-Instruct-1M',
-  'qwen2.5-vl-72b-instruct': 'Qwen2.5-VL-72B-Instruct',
-  'phi3': 'Phi-3 (Recommended)',
-  'llama3.3:70b': 'Llama 3.3 70B',
-  'llama3.3': 'Llama 3.3',
-  'llama3.2:90b': 'Llama 3.2 90B',
-  'llama3.2:70b': 'Llama 3.2 70B',
-  'llama3.2': 'Llama 3.2',
-  'llama3.1:70b': 'Llama 3.1 70B',
-  'llama3.1': 'Llama 3.1',
-  'mistral': 'Mistral',
-  'codellama': 'Code Llama',
-  'deepseek-coder-v2': 'DeepSeek Coder V2',
-  'qwen2.5': 'Qwen 2.5',
-  'gemma2': 'Gemma 2',
-  'llava': 'LLaVA (Vision)',
-  'llava-llama3': 'LLaVA Llama3 (Vision)',
-  'llava-phi3': 'LLaVA Phi3 (Vision)',
-  'moondream': 'Moondream (Vision)'
-};
+const PROJECT_NAME_STORAGE_KEY = 'earth_engine_project_name';
+const PROJECT_CONTEXT_STORAGE_KEY = 'earth_engine_project_context';
 
 interface SettingsProps {
   onClose: () => void;
 }
 
 export function Settings({ onClose }: SettingsProps) {
-  const [apiKey, setApiKey] = useState('');
-  const [provider, setProvider] = useState<ApiProvider>('openai');
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  // API Keys state
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
+  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [qwenApiKey, setQwenApiKey] = useState('');
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState('http://localhost:11434/api');
-  const [isSaving, setIsSaving] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Load saved API key on component mount
+  // Show/hide API keys
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [showQwenKey, setShowQwenKey] = useState(false);
+
+  // Status
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Project Context state
+  const [projectName, setProjectName] = useState('');
+  const [projectContext, setProjectContext] = useState('');
+  const [contextSaveStatus, setContextSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
+  // Load all data on mount
   useEffect(() => {
+    // Load API keys from sync storage
     chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY, 
+      API_KEY_STORAGE_KEY,
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       QWEN_API_KEY_STORAGE_KEY,
-      OLLAMA_API_KEY_STORAGE_KEY,
-      OLLAMA_BASE_URL_STORAGE_KEY,
-      API_PROVIDER_STORAGE_KEY,
-      MODEL_STORAGE_KEY
+      OLLAMA_BASE_URL_STORAGE_KEY
     ], (result) => {
-      const savedProvider = result[API_PROVIDER_STORAGE_KEY] as ApiProvider || 'openai';
-      setProvider(savedProvider);
-      
-      // Load the appropriate API key based on provider
-      if (savedProvider === 'openai') {
-        const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(openaiKey);
-      } else if (savedProvider === 'anthropic') {
-        const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(anthropicKey);
-      } else if (savedProvider === 'google') {
-        const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(googleKey);
-      } else if (savedProvider === 'qwen') {
-        const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(qwenKey);
-      } else if (savedProvider === 'ollama') {
-        const ollamaKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
-        setApiKey(ollamaKey);
-        const ollamaUrl = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
-        setOllamaBaseUrl(ollamaUrl);
-      }
+      setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '');
+      setAnthropicApiKey(result[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
+      setGoogleApiKey(result[GOOGLE_API_KEY_STORAGE_KEY] || '');
+      setQwenApiKey(result[QWEN_API_KEY_STORAGE_KEY] || '');
+      setOllamaBaseUrl(result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api');
+    });
 
-      // Load saved model or default to first model for the provider
-      const savedModel = result[MODEL_STORAGE_KEY] as string || '';
-      if (savedProvider === 'ollama') {
-        // For Ollama, use saved model or default to phi3
-        setSelectedModel(savedModel || 'phi3');
-      } else if (savedModel && AVAILABLE_MODELS[savedProvider].includes(savedModel)) {
-        setSelectedModel(savedModel);
-      } else {
-        setSelectedModel(AVAILABLE_MODELS[savedProvider][0]);
-      }
+    // Load project context from local storage
+    chrome.storage.local.get([
+      PROJECT_NAME_STORAGE_KEY,
+      PROJECT_CONTEXT_STORAGE_KEY
+    ], (result) => {
+      setProjectName(result[PROJECT_NAME_STORAGE_KEY] || '');
+      setProjectContext(result[PROJECT_CONTEXT_STORAGE_KEY] || '');
     });
   }, []);
 
-  // Load the provider-specific API key when provider changes
-  useEffect(() => {
-    chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY, 
-      OPENAI_API_KEY_STORAGE_KEY,
-      ANTHROPIC_API_KEY_STORAGE_KEY,
-      GOOGLE_API_KEY_STORAGE_KEY,
-      QWEN_API_KEY_STORAGE_KEY,
-      OLLAMA_API_KEY_STORAGE_KEY,
-      OLLAMA_BASE_URL_STORAGE_KEY,
-      MODEL_STORAGE_KEY
-    ], (result) => {
-      if (provider === 'openai') {
-        const openaiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(openaiKey);
-      } else if (provider === 'anthropic') {
-        const anthropicKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(anthropicKey);
-      } else if (provider === 'google') {
-        const googleKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(googleKey);
-      } else if (provider === 'qwen') {
-        const qwenKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        setApiKey(qwenKey);
-      } else if (provider === 'ollama') {
-        const ollamaKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
-        setApiKey(ollamaKey);
-        const ollamaUrl = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
-        setOllamaBaseUrl(ollamaUrl);
-      }
+  const handleSaveApiKey = (provider: ApiProvider, apiKey: string) => {
+    const storageData: { [key: string]: string } = {};
 
-      // When provider changes, check if current model is valid for new provider
-      const currentSavedModel = result[MODEL_STORAGE_KEY] as string || '';
-      
-      if (provider === 'ollama') {
-        // For Ollama, use saved model or default to phi3
-        setSelectedModel(currentSavedModel || 'phi3');
-      } else if (currentSavedModel && AVAILABLE_MODELS[provider].includes(currentSavedModel)) {
-        // Keep current model if it's valid for the new provider (rare case)
-        setSelectedModel(currentSavedModel);
-      } else {
-        // Otherwise default to first model for the new provider
-        setSelectedModel(AVAILABLE_MODELS[provider][0]);
-      }
-    });
-  }, [provider]);
-
-  const handleSave = () => {
-    setIsSaving(true);
-    // Store in Chrome sync storage for sync across devices
-    const storageData: { [key: string]: any } = {
-      [API_PROVIDER_STORAGE_KEY]: provider,
-      [MODEL_STORAGE_KEY]: selectedModel
-    };
-    
-    // Store API key in the provider-specific key and the legacy key for backward compatibility
+    // Store API key in the provider-specific key
     if (provider === 'openai') {
       storageData[OPENAI_API_KEY_STORAGE_KEY] = apiKey;
+      storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key
     } else if (provider === 'anthropic') {
       storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
     } else if (provider === 'google') {
@@ -289,474 +85,337 @@ export function Settings({ onClose }: SettingsProps) {
     } else if (provider === 'qwen') {
       storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
     } else if (provider === 'ollama') {
-      storageData[OLLAMA_API_KEY_STORAGE_KEY] = apiKey;
+      // Ollama doesn't use API keys, only save Base URL
       storageData[OLLAMA_BASE_URL_STORAGE_KEY] = ollamaBaseUrl;
     }
-    
-    if (provider !== 'ollama') {
-      storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key for backward compatibility (not needed for Ollama)
-    }
-    
-    chrome.storage.sync.set(
-      storageData,
-      () => {
-        if (chrome.runtime.lastError) {
-          console.error('Error saving API key:', chrome.runtime.lastError);
-          setSaveStatus('error');
-        } else {
-          setSaveStatus('success');
-          // Test the API connection
-          testApiConnection(provider, apiKey, selectedModel);
-        }
-        setIsSaving(false);
-        
-        // Reset status after 3 seconds
-        setTimeout(() => {
-          setSaveStatus('idle');
-        }, 3000);
+
+    chrome.storage.sync.set(storageData, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving API key:', chrome.runtime.lastError);
+        setSaveStatus('error');
+        setSaveMessage(`Failed to save ${provider} API key`);
+      } else {
+        setSaveStatus('success');
+        setSaveMessage(`${provider} API key saved successfully`);
       }
-    );
+
+      // Reset status after 2 seconds
+      setTimeout(() => {
+        setSaveStatus('idle');
+        setSaveMessage('');
+      }, 2000);
+    });
   };
 
-  const testApiConnection = async (provider: ApiProvider, key: string, model: string) => {
-    try {
-      setConnectionStatus('idle');
-      
-      // For OpenAI, we'll test with a simple models.list call
-      if (provider === 'openai') {
-        // First check if the API key is valid by listing models
-        const response = await fetch('https://api.openai.com/v1/models', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('OpenAI Connection test result:', result);
-          
-          // Then test if the selected model is valid with a simple completion
-          if (model) {
-            try {
-              const modelTestResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${key}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  model: model,
-                  messages: [{ role: 'user', content: 'Hello, please respond with "Model test successful"' }],
-                  max_tokens: 20
-                })
-              });
-              
-              if (modelTestResponse.ok) {
-                console.log(`Model test successful for ${model}`);
-                setConnectionStatus('success');
-              } else {
-                const errorData = await modelTestResponse.json();
-                console.error(`Model ${model} test failed:`, errorData);
-                setConnectionStatus('error');
-              }
-            } catch (modelError) {
-              console.error(`Error testing model ${model}:`, modelError);
-              setConnectionStatus('error');
-            }
-          } else {
-            setConnectionStatus('success');
-          }
-        } else {
-          console.error('OpenAI API connection failed:', response.statusText);
-          setConnectionStatus('error');
-        }
-      } 
-      // For Anthropic, we'll check if the API key format is valid (usually starts with 'sk-ant-')
-      else if (provider === 'anthropic') {
-        // Validate Anthropic API key format (usually starts with 'sk-ant-')
-        if (key.startsWith('sk-ant-') && key.length > 20) {
-          console.log('Anthropic API key format looks valid');
-          
-          // If a model was selected, we could test it with a minimal API call
-          // Note: This is commented out to avoid unnecessary API charges
-          // Uncomment this for production if desired
-          /*
-          if (model) {
-            try {
-              const modelTestResponse = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                  'x-api-key': key,
-                  'anthropic-version': '2023-06-01',
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  model: model,
-                  messages: [{ role: 'user', content: 'Hello, please respond with "Model test successful"' }],
-                  max_tokens: 20
-                })
-              });
-              
-              if (modelTestResponse.ok) {
-                console.log(`Model test successful for ${model}`);
-                setConnectionStatus('success');
-              } else {
-                const errorData = await modelTestResponse.json();
-                console.error(`Model ${model} test failed:`, errorData);
-                setConnectionStatus('error');
-              }
-            } catch (modelError) {
-              console.error(`Error testing model ${model}:`, modelError);
-              setConnectionStatus('error');
-            }
-          } else {
-            setConnectionStatus('success');
-          }
-          */
-          setConnectionStatus('success');
-        } else {
-          console.error('Anthropic API key format looks invalid');
-          setConnectionStatus('error');
-        }
-      }
-      // For Google, we'll check if the API key format is valid
-      else if (provider === 'google') {
-        // Validate Google API key format (usually starts with 'AIza' and is 39 characters long)
-        if (key.startsWith('AIza') && key.length === 39) {
-          console.log('Google API key format looks valid');
-          
-          // We could test with a simple API call but for now just validate format
-          // Note: This is commented out to avoid unnecessary API charges
-          // Uncomment this for production if desired
-          /*
-          if (model) {
-            try {
-              const modelTestResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
-                method: 'GET',
-                headers: {
-                  'x-goog-api-key': key,
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              if (modelTestResponse.ok) {
-                console.log(`Google API connection test successful`);
-                setConnectionStatus('success');
-              } else {
-                const errorData = await modelTestResponse.json();
-                console.error(`Google API test failed:`, errorData);
-                setConnectionStatus('error');
-              }
-            } catch (modelError) {
-              console.error(`Error testing Google API:`, modelError);
-              setConnectionStatus('error');
-            }
-          } else {
-            setConnectionStatus('success');
-          }
-          */
-          setConnectionStatus('success');
-        } else {
-          console.error('Google API key format looks invalid');
-          setConnectionStatus('error');
-        }
-      }
-      // For Qwen, we'll check if the API key looks valid
-      else if (provider === 'qwen') {
-        // Validate Qwen API key (DashScope API key format)
-        if (key && key.trim().length > 10) {
-          console.log('Qwen API key format looks valid');
-          
-          // We could test with a simple API call but for now just validate that key is not empty
-          // Note: This is commented out to avoid unnecessary API charges
-          // Uncomment this for production if desired
-          /*
-          if (model) {
-            try {
-              const modelTestResponse = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/models', {
-                method: 'GET',
-                headers: {
-                  'Authorization': `Bearer ${key}`,
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              if (modelTestResponse.ok) {
-                console.log(`Qwen API connection test successful`);
-                setConnectionStatus('success');
-              } else {
-                const errorData = await modelTestResponse.json();
-                console.error(`Qwen API test failed:`, errorData);
-                setConnectionStatus('error');
-              }
-            } catch (modelError) {
-              console.error(`Error testing Qwen API:`, modelError);
-              setConnectionStatus('error');
-            }
-          } else {
-            setConnectionStatus('success');
-          }
-          */
-          setConnectionStatus('success');
-        } else {
-          console.error('Qwen API key looks invalid');
-          setConnectionStatus('error');
-        }
-      }
-      // For Ollama, we'll check if the base URL is reachable
-      else if (provider === 'ollama') {
-        console.log('🔧 [Settings] Testing Ollama connection', {
-          baseUrl: ollamaBaseUrl,
-          model: model,
-          hasApiKey: !!key
-        });
-        
-        // For Ollama, test the actual connection
-        try {
-          // Test the /api/tags endpoint to see if Ollama is running
-          const testUrl = `${ollamaBaseUrl.replace('/api', '')}/api/tags`;
-          console.log('🔧 [Settings] Testing Ollama endpoint:', testUrl);
-          
-          const testResponse = await fetch(testUrl, {
-            method: 'GET',
-            headers: key ? { 'Authorization': `Bearer ${key}` } : {},
-            // Add timeout and proper error handling
-            signal: AbortSignal.timeout(5000)
-          });
-          
-          if (testResponse.ok) {
-            const data = await testResponse.json();
-            console.log('✅ [Settings] Ollama connection test successful:', data);
-            setConnectionStatus('success');
-          } else {
-            console.error('❌ [Settings] Ollama connection test failed:', {
-              status: testResponse.status,
-              statusText: testResponse.statusText,
-              url: testUrl
-            });
-            setConnectionStatus('error');
-          }
-        } catch (ollamaError) {
-          console.error('❌ [Settings] Error testing Ollama connection:', {
-            error: ollamaError,
-            baseUrl: ollamaBaseUrl,
-            message: ollamaError instanceof Error ? ollamaError.message : 'Unknown error'
-          });
-          // For local development, still mark as success if it's a network error (Ollama might be running but not accessible due to CORS)
-          if (ollamaError instanceof Error && (ollamaError.message.includes('fetch') || ollamaError.message.includes('network'))) {
-            console.log('🔧 [Settings] Assuming Ollama is available despite fetch error (likely CORS)');
-            setConnectionStatus('success');
-          } else {
-            setConnectionStatus('error');
-          }
-        }
-      }
-      
-    } catch (error) {
-      console.error('Error testing API connection:', error);
-      setConnectionStatus('error');
+  const handleSaveContext = () => {
+    // Validate character limit
+    if (projectContext.length > 2000) {
+      setContextSaveStatus('error');
+      setTimeout(() => setContextSaveStatus('idle'), 3000);
+      return;
     }
+
+    // Save to local storage
+    chrome.storage.local.set({
+      [PROJECT_NAME_STORAGE_KEY]: projectName,
+      [PROJECT_CONTEXT_STORAGE_KEY]: projectContext
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving project context:', chrome.runtime.lastError);
+        setContextSaveStatus('error');
+      } else {
+        setContextSaveStatus('success');
+      }
+
+      // Reset status after 3 seconds
+      setTimeout(() => {
+        setContextSaveStatus('idle');
+      }, 3000);
+    });
+  };
+
+  const handleClearContext = () => {
+    // Clear project context without confirmation
+    setProjectName('');
+    setProjectContext('');
+
+    // Clear from storage
+    chrome.storage.local.set({
+      [PROJECT_NAME_STORAGE_KEY]: '',
+      [PROJECT_CONTEXT_STORAGE_KEY]: ''
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error clearing project context:', chrome.runtime.lastError);
+      }
+    });
   };
 
   return (
-    <Card className="p-4 w-full">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">LLM API Settings</h2>
+    <Card className="p-4 w-full h-full flex flex-col overflow-hidden">
+      <div className="flex justify-between items-center mb-4 flex-shrink-0">
+        <h2 className="text-lg font-semibold">Settings</h2>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {connectionStatus === 'success' && (
-          <div className="text-sm bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-2 text-green-800 dark:text-green-300">
-            <p><strong>Active Configuration:</strong></p>
-            <p>Provider: <strong>{provider}</strong></p>
-            <p>Model: <strong>{selectedModel}</strong></p>
+      <div className="space-y-4 overflow-y-auto flex-1 px-1 -mx-1">
+        {/* API Keys Section */}
+        <div className="pt-2">
+          <h3 className="text-sm font-semibold mb-1">API Keys</h3>
+          <p className="text-xs text-gray-500 mb-3">Your API keys are stored securely in Chrome's synced storage and are never sent to our servers.</p>
+
+          <div className="space-y-4">
+            {/* OpenAI */}
+            <div>
+              <label className="text-sm mb-1 block">OpenAI API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showOpenaiKey ? 'text' : 'password'}
+                    value={openaiApiKey}
+                    onChange={(e) => setOpenaiApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                  >
+                    {showOpenaiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button onClick={() => handleSaveApiKey('openai', openaiApiKey)} disabled={!openaiApiKey}>
+                  Save
+                </Button>
+              </div>
+            </div>
+
+            {/* Anthropic */}
+            <div>
+              <label className="text-sm mb-1 block">Anthropic API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showAnthropicKey ? 'text' : 'password'}
+                    value={anthropicApiKey}
+                    onChange={(e) => setAnthropicApiKey(e.target.value)}
+                    placeholder="sk-ant-..."
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    onClick={() => setShowAnthropicKey(!showAnthropicKey)}
+                  >
+                    {showAnthropicKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button onClick={() => handleSaveApiKey('anthropic', anthropicApiKey)} disabled={!anthropicApiKey}>
+                  Save
+                </Button>
+              </div>
+            </div>
+
+            {/* Google */}
+            <div>
+              <label className="text-sm mb-1 block">Google API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showGoogleKey ? 'text' : 'password'}
+                    value={googleApiKey}
+                    onChange={(e) => setGoogleApiKey(e.target.value)}
+                    placeholder="AIza..."
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    onClick={() => setShowGoogleKey(!showGoogleKey)}
+                  >
+                    {showGoogleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button onClick={() => handleSaveApiKey('google', googleApiKey)} disabled={!googleApiKey}>
+                  Save
+                </Button>
+              </div>
+            </div>
+
+            {/* Qwen */}
+            <div>
+              <label className="text-sm mb-1 block">Qwen API Key</label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    type={showQwenKey ? 'text' : 'password'}
+                    value={qwenApiKey}
+                    onChange={(e) => setQwenApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    onClick={() => setShowQwenKey(!showQwenKey)}
+                  >
+                    {showQwenKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button onClick={() => handleSaveApiKey('qwen', qwenApiKey)} disabled={!qwenApiKey}>
+                  Save
+                </Button>
+              </div>
+            </div>
+
+            {/* Ollama */}
+            <div>
+              <label className="text-sm mb-1 block">Ollama Base URL</label>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  value={ollamaBaseUrl}
+                  onChange={(e) => setOllamaBaseUrl(e.target.value)}
+                  placeholder="http://localhost:11434/api"
+                  className="flex-1"
+                />
+                <Button onClick={() => handleSaveApiKey('ollama', '')}>
+                  Save
+                </Button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t my-4"></div>
+
+            {/* OpenAI Compatible Providers */}
+            <OpenAICompatibleSection />
+
+            {/* Status Messages */}
+            {saveStatus === 'success' && (
+              <div className="text-sm flex items-center text-green-600">
+                <Check className="h-4 w-4 mr-1" /> {saveMessage}
+              </div>
+            )}
+
+            {saveStatus === 'error' && (
+              <div className="text-sm flex items-center text-red-600">
+                <X className="h-4 w-4 mr-1" /> {saveMessage}
+              </div>
+            )}
           </div>
-        )}
-        <div>
-          <label className="text-sm mb-1 block">Select API Provider</label>
-          <div className="flex gap-2">
-            <Button 
-              variant={provider === 'openai' ? 'default' : 'outline'}
-              onClick={() => setProvider('openai')}
-            >
-              OpenAI
-            </Button>
-            <Button 
-              variant={provider === 'anthropic' ? 'default' : 'outline'}
-              onClick={() => setProvider('anthropic')}
-            >
-              Anthropic
-            </Button>
-            <Button 
-              variant={provider === 'google' ? 'default' : 'outline'}
-              onClick={() => setProvider('google')}
-            >
-              Google
-            </Button>
-            <Button 
-              variant={provider === 'qwen' ? 'default' : 'outline'}
-              onClick={() => setProvider('qwen')}
-            >
-              Qwen
-            </Button>
-            <Button 
-              variant={provider === 'ollama' ? 'default' : 'outline'}
-              onClick={() => setProvider('ollama')}
-            >
-              Ollama
-            </Button>
-          </div>
-          {provider === 'google' && (
-            <p className="text-xs text-gray-500 mt-2">
-              Note: Google Gemini models may require a Google Cloud project with billing enabled. 
-              Please refer to Google's rate limit and pricing documentation.
-            </p>
-          )}
-          {provider === 'qwen' && (
-            <p className="text-xs text-gray-500 mt-2">
-              Note: Qwen uses DashScope API keys. You can obtain your API key from the Alibaba Cloud DashScope console.
-              Base URL: https://dashscope.aliyuncs.com/compatible-mode/v1
-            </p>
-          )}
-          {provider === 'ollama' && (
-            <p className="text-xs text-gray-500 mt-2">
-              Note: Ollama runs locally or on a remote server. For local instances, usually no API key is required.
-              Default Base URL: http://localhost:11434/api
-            </p>
-          )}
         </div>
 
-        {provider === 'ollama' && (
-          <div>
-            <label className="text-sm mb-1 block">Base URL</label>
-            <Input
-              type="text"
-              value={ollamaBaseUrl}
-              onChange={(e) => setOllamaBaseUrl(e.target.value)}
-              placeholder="http://localhost:11434/api"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Enter the URL of your Ollama instance. Use http://localhost:11434/api for local installations.
-            </p>
+        {/* Project Context Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold mb-1">Project Context</h3>
+          <div className="text-xs text-gray-500 mb-3">
+            <p>ℹ️ These instructions will be applied to every chat message.</p>
+            <p className="mt-1">Stored locally on this device (not synced across devices).</p>
           </div>
-        )}
 
-        <div>
-          <label className="text-sm mb-1 block">
-            {provider === 'ollama' ? 'Enter Model ID' : 'Select Model'}
-          </label>
-          {provider === 'ollama' ? (
+          <div className="space-y-4">
             <div>
+              <label className="text-sm mb-1 block">Project Name</label>
               <Input
                 type="text"
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                placeholder="Enter Ollama model ID (e.g., llama3.2, phi3, mistral)"
-                className="mb-2"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Enter project name (optional)"
               />
-              <p className="text-xs text-gray-500 mb-4">
-                Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2
-              </p>
             </div>
-          ) : (
-            <select 
-              className="w-full p-2 border rounded-md mb-4 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600"
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-            >
-              {AVAILABLE_MODELS[provider].map((modelId) => (
-                <option key={modelId} value={modelId}>
-                  {MODEL_DISPLAY_NAMES[modelId] || modelId}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        
-        {provider !== 'ollama' && (
-          <div>
-            <label className="text-sm mb-1 block">API Key</label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  type={showApiKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={`Enter your ${provider === 'openai' ? 'OpenAI' : provider === 'anthropic' ? 'Anthropic' : provider === 'google' ? 'Google' : 'Qwen'} API key`}
-                  className="pr-10"
-                />
-                <button 
-                  type="button" 
-                  className="absolute inset-y-0 right-0 px-3 flex items-center"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+
+            <div>
+              <label className="text-sm mb-1 block">Custom Instructions</label>
+              <textarea
+                value={projectContext}
+                onChange={(e) => setProjectContext(e.target.value)}
+                placeholder="Add project-specific context that will be included in every message...
+
+Examples:
+- Project background and goals
+- Custom terminology and definitions
+- Preferred coding styles or conventions
+- Domain-specific knowledge"
+                className="w-full h-[120px] px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                maxLength={2000}
+              />
+              <div className="flex items-center justify-between mt-1">
+                <span className={`text-xs ${projectContext.length > 1900 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'}`}>
+                  {projectContext.length}/2000 characters
+                </span>
+                {projectContext.length > 2000 && (
+                  <span className="text-xs text-red-600 dark:text-red-400">
+                    Character limit exceeded
+                  </span>
+                )}
               </div>
-              <Button onClick={handleSave} disabled={isSaving || !apiKey}>
-                Save
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleSaveContext} disabled={projectContext.length > 2000}>
+                Save Context
+              </Button>
+              <Button onClick={handleClearContext} variant="outline" disabled={!projectName && !projectContext}>
+                Clear
               </Button>
             </div>
-          </div>
-        )}
-        
-        {provider === 'ollama' && (
-          <div>
-            <Button onClick={handleSave} disabled={isSaving} className="w-full">
-              Save Configuration
-            </Button>
-          </div>
-        )}
 
-        {saveStatus === 'success' && (
-          <div className="mt-2 text-sm flex items-center text-green-600">
-            <Check className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Configuration saved successfully' : 'API key saved successfully'}
-          </div>
-        )}
+            {contextSaveStatus === 'success' && (
+              <div className="text-sm flex items-center text-green-600">
+                <Check className="h-4 w-4 mr-1" /> Project context saved successfully
+              </div>
+            )}
 
-        {saveStatus === 'error' && (
-          <div className="mt-2 text-sm flex items-center text-red-600">
-            <X className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Error saving configuration' : 'Error saving API key'}
+            {contextSaveStatus === 'error' && (
+              <div className="text-sm flex items-center text-red-600">
+                <X className="h-4 w-4 mr-1" /> Error saving project context
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {connectionStatus === 'success' && (
-          <div className="mt-2 text-sm flex items-center text-green-600">
-            <Check className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Ollama connection verified successfully' : 'API connection verified successfully'}
+        {/* About Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold mb-3">About Earth Agent</h3>
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+            <p className="flex items-center justify-between">
+              <span>Version:</span>
+              <code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">1.0.0</code>
+            </p>
+            <a
+              href="https://github.com/wybert/earth-agent-chrome-ext"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <span>GitHub Repository</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+            <a
+              href="https://github.com/wybert/earth-agent-chrome-ext/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              <span>Report an Issue</span>
+              <ExternalLink className="h-4 w-4" />
+            </a>
+            <p className="pt-2 text-xs">
+              AI-powered assistant for Google Earth Engine
+            </p>
           </div>
-        )}
 
-        {connectionStatus === 'error' && (
-          <div className="mt-2 text-sm flex items-center text-red-600">
-            <X className="h-4 w-4 mr-1" /> {provider === 'ollama' ? 'Could not verify Ollama connection' : 'Could not verify API connection'}
+          {/* Logo */}
+          <div className="flex justify-center mt-6">
+            <img
+              src="/assets/icon.svg"
+              alt="Earth Agent Logo"
+              className="w-24 h-24 opacity-80 dark:opacity-70"
+            />
           </div>
-        )}
-
-        <div className="text-sm text-gray-500">
-          <p>Your API key is stored securely in Chrome's synced storage and is never sent to our servers.</p>
-          <p className="mt-1">
-            {provider === 'openai' 
-              ? 'You can create an OpenAI API key in your OpenAI dashboard.' 
-              : provider === 'anthropic' 
-              ? 'You can create an Anthropic API key in your Anthropic console.'
-              : provider === 'google' 
-              ? 'You can create a Google Generative AI API key in your Google AI Studio.'
-              : provider === 'qwen'
-              ? 'You can create a Qwen API key in your Qwen console.'
-              : 'For Ollama, API key is usually not required for local instances. Configure base URL above.'}
-          </p>
-          <p className="mt-1">
-            <strong>Model selection:</strong> Different models have varying capabilities, speeds, and costs.
-            More powerful models may offer better results but could be slower or more expensive to use.
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Selected model: <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">{selectedModel}</code>
-          </p>
         </div>
       </div>
     </Card>

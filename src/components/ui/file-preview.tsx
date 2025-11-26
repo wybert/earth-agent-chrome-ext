@@ -62,32 +62,30 @@ const CustomImagePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
     // Extract data from our custom format
     const imageData = 'data' in file ? file.data : '';
     const fileName = 'name' in file ? file.name : 'Image';
-    
+
     return (
       <motion.div
         ref={ref}
-        className="relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs"
+        className="relative flex flex-col w-[120px] rounded-md border p-2 text-xs"
         layout
         initial={{ opacity: 0, y: "100%" }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
       >
-        <div className="flex w-full items-center space-x-2">
-          {imageData ? (
-            <img
-              alt={`Attachment ${fileName}`}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted object-cover"
-              src={imageData}
-            />
-          ) : (
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted">
-              <ImageIcon className="h-6 w-6 text-foreground" />
-            </div>
-          )}
-          <span className="w-full truncate text-muted-foreground">
-            {fileName || 'Image attachment'}
-          </span>
-        </div>
+        <span className="mb-1 truncate text-muted-foreground text-center">
+          {fileName || 'Image attachment'}
+        </span>
+        {imageData && imageData !== '' ? (
+          <img
+            alt={`Attachment ${fileName}`}
+            className="w-full h-20 rounded-sm border bg-muted object-cover"
+            src={imageData}
+          />
+        ) : (
+          <div className="w-full h-20 flex items-center justify-center rounded-sm border bg-muted">
+            <ImageIcon className="h-6 w-6 text-foreground" />
+          </div>
+        )}
 
         {onRemove ? (
           <button
@@ -114,7 +112,7 @@ const ImageFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
       if (file instanceof File) {
         const url = URL.createObjectURL(file);
         setImageUrl(url);
-        
+
         return () => {
           URL.revokeObjectURL(url);
         };
@@ -130,23 +128,26 @@ const ImageFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
     return (
       <motion.div
         ref={ref}
-        className="relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs"
+        className="relative flex flex-col w-[120px] rounded-md border p-2 text-xs"
         layout
         initial={{ opacity: 0, y: "100%" }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: "100%" }}
       >
-        <div className="flex w-full items-center space-x-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+        <span className="mb-1 truncate text-muted-foreground text-center">
+          {fileName}
+        </span>
+        {imageUrl && imageUrl !== '' ? (
           <img
             alt={`Attachment ${fileName}`}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted object-cover"
+            className="w-full h-20 rounded-sm border bg-muted object-cover"
             src={imageUrl}
           />
-          <span className="w-full truncate text-muted-foreground">
-            {fileName}
-          </span>
-        </div>
+        ) : (
+          <div className="w-full h-20 flex items-center justify-center rounded-sm border bg-muted">
+            <ImageIcon className="h-6 w-6 text-foreground" />
+          </div>
+        )}
 
         {onRemove ? (
           <button

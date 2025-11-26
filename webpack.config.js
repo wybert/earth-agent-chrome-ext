@@ -52,13 +52,19 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { from: 'src/manifest.json', to: 'manifest.json' },
-        { from: 'src/assets', to: 'assets', noErrorOnMissing: true }
+        { from: 'src/assets', to: 'assets', noErrorOnMissing: true },
+        {
+          from: 'src/sidepanel/index.html',
+          to: 'sidepanel.html',
+          transform(content, absoluteFrom) {
+            // Inject the script tag for sidepanel.js
+            return content.toString().replace(
+              '<script src="index.tsx"></script>',
+              '<script src="sidepanel.js"></script>'
+            );
+          }
+        }
       ]
-    }),
-    new HtmlWebpackPlugin({
-      template: './src/sidepanel/index.html',
-      filename: 'sidepanel.html',
-      chunks: ['sidepanel']
     })
   ]
 }; 

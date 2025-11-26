@@ -16,6 +16,7 @@ import { CopyButton } from "@/components/ui/copy-button"
 import { MessageInput } from "@/components/ui/message-input"
 import { MessageList } from "@/components/ui/message-list"
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
+import type { Provider } from "@/types/extension"
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -34,6 +35,14 @@ interface ChatPropsBase {
   ) => void
   setMessages?: (messages: any[]) => void
   transcribeAudio?: (blob: Blob) => Promise<string>
+  onRegenerate?: () => void
+  showRegenerate?: boolean
+  mode?: 'ask' | 'do'
+  onModeChange?: (mode: 'ask' | 'do') => void
+  provider?: Provider
+  model?: string
+  onProviderChange?: (provider: Provider) => void
+  onModelChange?: (model: string) => void
 }
 
 interface ChatPropsWithoutSuggestions extends ChatPropsBase {
@@ -61,6 +70,14 @@ export function Chat({
   onRateResponse,
   setMessages,
   transcribeAudio,
+  onRegenerate,
+  showRegenerate,
+  mode,
+  onModeChange,
+  provider,
+  model,
+  onProviderChange,
+  onModelChange,
   ...props
 }: ChatProps) {
   const lastMessage = messages.at(-1)
@@ -155,27 +172,50 @@ export function Chat({
   }, [stop, setMessages, messagesRef])
 
   const messageOptions = useCallback(
-    (message: Message) => {
+    (message: Message, index: number) => {
+      const isUserMessage = message.role === "user";
+      // Check if this is the last assistant message
+      const isLastAssistantMessage = message.role === "assistant" &&
+        index === messages.length - 1;
+
       return {
         message: message,
         actions: (
         <>
             <CopyButton content={message.content ?? ""} />
-            {onRateResponse ? (
+            {!isUserMessage && onRegenerate && isLastAssistantMessage && showRegenerate ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={onRegenerate}
+                aria-label="Regenerate response"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <path d="M21 2v6h-6"/>
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                  <path d="M3 22v-6h6"/>
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
+              </Button>
+            ) : null}
+            {onRateResponse && !isUserMessage ? (
               <>
           <Button
             size="icon"
             variant="ghost"
+            className="h-6 w-6"
             onClick={() => onRateResponse(message.id, "thumbs-up")}
           >
-                  <ThumbsUp size={16} />
+                  <ThumbsUp className="h-4 w-4" />
           </Button>
           <Button
             size="icon"
             variant="ghost"
+            className="h-6 w-6"
             onClick={() => onRateResponse(message.id, "thumbs-down")}
           >
-                  <ThumbsDown size={16} />
+                  <ThumbsDown className="h-4 w-4" />
           </Button>
         </>
             ) : null}
@@ -183,7 +223,7 @@ export function Chat({
       ),
       };
     },
-    [onRateResponse]
+    [onRateResponse, onRegenerate, showRegenerate, messages.length]
   );
 
   // Provide default empty strings for potentially undefined props
@@ -194,25 +234,29 @@ export function Chat({
   return (
     <div className={cn("relative flex h-full flex-col", className)} {...props}>
       {isEmpty && append && suggestions ? (
-        <PromptSuggestions
-          label="Try these prompts ✨"
-          append={append}
-          suggestions={suggestions}
-        />
+        <div className="flex-1 min-h-0 overflow-auto">
+          <PromptSuggestions
+            label="Try these prompts ✨"
+            append={append}
+            suggestions={suggestions}
+          />
+        </div>
       ) : null}
 
       {messages.length > 0 ? (
-        <ChatMessages messages={messages}>
-          <MessageList
-            messages={messages}
-            isTyping={isTyping}
-            messageOptions={messageOptions}
-          />
-        </ChatMessages>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ChatMessages messages={messages}>
+            <MessageList
+              messages={messages}
+              isTyping={isTyping}
+              messageOptions={messageOptions}
+            />
+          </ChatMessages>
+        </div>
       ) : null}
 
       <ChatForm
-        className="mt-auto"
+        className="shrink-0 px-3 pb-3"
         isPending={isGenerating || isTyping}
         handleSubmit={handleSubmit}
       >
@@ -226,6 +270,12 @@ export function Chat({
             stop={handleStop}
             isGenerating={isGenerating}
             transcribeAudio={transcribeAudio}
+            mode={mode}
+            onModeChange={onModeChange}
+            provider={provider}
+            model={model}
+            onProviderChange={onProviderChange}
+            onModelChange={onModelChange}
           />
         )}
       </ChatForm>
@@ -245,12 +295,13 @@ export function ChatMessages({
     scrollToBottom,
     handleScroll,
     shouldAutoScroll,
+    hasScrollableContent,
     handleTouchStart,
   } = useAutoScroll([messages])
 
   return (
     <div
-      className="grid grid-cols-1 overflow-y-auto pb-4"
+      className="grid grid-cols-1 overflow-y-auto pb-4 h-full"
       ref={containerRef}
       onScroll={handleScroll}
       onTouchStart={handleTouchStart}
@@ -259,7 +310,7 @@ export function ChatMessages({
         {children}
       </div>
 
-      {!shouldAutoScroll && (
+      {!shouldAutoScroll && hasScrollableContent && (
         <div className="pointer-events-none flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]">
           <div className="sticky bottom-0 left-0 flex w-full justify-end">
             <Button
