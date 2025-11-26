@@ -15,7 +15,23 @@ export interface Message {
   parts?: MessagePart[];
 }
 
-export type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+// Built-in providers
+export type BuiltInProvider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+
+// Custom provider format: 'custom:{uuid}'
+export type Provider = BuiltInProvider | `custom:${string}`;
+
+// OpenAI Compatible provider configuration
+export interface OpenAICompatibleConfig {
+  id: string;              // Unique identifier (UUID)
+  name: string;            // User-provided name (e.g., "DeepSeek", "Together AI")
+  baseURL: string;         // API endpoint URL
+  apiKey: string;          // API key for this provider
+  modelName: string;       // Default model name to use
+  enabled: boolean;        // Whether this config is currently active
+  createdAt: number;       // Creation timestamp
+  updatedAt: number;       // Last update timestamp
+}
 
 export interface ExtensionMessage {
   type: string;

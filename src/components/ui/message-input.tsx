@@ -13,7 +13,8 @@ import { FilePreview } from "@/components/ui/file-preview"
 import { InterruptPrompt } from "@/components/ui/interrupt-prompt"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { AVAILABLE_MODELS, MODEL_DISPLAY_NAMES, type ApiProvider } from "@/constants/models"
+import { AVAILABLE_MODELS, MODEL_DISPLAY_NAMES, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY, type ApiProvider } from "@/constants/models"
+import type { OpenAICompatibleConfig, Provider } from "@/types/extension"
 
 // File upload validation constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -41,9 +42,9 @@ interface MessageInputBaseProps
   transcribeAudio?: (blob: Blob) => Promise<string>
   mode?: 'ask' | 'do'
   onModeChange?: (mode: 'ask' | 'do') => void
-  provider?: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama'
+  provider?: Provider
   model?: string
-  onProviderChange?: (provider: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama') => void
+  onProviderChange?: (provider: Provider) => void
   onModelChange?: (model: string) => void
 }
 
@@ -85,6 +86,27 @@ export function MessageInput({
   const [isDragging, setIsDragging] = useState(false)
   const [showInterruptPrompt, setShowInterruptPrompt] = useState(false)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([])
+
+  // Load custom providers from storage
+  useEffect(() => {
+    chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY], (result) => {
+      const configs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || []
+      // Only include enabled providers
+      setCustomProviders(configs.filter(c => c.enabled))
+    })
+
+    // Listen for changes to custom providers
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName === 'sync' && changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]) {
+        const configs: OpenAICompatibleConfig[] = changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || []
+        setCustomProviders(configs.filter(c => c.enabled))
+      }
+    }
+
+    chrome.storage.onChanged.addListener(handleStorageChange)
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange)
+  }, [])
 
   // Get all models grouped by provider
   const allModelsGrouped = Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => ({
@@ -92,13 +114,30 @@ export function MessageInput({
     models: models
   }))
 
-  // Get display name for model
+  // Get display name for model (supports custom providers)
   const getModelDisplayName = (modelId: string) => {
+    // Check if it's a custom provider
+    if (provider?.startsWith('custom:')) {
+      const configId = provider.replace('custom:', '')
+      const config = customProviders.find(c => c.id === configId)
+      if (config) {
+        return `${config.name} - ${modelId}`
+      }
+    }
     return MODEL_DISPLAY_NAMES[modelId] || modelId
   }
 
   // Get display name without parentheses for button
   const getModelDisplayNameShort = (modelId: string) => {
+    // For custom providers, show just the provider name and model
+    if (provider?.startsWith('custom:')) {
+      const configId = provider.replace('custom:', '')
+      const config = customProviders.find(c => c.id === configId)
+      if (config) {
+        return `${config.name} - ${modelId}`
+      }
+    }
+
     const fullName = MODEL_DISPLAY_NAMES[modelId] || modelId
     // Remove everything in parentheses including the parentheses
     return fullName.replace(/\s*\([^)]*\)/g, '').trim()
@@ -127,20 +166,39 @@ export function MessageInput({
   }
 
   // Handle model change and save to storage
-  const handleModelChange = (newModel: string) => {
-    onModelChange?.(newModel)
+  const handleModelChange = (value: string) => {
+    // Check if it's a custom provider (format: "custom:{id}:{model}")
+    if (value.startsWith('custom:')) {
+      const parts = value.split(':')
+      if (parts.length === 3) {
+        const providerId = `custom:${parts[1]}`
+        const modelName = parts[2]
+
+        onModelChange?.(modelName)
+        onProviderChange?.(providerId as Provider)
+
+        chrome.storage.sync.set({
+          earth_engine_llm_model: modelName,
+          earth_engine_llm_provider: providerId
+        })
+        return
+      }
+    }
+
+    // Built-in provider model
+    onModelChange?.(value)
     // Find the provider for this model and update both
-    const newProvider = findProviderForModel(newModel)
+    const newProvider = findProviderForModel(value)
     if (newProvider && onProviderChange) {
       onProviderChange(newProvider)
       // Save both to Chrome storage
       chrome.storage.sync.set({
-        earth_engine_llm_model: newModel,
+        earth_engine_llm_model: value,
         earth_engine_llm_provider: newProvider
       })
     } else {
       // Just save the model
-      chrome.storage.sync.set({ earth_engine_llm_model: newModel })
+      chrome.storage.sync.set({ earth_engine_llm_model: value })
     }
   }
 
@@ -447,6 +505,7 @@ export function MessageInput({
                 <span className="truncate">{getModelDisplayNameShort(model)}</span>
               </SelectTrigger>
               <SelectContent side="top" className="max-h-80 w-64">
+                {/* Built-in Providers */}
                 {allModelsGrouped.map(({ provider: providerKey, models }, groupIndex) => (
                   <React.Fragment key={providerKey}>
                     {groupIndex > 0 && (
@@ -462,6 +521,27 @@ export function MessageInput({
                     ))}
                   </React.Fragment>
                 ))}
+
+                {/* Custom Providers */}
+                {customProviders.length > 0 && (
+                  <>
+                    <div className="border-t border-gray-600 my-1" />
+                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                      Custom Providers
+                    </div>
+                    {customProviders.map((config) => (
+                      <SelectItem
+                        key={`custom:${config.id}`}
+                        value={`custom:${config.id}:${config.modelName}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          <span>{config.name} - {config.modelName}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
               </SelectContent>
             </Select>
           )}

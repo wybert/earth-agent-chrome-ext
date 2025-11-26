@@ -4,6 +4,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Check, X, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import { type ApiProvider } from '@/constants/models';
+import { OpenAICompatibleSection } from './OpenAICompatibleSection';
 
 // Storage keys
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
@@ -285,6 +286,12 @@ export function Settings({ onClose }: SettingsProps) {
                 </Button>
               </div>
             </div>
+
+            {/* Divider */}
+            <div className="border-t my-4"></div>
+
+            {/* OpenAI Compatible Providers */}
+            <OpenAICompatibleSection />
 
             {/* Status Messages */}
             {saveStatus === 'success' && (
