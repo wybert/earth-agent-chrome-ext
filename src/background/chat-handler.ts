@@ -646,6 +646,7 @@ ${projectContext}`;
     // Create all AI tools with event callback
     const {
       weatherTool,
+      dateTimeTool,
       earthEngineDatasetTool,
       earthEngineScriptTool,
       earthEngineRunCodeTool,
@@ -663,6 +664,7 @@ ${projectContext}`;
 
     const readOnlyTools = {
       weather: weatherTool,
+      dateTime: dateTimeTool,
       earthEngineDataset: earthEngineDatasetTool,
       screenshot: screenshotTool,
       snapshot: snapshotTool,
@@ -721,22 +723,16 @@ ${projectContext}`;
       // Update callbacks to call onToolEvent if provided
       if (onToolEvent) {
         console.log('🔧 [Chat Handler] onToolEvent callback is provided, setting up step callbacks');
+
+        // Note: tool_start events are sent manually by each tool's execute function
+        // This ensures they're sent before the tool actually starts executing
         streamOptions.onStepStart = ({ toolCalls }: { toolCalls?: any[] }) => {
           console.log('🔧 [Chat Handler] onStepStart called, toolCalls:', toolCalls);
+          // Don't send tool_start events here - they're sent by the tools themselves
           if (toolCalls && toolCalls.length > 0) {
             toolCalls.forEach((toolCall: any) => {
-              const event = {
-                type: 'tool_start' as const,
-                toolName: toolCall.toolName,
-                args: toolCall.args,
-                timestamp: Date.now()
-              };
-              console.log(`🔧 [Chat Handler] Calling onToolEvent with:`, event);
-              onToolEvent(event);
               console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, { args: toolCall.args });
             });
-          } else {
-            console.log('🔧 [Chat Handler] onStepStart called but no toolCalls found');
           }
         };
 

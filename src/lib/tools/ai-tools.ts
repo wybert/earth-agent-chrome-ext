@@ -42,22 +42,9 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
         location: z.string().describe('City or place name to get the weather for'),
       }),
       execute: async ({ location }) => {
+        // Send tool_start event manually for reliable timing
         const toolName = 'weather';
-        const startEvent = {
-          type: 'tool_start' as const,
-          toolName,
-          args: { location },
-          timestamp: Date.now(),
-        };
-        onToolEvent?.(startEvent);
-
-        const finish = (result: any) =>
-          onToolEvent?.({
-            type: 'tool_finish',
-            toolName,
-            result,
-            timestamp: Date.now(),
-          });
+        onToolEvent?.({ type: 'tool_start', toolName, args: { location }, timestamp: Date.now() });
 
         try {
           const geoRes = await weatherFetch(
@@ -65,13 +52,11 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
           );
           if (!geoRes.ok) {
             const err = `Geocoding failed with status ${geoRes.status}`;
-            finish({ error: err });
             return { error: err };
           }
           const geoData = await geoRes.json();
           if (!geoData?.results?.length) {
             const err = `Could not find location: "${location}"`;
-            finish({ error: err });
             return { error: err };
           }
 
@@ -84,14 +69,12 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
           );
           if (!weatherRes.ok) {
             const err = `Weather lookup failed with status ${weatherRes.status}`;
-            finish({ error: err });
             return { error: err };
           }
           const weatherData = await weatherRes.json();
           const current = weatherData?.current_weather;
           if (!current) {
             const err = 'Weather data unavailable for this location';
-            finish({ error: err });
             return { error: err };
           }
 
@@ -112,13 +95,65 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
             source: 'open-meteo',
           };
 
-          finish(payload);
+          // Note: tool_finish event is automatically sent by onStepFinish callback
           return payload;
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error);
-          finish({ error: errMsg });
           return { error: `Weather lookup failed: ${errMsg}` };
         }
+      },
+    });
+
+    const dateTimeTool = tool({
+      description: 'Get the current date and time, optionally for a specific IANA time zone. Returns the current time formatted in the requested timezone.',
+      inputSchema: z.object({
+        timeZone: z.string().optional().describe('IANA time zone, e.g., "Asia/Shanghai" for Beijing, "America/New_York", or "UTC". If not specified, uses system timezone.'),
+      }),
+      execute: async ({ timeZone }) => {
+        // Send tool_start event manually for reliable timing
+        const toolName = 'dateTime';
+        onToolEvent?.({ type: 'tool_start', toolName, args: { timeZone }, timestamp: Date.now() });
+
+        const now = new Date();
+        const resolvedTz = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+        // Format the current time in the requested timezone
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: resolvedTz,
+          hour12: false,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          weekday: 'long',
+        });
+
+        const humanReadable = formatter.format(now);
+
+        // Get date parts for structured output
+        const parts = formatter.formatToParts(now).reduce<Record<string, string>>((acc, p) => {
+          if (p.type !== 'literal') acc[p.type] = p.value;
+          return acc;
+        }, {});
+
+        const result = {
+          timeZone: resolvedTz,
+          dateTime: humanReadable,
+          year: parts.year,
+          month: parts.month,
+          day: parts.day,
+          weekday: parts.weekday,
+          hour: parts.hour,
+          minute: parts.minute,
+          second: parts.second,
+          isoString: now.toISOString(),
+          unixTimestamp: now.getTime(),
+        };
+
+        // Note: tool_finish event is automatically sent by onStepFinish callback
+        return result;
       },
     });
 
@@ -1937,6 +1972,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
   // Return all tools
   return {
     weatherTool,
+    dateTimeTool,
     earthEngineDatasetTool,
     earthEngineScriptTool,
     earthEngineRunCodeTool,

@@ -48,3 +48,38 @@ describe('weatherTool', () => {
     expect((result as any).error).toMatch(/Could not find location/i);
   });
 });
+
+describe('dateTimeTool', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2024-01-01T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('returns current time in UTC', async () => {
+    const { dateTimeTool } = createAITools();
+    const res = await (dateTimeTool as any).execute({ timeZone: 'UTC' });
+
+    expect(res.timeZone).toBe('UTC');
+    expect(res.dateTime).toContain('2024');
+    expect(res.dateTime).toContain('12:00:00');
+    expect(typeof res.unixTimestamp).toBe('number');
+    expect(res.isoString).toContain('2024-01-01T12:00:00');
+  });
+
+  it('returns current time in specified timezone', async () => {
+    const { dateTimeTool } = createAITools();
+    const res = await (dateTimeTool as any).execute({ timeZone: 'Asia/Shanghai' });
+
+    expect(res.timeZone).toBe('Asia/Shanghai');
+    expect(res.dateTime).toContain('2024');
+    expect(res.year).toBe('2024');
+    expect(res.month).toBe('01');
+    expect(res.day).toBe('01');
+    expect(typeof res.hour).toBe('string');
+    expect(typeof res.minute).toBe('string');
+    expect(typeof res.second).toBe('string');
+  });
+});
