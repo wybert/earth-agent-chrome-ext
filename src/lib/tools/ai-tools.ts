@@ -12,7 +12,8 @@ import { snapshot as browserSnapshot, SnapshotResponse } from './browser/snapsho
 import {
   selectBestEarthEngineTab,
   ensureContentScript,
-  validateChromeAPIs
+  validateChromeAPIs,
+  createResilientFetch
 } from '../utils';
 
 // Tool event callback type (used by chat-handler)
@@ -29,30 +30,95 @@ export type ToolEventCallback = (event: {
  * This factory function allows tools to emit events for tracking
  */
 export function createAITools(onToolEvent?: ToolEventCallback) {
+    const weatherFetch = createResilientFetch({
+      label: 'WeatherTool',
+      maxAttempts: 3,
+      baseDelayMs: 400,
+    });
+
     const weatherTool = tool({
-      description: 'Get the weather in a location',
+      description: 'Get the current weather for a location (uses Open-Meteo, no API key required)',
       inputSchema: z.object({
-        location: z.string().describe('The location to get the weather for'),
+        location: z.string().describe('City or place name to get the weather for'),
       }),
       execute: async ({ location }) => {
-        // Manually send tool_start event
-        if (onToolEvent) {
-          onToolEvent({
-            type: 'tool_start',
-            toolName: 'weather',
-            args: { location },
-            timestamp: Date.now()
-          });
-        }
-
-        // Simulate weather data
-        const temperature = 72 + Math.floor(Math.random() * 21) - 10;
-        return {
-          location,
-          temperature,
-          description: temperature > 75 ? 'Sunny and warm' : 'Partly cloudy',
-          humidity: Math.floor(Math.random() * 30) + 50, // Random humidity between 50-80%
+        const toolName = 'weather';
+        const startEvent = {
+          type: 'tool_start' as const,
+          toolName,
+          args: { location },
+          timestamp: Date.now(),
         };
+        onToolEvent?.(startEvent);
+
+        const finish = (result: any) =>
+          onToolEvent?.({
+            type: 'tool_finish',
+            toolName,
+            result,
+            timestamp: Date.now(),
+          });
+
+        try {
+          const geoRes = await weatherFetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
+          );
+          if (!geoRes.ok) {
+            const err = `Geocoding failed with status ${geoRes.status}`;
+            finish({ error: err });
+            return { error: err };
+          }
+          const geoData = await geoRes.json();
+          if (!geoData?.results?.length) {
+            const err = `Could not find location: "${location}"`;
+            finish({ error: err });
+            return { error: err };
+          }
+
+          const place = geoData.results[0];
+          const { latitude, longitude, name, country_code } = place;
+          const resolvedName = [name, country_code].filter(Boolean).join(', ');
+
+          const weatherRes = await weatherFetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+          );
+          if (!weatherRes.ok) {
+            const err = `Weather lookup failed with status ${weatherRes.status}`;
+            finish({ error: err });
+            return { error: err };
+          }
+          const weatherData = await weatherRes.json();
+          const current = weatherData?.current_weather;
+          if (!current) {
+            const err = 'Weather data unavailable for this location';
+            finish({ error: err });
+            return { error: err };
+          }
+
+          const payload = {
+            location: resolvedName || location,
+            latitude,
+            longitude,
+            country: country_code,
+            current: {
+              temperatureC: current.temperature,
+              temperatureF: Math.round((current.temperature * 9) / 5 + 32),
+              windSpeed: current.windspeed,
+              windDirection: current.winddirection,
+              weatherCode: current.weathercode,
+              isDay: current.is_day === 1,
+              time: current.time,
+            },
+            source: 'open-meteo',
+          };
+
+          finish(payload);
+          return payload;
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          finish({ error: errMsg });
+          return { error: `Weather lookup failed: ${errMsg}` };
+        }
       },
     });
 

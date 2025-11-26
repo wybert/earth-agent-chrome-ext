@@ -22,6 +22,12 @@ if (typeof TextEncoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
 
+// Polyfill TransformStream for ai-sdk deps in jsdom
+if (typeof TransformStream === 'undefined') {
+  const { TransformStream } = require('stream/web');
+  global.TransformStream = TransformStream;
+}
+
 const makePort = () => ({
   name: 'test-port',
   onMessage: { addListener: jest.fn(), removeListener: jest.fn() },
