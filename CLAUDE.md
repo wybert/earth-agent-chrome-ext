@@ -146,36 +146,53 @@ Each tool typically has:
 ## Project Structure
 
 ```
-src/
-├── background/         # Background service worker
-│   ├── index.ts       # Main message listener and routing
-│   └── chat-handler.ts # AI provider integration (806 lines, refactored)
-├── content/           # Content script for Earth Engine pages
-│   └── index.ts
-├── sidepanel/         # React UI entry point
-│   └── index.tsx
-├── components/        # React components
-│   ├── Chat.tsx       # Main chat component with Help button
-│   ├── Settings.tsx   # Provider/model configuration
-│   ├── EarthEngineAgent.tsx
-│   └── ui/           # Reusable UI components (shadcn/ui based)
-├── lib/
-│   ├── prompts/
-│   │   └── gee-prompts.ts  # All system prompts (Ask/Do modes)
-│   ├── tools/
-│   │   ├── ai-tools.ts     # All AI SDK tool definitions (1,256 lines)
-│   │   ├── earth-engine/   # EE-specific tool implementations
-│   │   ├── browser/        # Browser interaction tools
-│   │   └── context7/       # Documentation query tools
-│   ├── utils.ts      # Shared utilities (255 lines: detectEnvironment,
-│   │                 # tab selection, content script injection, resilient fetch)
-│   └── audio-utils.ts
-├── hooks/            # React hooks
-├── types/            # TypeScript type definitions
-│   ├── extension.ts  # Extension-specific types
-│   └── chrome.d.ts   # Chrome API type extensions
-├── assets/           # Icons and images
-└── manifest.json     # Chrome extension manifest
+earth-agent-ai-sdk/
+├── src/                    # Source code
+│   ├── background/         # Background service worker
+│   │   ├── index.ts       # Main message listener and routing
+│   │   └── chat-handler.ts # AI provider integration (806 lines, refactored)
+│   ├── content/           # Content script for Earth Engine pages
+│   │   └── index.ts
+│   ├── sidepanel/         # React UI entry point
+│   │   └── index.tsx
+│   ├── components/        # React components
+│   │   ├── Chat.tsx       # Main chat component with Help button
+│   │   ├── Settings.tsx   # Provider/model configuration
+│   │   ├── EarthEngineAgent.tsx
+│   │   └── ui/           # Reusable UI components (shadcn/ui based)
+│   ├── lib/
+│   │   ├── prompts/
+│   │   │   └── gee-prompts.ts  # All system prompts (Ask/Do modes)
+│   │   ├── tools/
+│   │   │   ├── ai-tools.ts     # All AI SDK tool definitions (1,256 lines)
+│   │   │   ├── earth-engine/   # EE-specific tool implementations
+│   │   │   ├── browser/        # Browser interaction tools
+│   │   │   └── context7/       # Documentation query tools
+│   │   ├── utils.ts      # Shared utilities (255 lines: detectEnvironment,
+│   │   │                 # tab selection, content script injection, resilient fetch)
+│   │   └── audio-utils.ts
+│   ├── hooks/            # React hooks
+│   ├── types/            # TypeScript type definitions
+│   │   ├── extension.ts  # Extension-specific types
+│   │   └── chrome.d.ts   # Chrome API type extensions
+│   ├── assets/           # Icons and images
+│   └── manifest.json     # Chrome extension manifest
+│
+├── docs/                   # Documentation (keep organized!)
+│   ├── debugging/         # Debug notes and snapshots
+│   ├── development/       # Development guides and plans
+│   ├── implementation/    # Implementation records and analysis
+│   └── testing/           # Test documentation
+│
+├── scripts/               # Utility scripts
+│   └── debug/            # Debug and testing scripts
+│
+├── reference/             # Reference materials
+│   └── api-models/       # API model definitions (JSON files)
+│
+├── tests/                 # Test files
+├── memory-bank/          # Project context and history
+└── dist/                 # Build output (generated, not committed)
 ```
 
 ### Code Organization Philosophy
@@ -186,6 +203,61 @@ The project follows a **single-file pattern** for better maintainability:
 - **One utils file** (`utils.ts`): All shared helper functions centralized
 
 This approach reduces file fragmentation while maintaining clear separation of concerns.
+
+## File Organization Guidelines
+
+**IMPORTANT**: Keep the root directory clean and organized. When creating new files, follow these rules:
+
+### ✅ What Goes in the Root Directory
+- Configuration files only: `package.json`, `tsconfig.json`, `webpack.config.js`, etc.
+- Main documentation: `README.md`, `CLAUDE.md`, `PRIVACY_POLICY.md`
+- Project management: `roadmap.md`
+
+### 📁 Where to Create New Files
+
+**Documentation Files** → `docs/`
+- Development plans, guides → `docs/development/`
+- Implementation notes, analysis → `docs/implementation/`
+- Test documentation → `docs/testing/`
+- Debug notes, snapshots → `docs/debugging/`
+
+**Scripts** → `scripts/`
+- Debug/test scripts → `scripts/debug/`
+- Build scripts → `scripts/build/`
+
+**Reference Materials** → `reference/`
+- API schemas, model definitions → `reference/api-models/`
+- Code examples → `reference/examples/`
+
+**Source Code** → `src/`
+- All application code must go in `src/` subdirectories
+- Follow the established structure (components, lib, hooks, etc.)
+
+### 🚫 Never Create These in Root
+- Debug scripts (e.g., `test-*.js`, `analyze-*.js`, `debug-*.js`)
+- Implementation notes (e.g., `*-ANALYSIS.md`, `*-IMPLEMENTATION.md`)
+- Temporary files or test outputs
+- API reference files (e.g., `*_models.json`)
+
+### 📝 Examples
+
+**Bad** ❌
+```bash
+# Creating files in root directory
+touch test-new-feature.js
+touch FEATURE-ANALYSIS.md
+touch openai-models.json
+```
+
+**Good** ✅
+```bash
+# Creating files in appropriate directories
+touch scripts/debug/test-new-feature.js
+touch docs/implementation/FEATURE-ANALYSIS.md
+touch reference/api-models/openai-models.json
+```
+
+**Before creating any file, ask yourself**: "Does this belong in the root directory?" If not, choose the appropriate subdirectory from the structure above.
 
 ## Key Implementation Details
 
