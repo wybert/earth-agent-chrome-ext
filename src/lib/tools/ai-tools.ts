@@ -159,7 +159,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Earth Engine dataset documentation tool
     const earthEngineDatasetTool = tool({
-      description: 'Get information about Earth Engine datasets including documentation and code examples',
+      description: 'Get information about Earth Engine datasets including documentation and code examples. WORKFLOW TIP: After finding a dataset, use earthEngineScript to write code with the correct dataset ID and band names.',
       inputSchema: z.object({
         datasetQuery: z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
       }),
@@ -218,7 +218,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Earth Engine script editor tool
     const earthEngineScriptTool = tool({
-      description: 'Insert JavaScript code into the Google Earth Engine code editor',
+      description: 'Insert JavaScript code into the Google Earth Engine code editor. WORKFLOW TIP: After editing code, ALWAYS use earthEngineRunCode to execute it, then check getConsoleOutput for errors.',
       inputSchema: z.object({
         scriptId: z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
         code: z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
@@ -365,7 +365,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Earth Engine code runner tool
     const earthEngineRunCodeTool = tool({
-      description: 'Run JavaScript code in the Google Earth Engine code editor',
+      description: 'Run JavaScript code in the Google Earth Engine code editor. WORKFLOW TIP: After running, ALWAYS check getConsoleOutput for errors and getMapInfo to verify visualizations were created.',
       inputSchema: z.object({
         code: z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
       }),
@@ -925,7 +925,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Reset Map/Inspector/Console tool
     const resetMapInspectorConsoleTool = tool({
-      description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment.',
+      description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment. WORKFLOW TIP: Follow this with clearScript to start completely fresh, then use earthEngineScript to write new code.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         // Manually send tool_start event
@@ -1057,7 +1057,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Clear Script tool
     const clearScriptTool = tool({
-      description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state.',
+      description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state. WORKFLOW TIP: After clearing, use earthEngineScript to write new code. WARNING: Do NOT use earthEngineRunCode immediately after this without writing code first.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         // Manually send tool_start event
@@ -1343,7 +1343,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Get Console Output tool
     const getConsoleOutputTool = tool({
-      description: 'Read all output from the Google Earth Engine console, including print() statements, data, and error messages. Use this to verify code execution results.',
+      description: 'Read all output from the Google Earth Engine console, including print() statements, data, and error messages. WORKFLOW TIP: Use this immediately after earthEngineRunCode to check for errors.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         // Manually send tool_start event
@@ -1520,7 +1520,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
 
     // Define Get Script tool
     const getScriptTool = tool({
-      description: 'Read the current JavaScript code from the Google Earth Engine code editor. Use this tool to see what code is currently in the editor before making modifications.',
+      description: 'Read the current JavaScript code from the Google Earth Engine code editor. WORKFLOW TIP: Use this before earthEngineScript when debugging or modifying existing code.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         // Manually send tool_start event
@@ -1649,7 +1649,7 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
   // Define Inspect Map tool
   // Define Get Map Info tool
   const getMapInfoTool = tool({
-    description: 'Get information about the Google Earth Engine map including its screen bounds, center point coordinates, and viewport dimensions. Useful for programmatic map interactions and determining where to click on the map.',
+    description: 'Get information about the Google Earth Engine map including current layers, bounds, center coordinates, and viewport dimensions. WORKFLOW TIP: Use this after earthEngineRunCode to verify visualization layers were created.',
     inputSchema: z.object({}),
     execute: async () => {
       // Manually send tool_start event
@@ -1781,8 +1781,10 @@ To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${dat
   const getInspectorOutputTool = tool({
     description: `Get complete information from the Google Earth Engine Inspector panel including Point data, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.).
 
+WORKFLOW TIP: Use clickByCoordinates BEFORE this tool to activate the Inspector at specific coordinates.
+
 IMPORTANT REQUIREMENTS:
-1. User must manually click on the map at the desired location to populate the Inspector panel
+1. User must manually click on the map OR you must use clickByCoordinates tool to populate the Inspector panel
 2. User must manually expand the Objects section in the Inspector panel (click on "Objects" to expand it)
 3. Once expanded, this tool will extract all visible data including EPSG, CRS transform, data type, dimensions, origin, and properties
 
