@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Check, X, Eye, EyeOff, ExternalLink } from 'lucide-react';
+import { Check, X, Eye, EyeOff, ExternalLink, Shield } from 'lucide-react';
 import { type ApiProvider } from '@/constants/models';
 import { OpenAICompatibleSection } from './OpenAICompatibleSection';
 
@@ -160,6 +160,28 @@ export function Settings({ onClose }: SettingsProps) {
       </div>
 
       <div className="space-y-4 overflow-y-auto flex-1 px-1 -mx-1">
+        {/* Privacy Notice */}
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-2">
+          <div className="flex items-start gap-3">
+            <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Privacy & Your Data</h3>
+              <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
+                By using Earth Agent, you agree to our data practices. All your data (API keys, chat history, settings) is stored locally on your device and never sent to our servers. Your messages are sent directly to your chosen AI provider.
+              </p>
+              <a
+                href="https://github.com/wybert/earth-agent-ai-sdk/blob/main/PRIVACY_POLICY.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline font-medium transition-colors"
+              >
+                Read Privacy Policy
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* API Keys Section */}
         <div className="pt-2">
           <h3 className="text-sm font-semibold mb-1">API Keys</h3>
