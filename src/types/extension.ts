@@ -13,6 +13,14 @@ export interface Message {
   role: string;
   content?: string;
   parts?: MessagePart[];
+  tokenUsage?: TokenUsage; // Token usage for this message
+}
+
+// Token usage information from AI providers
+export interface TokenUsage {
+  promptTokens: number;      // Tokens in the prompt
+  completionTokens: number;  // Tokens in the completion
+  totalTokens: number;       // Total tokens used
 }
 
 // Built-in providers

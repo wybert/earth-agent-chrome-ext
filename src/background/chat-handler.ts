@@ -9,6 +9,8 @@ import { createResilientFetch } from '../lib/utils';
 import { GEE_ASK_MODE_PROMPT, GEE_DO_MODE_PROMPT, GEE_SYSTEM_PROMPT } from '../lib/prompts/gee-prompts';
 import { createAITools, type ToolEventCallback } from '../lib/tools/ai-tools';
 import { OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '../constants/models';
+import { estimatePromptTokens } from '../lib/utils/token-counter';
+import { getModelContextLimit } from '../constants/model-limits';
 
 // Re-export ToolEventCallback and Provider for backwards compatibility
 export type { ToolEventCallback, Provider };
@@ -764,6 +766,29 @@ ${projectContext}`;
         console.log('🔧 [Chat Handler] onToolEvent callback is NOT provided');
       }
 
+      // Estimate token usage before making the API call
+      const systemPrompt = streamOptions.system as string || '';
+      const toolCount = Object.keys(toolsToUse).length;
+      const tokenEstimate = estimatePromptTokens(systemPrompt, messages, toolCount);
+
+      console.log(`📊 [Chat Handler] Token estimate before API call:`, {
+        systemTokens: tokenEstimate.systemTokens,
+        toolTokens: tokenEstimate.toolTokens,
+        messageTokens: tokenEstimate.messageTokens,
+        totalEstimated: tokenEstimate.totalTokens
+      });
+
+      // Check token estimate against model limit
+      const modelLimit = getModelContextLimit(effectiveModel);
+      const estimatedPercentage = (tokenEstimate.totalTokens / modelLimit) * 100;
+
+      // Warn if approaching or exceeding limit (but still allow the request)
+      if (estimatedPercentage >= 100) {
+        console.error(`🚨 [Chat Handler] Token estimate (${tokenEstimate.totalTokens}) exceeds model limit (${modelLimit})! Request may fail.`);
+      } else if (estimatedPercentage >= 90) {
+        console.warn(`⚠️ [Chat Handler] Token estimate (${tokenEstimate.totalTokens}) is ${estimatedPercentage.toFixed(1)}% of model limit (${modelLimit})`);
+      }
+
       // Use streamText for AI generation with tools
       // streamText returns the result object synchronously. The async work happens when the stream is consumed.
       const result = streamText(streamOptions);
@@ -776,6 +801,17 @@ ${projectContext}`;
       const customErrorHandlingStream = new ReadableStream({
         async start(controller) {
           try {
+            // Send token estimate as the first chunk
+            const estimateChunk = encoder.encode(`data: ${JSON.stringify({
+              type: 'token_estimate',
+              estimate: {
+                promptTokens: tokenEstimate.totalTokens,
+                systemTokens: tokenEstimate.systemTokens,
+                toolTokens: tokenEstimate.toolTokens,
+                messageTokens: tokenEstimate.messageTokens
+              }
+            })}\n\n`);
+            controller.enqueue(estimateChunk);
             // Get the original text stream
             const originalStream = result.toTextStreamResponse().body;
             if (!originalStream) {
@@ -790,7 +826,26 @@ ${projectContext}`;
               const { done, value } = await reader.read();
 
               if (done) {
-                // Before closing, check if there was an error captured by onError
+                // Before closing, send token usage information
+                try {
+                  const usage = await result.usage;
+                  if (usage) {
+                    console.log(`📊 [Chat Handler] Token usage:`, usage);
+                    const usageChunk = encoder.encode(`data: ${JSON.stringify({
+                      type: 'token_usage',
+                      usage: {
+                        promptTokens: usage.inputTokens || 0,
+                        completionTokens: usage.outputTokens || 0,
+                        totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0)
+                      }
+                    })}\n\n`);
+                    controller.enqueue(usageChunk);
+                  }
+                } catch (usageError) {
+                  console.warn(`⚠️ [Chat Handler] Could not get token usage:`, usageError);
+                }
+
+                // Check if there was an error captured by onError
                 if (streamError) {
                   console.log(`❌ [Chat Handler] Sending captured error to frontend:`, streamError.message);
                   const errorChunk = encoder.encode(`error:${JSON.stringify({ error: streamError.message })}\n`);

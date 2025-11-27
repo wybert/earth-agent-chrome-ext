@@ -1973,6 +1973,40 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
             } catch (parseError) {
               console.error(`[${requestId}] Failed to parse error message:`, chunk);
             }
+          } else if (chunk.startsWith('data: ')) {
+            // Check if this is a data message (e.g., token usage, token estimate)
+            try {
+              const data = JSON.parse(chunk.substring(6)); // Remove 'data: ' prefix
+              if (data.type === 'token_usage' && data.usage) {
+                console.log(`📊 [${requestId}] Received token usage:`, data.usage);
+                port.postMessage({
+                  type: 'TOKEN_USAGE',
+                  requestId,
+                  usage: data.usage
+                });
+              } else if (data.type === 'token_estimate' && data.estimate) {
+                console.log(`📊 [${requestId}] Received token estimate:`, data.estimate);
+                port.postMessage({
+                  type: 'TOKEN_ESTIMATE',
+                  requestId,
+                  estimate: data.estimate
+                });
+              } else {
+                // Unknown data type, treat as normal chunk
+                port.postMessage({
+                  type: 'CHAT_STREAM_CHUNK',
+                  requestId,
+                  chunk: chunk
+                });
+              }
+            } catch (parseError) {
+              // If parsing fails, treat as normal chunk
+              port.postMessage({
+                type: 'CHAT_STREAM_CHUNK',
+                requestId,
+                chunk: chunk
+              });
+            }
           } else {
             // Normal chunk, forward to frontend
             port.postMessage({
