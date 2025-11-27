@@ -13,6 +13,7 @@ import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
 import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
+import { TokenUsageDisplay } from "@/components/ui/TokenUsageDisplay";
 import { DEFAULT_MODELS } from '@/constants/models';
 
 // Define Zod schema for message responses (Restore)
@@ -138,6 +139,13 @@ export function ChatUI() {
 
   // Agent mode state (ask = read-only, do = full actions)
   const [agentMode, setAgentMode] = useState<'ask' | 'do'>('ask');
+
+  // Token usage tracking for current session
+  const [sessionTokenUsage, setSessionTokenUsage] = useState<{
+    totalPromptTokens: number;
+    totalCompletionTokens: number;
+    totalTokens: number;
+  }>({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
 
   // Clean up old sessions if exceeding MAX_SESSIONS limit
   const cleanupOldSessions = useCallback((sessions: ChatSessions): ChatSessions => {
@@ -595,6 +603,65 @@ export function ChatUI() {
         toolEventsRef.current = [];
         setToolEvents([]);
         break;
+      case 'TOKEN_ESTIMATE':
+        // Handle token estimate before API call
+        console.log('📊 [Chat] Received token estimate:', response.estimate);
+        if (response.estimate) {
+          setSessionTokenUsage(prev => {
+            const updated = {
+              totalPromptTokens: prev.totalPromptTokens + (response.estimate.promptTokens || 0),
+              totalCompletionTokens: prev.totalCompletionTokens, // Don't add completion tokens yet
+              totalTokens: prev.totalTokens + (response.estimate.promptTokens || 0)
+            };
+            console.log('📊 [Chat] Token estimate added:', {
+              previous: prev,
+              estimate: response.estimate,
+              updated: updated
+            });
+            return updated;
+          });
+        }
+        break;
+      case 'TOKEN_USAGE':
+        // Handle actual token usage from API response
+        // Note: This includes both prompt and completion tokens, so we need to adjust
+        console.log('📊 [Chat] Received actual token usage:', response.usage);
+        if (response.usage) {
+          setSessionTokenUsage(prev => {
+            // The actual usage includes prompt tokens which we already added via estimate
+            // So we only add the completion tokens here
+            const updated = {
+              totalPromptTokens: prev.totalPromptTokens, // Already counted in estimate
+              totalCompletionTokens: prev.totalCompletionTokens + (response.usage.completionTokens || 0),
+              totalTokens: prev.totalTokens + (response.usage.completionTokens || 0)
+            };
+            console.log('📊 [Chat] Actual token usage added:', {
+              previous: prev,
+              incoming: response.usage,
+              updated: updated
+            });
+            return updated;
+          });
+
+          // Also attach token usage to the last assistant message
+          setMessages(prevMessages => {
+            const lastMessageIndex = prevMessages.length - 1;
+            if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].role === 'assistant') {
+              const newMessages = prevMessages.slice();
+              newMessages[lastMessageIndex] = {
+                ...prevMessages[lastMessageIndex],
+                tokenUsage: {
+                  promptTokens: response.usage.promptTokens,
+                  completionTokens: response.usage.completionTokens,
+                  totalTokens: response.usage.totalTokens
+                }
+              };
+              return newMessages;
+            }
+            return prevMessages;
+          });
+        }
+        break;
       case 'TOOL_EVENT':
         // Handle tool execution events - add to message content
         console.log('🔧 [Chat] TOOL_EVENT received:', response.event);
@@ -678,6 +745,15 @@ export function ChatUI() {
             // Model not found errors
             else if (errorMessage.toLowerCase().includes('model') && (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('does not exist') || errorMessage.toLowerCase().includes('invalid model'))) {
               userFriendlyMessage = `❌ **Model Error**\n\nThe selected model is not available or doesn't exist.\n\n**Possible causes:**\n• Model name is incorrect\n• Your API key doesn't have access to this model\n• Model has been deprecated or renamed\n\n**What to do:**\n1. Check the model name in the dropdown menu\n2. Verify your API key has access to this model\n3. Try selecting a different model\n\n**Error details:** ${errorMessage}`;
+            }
+            // Context/Token limit errors (must check before rate limit)
+            else if (errorMessage.toLowerCase().includes('context length') ||
+                     errorMessage.toLowerCase().includes('maximum context') ||
+                     errorMessage.toLowerCase().includes('context_length_exceeded') ||
+                     errorMessage.toLowerCase().includes('token limit') ||
+                     errorMessage.toLowerCase().includes('too many tokens') ||
+                     errorMessage.toLowerCase().includes('exceeds') && errorMessage.toLowerCase().includes('token')) {
+              userFriendlyMessage = `📏 **Context Length Exceeded**\n\nYour conversation has exceeded the model's maximum context window.\n\n**What happened:**\nThe total tokens (messages + system prompt + tools) exceeded the model's limit.\n\n**What to do:**\n1. Start a new chat session (New Chat button)\n2. Delete some earlier messages to reduce context\n3. Switch to a model with larger context window:\n   • Gemini 2.5 Pro: 2M tokens\n   • Claude Sonnet 4.5: 200k tokens\n   • GPT-4o: 128k tokens\n\n**Error details:** ${errorMessage}`;
             }
             // Rate limit errors
             else if (errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('429')) {
@@ -962,6 +1038,8 @@ export function ChatUI() {
     setInput('');
     setError(null);
     setIsLocalLoading(false);
+    // Reset token usage when switching sessions
+    setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
     chrome.storage.local.set({ [ACTIVE_SESSION_ID_KEY]: sessionId });
     setIsMobileSidebarOpen(false);
   }, [sessions, activeSessionId]);
@@ -1058,6 +1136,8 @@ export function ChatUI() {
     setInput('');
     setError(null);
     setIsLocalLoading(false);
+    // Reset token usage for new session
+    setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
     setIsMobileSidebarOpen(false);
   }, [sessions, persistSessionsState]);
 
@@ -1100,6 +1180,8 @@ export function ChatUI() {
     setInput('');
     setError(null);
     setIsLocalLoading(false);
+    // Reset token usage for new session
+    setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
     setIsMobileSidebarOpen(false);
   }, [persistSessionsState]);
 
@@ -1284,6 +1366,14 @@ export function ChatUI() {
         </div>
       </div>
 
+        {/* Token Usage Display - Right below header */}
+        <TokenUsageDisplay
+          promptTokens={sessionTokenUsage.totalPromptTokens}
+          completionTokens={sessionTokenUsage.totalCompletionTokens}
+          totalTokens={sessionTokenUsage.totalTokens}
+          model={selectedModel}
+        />
+
         {/* Main Content Area with Sidebar */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {isDesktopSidebarOpen && (
@@ -1319,7 +1409,7 @@ export function ChatUI() {
               model={selectedModel}
               onProviderChange={setApiProvider}
               onModelChange={setSelectedModel}
-              className="h-full"
+              className="flex-1 min-h-0"
             />
 
             {/* Error and Fallback Displays - Positioned at bottom above input */}
