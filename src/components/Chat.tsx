@@ -15,6 +15,8 @@ import { Chat } from "@/components/ui/chat"; // Keep the UI component
 import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
 import { TokenUsageDisplay } from "@/components/ui/TokenUsageDisplay";
 import { DEFAULT_MODELS } from '@/constants/models';
+import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
+import { useOnboarding } from '@/hooks/useOnboarding';
 
 // Define Zod schema for message responses (Restore)
 const MessageContentSchema = z.string().min(1);
@@ -105,6 +107,23 @@ type ChatSessions = Record<string, StoredChatSession>
 // Restore original component name and structure
 export function ChatUI() {
   const [showSettings, setShowSettings] = useState(false);
+
+  // Onboarding
+  const {
+    showWelcome,
+    showTour,
+    currentStep,
+    steps,
+    startTour,
+    nextStep,
+    skipTour,
+    completeTour,
+  } = useOnboarding();
+
+  // Debug onboarding state
+  useEffect(() => {
+    console.log('🎯 [Chat] Onboarding state:', { showWelcome, showTour, currentStep });
+  }, [showWelcome, showTour, currentStep]);
   const [showToolsTest, setShowToolsTest] = useState(false);
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
@@ -1357,10 +1376,19 @@ export function ChatUI() {
             aria-label="Help"
             className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
             title="Help"
+            data-onboarding="help-button"
           >
             <HelpCircle className="h-4 w-4 text-gray-600" />
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setShowSettings(true)} aria-label="Settings" className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" title="Settings">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowSettings(true)}
+            aria-label="Settings"
+            className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+            title="Settings"
+            data-onboarding="settings-button"
+          >
             <SettingsIcon className="h-4 w-4 text-gray-600" />
           </Button>
         </div>
@@ -1475,6 +1503,20 @@ export function ChatUI() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Onboarding */}
+      {showWelcome && (
+        <WelcomeModal onStart={startTour} onSkip={skipTour} />
+      )}
+      {showTour && (
+        <OnboardingTour
+          steps={steps}
+          currentStep={currentStep}
+          onNext={nextStep}
+          onSkip={skipTour}
+          onComplete={completeTour}
+        />
       )}
     </>
   );

@@ -473,6 +473,7 @@ export function MessageInput({
               ref={textAreaRef as RefObject<HTMLTextAreaElement>}
               onPaste={onPaste}
               onKeyDown={onKeyDown}
+              data-onboarding="chat-input"
               className={cn(
                 "z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto",
                 className
@@ -490,7 +491,10 @@ export function MessageInput({
         <div className="flex gap-2 items-center">
           {onModeChange && (
             <Select value={mode} onValueChange={(value) => onModeChange(value as 'ask' | 'do')}>
-              <SelectTrigger className="h-7 w-12 px-1.5 text-[11px] border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+              <SelectTrigger
+                className="h-7 w-12 px-1.5 text-[11px] border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                data-onboarding="mode-selector"
+              >
                 <span>{mode === 'ask' ? 'Ask' : 'Do'}</span>
               </SelectTrigger>
               <SelectContent side="top" className="w-28">
