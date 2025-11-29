@@ -103,10 +103,23 @@ jobs:
           -x "*.tgz" \
           -x "*.zip"
           
-    - name: Get tag name
+    - name: Get tag name and prepare release notes
       id: tag_name
-      run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+
+        # Check if release notes file exists for this version
+        RELEASE_NOTES_FILE="RELEASE_NOTES_${TAG_NAME}.md"
+        if [ -f "$RELEASE_NOTES_FILE" ]; then
+          echo "Found release notes file: $RELEASE_NOTES_FILE"
+          echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
+          echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
+        else
+          echo "No release notes file found for $TAG_NAME"
+          echo "USE_RELEASE_NOTES=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Publish to Chrome Web Store
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
       uses: mnao305/chrome-extension-upload@v5.0.0
@@ -118,7 +131,21 @@ jobs:
         refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
         publish: true  # Set to false if you want to manually publish after review
 
-    - name: Create Release
+    - name: Create Release with custom notes
+      if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'true'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
+        name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+        body_path: ${{ steps.tag_name.outputs.RELEASE_NOTES_FILE }}
+        files: |
+          earth-agent-extension.zip
+          earth-agent-source.zip
+        draft: false
+        prerelease: false
+
+    - name: Create Release with default notes
+      if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'false'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
