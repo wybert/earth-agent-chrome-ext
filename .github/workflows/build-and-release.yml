@@ -28,9 +28,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: |
-        # Try npm ci first, fall back to legacy peer deps if needed
-        npm ci || npm ci --legacy-peer-deps
+      run: npm ci --legacy-peer-deps
       
     - name: Run type check
       run: npm run type-check
