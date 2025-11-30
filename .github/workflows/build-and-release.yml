@@ -54,14 +54,22 @@ jobs:
       run: |
         # Extract version from git tag (remove 'v' prefix)
         VERSION=${GITHUB_REF#refs/tags/v}
-        
+
         # Update manifest.json version
         sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" dist/manifest.json
-        
+
         # Verify version was updated
         echo "Updated manifest.json version to: $VERSION"
         grep "version" dist/manifest.json
-        
+
+    - name: Clean manifest for Chrome Web Store
+      run: |
+        echo "Removing localhost permissions from manifest..."
+        node scripts/prepare-manifest-for-store.js
+        echo ""
+        echo "Verifying cleaned manifest:"
+        grep -A 10 "host_permissions" dist/manifest.json || echo "No host_permissions found"
+
     - name: Verify extension files
       run: |
         echo "Verifying required extension files are present:"
