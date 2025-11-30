@@ -6,8 +6,9 @@ const truncateText = (text: string, max = 80) => {
 };
 
 const getLastMessagePreview = (messages: Message[]) => {
-  const last = [...messages].reverse().find((msg) => (msg.content || '').trim().length > 0);
-  return last ? truncateText(last.content || '', 80) : '';
+  // Show the last user message (question) instead of last message (which could be assistant's reply)
+  const lastUserMessage = [...messages].reverse().find((msg) => msg.role === 'user' && (msg.content || '').trim().length > 0);
+  return lastUserMessage ? truncateText(lastUserMessage.content || '', 80) : '';
 };
 
 const getSuggestedSessionTitle = (messages: Message[], timestamp: number) => {

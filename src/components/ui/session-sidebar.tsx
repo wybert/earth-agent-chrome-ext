@@ -13,6 +13,7 @@ export interface SidebarSession {
   preview?: string
   updatedAt: number
   pinned?: boolean
+  messagesContent?: string // All messages content concatenated for search
 }
 
 interface SessionSidebarProps {
@@ -50,7 +51,8 @@ export function SessionSidebar({
   const filtered = React.useMemo(() => {
     if (!normalizedSearch) return sessions
     return sessions.filter((session) => {
-      const haystack = `${session.title} ${session.preview || ""}`.toLowerCase()
+      // Search in title, preview, and all messages content
+      const haystack = `${session.title} ${session.preview || ""} ${session.messagesContent || ""}`.toLowerCase()
       return haystack.includes(normalizedSearch)
     })
   }, [sessions, normalizedSearch])
