@@ -128,7 +128,7 @@ jobs:
           echo "USE_RELEASE_NOTES=false" >> $GITHUB_OUTPUT
         fi
 
-    - name: Publish to Chrome Web Store
+    - name: Upload to Chrome Web Store
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
       continue-on-error: true  # Don't fail the workflow if Chrome Web Store upload fails
       id: chrome_upload
@@ -139,7 +139,20 @@ jobs:
         client-id: ${{ secrets.CHROME_CLIENT_ID }}
         client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
         refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        publish: true  # Automatically publish after upload
+        publish: false  # Upload only - publish manually to avoid API errors
+
+    - name: Chrome Web Store Upload Status
+      if: steps.chrome_upload.outcome == 'success'
+      run: |
+        echo "✅ Extension uploaded successfully to Chrome Web Store!"
+        echo "📝 Next step: Visit Chrome Web Store Developer Dashboard to publish manually"
+        echo "🔗 Dashboard: https://chrome.google.com/webstore/devconsole"
+
+    - name: Chrome Web Store Upload Failed
+      if: steps.chrome_upload.outcome == 'failure'
+      run: |
+        echo "❌ Chrome Web Store upload failed"
+        echo "📦 You can still download the extension package from GitHub Release"
 
     - name: Create Release with custom notes
       if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'true'

@@ -36,29 +36,44 @@ if (isContextInvalidated) {
   throw new Error('Extension context invalid on startup');
 }
 
+// Flag to prevent execution of duplicate instances
+let shouldExecute = true;
+
 // Check if another instance is already running
 if ((window as any)[CONTENT_SCRIPT_ID]) {
   const existingTimestamp = (window as any)[CONTENT_SCRIPT_ID];
-  console.log(`Content script already running (timestamp: ${existingTimestamp}). Current timestamp: ${INSTANCE_TIMESTAMP}. Exiting this instance.`);
-  
+  console.log(`⚠️ [Content Script] Another instance already running (timestamp: ${existingTimestamp}). Current timestamp: ${INSTANCE_TIMESTAMP}.`);
+
   // If this instance is newer, take over
   if (INSTANCE_TIMESTAMP > existingTimestamp) {
-    console.log('This instance is newer, taking over...');
+    console.log(`✅ [Content Script] This instance is newer, taking over from old instance ${existingTimestamp}`);
     // Clean up the old instance
     const oldPeriodicCheckId = (window as any)[CONTENT_SCRIPT_ID + '_intervalId'];
     if (oldPeriodicCheckId) {
       clearInterval(oldPeriodicCheckId);
-      console.log('Cleared old periodic check interval');
+      console.log('🧹 [Content Script] Cleared old periodic check interval');
+    }
+
+    // Signal old instance to stop (if it's still listening)
+    const oldShouldExecute = (window as any)[CONTENT_SCRIPT_ID + '_shouldExecute'];
+    if (oldShouldExecute !== undefined) {
+      (window as any)[CONTENT_SCRIPT_ID + '_shouldExecute'] = false;
+      console.log('🛑 [Content Script] Signaled old instance to stop');
     }
   } else {
-    // Exit if an older or same instance is already running
-    console.log('Exiting older/duplicate content script instance');
-    throw new Error('Content script instance already running with same or newer timestamp');
+    // This instance is older or same age - don't execute
+    console.log(`🛑 [Content Script] Exiting: older/duplicate instance (${INSTANCE_TIMESTAMP} <= ${existingTimestamp})`);
+    shouldExecute = false;
+    isContextInvalidated = true; // Mark as invalidated to prevent any operations
   }
 }
 
-// Mark this instance as the active one
-(window as any)[CONTENT_SCRIPT_ID] = INSTANCE_TIMESTAMP;
+// Mark this instance as the active one ONLY if we should execute
+if (shouldExecute) {
+  (window as any)[CONTENT_SCRIPT_ID] = INSTANCE_TIMESTAMP;
+  (window as any)[CONTENT_SCRIPT_ID + '_shouldExecute'] = true;
+  console.log(`✅ [Content Script] Registered as active instance: ${INSTANCE_TIMESTAMP}`);
+}
 
 // Initialize content script immediately to catch messages early
 console.log('Earth Engine AI Assistant content script loading at:', new Date().toISOString(), 'with timestamp:', INSTANCE_TIMESTAMP);
@@ -140,28 +155,29 @@ function notifyBackgroundScript() {
 let pingAttempts = 0;
 const MAX_PING_ATTEMPTS = 3;
 
-// Respond to ping checks from background script
-function setupPingResponse() {
-  // Create a specific handler for PING messages to increase reliability
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message && message.type === 'PING') {
-      console.log('Received PING from background script, responding...');
-      sendResponse({ 
-        success: true, 
-        message: 'Content script is active', 
-        timestamp: Date.now(),
-        url: window.location.href
-      });
-      // Reset ping attempts when a successful ping occurs
-      pingAttempts = 0;
-      backgroundConnectionVerified = true;
-      return true;
-    }
-  });
-}
+// Track if message listener has been added to prevent duplicates
+let messageListenerAdded = false;
 
-// Update the message listener to handle the new message type
+// Single message listener to handle ALL messages (including PING)
+// This prevents duplicate listener registration during hot reloads
+// ONLY add listener if this instance should execute
+if (shouldExecute && !messageListenerAdded) {
+  console.log(`🔧 [Content Script][${INSTANCE_TIMESTAMP}] Adding message listener (single instance)`);
+  messageListenerAdded = true;
+
   chrome.runtime.onMessage.addListener((message: Message, sender, sendResponse) => {
+  // CRITICAL: Check GLOBAL flag on EVERY message to respect deactivation from newer instances
+  const globalShouldExecute = (window as any)[CONTENT_SCRIPT_ID + '_shouldExecute'];
+  const isActiveInstance = (window as any)[CONTENT_SCRIPT_ID] === INSTANCE_TIMESTAMP;
+
+  if (!shouldExecute || globalShouldExecute === false || !isActiveInstance) {
+    console.log(`🛑 [Content Script][${INSTANCE_TIMESTAMP}] Instance deactivated, ignoring message: ${message.type}`);
+    console.log(`   - Local shouldExecute: ${shouldExecute}`);
+    console.log(`   - Global shouldExecute: ${globalShouldExecute}`);
+    console.log(`   - Is active instance: ${isActiveInstance}`);
+    console.log(`   - Current active timestamp: ${(window as any)[CONTENT_SCRIPT_ID]}`);
+    return false; // Don't handle this message
+  }
   if (isContextInvalidated) {
     console.error('Content script context is invalidated. Aborting message handling for:', message.type);
     // It's tricky to know if we should return true or false here without knowing if sendResponse was originally going to be async.
@@ -181,8 +197,17 @@ function setupPingResponse() {
   try {
     switch (message.type) {
       case 'PING':
-        sendResponse({ success: true, message: 'Earth Engine content script is active' });
-        return false;
+        console.log('Received PING from background script, responding...');
+        sendResponse({
+          success: true,
+          message: 'Content script is active',
+          timestamp: Date.now(),
+          url: window.location.href
+        });
+        // Reset ping attempts when a successful ping occurs
+        pingAttempts = 0;
+        backgroundConnectionVerified = true;
+        return true;
         
       case 'INIT':
         sendResponse({ success: true, message: 'Earth Engine content script is active' });
@@ -273,17 +298,23 @@ function setupPingResponse() {
     });
     return false;
   }
-});
+  });
+} else if (!shouldExecute) {
+  console.log(`🛑 [Content Script][${INSTANCE_TIMESTAMP}] Skipping listener registration - instance should not execute`);
+}
 
 // Also initialize when DOM content is loaded to make sure we have access to the page elements
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setupPingResponse();
+// ONLY if this instance should execute
+if (shouldExecute) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      notifyBackgroundScript();
+    });
+  } else {
     notifyBackgroundScript();
-  });
+  }
 } else {
-  setupPingResponse();
-  notifyBackgroundScript();
+  console.log(`🛑 [Content Script][${INSTANCE_TIMESTAMP}] Skipping initialization - instance should not execute`);
 }
 
 // Also set up a periodic self-check to ensure registration
@@ -375,10 +406,14 @@ function periodicSelfCheck() {
 }
 
 // Run self-checks less frequently (every 30 seconds instead of 10) to reduce context invalidation chances
-if (periodicCheckIntervalId === undefined) { // Ensure it's not set multiple times if script re-runs somehow
+// ONLY if this instance should execute
+if (shouldExecute && periodicCheckIntervalId === undefined) { // Ensure it's not set multiple times if script re-runs somehow
     periodicCheckIntervalId = window.setInterval(periodicSelfCheck, 30000); // Changed from 10000 to 30000
     // Store the interval ID globally so other instances can clean it up
     (window as any)[CONTENT_SCRIPT_ID + '_intervalId'] = periodicCheckIntervalId;
+    console.log(`✅ [Content Script][${INSTANCE_TIMESTAMP}] Started periodic self-check`);
+} else if (!shouldExecute) {
+    console.log(`🛑 [Content Script][${INSTANCE_TIMESTAMP}] Skipping periodic check - instance should not execute`);
 }
 
 /**
