@@ -1,6 +1,29 @@
 # Earth Agent v1.1.0 Release Notes
 
+## ⚠️ Important Changes
+
+### Chrome Web Store Compliance
+- **Removed localhost permissions** for Chrome Web Store compliance
+- **Ollama support unavailable** in Web Store version
+  - Web Store version supports: OpenAI, Anthropic, Google Gemini, Qwen
+  - For Ollama users: Download from [GitHub Releases](https://github.com/wybert/earth-agent-chrome-ext/releases) and install manually
+
+### AI SDK 5.0 Upgrade
+- **Migrated from AI SDK 4.x to 5.0** for better performance and reliability
+- Improved streaming capabilities and error handling
+- Enhanced type safety and developer experience
+
 ## 🎉 Major New Features
+
+### Latest AI Model Support
+- **GPT-5.1** 🚀 - OpenAI's newest flagship model (Recommended)
+- **GPT-5.1 Codex** - Specialized for code generation and analysis
+- **Claude Sonnet 4.5** - Anthropic's latest and most capable (default)
+- **Claude Haiku 4.5** - Ultra-fast responses with excellent quality
+- **Claude Sonnet 3.7** - Enhanced reasoning capabilities
+- **Gemini 3 Pro Preview** 🔥 - Google's experimental next-generation model
+- **Gemini 2.5 Pro** - Massive 2M token context window
+- Support for **30+ cutting-edge AI models** across 5 major providers
 
 ### Automatic Chrome Web Store Publishing
 - **GitHub Actions Integration**: Automatically publish new versions to Chrome Web Store when pushing version tags
@@ -14,13 +37,44 @@
 ### Enhanced Testing Tools
 - **Weather Tool**: Get real-time weather information
 - **DateTime Tool**: Access current date and time information
-- **Comprehensive Agent Testing Panel**: Test multiple AI providers with batch prompts
+- **Comprehensive Agent Testing Panel**:
+  - Test multiple AI providers with batch prompts
+  - **Helicone Integration**: AI observability and analytics
+  - Real-time progress tracking with success rate calculation
+  - Screenshot capture and CSV export
+  - Support for JSON/CSV/TXT prompt files
 
 ## 🔧 Improvements
 
-### Multi-Provider Support
-- Added support for OpenAI-compatible providers
-- Enhanced model selection UI for new installations
+### Multi-Provider Support & Latest AI Models
+
+**OpenAI (6 models)**
+- GPT-5.1 (Recommended), GPT-5.1 Codex, GPT-5.1 Chat
+- GPT-5, GPT-4.1, GPT-4o
+
+**Anthropic (7 models)**
+- Claude Sonnet 4.5, Claude Haiku 4.5 (Fast)
+- Claude Opus 4.1, Claude Opus 4, Claude Sonnet 4
+- Claude Sonnet 3.7, Claude Haiku 3.5
+
+**Google Gemini (3 models)**
+- Gemini 3 Pro Preview 🔥
+- Gemini 2.5 Pro (2M context), Gemini 2.5 Flash
+
+**Qwen (10 models)**
+- Qwen Max/Plus/Turbo (Latest & Stable versions)
+- Qwen VL Max (Vision-Language)
+- Qwen 2.5 72B, Qwen 2.5 14B (1M context), Qwen 2.5 VL 72B
+
+**Ollama (16+ local models)**
+- Llama 3.3 70B, Llama 3.2 90B/70B, Llama 3.1 70B
+- DeepSeek Coder V2, Mistral, Code Llama
+- LLaVA (Vision models), Phi-3, Gemma 2, Moondream
+- ⚠️ Note: Only available in manual installation from GitHub
+
+**Additional Features**
+- Support for OpenAI-compatible API providers
+- Enhanced model selection UI
 - Improved provider switching and configuration
 
 ### UI/UX Enhancements
@@ -79,11 +133,17 @@
 - Better file upload handling with size limitations
 - Enhanced port listening and connection management
 
-## 📦 Dependencies
+## 📦 Dependencies & Technical Stack
 
+### Major Updates
+- **AI SDK 5.0**: Upgraded from 4.x for improved streaming and error handling
+- **AI SDK React**: Updated to latest version with new hooks and utilities
+- **Provider Packages**: Updated @ai-sdk/openai, @ai-sdk/anthropic, @ai-sdk/google
+
+### Other Updates
 - Fixed Zod v4 dependency conflicts with `--legacy-peer-deps`
-- Updated AI SDK packages
 - Added chrome-webstore-upload-cli for automation
+- Updated various UI dependencies for better performance
 
 ## 🌐 Localization & Accessibility
 
@@ -111,12 +171,26 @@ The extension is automatically submitted to Chrome Web Store and pending review 
 After installation:
 1. Click the Earth Agent extension icon
 2. Go to Settings
-3. Add your AI provider API key:
-   - OpenAI API key
-   - Anthropic API key
-   - Google Gemini API key
-   - Qwen API key
-   - Ollama (local installation)
+3. Add your AI provider API key and choose from:
+
+   - **OpenAI** (6 models)
+     - GPT-5.1 🚀, GPT-5.1 Codex, GPT-5.1 Chat
+     - GPT-5, GPT-4.1, GPT-4o
+
+   - **Anthropic** (7 models)
+     - Claude Sonnet 4.5, Claude Haiku 4.5, Claude Opus 4.1
+     - Claude Opus 4, Claude Sonnet 4, Claude Sonnet 3.7, Claude Haiku 3.5
+
+   - **Google Gemini** (3 models)
+     - Gemini 3 Pro Preview 🔥, Gemini 2.5 Pro (2M), Gemini 2.5 Flash
+
+   - **Qwen** (10 models)
+     - Qwen Max/Plus/Turbo, Qwen VL Max, Qwen 2.5 series
+
+   - **Ollama** (16+ local models)
+     - ⚠️ Not available in Web Store version
+     - Download from GitHub for Llama 3.3, DeepSeek, Mistral, LLaVA, etc.
+
 4. Select your preferred provider and model
 5. Start chatting with Earth Engine!
 
