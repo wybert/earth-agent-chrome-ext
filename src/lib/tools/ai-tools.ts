@@ -224,19 +224,29 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
         code: z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
       }),
       execute: async ({ scriptId, code }) => {
+        const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log(`🔧 [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION START ==========`);
+        console.log(`🔧 [EarthEngineScriptTool][${executionId}] scriptId: "${scriptId}"`);
+        console.log(`🔧 [EarthEngineScriptTool][${executionId}] code length: ${code.length} characters`);
+        console.log(`🔧 [EarthEngineScriptTool][${executionId}] code preview: ${code.substring(0, 150)}...`);
+        console.log(`🔧 [EarthEngineScriptTool][${executionId}] timestamp: ${new Date().toISOString()}`);
+
         // Manually send tool_start event
         if (onToolEvent) {
+          console.log(`🔧 [EarthEngineScriptTool][${executionId}] Sending tool_start event`);
           onToolEvent({
             type: 'tool_start',
             toolName: 'earthEngineScript',
             args: { scriptId, code: code.substring(0, 100) + '...' },
             timestamp: Date.now()
           });
+        } else {
+          console.log(`⚠️ [EarthEngineScriptTool][${executionId}] No onToolEvent callback provided`);
         }
 
         try {
-          console.log(`🔧 [EarthEngineScriptTool] Tool called to edit script "${scriptId}"`);
-          console.time('EarthEngineScriptTool execution');
+          console.log(`🔧 [EarthEngineScriptTool][${executionId}] Starting execution...`);
+          console.time(`EarthEngineScriptTool-${executionId}`);
           
           const targetScriptId = scriptId === 'current' ? 'current_editor' : scriptId;
           
@@ -332,32 +342,39 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
               }
             });
           });
-          
-          console.timeEnd('EarthEngineScriptTool execution');
-          
+
+          console.timeEnd(`EarthEngineScriptTool-${executionId}`);
+
           if (!result.success) {
-            console.warn(`❌ [EarthEngineScriptTool] Failed to edit script via content script: ${result.error}`);
+            console.warn(`❌ [EarthEngineScriptTool][${executionId}] Failed to edit script via content script: ${result.error}`);
+            console.log(`❌ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION FAILED ==========`);
             return {
               success: false,
               error: result.error || 'Unknown error editing script',
-              suggestion: "Check content script logs or ensure EE tab is active."
+              suggestion: "Check content script logs or ensure EE tab is active.",
+              executionId
             };
           }
-          
-          console.log(`✅ [EarthEngineScriptTool] Successfully edited script "${targetScriptId}"`);
+
+          console.log(`✅ [EarthEngineScriptTool][${executionId}] Successfully edited script "${targetScriptId}"`);
+          console.log(`✅ [EarthEngineScriptTool][${executionId}] Result:`, JSON.stringify(result, null, 2));
+          console.log(`✅ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION SUCCESS ==========`);
           return {
             success: true,
             scriptId: targetScriptId,
             message: result.message || `Successfully inserted code into Earth Engine script "${targetScriptId}"`,
-            nextSteps: "You can now run the script in Earth Engine by clicking the 'Run' button"
+            nextSteps: "You can now run the script in Earth Engine by clicking the 'Run' button",
+            executionId
           };
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`❌ [EarthEngineScriptTool] Unexpected error:`, error);
+          console.error(`❌ [EarthEngineScriptTool][${executionId}] Unexpected error:`, error);
+          console.log(`❌ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION ERROR ==========`);
           return {
             success: false,
             error: `Unexpected error in EarthEngineScriptTool: ${errorMessage}`,
-            suggestion: "Check background script logs for more details"
+            suggestion: "Check background script logs for more details",
+            executionId
           };
         }
       },
@@ -370,19 +387,28 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
         code: z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
       }),
       execute: async ({ code }) => {
+        const executionId = `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION START ==========`);
+        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] code length: ${code.length} characters`);
+        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] code preview: ${code.substring(0, 150)}...`);
+        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] timestamp: ${new Date().toISOString()}`);
+
         // Manually send tool_start event
         if (onToolEvent) {
+          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Sending tool_start event`);
           onToolEvent({
             type: 'tool_start',
             toolName: 'earthEngineRunCode',
             args: { code: code.substring(0, 100) + '...' },
             timestamp: Date.now()
           });
+        } else {
+          console.log(`⚠️ [EarthEngineRunCodeTool][${executionId}] No onToolEvent callback provided`);
         }
 
         try {
-          console.log(`🏃 [EarthEngineRunCodeTool] Tool called to run code`);
-          console.time('EarthEngineRunCodeTool execution');
+          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Starting execution...`);
+          console.time(`EarthEngineRunCodeTool-${executionId}`);
           
           // Check if Chrome tabs API is available
           if (typeof chrome === 'undefined' || !chrome.tabs) {
@@ -476,32 +502,39 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
               }
             });
           });
-          
-          console.timeEnd('EarthEngineRunCodeTool execution');
-          
+
+          console.timeEnd(`EarthEngineRunCodeTool-${executionId}`);
+
           if (!result.success) {
-            console.warn(`❌ [EarthEngineRunCodeTool] Failed to run code via content script: ${result.error}`);
+            console.warn(`❌ [EarthEngineRunCodeTool][${executionId}] Failed to run code via content script: ${result.error}`);
+            console.log(`❌ [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION FAILED ==========`);
             return {
               success: false,
               error: result.error || 'Unknown error running code',
-              suggestion: "Check content script logs or ensure EE tab is active."
+              suggestion: "Check content script logs or ensure EE tab is active.",
+              executionId
             };
           }
-          
-          console.log(`✅ [EarthEngineRunCodeTool] Successfully ran code with result: ${result.result || 'No result returned'}`);
+
+          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] Successfully ran code with result: ${result.result || 'No result returned'}`);
+          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] Result:`, JSON.stringify(result, null, 2));
+          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION SUCCESS ==========`);
           return {
             success: true,
             result: result.result || 'Code executed successfully',
             message: 'Earth Engine code executed successfully',
-            nextSteps: "Check the Earth Engine console for any output or results"
+            nextSteps: "Check the Earth Engine console for any output or results",
+            executionId
           };
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`❌ [EarthEngineRunCodeTool] Unexpected error:`, error);
+          console.error(`❌ [EarthEngineRunCodeTool][${executionId}] Unexpected error:`, error);
+          console.log(`❌ [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION ERROR ==========`);
           return {
             success: false,
             error: `Unexpected error in EarthEngineRunCodeTool: ${errorMessage}`,
-            suggestion: "Check background script logs for more details"
+            suggestion: "Check background script logs for more details",
+            executionId
           };
         }
       },

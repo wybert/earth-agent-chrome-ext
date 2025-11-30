@@ -729,20 +729,59 @@ ${projectContext}`;
         // Note: tool_start events are sent manually by each tool's execute function
         // This ensures they're sent before the tool actually starts executing
         streamOptions.onStepStart = ({ toolCalls }: { toolCalls?: any[] }) => {
-          console.log('🔧 [Chat Handler] onStepStart called, toolCalls:', toolCalls);
+          console.log('🔧 [Chat Handler] ========== onStepStart CALLED ==========');
+          console.log('🔧 [Chat Handler] Timestamp:', new Date().toISOString());
+          console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
+          console.log('🔧 [Chat Handler] toolCalls:', JSON.stringify(toolCalls, null, 2));
+
           // Don't send tool_start events here - they're sent by the tools themselves
           if (toolCalls && toolCalls.length > 0) {
-            toolCalls.forEach((toolCall: any) => {
-              console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, { args: toolCall.args });
+            toolCalls.forEach((toolCall: any, index: number) => {
+              console.log(`🛠️ [Tool Start][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`);
+              console.log(`   - Tool ID: ${toolCall.toolCallId || 'N/A'}`);
+              console.log(`   - Args:`, toolCall.args);
+
+              // Special logging for code execution tools
+              if (toolCall.toolName === 'earthEngineScript' || toolCall.toolName === 'earthEngineRunCode') {
+                const code = toolCall.args?.code || '';
+                console.log(`   - Code length: ${code.length} characters`);
+                console.log(`   - Code preview: ${code.substring(0, 100)}...`);
+              }
             });
           }
+          console.log('🔧 [Chat Handler] ========== onStepStart END ==========');
         };
 
         streamOptions.onStepFinish = ({ toolCalls, toolResults }: { toolCalls?: any[], toolResults?: any[] }) => {
-          console.log('🔧 [Chat Handler] onStepFinish called, toolCalls:', toolCalls, 'toolResults:', toolResults);
+          console.log('🔧 [Chat Handler] ========== onStepFinish CALLED ==========');
+          console.log('🔧 [Chat Handler] Timestamp:', new Date().toISOString());
+          console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
+          console.log('🔧 [Chat Handler] Number of tool results:', toolResults?.length || 0);
+
           if (toolCalls && toolCalls.length > 0) {
             toolCalls.forEach((toolCall: any, index: number) => {
               const result = toolResults?.[index];
+
+              console.log(`✅ [Tool Finish][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`);
+              console.log(`   - Tool ID: ${toolCall.toolCallId || 'N/A'}`);
+              console.log(`   - Result status: ${result ? 'completed' : 'no result'}`);
+
+              if (result) {
+                console.log(`   - Result type: ${typeof result}`);
+                const resultPreview = typeof result === 'string'
+                  ? result.substring(0, 100)
+                  : JSON.stringify(result).substring(0, 100);
+                console.log(`   - Result preview: ${resultPreview}...`);
+
+                // Special logging for code execution results
+                if (result.executionId) {
+                  console.log(`   - Execution ID: ${result.executionId}`);
+                }
+                if (result.success !== undefined) {
+                  console.log(`   - Success: ${result.success}`);
+                }
+              }
+
               const event = {
                 type: 'tool_finish' as const,
                 toolName: toolCall.toolName,
@@ -750,17 +789,13 @@ ${projectContext}`;
                 result: result ? (typeof result === 'string' ? result.substring(0, 200) : 'completed') : undefined,
                 timestamp: Date.now()
               };
-              console.log(`🔧 [Chat Handler] Calling onToolEvent with:`, event);
+              console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish`);
               onToolEvent(event);
-              const resultPreview = result ? (typeof result === 'string' ? result.substring(0, 100) : JSON.stringify(result).substring(0, 100)) : 'none';
-              console.log(`✅ [Tool Finish] ${toolCall.toolName}`, {
-                success: result ? 'completed' : 'no result',
-                resultPreview
-              });
             });
           } else {
             console.log('🔧 [Chat Handler] onStepFinish called but no toolCalls found');
           }
+          console.log('🔧 [Chat Handler] ========== onStepFinish END ==========');
         };
       } else {
         console.log('🔧 [Chat Handler] onToolEvent callback is NOT provided');
