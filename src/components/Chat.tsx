@@ -715,9 +715,9 @@ export function ChatUI() {
               const toolStatusLines: string[] = [];
               toolEventsRef.current.forEach(event => {
                 if (event.type === 'tool_start') {
-                  toolStatusLines.push(`⚙️ 开始调用: ${event.toolName}`);
+                  toolStatusLines.push(`⚙️ Tool executing: ${event.toolName}`);
                 } else if (event.type === 'tool_finish') {
-                  toolStatusLines.push(`✅ 调用完成: ${event.toolName}`);
+                  toolStatusLines.push(`✅ Tool completed: ${event.toolName}`);
                 }
               });
 
