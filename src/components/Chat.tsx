@@ -214,13 +214,31 @@ export function ChatUI() {
 
   const sessionList = useMemo<SidebarSession[]>(() => {
     return Object.values(sessions)
-      .map((session) => ({
-        id: session.id,
-        title: session.meta.title,
-        preview: session.meta.lastMessagePreview || '',
-        updatedAt: session.meta.updatedAt,
-        pinned: session.meta.pinned,
-      }))
+      .map((session) => {
+        // Extract all messages content for search
+        const messagesContent = session.messages
+          .filter(m => !m.id.startsWith('welcome')) // Exclude welcome messages
+          .map(m => {
+            // For messages with parts (like images), only extract text content
+            if (m.parts) {
+              return m.parts
+                .filter(p => p.type === 'text' && p.text)
+                .map(p => p.text)
+                .join(' ');
+            }
+            return m.content || '';
+          })
+          .join(' ');
+
+        return {
+          id: session.id,
+          title: session.meta.title,
+          preview: session.meta.lastMessagePreview || '',
+          updatedAt: session.meta.updatedAt,
+          pinned: session.meta.pinned,
+          messagesContent: messagesContent,
+        };
+      })
       .sort((a, b) => {
         if ((a.pinned ? 1 : 0) !== (b.pinned ? 1 : 0)) {
           return a.pinned ? -1 : 1;
