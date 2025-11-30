@@ -139,7 +139,7 @@ jobs:
         client-id: ${{ secrets.CHROME_CLIENT_ID }}
         client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
         refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        publish: true  # Set to false if you want to manually publish after review
+        publish: true  # Automatically publish after upload
 
     - name: Create Release with custom notes
       if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'true'
