@@ -399,3 +399,4 @@ git push origin v1.0.0
 # GitHub Actions will build, test, and create release
 ```
 - remeber to use chrome devtools mcp when you need interact with gee, and when you need run code in gee console
+- you don't do any git commit and any other git commands that change could change the git history
