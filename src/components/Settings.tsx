@@ -5,6 +5,14 @@ import { Button } from './ui/button';
 import { Check, X, Eye, EyeOff, ExternalLink, Shield } from 'lucide-react';
 import { type ApiProvider } from '@/constants/models';
 import { OpenAICompatibleSection } from './OpenAICompatibleSection';
+import type { AgentProfile, ToolKey } from '@/types/extension';
+import {
+  ACTIVE_PROFILE_ID_STORAGE_KEY,
+  PROFILES_STORAGE_KEY,
+  TOOL_CATALOG,
+  createEmptyProfile,
+  migrateProfiles,
+} from '@/lib/profiles';
 
 // Storage keys
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
@@ -43,6 +51,11 @@ export function Settings({ onClose }: SettingsProps) {
   const [projectContext, setProjectContext] = useState('');
   const [contextSaveStatus, setContextSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Profiles state (stored locally)
+  const [profiles, setProfiles] = useState<AgentProfile[]>([]);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+
   // Load all data on mount
   useEffect(() => {
     // Load API keys from sync storage
@@ -64,10 +77,14 @@ export function Settings({ onClose }: SettingsProps) {
     // Load project context from local storage
     chrome.storage.local.get([
       PROJECT_NAME_STORAGE_KEY,
-      PROJECT_CONTEXT_STORAGE_KEY
+      PROJECT_CONTEXT_STORAGE_KEY,
+      PROFILES_STORAGE_KEY,
+      ACTIVE_PROFILE_ID_STORAGE_KEY
     ], (result) => {
       setProjectName(result[PROJECT_NAME_STORAGE_KEY] || '');
       setProjectContext(result[PROJECT_CONTEXT_STORAGE_KEY] || '');
+      setProfiles(migrateProfiles(result[PROFILES_STORAGE_KEY]));
+      setActiveProfileId(result[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
     });
   }, []);
 
@@ -148,6 +165,59 @@ export function Settings({ onClose }: SettingsProps) {
         console.error('Error clearing project context:', chrome.runtime.lastError);
       }
     });
+  };
+
+  const persistProfiles = (nextProfiles: AgentProfile[], nextActiveId: string | null) => {
+    chrome.storage.local.set(
+      {
+        [PROFILES_STORAGE_KEY]: nextProfiles,
+        [ACTIVE_PROFILE_ID_STORAGE_KEY]: nextActiveId,
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error saving profiles:', chrome.runtime.lastError);
+        }
+      }
+    );
+  };
+
+  const handleCreateProfile = () => {
+    const newProfile = createEmptyProfile();
+    setProfiles((prev) => {
+      const next = [newProfile, ...prev];
+      persistProfiles(next, activeProfileId);
+      return next;
+    });
+    setEditingProfileId(newProfile.id);
+  };
+
+  const handleUpdateProfile = (profileId: string, patch: Partial<AgentProfile>) => {
+    setProfiles((prev) => {
+      const next = prev.map((p) =>
+        p.id === profileId ? { ...p, ...patch, updatedAt: Date.now() } : p
+      );
+      persistProfiles(next, activeProfileId);
+      return next;
+    });
+  };
+
+  const handleDeleteProfile = (profileId: string) => {
+    setProfiles((prev) => {
+      const next = prev.filter((p) => p.id !== profileId);
+      const nextActive = activeProfileId === profileId ? null : activeProfileId;
+      setActiveProfileId(nextActive);
+      persistProfiles(next, nextActive);
+      return next;
+    });
+    setEditingProfileId((current) => (current === profileId ? null : current));
+  };
+
+  const toggleProfileTool = (profileId: string, tool: ToolKey) => {
+    const profile = profiles.find((p) => p.id === profileId);
+    if (!profile) return;
+    const has = profile.tools.includes(tool);
+    const nextTools = has ? profile.tools.filter((t) => t !== tool) : [...profile.tools, tool];
+    handleUpdateProfile(profileId, { tools: nextTools });
   };
 
   return (
@@ -396,6 +466,103 @@ Examples:
                 <X className="h-4 w-4 mr-1" /> Error saving project context
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Profiles Section */}
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold">Profiles</h3>
+            <Button size="sm" variant="outline" onClick={handleCreateProfile}>
+              + New Profile
+            </Button>
+          </div>
+          <div className="text-xs text-gray-500 mb-3">
+            <p>Profiles customize prompts and tool access for the AI.</p>
+            <p className="mt-1">Stored locally on this device (not synced across devices).</p>
+          </div>
+
+          <div className="space-y-3">
+            {profiles.length === 0 ? (
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                No custom profiles yet. Create one to show it in the Ask/Do menu.
+              </div>
+            ) : null}
+
+            {profiles.map((profile) => {
+              const isEditing = editingProfileId === profile.id;
+              return (
+                <div key={profile.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium truncate" title={profile.name}>
+                          {profile.name}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {profile.tools.length} tool(s) enabled
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <Button size="sm" variant="outline" onClick={() => setEditingProfileId(isEditing ? null : profile.id)}>
+                        {isEditing ? 'Close' : 'Edit'}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDeleteProfile(profile.id)}>
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+
+                  {isEditing ? (
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <label className="text-sm mb-1 block">Profile Name</label>
+                        <Input
+                          type="text"
+                          value={profile.name}
+                          onChange={(e) => handleUpdateProfile(profile.id, { name: e.target.value })}
+                          placeholder="e.g. memory bank"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm mb-1 block">Custom Prompt</label>
+                        <textarea
+                          value={profile.prompt}
+                          onChange={(e) => handleUpdateProfile(profile.id, { prompt: e.target.value })}
+                          placeholder="Additional instructions appended to the system prompt..."
+                          className="w-full h-[110px] px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm mb-2 block">Allowed Tools</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {TOOL_CATALOG.map((tool) => (
+                            <label key={tool.key} className="flex items-start gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={profile.tools.includes(tool.key)}
+                                onChange={() => toggleProfileTool(profile.id, tool.key)}
+                                className="mt-1"
+                              />
+                              <span className="min-w-0">
+                                <span className="font-medium">{tool.label}</span>
+                                <span className="block text-xs text-gray-500">{tool.description}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          Tip: selecting write tools enables Do-like behavior for this profile.
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -60,4 +60,34 @@ export interface ExtensionMessage {
   hasMultiModal?: boolean; // Flag to indicate multi-modal content
   sender?: string;
   mode?: 'ask' | 'do'; // Agent mode: ask (read-only) or do (full actions)
+  profileId?: string; // Optional custom profile id
+  profilePrompt?: string; // Optional profile prompt to prepend to system prompt
+  profileTools?: string[]; // Optional tool allowlist (by tool key)
+}
+
+// Tool keys exposed to the LLM (and selectable in custom profiles)
+export type ToolKey =
+  | 'weather'
+  | 'dateTime'
+  | 'earthEngineDataset'
+  | 'screenshot'
+  | 'snapshot'
+  | 'clickByRefId'
+  | 'clickByCoordinates'
+  | 'getConsoleOutput'
+  | 'getScript'
+  | 'getMapInfo'
+  | 'getInspectorOutput'
+  | 'earthEngineScript'
+  | 'earthEngineRunCode'
+  | 'resetMapInspectorConsole'
+  | 'clearScript';
+
+export interface AgentProfile {
+  id: string;
+  name: string;
+  prompt: string;
+  tools: ToolKey[];
+  createdAt: number;
+  updatedAt: number;
 }

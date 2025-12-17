@@ -40,8 +40,9 @@ interface MessageInputBaseProps
   isGenerating: boolean
   enableInterrupt?: boolean
   transcribeAudio?: (blob: Blob) => Promise<string>
-  mode?: 'ask' | 'do'
-  onModeChange?: (mode: 'ask' | 'do') => void
+  mode?: string
+  onModeChange?: (mode: string) => void
+  profiles?: Array<{ id: string; name: string }>
   provider?: Provider
   model?: string
   onProviderChange?: (provider: Provider) => void
@@ -73,6 +74,7 @@ export function MessageInput({
   transcribeAudio,
   mode = 'ask',
   onModeChange,
+  profiles = [],
   provider,
   model,
   onProviderChange,
@@ -80,7 +82,8 @@ export function MessageInput({
   ...props
 }: MessageInputProps) {
   // Set placeholder based on mode
-  const defaultPlaceholder = mode === 'ask' ? 'Ask a question...' : 'What would you like me to do?';
+  const placeholderMode = mode === 'ask' ? 'ask' : 'do';
+  const defaultPlaceholder = placeholderMode === 'ask' ? 'Ask a question...' : 'What would you like me to do?';
   const effectivePlaceholder = placeholder || defaultPlaceholder;
 
   const [isDragging, setIsDragging] = useState(false)
@@ -490,16 +493,39 @@ export function MessageInput({
         {/* Left side - Mode and Model selectors */}
         <div className="flex gap-2 items-center">
           {onModeChange && (
-            <Select value={mode} onValueChange={(value) => onModeChange(value as 'ask' | 'do')}>
+            <Select value={mode} onValueChange={(value) => onModeChange(value)}>
               <SelectTrigger
-                className="h-7 w-12 px-1.5 text-[11px] border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                className="h-7 w-auto min-w-[64px] max-w-[160px] px-1.5 text-[11px] border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
                 data-onboarding="mode-selector"
               >
-                <span>{mode === 'ask' ? 'Ask' : 'Do'}</span>
+                <span className="truncate">
+                  {mode === 'ask'
+                    ? 'Ask'
+                    : mode === 'do'
+                      ? 'Do'
+                      : mode.startsWith('profile:')
+                        ? (profiles.find((p) => `profile:${p.id}` === mode)?.name || 'Profile')
+                        : mode}
+                </span>
               </SelectTrigger>
-              <SelectContent side="top" className="w-28">
+              <SelectContent side="top" className="w-56">
                 <SelectItem value="ask">Ask</SelectItem>
                 <SelectItem value="do">Do</SelectItem>
+                {profiles.length > 0 ? (
+                  <>
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                    <div className="px-2 py-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                      Profiles
+                    </div>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={`profile:${p.id}`}>
+                        <span className="truncate" title={p.name}>
+                          {p.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </>
+                ) : null}
               </SelectContent>
             </Select>
           )}

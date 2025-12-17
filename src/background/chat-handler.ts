@@ -121,7 +121,8 @@ export async function handleChatRequest(
   heliconeHeaders?: Record<string, string>,
   baseURL?: string,
   onToolEvent?: ToolEventCallback,
-  mode: 'ask' | 'do' = 'ask'
+  mode: 'ask' | 'do' = 'ask',
+  profile?: { prompt?: string; tools?: string[] }
 ): Promise<Response> {
   try {
     // Debug log at start of request
@@ -584,6 +585,15 @@ ${projectContext}`;
       console.log(`📋 [Chat Handler] Using ${mode} mode system prompt (no project context)`);
     }
 
+    if (profile?.prompt && profile.prompt.trim()) {
+      finalSystemPrompt = `${finalSystemPrompt}
+
+## Profile Instructions
+
+${profile.prompt.trim()}`;
+      console.log(`📋 [Chat Handler] Applied profile prompt (${profile.prompt.trim().length} chars)`);
+    }
+
     // Configure stream options based on provider
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
@@ -687,9 +697,16 @@ ${projectContext}`;
 
     // Determine which tools to use based on mode
     const toolsToUse = mode === 'ask' ? readOnlyTools : { ...readOnlyTools, ...writeTools };
+    const allowedTools = profile?.tools?.length ? new Set(profile.tools) : null;
+    const effectiveToolsToUse = allowedTools
+      ? Object.fromEntries(Object.entries(toolsToUse).filter(([key]) => allowedTools.has(key)))
+      : toolsToUse;
 
-    console.log(`🛠️ [Chat Handler] Adding tools for ${provider} provider in ${mode} mode (${Object.keys(toolsToUse).length} tools)`);
-    streamOptions.tools = toolsToUse;
+    console.log(
+      `🛠️ [Chat Handler] Adding tools for ${provider} provider in ${mode} mode (${Object.keys(effectiveToolsToUse).length} tools)` +
+        (allowedTools ? ` [filtered by profile allowlist: ${allowedTools.size}]` : '')
+    );
+    streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
     streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
     
