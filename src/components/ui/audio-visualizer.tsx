@@ -30,7 +30,7 @@ export function AudioVisualizer({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const dataArrayRef = useRef<Uint8Array | null>(null)
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
 
@@ -51,7 +51,7 @@ export function AudioVisualizer({
 
          // Prepare data array
          dataArrayRef.current = new Uint8Array(
-           analyserRef.current.frequencyBinCount
+           new ArrayBuffer(analyserRef.current.frequencyBinCount)
          )
 
          // Start visualization

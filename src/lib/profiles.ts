@@ -1,0 +1,81 @@
+import type { AgentProfile, ToolKey } from '@/types/extension';
+
+export const PROFILES_STORAGE_KEY = 'earth_agent_profiles';
+export const ACTIVE_PROFILE_ID_STORAGE_KEY = 'earth_agent_active_profile_id';
+
+export interface ToolCatalogItem {
+  key: ToolKey;
+  label: string;
+  description: string;
+  kind: 'read' | 'write';
+}
+
+export const TOOL_CATALOG: ToolCatalogItem[] = [
+  { key: 'weather', label: 'Weather', description: 'Get current weather for a location', kind: 'read' },
+  { key: 'dateTime', label: 'Date/Time', description: 'Get current date/time (optional time zone)', kind: 'read' },
+  { key: 'earthEngineDataset', label: 'EE Dataset Docs', description: 'Search Earth Engine dataset documentation', kind: 'read' },
+  { key: 'screenshot', label: 'Screenshot', description: 'Take a screenshot of the current page', kind: 'read' },
+  { key: 'snapshot', label: 'Snapshot', description: 'Capture accessibility snapshot of the page', kind: 'read' },
+  { key: 'clickByRefId', label: 'Click (Ref ID)', description: 'Click an element by ref id', kind: 'read' },
+  { key: 'clickByCoordinates', label: 'Click (Coords)', description: 'Click by x/y coordinates', kind: 'read' },
+  { key: 'getConsoleOutput', label: 'Console Output', description: 'Get Earth Engine console output', kind: 'read' },
+  { key: 'getScript', label: 'Get Script', description: 'Read current Earth Engine script', kind: 'read' },
+  { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
+  { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
+
+  { key: 'earthEngineScript', label: 'Edit Script', description: 'Insert/modify code in Earth Engine editor', kind: 'write' },
+  { key: 'earthEngineRunCode', label: 'Run Script', description: 'Execute Earth Engine script', kind: 'write' },
+  { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
+  { key: 'clearScript', label: 'Clear Script', description: 'Clear the editor script', kind: 'write' },
+];
+
+export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
+  'dateTime',
+  'weather',
+  'earthEngineDataset',
+  'snapshot',
+  'getScript',
+  'getMapInfo',
+  'getConsoleOutput',
+];
+
+export function createEmptyProfile(now = Date.now()): AgentProfile {
+  return {
+    id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `p_${now}_${Math.random().toString(16).slice(2)}`,
+    name: 'New profile',
+    prompt: '',
+    tools: [...DEFAULT_PROFILE_TOOLS],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function truncateLabel(text: string, max = 14): string {
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+export function inferBaseModeFromTools(tools: ToolKey[]): 'ask' | 'do' {
+  const writeKeys = new Set<ToolKey>(TOOL_CATALOG.filter(t => t.kind === 'write').map(t => t.key));
+  return tools.some(t => writeKeys.has(t)) ? 'do' : 'ask';
+}
+
+export function migrateProfiles(raw: unknown): AgentProfile[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p: any) => {
+      if (!p || typeof p !== 'object') return null;
+      if (typeof p.id !== 'string' || typeof p.name !== 'string') return null;
+      const tools = Array.isArray(p.tools) ? (p.tools.filter((t: any) => typeof t === 'string') as ToolKey[]) : [];
+      return {
+        id: p.id,
+        name: p.name,
+        prompt: typeof p.prompt === 'string' ? p.prompt : '',
+        tools,
+        createdAt: typeof p.createdAt === 'number' ? p.createdAt : Date.now(),
+        updatedAt: typeof p.updatedAt === 'number' ? p.updatedAt : Date.now(),
+      } satisfies AgentProfile;
+    })
+    .filter(Boolean) as AgentProfile[];
+}
+
