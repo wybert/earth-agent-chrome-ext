@@ -352,7 +352,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               apiKey,
               provider,
               model,
-              undefined // No Helicone headers for direct API requests
+              undefined, // No Helicone headers for direct API requests
+              undefined, // No base URL
+              undefined, // No tool event callback
+              'ask'
             );
             
             // Stream the response back? Requires careful handling
@@ -494,7 +497,13 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               provider as Provider,
               model,
               message.heliconeHeaders, // Include Helicone headers if provided
-              baseURL // Include base URL for Ollama
+              baseURL, // Include base URL for Ollama
+              undefined,
+              message.mode || 'ask',
+              {
+                prompt: (message as any).profilePrompt,
+                tools: (message as any).profileTools
+              }
             );
             
             // Get response body as a readable stream
@@ -1896,7 +1905,11 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       message.heliconeHeaders,
       apiConfig.baseURL,
       onToolEvent,
-      mode
+      mode,
+      {
+        prompt: (message as any).profilePrompt,
+        tools: (message as any).profileTools
+      }
     );
       
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
