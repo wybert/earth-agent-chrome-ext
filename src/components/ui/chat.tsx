@@ -37,8 +37,9 @@ interface ChatPropsBase {
   transcribeAudio?: (blob: Blob) => Promise<string>
   onRegenerate?: () => void
   showRegenerate?: boolean
-  mode?: 'ask' | 'do'
-  onModeChange?: (mode: 'ask' | 'do') => void
+  mode?: string
+  onModeChange?: (mode: string) => void
+  profiles?: Array<{ id: string; name: string }>
   provider?: Provider
   model?: string
   onProviderChange?: (provider: Provider) => void
@@ -74,6 +75,7 @@ export function Chat({
   showRegenerate,
   mode,
   onModeChange,
+  profiles,
   provider,
   model,
   onProviderChange,
@@ -272,6 +274,7 @@ export function Chat({
             transcribeAudio={transcribeAudio}
             mode={mode}
             onModeChange={onModeChange}
+            profiles={profiles}
             provider={provider}
             model={model}
             onProviderChange={onProviderChange}

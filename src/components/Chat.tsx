@@ -7,6 +7,8 @@ import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, 
 import { Settings } from './Settings';
 import { Message, ExtensionMessage, Provider } from '../types/extension';
 import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview } from './chat-helpers';
+import type { AgentProfile } from '@/types/extension';
+import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
 import ToolsTestPanel from './ui/ToolsTestPanel';
 import AgentTestPanel from './ui/AgentTestPanel';
 import { TabStatusIndicator } from './TabStatusIndicator';
@@ -143,6 +145,10 @@ export function ChatUI() {
   const [input, setInput] = useState('');
   const [error, setError] = useState<Error | null>(null);
 
+  // Profiles (stored locally)
+  const [profiles, setProfiles] = useState<AgentProfile[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+
   // Restore port connection state and logic
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
@@ -156,8 +162,8 @@ export function ChatUI() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editingTitleText, setEditingTitleText] = useState('');
 
-  // Agent mode state (ask = read-only, do = full actions)
-  const [agentMode, setAgentMode] = useState<'ask' | 'do'>('ask');
+  // Mode selection: ask/do plus optional profile:<id>
+  const [modeSelection, setModeSelection] = useState<string>('ask');
 
   // Token usage tracking for current session
   const [sessionTokenUsage, setSessionTokenUsage] = useState<{
@@ -338,6 +344,30 @@ export function ChatUI() {
       console.log("Loaded sessions (v2), active ID:", currentActiveId, "Total sessions:", Object.keys(loadedSessions).length);
     });
   }, [cleanupOldSessions]);
+
+  // Load profiles + listen for updates (stored locally)
+  useEffect(() => {
+    chrome.storage.local.get([PROFILES_STORAGE_KEY, ACTIVE_PROFILE_ID_STORAGE_KEY], (result) => {
+      setProfiles(migrateProfilesList(result[PROFILES_STORAGE_KEY]));
+      setActiveProfileId(result[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
+    });
+
+    const onStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName !== 'local') return;
+      if (changes[PROFILES_STORAGE_KEY]) {
+        setProfiles(migrateProfilesList(changes[PROFILES_STORAGE_KEY].newValue));
+      }
+      if (changes[ACTIVE_PROFILE_ID_STORAGE_KEY]) {
+        setActiveProfileId(changes[ACTIVE_PROFILE_ID_STORAGE_KEY].newValue || null);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(onStorageChange);
+    return () => chrome.storage.onChanged.removeListener(onStorageChange);
+  }, []);
 
   // Restore session saving useEffect
   useEffect(() => {
@@ -841,6 +871,28 @@ export function ChatUI() {
     setInput(e.target.value);
   };
 
+  const resolveModeAndProfile = useCallback((): {
+    baseMode: 'ask' | 'do';
+    profileId?: string;
+    profilePrompt?: string;
+    profileTools?: string[];
+  } => {
+    if (modeSelection.startsWith('profile:')) {
+      const id = modeSelection.slice('profile:'.length);
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) {
+        return { baseMode: 'ask' };
+      }
+      return {
+        baseMode: inferBaseModeFromTools(profile.tools),
+        profileId: profile.id,
+        profilePrompt: profile.prompt || undefined,
+        profileTools: profile.tools as any,
+      };
+    }
+    return { baseMode: (modeSelection as 'ask' | 'do') || 'ask' };
+  }, [modeSelection, profiles]);
+
   // Restore original submit handler using port
   const handleChatSubmit = useCallback(async (e?: React.FormEvent, options?: { experimental_attachments?: FileList }) => {
     e?.preventDefault();
@@ -958,7 +1010,15 @@ export function ChatUI() {
         attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
         provider: provider,
         model: model,
-        mode: agentMode
+        ...(() => {
+          const cfg = resolveModeAndProfile();
+          return {
+            mode: cfg.baseMode,
+            profileId: cfg.profileId,
+            profilePrompt: cfg.profilePrompt,
+            profileTools: cfg.profileTools,
+          };
+        })()
       };
 
       console.log(`🔧 [Chat] Full message payload being sent:`, {
@@ -979,7 +1039,7 @@ export function ChatUI() {
       
       port.postMessage(messagePayload);
     });
-  }, [input, isLocalLoading, port, activeSessionId, sessions, agentMode]);
+  }, [input, isLocalLoading, port, activeSessionId, sessions, resolveModeAndProfile]);
 
   // Restore regenerate handler
   const handleRegenerate = useCallback(() => {
@@ -1004,7 +1064,8 @@ export function ChatUI() {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
         const model = result[MODEL_STORAGE_KEY] || '';
         
-        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}, mode: ${agentMode}`);
+        const cfg = resolveModeAndProfile();
+        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}, mode: ${cfg.baseMode}`);
 
         const messagePayload: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
@@ -1012,12 +1073,20 @@ export function ChatUI() {
           messages: messagesForApi,
           provider: provider,
           model: model,
-          mode: agentMode
+          ...(() => {
+            const cfg = resolveModeAndProfile();
+            return {
+              mode: cfg.baseMode,
+              profileId: cfg.profileId,
+              profilePrompt: cfg.profilePrompt,
+              profileTools: cfg.profileTools,
+            };
+          })()
         };
         port.postMessage(messagePayload);
       });
     }
-  }, [messages, isLocalLoading, port, activeSessionId, agentMode]);
+  }, [messages, isLocalLoading, port, activeSessionId, resolveModeAndProfile]);
 
   // Restore stop handler
   const stop = useCallback(() => {
@@ -1449,8 +1518,9 @@ export function ChatUI() {
               append={append as any}
               onRegenerate={handleRegenerate}
               showRegenerate={canRegenerate}
-              mode={agentMode}
-              onModeChange={setAgentMode}
+              mode={modeSelection}
+              onModeChange={setModeSelection}
+              profiles={profiles.map((p) => ({ id: p.id, name: p.name }))}
               provider={apiProvider}
               model={selectedModel}
               onProviderChange={setApiProvider}
