@@ -420,7 +420,11 @@ if (shouldExecute && !messageListenerAdded) {
       case 'RUN_CODE':
         handleRunCode(message.code || '', sendResponse);
         return true; // Will respond asynchronously
-        
+
+      case 'CLICK_RUN_BUTTON':
+        handleClickRunButton(sendResponse);
+        return true; // Will respond asynchronously
+
       case 'CHECK_CONSOLE':
         handleCheckConsole(sendResponse);
         return true; // Will respond asynchronously
@@ -700,6 +704,53 @@ async function handleRunCode(code: string, sendResponse: (response: any) => void
     sendResponse({
       success: false,
       error: `Error executing Earth Engine code: ${error instanceof Error ? error.message : String(error)}`
+    });
+  }
+}
+
+/**
+ * Click the run button in Google Earth Engine editor
+ * This is a simple DOM operation that doesn't require page context access
+ */
+async function handleClickRunButton(sendResponse: (response: any) => void) {
+  try {
+    console.log('Looking for run button...');
+
+    // Try primary selector
+    let runButton = document.querySelector('button.goog-button.run-button[title="Run script (Ctrl+Enter)"]');
+
+    if (!runButton) {
+      // Fallback to alternative selectors
+      runButton = document.querySelector('.run-button') ||
+                  document.querySelector('button[title*="Run script"]') ||
+                  document.querySelector('button.goog-button[value="Run"]');
+    }
+
+    if (!runButton) {
+      console.error('Run button not found');
+      sendResponse({
+        success: false,
+        error: 'Run button not found in the Google Earth Engine editor'
+      });
+      return;
+    }
+
+    console.log('Clicking run button');
+    (runButton as HTMLElement).click();
+
+    // Wait briefly for the click to register
+    setTimeout(() => {
+      console.log('Run button clicked successfully');
+      sendResponse({
+        success: true,
+        result: 'Run button clicked successfully'
+      });
+    }, 300);
+  } catch (error) {
+    console.error('Error clicking run button:', error);
+    sendResponse({
+      success: false,
+      error: `Error clicking run button: ${error instanceof Error ? error.message : String(error)}`
     });
   }
 }

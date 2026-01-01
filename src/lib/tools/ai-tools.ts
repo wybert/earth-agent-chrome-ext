@@ -753,7 +753,12 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
 
         const state = shadowWorkspaceSingleton.getOrCreate(tabId, scriptId || 'current_editor');
         const result: any = await new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            resolve({ success: false, error: 'Content script timed out while syncing to editor.' });
+          }, 10000); // 10 second timeout
+
           chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: state.scriptId, content: state.content }, (response) => {
+            clearTimeout(timeout);
             if (chrome.runtime.lastError) resolve({ success: false, error: chrome.runtime.lastError.message });
             else resolve(response || { success: false, error: 'No response from content script' });
           });
@@ -957,9 +962,15 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
             }
           }
           
-          // Send message to content script
+          // Send message to content script with timeout to prevent hanging
           const result: any = await new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+              console.warn(`⚠️ [EarthEngineScriptTool][${executionId}] EDIT_SCRIPT message timed out after 10s`);
+              resolve({ success: false, error: 'Content script timed out while editing code. The tab may be unresponsive.' });
+            }, 10000); // 10 second timeout
+
             chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: targetScriptId, content: code }, (response) => {
+              clearTimeout(timeout);
               if (chrome.runtime.lastError) {
                 resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
               } else {
@@ -1015,45 +1026,20 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         const executionId = `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION START ==========`);
         console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] code length: ${code.length} characters`);
-        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] code preview: ${code.substring(0, 150)}...`);
-        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] timestamp: ${new Date().toISOString()}`);
 
         // Manually send tool_start event
         if (onToolEvent) {
-          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Sending tool_start event`);
           onToolEvent({
             type: 'tool_start',
             toolName: 'earthEngineRunCode',
             args: { code: code.substring(0, 100) + '...' },
             timestamp: Date.now()
           });
-        } else {
-          console.log(`⚠️ [EarthEngineRunCodeTool][${executionId}] No onToolEvent callback provided`);
         }
 
         try {
-          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Starting execution...`);
-          console.time(`EarthEngineRunCodeTool-${executionId}`);
-          
-          // Check if Chrome tabs API is available
-          if (typeof chrome === 'undefined' || !chrome.tabs) {
-            console.warn('❌ [EarthEngineRunCodeTool] Chrome tabs API not available');
-            return {
-              success: false,
-              error: 'Cannot run Earth Engine code: Extension context not available',
-              suggestion: "This operation requires running in a Chrome extension environment"
-            };
-          }
-          
-          // Find the Earth Engine tab
-          const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
-            chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
-              resolve(tabs || []);
-            });
-          });
-          
-          if (earthEngineTabs.length === 0) {
-            console.warn('❌ [EarthEngineRunCodeTool] No Earth Engine tab found');
+          const tabId = await getActiveEarthEngineTabId();
+          if (!tabId) {
             return {
               success: false,
               error: 'No Earth Engine tab found',
@@ -1061,105 +1047,70 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
             };
           }
 
-          // Smart tab selection: prefer active or recently used tab
-          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
-          const tabId = selectedTab?.id;
-          if (!tabId) {
-            console.warn('❌ [EarthEngineRunCodeTool] Invalid Earth Engine tab');
+          // Step 1: Set the code using editor-helpers (CSP-safe via chrome.scripting.executeScript)
+          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Setting editor content via MAIN world...`);
+          const setResult = await setEditorContent(code, tabId);
+          if (!setResult.success) {
             return {
               success: false,
-              error: 'Invalid Earth Engine tab',
-              suggestion: "Please reload your Earth Engine tab and try again"
+              error: `Failed to set code in editor: ${setResult.error}`,
+              suggestion: "Make sure the Earth Engine Code Editor is open and accessible"
             };
           }
-          
-          console.log(`🏃 [EarthEngineRunCodeTool] Found Earth Engine tab: ${tabId}`);
-          
-          // Check/inject content script
-          try {
-            await new Promise<void>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Content script ping timed out')), 300);
-              chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
-                clearTimeout(timeout);
-                if (chrome.runtime.lastError) {
-                  reject(new Error(chrome.runtime.lastError.message || 'Error pinging content script'));
-                } else {
-                  resolve();
-                }
-              });
-            });
-            console.log(`🏃 [EarthEngineRunCodeTool] Content script ready`);
-          } catch (pingError: unknown) {
-            const errorMessage = pingError instanceof Error ? pingError.message : String(pingError);
-            console.log(`🏃 [EarthEngineRunCodeTool] Content script not ready: ${errorMessage}, injecting...`);
-            try {
-              await new Promise<void>((resolve, reject) => {
-                chrome.scripting.executeScript({
-                  target: { tabId },
-                  files: ['content.js']
-                }, (results) => {
-                  if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message || 'Failed to inject content script'));
-                  } else {
-                    setTimeout(resolve, 500); // Wait for script init
-                  }
-                });
-              });
-              console.log(`🏃 [EarthEngineRunCodeTool] Content script injected successfully`);
-            } catch (injectError: unknown) {
-              const injectErrorMessage = injectError instanceof Error ? injectError.message : String(injectError);
-              console.warn(`❌ [EarthEngineRunCodeTool] Failed to inject content script: ${injectErrorMessage}`);
-              return {
-                success: false,
-                error: `Content script not available: ${injectErrorMessage}`,
-                suggestion: "Try refreshing the Earth Engine tab and ensure the extension has permission"
-              };
-            }
+          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Editor content set successfully`);
+
+          // Step 2: Click the run button via content script (simple DOM click, no CSP issues)
+          const contentScriptReady = await ensureContentScript(tabId);
+          if (!contentScriptReady.success) {
+            return {
+              success: false,
+              error: `Content script not available: ${contentScriptReady.error}`,
+              suggestion: "Try refreshing the Earth Engine tab"
+            };
           }
-          
-          // Send message to content script
-          const result: any = await new Promise((resolve) => {
-            chrome.tabs.sendMessage(tabId, { type: 'RUN_CODE', code }, (response) => {
+
+          // Send CLICK_RUN_BUTTON message to content script
+          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Clicking run button...`);
+          const clickResult: any = await new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+              resolve({ success: false, error: 'Timed out waiting for run button click' });
+            }, 5000);
+
+            chrome.tabs.sendMessage(tabId, { type: 'CLICK_RUN_BUTTON' }, (response) => {
+              clearTimeout(timeout);
               if (chrome.runtime.lastError) {
-                resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
+                resolve({ success: false, error: chrome.runtime.lastError.message });
               } else {
-                resolve(response || { success: false, error: 'No response from content script' });
+                resolve(response || { success: true });
               }
             });
           });
 
-          console.timeEnd(`EarthEngineRunCodeTool-${executionId}`);
-
-          if (!result.success) {
-            console.warn(`❌ [EarthEngineRunCodeTool][${executionId}] Failed to run code via content script: ${result.error}`);
-            console.log(`❌ [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION FAILED ==========`);
+          if (!clickResult.success) {
+            console.warn(`⚠️ [EarthEngineRunCodeTool][${executionId}] Run button click failed: ${clickResult.error}`);
+            // Still return success since code was set - user can click run manually
             return {
-              success: false,
-              error: result.error || 'Unknown error running code',
-              suggestion: "Check content script logs or ensure EE tab is active.",
-              executionId
+              success: true,
+              result: 'Code inserted into editor. Run button click may have failed - please click Run manually if needed.',
+              message: 'Code set in editor',
+              warning: clickResult.error
             };
           }
 
-          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] Successfully ran code with result: ${result.result || 'No result returned'}`);
-          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] Result:`, JSON.stringify(result, null, 2));
-          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION SUCCESS ==========`);
+          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] Code executed successfully`);
           return {
             success: true,
-            result: result.result || 'Code executed successfully',
+            result: 'Code executed successfully',
             message: 'Earth Engine code executed successfully',
-            nextSteps: "Check the Earth Engine console for any output or results",
-            executionId
+            nextSteps: "Check the Earth Engine console for any output or results"
           };
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(`❌ [EarthEngineRunCodeTool][${executionId}] Unexpected error:`, error);
-          console.log(`❌ [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION ERROR ==========`);
           return {
             success: false,
-            error: `Unexpected error in EarthEngineRunCodeTool: ${errorMessage}`,
-            suggestion: "Check background script logs for more details",
-            executionId
+            error: `Unexpected error: ${errorMessage}`,
+            suggestion: "Check background script logs for more details"
           };
         }
       },
@@ -2068,10 +2019,16 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
             };
           }
 
-          // Send message to content script to get console output
+          // Send message to content script to get console output with timeout
           console.log('📋 [GetConsoleOutputTool] Requesting console output from content script...');
           const result: any = await new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+              console.warn('⚠️ [GetConsoleOutputTool] GET_CONSOLE_OUTPUT message timed out after 10s');
+              resolve({ success: false, error: 'Content script timed out while reading console. The tab may be unresponsive.' });
+            }, 10000); // 10 second timeout
+
             chrome.tabs.sendMessage(tabId, { type: 'GET_CONSOLE_OUTPUT' }, (response) => {
+              clearTimeout(timeout);
               if (chrome.runtime.lastError) {
                 resolve({
                   success: false,
@@ -2193,97 +2150,43 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
 
         try {
           console.log(`📖 [GetScriptTool] Tool called to read GEE code editor`);
-          console.time('GetScriptTool execution');
 
-          // Validate Chrome APIs
-          const apiValidation = validateChromeAPIs();
-          if (!apiValidation.success) {
-            console.warn(`❌ [GetScriptTool] ${apiValidation.error}`);
+          const tabId = await getActiveEarthEngineTabId();
+          if (!tabId) {
             return {
               success: false,
-              error: apiValidation.error,
-              suggestion: 'This tool requires running in a Chrome extension background script context'
-            };
-          }
-
-          // Find the Earth Engine tab
-          const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
-            chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
-              resolve(tabs || []);
-            });
-          });
-
-          if (earthEngineTabs.length === 0) {
-            console.warn('❌ [GetScriptTool] No Earth Engine tab found');
-            return {
-              success: false,
-              error: 'No Google Earth Engine tab found',
+              error: 'No Earth Engine tab found',
               suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
             };
           }
 
-          // Smart tab selection: prefer active or recently used tab
-          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
-          const tabId = selectedTab?.id;
-          if (!tabId) {
-            console.warn('❌ [GetScriptTool] Invalid Earth Engine tab');
+          // Use editor-helpers which uses chrome.scripting with world: 'MAIN' (CSP-safe)
+          const response = await getEditorContent(tabId);
+
+          if (!response.success || response.content === undefined) {
+            console.warn(`❌ [GetScriptTool] Failed to get script:`, response.error);
             return {
               success: false,
-              error: 'Invalid Earth Engine tab',
-              suggestion: "Please reload your Earth Engine tab and try again"
-            };
-          }
-
-          // Ensure content script is ready
-          const scriptReady = await ensureContentScript(tabId);
-          if (!scriptReady.success) {
-            console.error('❌ [GetScriptTool] Content script not available:', scriptReady.error);
-            return {
-              success: false,
-              error: scriptReady.error || 'Content script not available',
-              suggestion: 'Try refreshing the Earth Engine tab'
-            };
-          }
-
-          // Send message to content script to get the script
-          console.log('📖 [GetScriptTool] Requesting script content from content script...');
-          const result: any = await new Promise((resolve) => {
-            chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (response) => {
-              if (chrome.runtime.lastError) {
-                resolve({
-                  success: false,
-                  error: chrome.runtime.lastError.message || 'Error communicating with content script'
-                });
-              } else {
-                resolve(response || { success: false, error: 'No response from content script' });
-              }
-            });
-          });
-
-          console.timeEnd('GetScriptTool execution');
-
-          if (!result.success) {
-            console.warn(`❌ [GetScriptTool] Failed to get script:`, result.error);
-            return {
-              success: false,
-              error: result.error || 'Failed to read script from editor',
+              error: response.error || 'Failed to read script from editor',
               suggestion: 'Make sure the Earth Engine editor is loaded and the code editor is visible'
             };
           }
 
-          console.log(`✅ [GetScriptTool] Successfully read script: ${result.lineCount} lines, ${result.content?.length || 0} characters`);
+          const content = response.content;
+          const lineCount = content.split('\n').length;
+
+          console.log(`✅ [GetScriptTool] Successfully read script: ${lineCount} lines, ${content.length} characters`);
           return {
             success: true,
-            content: result.content || '',
-            lineCount: result.lineCount || 0,
-            method: result.method,
-            message: `Successfully read ${result.lineCount} lines of code from the Earth Engine editor`
+            content: content,
+            lineCount: lineCount,
+            method: 'chrome.scripting.executeScript (MAIN world)',
+            message: `Successfully read ${lineCount} lines of code from the Earth Engine editor`
           };
 
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           console.error(`❌ [GetScriptTool] Error:`, error);
-          console.timeEnd('GetScriptTool execution');
           return {
             success: false,
             error: `Error reading GEE code editor: ${errorMessage}`,
@@ -2369,9 +2272,15 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           };
         }
 
-        // Send message to content script to get map info
+        // Send message to content script to get map info with timeout
         const result: any = await new Promise((resolve) => {
+          const timeout = setTimeout(() => {
+            console.warn('⚠️ [GetMapInfoTool] GET_MAP_INFO message timed out after 10s');
+            resolve({ success: false, error: 'Content script timed out while getting map info.' });
+          }, 10000); // 10 second timeout
+
           chrome.tabs.sendMessage(tabId, { type: 'GET_MAP_INFO' }, (response) => {
+            clearTimeout(timeout);
             if (chrome.runtime.lastError) {
               resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
             } else {
