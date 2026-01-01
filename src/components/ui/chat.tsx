@@ -16,7 +16,12 @@ import { CopyButton } from "@/components/ui/copy-button"
 import { MessageInput } from "@/components/ui/message-input"
 import { MessageList } from "@/components/ui/message-list"
 import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
+import { DiffStatusBar, type DiffSummary } from "@/components/ui/DiffStatusBar"
 import type { Provider } from "@/types/extension"
+
+// Re-export DiffHunk type for external use
+type DiffLine = { type: 'context' | 'delete' | 'insert'; text: string; oldLine?: number; newLine?: number };
+type DiffHunk = { oldStart: number; newStart: number; lines: DiffLine[] };
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -44,6 +49,11 @@ interface ChatPropsBase {
   model?: string
   onProviderChange?: (provider: Provider) => void
   onModelChange?: (model: string) => void
+  // Diff status bar props
+  diffSummary?: DiffSummary
+  diffHunks?: DiffHunk[]
+  onDiffUndo?: () => void
+  onDiffClose?: () => void
 }
 
 interface ChatPropsWithoutSuggestions extends ChatPropsBase {
@@ -80,6 +90,10 @@ export function Chat({
   model,
   onProviderChange,
   onModelChange,
+  diffSummary,
+  diffHunks,
+  onDiffUndo,
+  onDiffClose,
   ...props
 }: ChatProps) {
   const lastMessage = messages.at(-1)
@@ -256,6 +270,16 @@ export function Chat({
           </ChatMessages>
         </div>
       ) : null}
+
+      {/* Diff status bar - shown above input when there are code changes */}
+      {diffSummary && (diffSummary.added > 0 || diffSummary.removed > 0) && (
+        <DiffStatusBar
+          summary={diffSummary}
+          hunks={diffHunks}
+          onUndo={onDiffUndo}
+          onClose={onDiffClose}
+        />
+      )}
 
       <ChatForm
         className="shrink-0 px-3 pb-3"
