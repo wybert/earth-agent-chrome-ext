@@ -4,6 +4,7 @@ import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
 import { shadowWorkspaceSingleton } from './shadow-workspace';
+import { getEditorContent, setEditorContent } from './editor-helpers';
 
 // Types for messages between components
 interface MessageBase {
@@ -332,23 +333,25 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         console.log(`Content script loaded and registered for tab ${sender.tab.id}`);
         contentScriptTabs.set(sender.tab.id, true);
         // Auto-sync editor -> shadow on load so the agent always starts from current script
+        // Using getEditorContent (CSP-safe via chrome.scripting.executeScript)
         try {
           const tabId = sender.tab.id;
-          const attemptSync = (delayMs: number) => {
-            setTimeout(() => {
-              chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (resp) => {
-                if (chrome.runtime.lastError) return;
-                if (resp?.success && typeof resp.content === 'string') {
-                  shadowWorkspaceSingleton.setFromEditor(
-                    tabId,
-                    'current_editor',
-                    resp.content,
-                    'initial sync from editor'
-                  );
-                  shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
-                }
-              });
-            }, delayMs);
+          const attemptSync = async (delayMs: number) => {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            try {
+              const resp = await getEditorContent(tabId);
+              if (resp?.success && typeof resp.content === 'string') {
+                shadowWorkspaceSingleton.setFromEditor(
+                  tabId,
+                  'current_editor',
+                  resp.content,
+                  'initial sync from editor'
+                );
+                shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
+              }
+            } catch {
+              // ignore sync errors
+            }
           };
           attemptSync(0);
           attemptSync(1000);
@@ -452,13 +455,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       sendResponse({ success: false, error: 'Invalid API_REQUEST payload' });
       return false; // Synchronous response
 
-    // --- Handlers for Direct Earth Engine Tool Calls --- 
+    // --- Handlers for Direct Earth Engine Tool Calls ---
     case 'EDIT_SCRIPT':
-      // Forward to Earth Engine tab
+      // Use CSP-safe editor-helpers instead of content script messaging
       (async () => {
         try {
-          const response = await sendMessageToEarthEngineTab(message);
-          sendResponse(response);
+          const content = message.content || message.code || '';
+          const result = await setEditorContent(content);
+          sendResponse(result);
         } catch (error) {
           sendResponse({
             success: false,
@@ -1773,19 +1777,15 @@ chrome.runtime.onConnect.addListener((newPort) => {
             }
 
             const state = shadowWorkspaceSingleton.getOrCreate(tabId, 'current_editor');
-            chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: 'current_editor', content: state.content }, (resp) => {
-              if (chrome.runtime.lastError) {
-                postToPort(newPort, { type: 'ERROR', error: chrome.runtime.lastError.message || 'Sync failed' });
-                return;
-              }
-              if (resp?.success) {
-                shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
-                const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
-                postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
-              } else {
-                postToPort(newPort, { type: 'ERROR', error: resp?.error || 'Sync failed' });
-              }
-            });
+            // Use CSP-safe editor-helpers instead of content script messaging
+            const resp = await setEditorContent(state.content, tabId);
+            if (resp?.success) {
+              shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
+              const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
+              postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
+            } else {
+              postToPort(newPort, { type: 'ERROR', error: resp?.error || 'Sync failed' });
+            }
           } catch (e: any) {
             postToPort(newPort, { type: 'ERROR', error: e?.message || String(e) });
           }
@@ -1846,15 +1846,11 @@ chrome.runtime.onConnect.addListener((newPort) => {
       console.log('Received clear code message:', message);
       
       if (message.type === 'CLEAR_CODE') {
-                 try {
-           // Use the editScript tool to clear the Earth Engine code editor
-           console.log('Clearing Earth Engine code editor...');
-           const result = await sendMessageToEarthEngineTab({
-             type: 'EDIT_SCRIPT',
-             scriptId: 'current',
-             content: ''
-           });
-          
+        try {
+          // Use CSP-safe setEditorContent to clear the Earth Engine code editor
+          console.log('Clearing Earth Engine code editor...');
+          const result = await setEditorContent('');
+
           if (result.success) {
             console.log('Code cleared successfully');
             postToPort(newPort, { type: 'CLEAR_CODE_SUCCESS' });
@@ -1864,8 +1860,8 @@ chrome.runtime.onConnect.addListener((newPort) => {
           }
         } catch (error) {
           console.error('Error clearing code:', error);
-          postToPort(newPort, { 
-            type: 'ERROR', 
+          postToPort(newPort, {
+            type: 'ERROR',
             error: error instanceof Error ? error.message : 'Unknown error clearing code'
           });
         }

@@ -806,6 +806,14 @@ export function ChatUI() {
 
           // If editCode or insertAtLine was called, extract diff from the result and show it
           try {
+            console.log('🎨 [Chat] Processing tool event:', {
+              type: response.event.type,
+              toolName: response.event.toolName,
+              hasResult: !!response.event.result,
+              resultType: typeof response.event.result,
+              result: response.event.result
+            });
+
             if (
               response.event.type === 'tool_finish' &&
               (response.event.toolName === 'editCode' || response.event.toolName === 'insertAtLine') &&
@@ -813,15 +821,20 @@ export function ChatUI() {
               response.event.result?.diff
             ) {
               const { diff } = response.event.result;
+              console.log('🎨 [Chat] Found diff data:', diff);
               if (diff?.hunks && diff?.summary) {
+                console.log('🎨 [Chat] Setting edit diff card with:', {
+                  summary: diff.summary,
+                  hunkCount: diff.hunks?.length
+                });
                 setEditDiff(diff as EditDiffData);
                 const added = diff.summary?.added ?? 0;
                 const removed = diff.summary?.removed ?? 0;
                 setShowEditDiff(added > 0 || removed > 0);
               }
             }
-          } catch {
-            // ignore
+          } catch (e) {
+            console.error('🎨 [Chat] Error processing diff:', e);
           }
         }
         break;

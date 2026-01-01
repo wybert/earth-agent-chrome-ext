@@ -814,11 +814,25 @@ ${profile.prompt.trim()}`;
                 }
               }
 
+              // Pass the full result object for tools that have structured data (like diff)
+              // Only truncate string results to prevent huge payloads
+              let eventResult: any;
+              if (!result) {
+                eventResult = undefined;
+              } else if (typeof result === 'string') {
+                eventResult = result.substring(0, 500);
+              } else if (typeof result === 'object') {
+                // Keep the full object for structured results (editCode, insertAtLine, etc.)
+                eventResult = result;
+              } else {
+                eventResult = 'completed';
+              }
+
               const event = {
                 type: 'tool_finish' as const,
                 toolName: toolCall.toolName,
                 args: toolCall.args,
-                result: result ? (typeof result === 'string' ? result.substring(0, 200) : 'completed') : undefined,
+                result: eventResult,
                 timestamp: Date.now()
               };
               console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish`);
