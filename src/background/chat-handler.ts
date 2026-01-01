@@ -657,26 +657,37 @@ ${profile.prompt.trim()}`;
 
     // Create all AI tools with event callback
     const {
+      // Utility tools
       weatherTool,
       dateTimeTool,
+      // Simplified code editing tools (Claude Code-style)
+      readCodeTool,
+      editCodeTool,
+      insertAtLineTool,
+      undoEditTool,
+      // Earth Engine tools
       earthEngineDatasetTool,
       earthEngineScriptTool,
       earthEngineRunCodeTool,
+      // Browser interaction tools
       screenshotTool,
       snapshotTool,
       clickByRefIdTool,
+      clickByCoordinatesTool,
+      // Earth Engine state tools
       resetMapInspectorConsoleTool,
       clearScriptTool,
-      clickByCoordinatesTool,
       getConsoleOutputTool,
       getScriptTool,
       getMapInfoTool,
       getInspectorOutputTool
     } = createAITools(onToolEvent);
 
+    // Read-only tools for "ask" mode
     const readOnlyTools = {
       weather: weatherTool,
       dateTime: dateTimeTool,
+      readCode: readCodeTool,  // Can read code (no modifications)
       earthEngineDataset: earthEngineDatasetTool,
       screenshot: screenshotTool,
       snapshot: snapshotTool,
@@ -688,8 +699,12 @@ ${profile.prompt.trim()}`;
       getInspectorOutput: getInspectorOutputTool,
     };
 
+    // Write tools for "do" mode (includes all read-only tools plus these)
     const writeTools = {
-      earthEngineScript: earthEngineScriptTool,
+      editCode: editCodeTool,
+      insertAtLine: insertAtLineTool,
+      undoEdit: undoEditTool,
+      earthEngineScript: earthEngineScriptTool,  // Legacy: full replacement
       earthEngineRunCode: earthEngineRunCodeTool,
       resetMapInspectorConsole: resetMapInspectorConsoleTool,
       clearScript: clearScriptTool

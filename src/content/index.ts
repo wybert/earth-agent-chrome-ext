@@ -90,6 +90,210 @@ const MAX_CONNECTION_RETRIES = 5;
 const CONNECTION_RETRY_DELAYS = [500, 1000, 2000, 4000, 8000]; // Exponential backoff
 
 let periodicCheckIntervalId: number | undefined;
+let shadowSyncDebounceId: number | null = null;
+let shadowSyncLastContent: string | null = null;
+let editorChangeListenerRegistered = false;
+let editorSyncRetryCount = 0;
+
+/**
+ * Execute code in the page's main world context to access Ace editor.
+ * Content scripts run in isolated world and can't access page JS variables directly.
+ */
+function executeInPageContext<T>(code: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const callbackName = `__aceCallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Create a callback function that the injected script will call
+    (window as any)[callbackName] = (result: T, error?: string) => {
+      delete (window as any)[callbackName];
+      script.remove();
+      if (error) {
+        reject(new Error(error));
+      } else {
+        resolve(result);
+      }
+    };
+
+    script.textContent = `
+      (function() {
+        try {
+          const result = (function() { ${code} })();
+          window['${callbackName}'](result);
+        } catch (e) {
+          window['${callbackName}'](null, e.message);
+        }
+      })();
+    `;
+
+    document.documentElement.appendChild(script);
+  });
+}
+
+/**
+ * Get editor content by executing in page context
+ */
+async function getEditorContentViaPageContext(): Promise<{ success: boolean; content?: string; error?: string }> {
+  try {
+    const result = await executeInPageContext<{ content: string } | null>(`
+      const el = document.querySelector('.ace_editor');
+      if (!el) return null;
+      const editor = el.env?.editor || el.__ace_editor__;
+      if (!editor || !editor.getValue) return null;
+      return { content: editor.getValue() };
+    `);
+
+    if (result && result.content !== undefined) {
+      return { success: true, content: result.content };
+    }
+    return { success: false, error: 'Could not get editor content from page context' };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * Set editor content by executing in page context
+ */
+async function setEditorContentViaPageContext(content: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Escape the content for safe injection
+    const escapedContent = JSON.stringify(content);
+
+    const result = await executeInPageContext<boolean>(`
+      const el = document.querySelector('.ace_editor');
+      if (!el) return false;
+      const editor = el.env?.editor || el.__ace_editor__;
+      if (!editor || !editor.setValue) return false;
+      editor.setValue(${escapedContent}, -1);
+      return true;
+    `);
+
+    if (result) {
+      return { success: true };
+    }
+    return { success: false, error: 'Could not set editor content in page context' };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * Find the main GEE Ace Editor instance reliably.
+ * NOTE: This only works for DOM access. For editor API access, use executeInPageContext.
+ * Returns { editor, session } or null if not found.
+ * @deprecated Use getEditorContentViaPageContext/setEditorContentViaPageContext instead
+ */
+function findMainAceEditor(): { editor: any; session: any } | null {
+  // Content scripts can't access page JS variables due to isolated world
+  // This function is kept for backwards compatibility but will likely fail
+  const editorPaths = [
+    // GEE-specific paths (won't work in content script isolated world)
+    () => (window as any).code?.editor?.aceEditor,
+    () => (window as any).ee?.Editor?.ace,
+    () => (window as any).ee?.data?.aceEditor,
+    // Find from DOM element (env.editor won't be accessible in isolated world)
+    () => {
+      const elements = document.querySelectorAll('.ace_editor');
+      for (const el of Array.from(elements)) {
+        const editor = (el as any).__ace_editor__ || (el as any).env?.editor;
+        if (editor && (editor.getSession || editor.session)) {
+          return editor;
+        }
+      }
+      return null;
+    },
+  ];
+
+  for (const getEditor of editorPaths) {
+    try {
+      const editor = getEditor();
+      if (editor) {
+        const session = editor.getSession ? editor.getSession() : editor.session;
+        if (session) {
+          console.log('[findMainAceEditor] Found editor with session');
+          return { editor, session };
+        }
+      }
+    } catch (e) {
+      // Continue to next method
+    }
+  }
+
+  console.warn('[findMainAceEditor] Could not find Ace editor (expected in isolated content script world)');
+  return null;
+}
+
+function registerEditorShadowSync() {
+  if (editorChangeListenerRegistered) return;
+  editorChangeListenerRegistered = true;
+
+  try {
+    const editorPaths = [
+      () => Array.from(document.querySelectorAll('.ace_editor')).map(
+        el => (el as any).__ace_editor__ || (el as any).env?.editor
+      ).find(editor => editor),
+      () => (window as any).code?.editor?.aceEditor,
+      () => (window as any).ee?.Editor?.ace,
+    ];
+
+    let editor: any = null;
+    for (const getEditor of editorPaths) {
+      try {
+        const potential = getEditor();
+        if (potential && (potential.getSession || potential.session)) {
+          editor = potential;
+          break;
+        }
+      } catch {}
+    }
+
+    if (!editor) {
+      editorChangeListenerRegistered = false;
+      if (editorSyncRetryCount < 10) {
+        editorSyncRetryCount += 1;
+        setTimeout(registerEditorShadowSync, 500);
+      }
+      return;
+    }
+
+    const session = editor.getSession ? editor.getSession() : editor.session;
+    if (!session?.on) {
+      editorChangeListenerRegistered = false;
+      if (editorSyncRetryCount < 10) {
+        editorSyncRetryCount += 1;
+        setTimeout(registerEditorShadowSync, 500);
+      }
+      return;
+    }
+
+    session.on('change', () => {
+      try {
+        const content = editor.getValue ? editor.getValue() : (session.getValue ? session.getValue() : '');
+        if (content === shadowSyncLastContent) return;
+        shadowSyncLastContent = content;
+
+        if (shadowSyncDebounceId) {
+          clearTimeout(shadowSyncDebounceId);
+        }
+        shadowSyncDebounceId = window.setTimeout(() => {
+          try {
+            chrome.runtime.sendMessage({
+              type: 'SHADOW_EDITOR_UPDATED',
+              payload: {
+                scriptId: 'current_editor',
+                content,
+                reason: 'ace change'
+              }
+            });
+          } catch {}
+        }, 500);
+      } catch {}
+    });
+  } catch {
+    editorChangeListenerRegistered = false;
+  }
+}
 
 // Notify background script that content script is loaded
 function notifyBackgroundScript() {
@@ -309,9 +513,11 @@ if (shouldExecute) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       notifyBackgroundScript();
+      registerEditorShadowSync();
     });
   } else {
     notifyBackgroundScript();
+    registerEditorShadowSync();
   }
 } else {
   console.log(`🛑 [Content Script][${INSTANCE_TIMESTAMP}] Skipping initialization - instance should not execute`);
@@ -904,124 +1110,21 @@ async function handleEditScript(message: any, sendResponse: (response: any) => v
     
     console.log('Attempting to update Earth Engine editor content...');
     
-    // METHOD 1: Direct Ace editor access - try multiple paths
+    // METHOD 1: Use page context injection to access Ace editor (most reliable)
+    // Content scripts run in isolated world, so we need to inject into page context
     try {
-      console.log('METHOD 1: Attempting direct Ace editor access...');
-      
-      // Try different potential paths to find the Ace editor instance
-      const editorPaths = [
-        // Try standard AceEditor global
-        () => (window as any).ace,
-        
-        // Try to find the editor in the page scope
-        () => Array.from(document.querySelectorAll('.ace_editor')).map(
-          el => (el as any).__ace_editor__ || (el as any).env?.editor
-        ).find(editor => editor),
-        
-        // Try from CodeMirror if it's used instead
-        () => {
-          const cmElements = document.querySelectorAll('.CodeMirror');
-          if (cmElements.length > 0) {
-            return Array.from(cmElements).map(el => (el as any).CodeMirror).find(cm => cm);
-          }
-          return null;
-        },
-        
-        // Try to find editor in Google Earth Engine specific objects
-        () => (window as any).ee?.Editor?.ace,
-        () => (window as any).ee?.data?.aceEditor,
-        () => (window as any).code?.editor?.aceEditor,
-        
-        // Last resort - try to scan the entire window object for anything that looks like an editor
-        () => {
-          const foundEditors = [];
-          for (const key in window) {
-            try {
-              const obj = (window as any)[key];
-              if (obj && typeof obj === 'object' && 
-                  (obj.setContent || obj.setValue || obj.getSession || obj.edit)) {
-                foundEditors.push(obj);
-              }
-            } catch (e) {
-              // Ignore errors from security restrictions
-            }
-          }
-          return foundEditors[0]; // Return the first one we find
-        }
-      ];
-      
-      // Try each path until we find an editor
-      let editor = null;
-      for (const getEditor of editorPaths) {
-        try {
-          const potentialEditor = getEditor();
-          if (potentialEditor) {
-            editor = potentialEditor;
-            console.log('Found potential editor:', editor);
-            break;
-          }
-        } catch (e) {
-          // Continue to the next method
-          console.log('Editor path attempt failed:', e);
-        }
-      }
-      
-      if (editor) {
-        // Try different methods to update content based on what API the editor exposes
-        const updateMethods = [
-          // Standard Ace editor API
-          () => {
-            if (editor.getSession && editor.setValue) {
-              editor.setValue(content, -1); // -1 to place cursor at start
-              return true;
-            }
-            return false;
-          },
-          
-          // Some editors have a setContent method
-          () => {
-            if (editor.setContent) {
-              editor.setContent(content);
-              return true;
-            }
-            return false;
-          },
-          
-          // CodeMirror API
-          () => {
-            if (editor.setValue) {
-              editor.setValue(content);
-              return true;
-            }
-            return false;
-          },
-          
-          // Nested session access
-          () => {
-            if (editor.getSession && editor.getSession().setValue) {
-              editor.getSession().setValue(content);
-              return true;
-            }
-            return false;
-          }
-        ];
-        
-        for (const update of updateMethods) {
-          try {
-            if (update()) {
-              editorUpdated = true;
-              successMethod = 'Direct editor API';
-              console.log('Successfully updated editor content via direct API');
-              break;
-            }
-          } catch (e) {
-            // Try the next method
-            console.log('Editor update method failed:', e);
-          }
-        }
+      console.log('METHOD 1: Using page context injection to set Ace editor content...');
+      const result = await setEditorContentViaPageContext(content);
+
+      if (result.success) {
+        editorUpdated = true;
+        successMethod = 'Page context injection';
+        console.log('Successfully updated editor content via page context');
+      } else {
+        console.warn('Page context method failed:', result.error);
       }
     } catch (error) {
-      console.error('Error accessing Ace editor directly:', error);
+      console.error('Error setting Ace editor content via page context:', error);
     }
     
     // METHOD 2: DOM Manipulation - Bypass CSP restrictions
@@ -1163,156 +1266,91 @@ async function handleGetScript(sendResponse: (response: any) => void) {
 
     console.log('Attempting to read Earth Engine editor content...');
 
-    // METHOD 1: Direct Ace editor access - try multiple paths
+    // METHOD 1: Use page context injection to access Ace editor (most reliable)
+    // Content scripts run in isolated world, so we need to inject into page context
     try {
-      console.log('METHOD 1: Attempting direct Ace editor access...');
+      console.log('METHOD 1: Using page context injection to access Ace editor...');
+      const result = await getEditorContentViaPageContext();
 
-      // Try different potential paths to find the Ace editor instance
-      const editorPaths = [
-        // Try standard AceEditor global
-        () => (window as any).ace,
-
-        // Try to find the editor in the page scope
-        () => Array.from(document.querySelectorAll('.ace_editor')).map(
-          el => (el as any).__ace_editor__ || (el as any).env?.editor
-        ).find(editor => editor),
-
-        // Try from CodeMirror if it's used instead
-        () => {
-          const cmElements = document.querySelectorAll('.CodeMirror');
-          if (cmElements.length > 0) {
-            return Array.from(cmElements).map(el => (el as any).CodeMirror).find(cm => cm);
-          }
-          return null;
-        },
-
-        // Try to find editor in Google Earth Engine specific objects
-        () => (window as any).ee?.Editor?.ace,
-        () => (window as any).ee?.data?.aceEditor,
-        () => (window as any).code?.editor?.aceEditor,
-
-        // Last resort - try to scan the entire window object for anything that looks like an editor
-        () => {
-          const foundEditors = [];
-          for (const key in window) {
-            try {
-              const obj = (window as any)[key];
-              if (obj && typeof obj === 'object' &&
-                  (obj.getValue || obj.getSession || obj.edit)) {
-                foundEditors.push(obj);
-              }
-            } catch (e) {
-              // Ignore errors from security restrictions
-            }
-          }
-          return foundEditors[0]; // Return the first one we find
-        }
-      ];
-
-      // Try each path until we find an editor
-      let editor = null;
-      for (const getEditor of editorPaths) {
-        try {
-          const potentialEditor = getEditor();
-          if (potentialEditor) {
-            editor = potentialEditor;
-            console.log('Found potential editor:', editor);
-            break;
-          }
-        } catch (e) {
-          // Continue to the next method
-          console.log('Editor path attempt failed:', e);
-        }
-      }
-
-      if (editor) {
-        // Try different methods to get content based on what API the editor exposes
-        const getMethods = [
-          // Standard Ace editor API
-          () => {
-            if (editor.getValue) {
-              return editor.getValue();
-            }
-            return null;
-          },
-
-          // Some editors have a getContent method
-          () => {
-            if (editor.getContent) {
-              return editor.getContent();
-            }
-            return null;
-          },
-
-          // Session-based access
-          () => {
-            if (editor.getSession && editor.getSession().getValue) {
-              return editor.getSession().getValue();
-            }
-            return null;
-          },
-
-          // CodeMirror API
-          () => {
-            if (editor.doc && editor.doc.getValue) {
-              return editor.doc.getValue();
-            }
-            return null;
-          }
-        ];
-
-        for (const getMethod of getMethods) {
-          try {
-            const content = getMethod();
-            if (content !== null && content !== undefined) {
-              scriptContent = content;
-              contentFound = true;
-              successMethod = 'Direct editor API';
-              console.log('Successfully read editor content via direct API');
-              break;
-            }
-          } catch (e) {
-            // Try the next method
-            console.log('Editor get method failed:', e);
-          }
-        }
+      if (result.success && result.content !== undefined) {
+        scriptContent = result.content;
+        contentFound = true;
+        successMethod = 'Page context injection';
+        console.log(`Successfully read editor content via page context (${scriptContent.split('\n').length} lines)`);
+      } else {
+        console.warn('Page context method failed:', result.error);
       }
     } catch (error) {
-      console.error('Error accessing Ace editor directly:', error);
+      console.error('Error accessing Ace editor via page context:', error);
     }
 
-    // METHOD 2: DOM Manipulation - Read from editor pre elements
+    // METHOD 2: DOM Manipulation - Read from editor pre elements (fallback, less reliable)
     if (!contentFound) {
       try {
         console.log('METHOD 2: Attempting DOM reading...');
 
-        // Find the pre elements in the editor
-        const editorPres = document.querySelectorAll('.ace_editor .ace_text-layer');
-        if (editorPres.length > 0) {
-          console.log(`Found ${editorPres.length} text layer elements in the editor`);
+        // GEE-specific: Target only the main code editor panel, not other Ace editors on the page
+        // The main editor is inside .editor-panel or the first significant .ace_editor
+        const mainEditorSelectors = [
+          '.editor-panel .ace_editor',  // GEE main editor panel
+          '.script-editor .ace_editor', // Alternative selector
+          '#editor .ace_editor',        // ID-based selector
+          '.ace_editor.ace-tm',          // Theme-specific selector (usually main editor)
+        ];
 
-          // Get text content from the text layer
-          const textLayer = editorPres[0];
-          scriptContent = textLayer.textContent || '';
+        let mainEditor: Element | null = null;
+        for (const selector of mainEditorSelectors) {
+          mainEditor = document.querySelector(selector);
+          if (mainEditor) {
+            console.log(`Found main editor using selector: ${selector}`);
+            break;
+          }
+        }
 
-          contentFound = true;
-          successMethod = 'DOM text layer reading';
-          console.log('Successfully read editor content via DOM text layer');
-        } else {
-          // Try alternative: read from all .ace_line elements
-          const aceLines = document.querySelectorAll('.ace_editor .ace_line');
+        // Fallback: use the largest .ace_editor (by line count) which is likely the main code editor
+        if (!mainEditor) {
+          const allEditors = document.querySelectorAll('.ace_editor');
+          console.log(`Found ${allEditors.length} ace_editor elements on page`);
+
+          let maxLines = 0;
+          for (const editor of Array.from(allEditors)) {
+            const lineCount = editor.querySelectorAll('.ace_line').length;
+            if (lineCount > maxLines) {
+              maxLines = lineCount;
+              mainEditor = editor;
+            }
+          }
+          if (mainEditor) {
+            console.log(`Selected editor with most lines (${maxLines} lines)`);
+          }
+        }
+
+        if (mainEditor) {
+          // Read from the selected main editor only
+          const aceLines = mainEditor.querySelectorAll('.ace_line');
           if (aceLines.length > 0) {
-            console.log(`Found ${aceLines.length} ace_line elements`);
+            console.log(`Found ${aceLines.length} ace_line elements in main editor`);
             scriptContent = Array.from(aceLines)
-              .map(line => line.textContent || '')
+              .map((line) => (line.textContent || '').replace(/\u00a0/g, ''))
               .join('\n');
 
             contentFound = true;
-            successMethod = 'DOM ace_line reading';
-            console.log('Successfully read editor content via ace_line elements');
+            successMethod = 'DOM ace_line reading (main editor)';
+            console.log('Successfully read editor content via ace_line elements from main editor');
           } else {
-            console.log('No text layer or ace_line elements found in the editor');
+            // Fallback: try text layer innerText from main editor
+            const textLayer = mainEditor.querySelector('.ace_text-layer') as HTMLElement;
+            if (textLayer) {
+              console.log('Reading from text layer in main editor');
+              scriptContent = (textLayer.innerText || textLayer.textContent || '').replace(/\u00a0/g, '');
+
+              contentFound = true;
+              successMethod = 'DOM text layer reading (main editor)';
+              console.log('Successfully read editor content via DOM text layer from main editor');
+            }
           }
+        } else {
+          console.log('No main editor found on page');
         }
       } catch (error) {
         console.error('Error using DOM reading:', error);
@@ -1793,7 +1831,8 @@ async function handleExecuteClickByCoordinates(x: number, y: number, sendRespons
  */
 async function handleClickBySelector(selector: string, elementDescription: string | undefined, sendResponse: (response: any) => void) {
   try {
-    console.log(`[Content Script - Click By Selector] Looking for element with selector: "${selector}"`);
+    // Keep logs quiet by default; click-by-selector is inherently best-effort.
+    console.debug(`[Content Script - Click By Selector] selector="${selector}"`);
     
     // Function to search in shadow DOMs as well
     const findElementInShadowDoms = (root: Document | ShadowRoot, selector: string): Element | null => {
@@ -1801,21 +1840,21 @@ async function handleClickBySelector(selector: string, elementDescription: strin
       try {
         const element = root.querySelector(selector);
         if (element) {
-          console.log(`[Content Script - Click By Selector] Found element directly:`, element);
+          console.debug(`[Content Script - Click By Selector] Found element directly`);
           return element;
         }
       } catch (error) {
-        console.error(`[Content Script - Click By Selector] Error in direct querySelector:`, error);
+        // Some selectors may be invalid for querySelector; treat as non-fatal.
+        console.warn(`[Content Script - Click By Selector] querySelector error`);
       }
       
       // Search in shadow DOMs
       const allElements = root.querySelectorAll('*');
       for (const host of Array.from(allElements)) {
         if (host.shadowRoot && host.shadowRoot.mode === 'open') {
-          console.log(`[Content Script - Click By Selector] Searching in shadow DOM of:`, host);
           const elementInShadow = findElementInShadowDoms(host.shadowRoot, selector);
           if (elementInShadow) {
-            console.log(`[Content Script - Click By Selector] Found element in shadow DOM:`, elementInShadow);
+            console.debug(`[Content Script - Click By Selector] Found element in shadow DOM`);
             return elementInShadow;
           }
         }
@@ -1824,10 +1863,17 @@ async function handleClickBySelector(selector: string, elementDescription: strin
       return null;
     };
 
-    const element = findElementInShadowDoms(document, selector);
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let element: Element | null = null;
+    // Retry briefly: Closure menus (goog-menuitem) may appear a moment after the triggering click.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      element = findElementInShadowDoms(document, selector);
+      if (element) break;
+      await sleep(100);
+    }
     
     if (!element) {
-      console.error(`[Content Script - Click By Selector] Element not found with selector: "${selector}"`);
+      console.warn(`[Content Script - Click By Selector] Element not found: "${selector}"`);
       sendResponse({
         success: false,
         error: `Element not found with selector: ${selector}`
@@ -1835,12 +1881,13 @@ async function handleClickBySelector(selector: string, elementDescription: strin
       return;
     }
 
-    console.log(`[Content Script - Click By Selector] Found element:`, element);
-    console.log(`[Content Script - Click By Selector] Element details: tagName=${element.tagName}, id=${element.id || 'none'}, class=${element.className || 'none'}`);
+    console.debug(
+      `[Content Script - Click By Selector] Found element tagName=${element.tagName}, id=${element.id || 'none'}`
+    );
 
     // Check if element is connected to DOM
     if (!element.isConnected) {
-      console.error(`[Content Script - Click By Selector] Element is detached from DOM`);
+      console.warn(`[Content Script - Click By Selector] Element is detached from DOM`);
       sendResponse({
         success: false,
         error: 'Element is detached from the DOM'
@@ -1849,12 +1896,10 @@ async function handleClickBySelector(selector: string, elementDescription: strin
     }
 
     // Scroll element into view
-    console.log(`[Content Script - Click By Selector] Scrolling element into view`);
     element.scrollIntoView({ behavior: 'auto', block: 'center' });
 
     // Get element's bounding rect for click coordinates
     const rect = element.getBoundingClientRect();
-    console.log(`[Content Script - Click By Selector] Element bounding rect:`, rect);
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
@@ -1887,24 +1932,21 @@ async function handleClickBySelector(selector: string, elementDescription: strin
     });
 
     // Dispatch events in sequence
-    console.log(`[Content Script - Click By Selector] Dispatching mouse events`);
     element.dispatchEvent(mouseDownEvent);
     element.dispatchEvent(mouseUpEvent);
     element.dispatchEvent(clickEvent);
 
     // Also trigger native click for form elements and links
     if (element instanceof HTMLElement) {
-      console.log(`[Content Script - Click By Selector] Calling native click() method`);
       element.click();
     }
 
-    console.log(`[Content Script - Click By Selector] Click sequence completed`);
     sendResponse({
       success: true,
       message: `Successfully clicked element with selector: ${selector}${elementDescription ? ` (${elementDescription})` : ''}`
     });
   } catch (error) {
-    console.error(`[Content Script - Click By Selector] Error clicking element:`, error);
+    console.warn(`[Content Script - Click By Selector] Error clicking element`);
     sendResponse({
       success: false,
       error: `Error clicking element: ${error instanceof Error ? error.message : String(error)}`

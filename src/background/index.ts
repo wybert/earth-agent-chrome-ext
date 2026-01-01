@@ -3,6 +3,7 @@ import { selectBestEarthEngineTab } from '../lib/utils';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
+import { shadowWorkspaceSingleton } from './shadow-workspace';
 
 // Types for messages between components
 interface MessageBase {
@@ -16,6 +17,36 @@ type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
 
 // Store active port connections
 let port: chrome.runtime.Port | null = null;
+const disconnectedPorts = new WeakSet<chrome.runtime.Port>();
+
+function postToSidepanel(payload: any) {
+  if (!port) return false;
+  if (disconnectedPorts.has(port)) {
+    port = null;
+    return false;
+  }
+  try {
+    port.postMessage(payload);
+    return true;
+  } catch {
+    // Sidepanel can disconnect while background is still streaming; avoid throwing.
+    port = null;
+    return false;
+  }
+}
+
+function postToPort(targetPort: chrome.runtime.Port | null, payload: any) {
+  if (!targetPort) return false;
+  if (disconnectedPorts.has(targetPort)) return false;
+  try {
+    targetPort.postMessage(payload);
+    return true;
+  } catch {
+    // Ports can disconnect while async work is in-flight; avoid throwing.
+    disconnectedPorts.add(targetPort);
+    return false;
+  }
+}
 
 // Store connections from side panel ports with type safety
 const sidePanelPorts = new Map<string, chrome.runtime.Port>();
@@ -300,6 +331,30 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       if (sender.tab && sender.tab.id) {
         console.log(`Content script loaded and registered for tab ${sender.tab.id}`);
         contentScriptTabs.set(sender.tab.id, true);
+        // Auto-sync editor -> shadow on load so the agent always starts from current script
+        try {
+          const tabId = sender.tab.id;
+          const attemptSync = (delayMs: number) => {
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (resp) => {
+                if (chrome.runtime.lastError) return;
+                if (resp?.success && typeof resp.content === 'string') {
+                  shadowWorkspaceSingleton.setFromEditor(
+                    tabId,
+                    'current_editor',
+                    resp.content,
+                    'initial sync from editor'
+                  );
+                  shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
+                }
+              });
+            }, delayMs);
+          };
+          attemptSync(0);
+          attemptSync(1000);
+        } catch {
+          // ignore
+        }
         sendResponse({ success: true, message: 'Content script registered' });
       } else {
         console.warn('Received CONTENT_SCRIPT_LOADED without tab info');
@@ -312,6 +367,29 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       console.log('Received heartbeat from content script', sender.tab?.id);
       sendResponse({ success: true, message: 'Heartbeat acknowledged' });
       return false; // Synchronous response
+
+    case 'SHADOW_EDITOR_UPDATED':
+      // Content script pushed updated editor content (user typing or external changes)
+      if (sender.tab?.id && typeof message.payload?.content === 'string') {
+        try {
+          shadowWorkspaceSingleton.setFromEditor(
+            sender.tab.id,
+            message.payload.scriptId || 'current_editor',
+            message.payload.content,
+            message.payload.reason || 'editor changed'
+          );
+          if (port) {
+            const diff = shadowWorkspaceSingleton.diffSinceSynced(sender.tab.id, message.payload.scriptId || 'current_editor');
+            postToSidepanel({ type: 'SHADOW_DIFF_UPDATE', diff });
+          }
+        } catch (e) {
+          // ignore
+        }
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false, error: 'Missing tab or content' });
+      }
+      return false;
     
     case 'VALIDATE_SERVER':
       if (message.payload && message.payload.host && message.payload.port) {
@@ -533,7 +611,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 });
               } else if (port) {
                 // If this is from a port connection like sidebar
-                port.postMessage({
+                postToSidepanel({
                   type: 'CHAT_STREAM_CHUNK',
                   requestId,
                   chunk: chunkText
@@ -550,7 +628,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               });
             } else if (port) {
               // If this is from a port connection like sidebar
-              port.postMessage({
+              postToSidepanel({
                 type: 'CHAT_STREAM_END',
                 requestId,
                 fullText: accumulatedResponse
@@ -570,7 +648,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               });
             } else if (port) {
               // If this is from a port connection like sidebar
-              port.postMessage({
+              postToSidepanel({
                 type: 'ERROR',
                 requestId,
                 error: `Chat request failed: ${errorMessage}`
@@ -1606,7 +1684,7 @@ chrome.runtime.onConnect.addListener((newPort) => {
       // Handle side panel specific messages
       switch (message.type) {
         case 'INIT':
-          newPort.postMessage({ type: 'INIT_RESPONSE', status: 'initialized' });
+          postToPort(newPort, { type: 'INIT_RESPONSE', status: 'initialized' });
           break;
           
         case 'CHAT_MESSAGE':
@@ -1618,7 +1696,7 @@ chrome.runtime.onConnect.addListener((newPort) => {
         case 'PING':
           // Handle ping messages from side panel
           console.log('Received PING from side panel, responding with PONG');
-          newPort.postMessage({ type: 'PONG', timestamp: Date.now() });
+          postToPort(newPort, { type: 'PONG', timestamp: Date.now() });
           break;
 
         case 'CANCEL_STREAM':
@@ -1631,14 +1709,98 @@ chrome.runtime.onConnect.addListener((newPort) => {
           }
           break;
 
+        case 'SHADOW_GET_DIFF': {
+          try {
+            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+            const tabId = selectedTab?.id;
+            if (!tabId) {
+              postToPort(newPort, { type: 'ERROR', error: 'No Earth Engine tab found for diff' });
+              break;
+            }
+            const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
+            postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
+          } catch (e: any) {
+            postToPort(newPort, { type: 'ERROR', error: e?.message || String(e) });
+          }
+          break;
+        }
+
+        case 'SHADOW_UNDO': {
+          try {
+            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+            const tabId = selectedTab?.id;
+            if (!tabId) {
+              postToPort(newPort, { type: 'ERROR', error: 'No Earth Engine tab found for undo' });
+              break;
+            }
+            shadowWorkspaceSingleton.undo(tabId, 'current_editor');
+            const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
+            postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
+          } catch (e: any) {
+            postToPort(newPort, { type: 'ERROR', error: e?.message || String(e) });
+          }
+          break;
+        }
+
+        case 'SHADOW_REDO': {
+          try {
+            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+            const tabId = selectedTab?.id;
+            if (!tabId) {
+              postToPort(newPort, { type: 'ERROR', error: 'No Earth Engine tab found for redo' });
+              break;
+            }
+            shadowWorkspaceSingleton.redo(tabId, 'current_editor');
+            const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
+            postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
+          } catch (e: any) {
+            postToPort(newPort, { type: 'ERROR', error: e?.message || String(e) });
+          }
+          break;
+        }
+
+        case 'SHADOW_SYNC_TO_EDITOR': {
+          try {
+            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+            const tabId = selectedTab?.id;
+            if (!tabId) {
+              postToPort(newPort, { type: 'ERROR', error: 'No Earth Engine tab found for sync' });
+              break;
+            }
+
+            const state = shadowWorkspaceSingleton.getOrCreate(tabId, 'current_editor');
+            chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: 'current_editor', content: state.content }, (resp) => {
+              if (chrome.runtime.lastError) {
+                postToPort(newPort, { type: 'ERROR', error: chrome.runtime.lastError.message || 'Sync failed' });
+                return;
+              }
+              if (resp?.success) {
+                shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
+                const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
+                postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
+              } else {
+                postToPort(newPort, { type: 'ERROR', error: resp?.error || 'Sync failed' });
+              }
+            });
+          } catch (e: any) {
+            postToPort(newPort, { type: 'ERROR', error: e?.message || String(e) });
+          }
+          break;
+        }
+
         default:
           console.warn('Unknown side panel message type:', message.type);
-          newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+          postToPort(newPort, { type: 'ERROR', error: 'Unknown message type' });
       }
     });
 
     newPort.onDisconnect.addListener(() => {
       console.log('Side panel disconnected');
+      disconnectedPorts.add(newPort);
       if (port === newPort) {
         // Clear the global port reference when this port disconnects
         port = null;
@@ -1669,12 +1831,13 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
         default:
           console.warn('Unknown agent test message type:', message.type);
-          newPort.postMessage({ type: 'ERROR', error: 'Unknown message type' });
+          postToPort(newPort, { type: 'ERROR', error: 'Unknown message type' });
       }
     });
 
     newPort.onDisconnect.addListener(() => {
       console.log('Agent test connection disconnected');
+      disconnectedPorts.add(newPort);
     });
   } else if (newPort.name === 'clear-code') {
     console.log('Clear code connection established');
@@ -1694,14 +1857,14 @@ chrome.runtime.onConnect.addListener((newPort) => {
           
           if (result.success) {
             console.log('Code cleared successfully');
-            newPort.postMessage({ type: 'CLEAR_CODE_SUCCESS' });
+            postToPort(newPort, { type: 'CLEAR_CODE_SUCCESS' });
           } else {
             console.error('Failed to clear code:', result.error);
-            newPort.postMessage({ type: 'ERROR', error: result.error || 'Failed to clear code' });
+            postToPort(newPort, { type: 'ERROR', error: result.error || 'Failed to clear code' });
           }
         } catch (error) {
           console.error('Error clearing code:', error);
-          newPort.postMessage({ 
+          postToPort(newPort, { 
             type: 'ERROR', 
             error: error instanceof Error ? error.message : 'Unknown error clearing code'
           });
@@ -1711,6 +1874,7 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
     newPort.onDisconnect.addListener(() => {
       console.log('Clear code connection disconnected');
+      disconnectedPorts.add(newPort);
     });
   }
 });
@@ -1721,6 +1885,19 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
   // Track this request ID for this port so we can cancel it if needed
   activeRequestsByPort.set(port, requestId);
+
+  const safePostMessage = (payload: any) => {
+    if (disconnectedPorts.has(port)) return false;
+    try {
+      port.postMessage(payload);
+      return true;
+    } catch (e) {
+      // Sidepanel can disconnect while a stream is still running; treat as non-fatal.
+      disconnectedPorts.add(port);
+      console.warn(`[${requestId}] Attempted to postMessage on a disconnected port.`);
+      return false;
+    }
+  };
 
   console.log(`[${requestId}] Handling chat message...`);
   console.log(`[${requestId}] Message type: ${message.type}`);
@@ -1861,7 +2038,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     
     if (!apiConfig.apiKey && apiConfig.provider !== 'ollama') {
       console.error(`[${requestId}] API key not configured`);
-      port.postMessage({ 
+      safePostMessage({ 
         type: 'ERROR',
         requestId,
         error: 'API key not configured. Please configure it in the extension settings.'
@@ -1884,7 +2061,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       timestamp: number;
     }) => {
       console.log(`🔧 [Background] onToolEvent called:`, event);
-      port.postMessage({
+      safePostMessage({
         type: 'TOOL_EVENT',
         requestId,
         event
@@ -1923,7 +2100,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           errorPayload = { error: `API Error: ${response.statusText}` };
       }
       console.error(`[${requestId}] Error from chat handler:`, errorPayload);
-      port.postMessage({ 
+      safePostMessage({ 
         type: 'ERROR',
         requestId,
         error: errorPayload.error || errorPayload.message || 'Unknown API error'
@@ -1934,7 +2111,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     // Check if the response body exists
     if (!response.body) {
         console.error(`[${requestId}] Response body is null.`);
-        port.postMessage({ 
+        safePostMessage({ 
           type: 'ERROR',
           requestId,
           error: 'Received empty response from API handler'
@@ -1961,10 +2138,12 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
         if (done) {
           console.log(`[${requestId}] Text stream finished.`);
-          port.postMessage({
+          if (!safePostMessage({
             type: 'CHAT_STREAM_END',
             requestId
-          });
+          })) {
+            break;
+          }
           break; // Exit loop when stream is done
         }
 
@@ -1977,7 +2156,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
             try {
               const errorData = JSON.parse(chunk.substring(6)); // Remove 'error:' prefix
               console.error(`[${requestId}] Received error from stream:`, errorData.error);
-              port.postMessage({
+              safePostMessage({
                 type: 'ERROR',
                 requestId,
                 error: errorData.error
@@ -1992,21 +2171,21 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               const data = JSON.parse(chunk.substring(6)); // Remove 'data: ' prefix
               if (data.type === 'token_usage' && data.usage) {
                 console.log(`📊 [${requestId}] Received token usage:`, data.usage);
-                port.postMessage({
+                safePostMessage({
                   type: 'TOKEN_USAGE',
                   requestId,
                   usage: data.usage
                 });
               } else if (data.type === 'token_estimate' && data.estimate) {
                 console.log(`📊 [${requestId}] Received token estimate:`, data.estimate);
-                port.postMessage({
+                safePostMessage({
                   type: 'TOKEN_ESTIMATE',
                   requestId,
                   estimate: data.estimate
                 });
               } else {
                 // Unknown data type, treat as normal chunk
-                port.postMessage({
+                safePostMessage({
                   type: 'CHAT_STREAM_CHUNK',
                   requestId,
                   chunk: chunk
@@ -2014,7 +2193,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               }
             } catch (parseError) {
               // If parsing fails, treat as normal chunk
-              port.postMessage({
+              safePostMessage({
                 type: 'CHAT_STREAM_CHUNK',
                 requestId,
                 chunk: chunk
@@ -2022,7 +2201,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
             }
           } else {
             // Normal chunk, forward to frontend
-            port.postMessage({
+            safePostMessage({
               type: 'CHAT_STREAM_CHUNK',
               requestId,
               chunk: chunk
@@ -2033,7 +2212,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     } catch (streamError) {
       const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
       console.error(`[${requestId}] Error reading text stream:`, errorMessage);
-      port.postMessage({
+      safePostMessage({
         type: 'ERROR',
         requestId,
         error: `Stream reading error: ${errorMessage}`
@@ -2050,7 +2229,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[${requestId}] Chat processing error:`, errorMessage);
-    port.postMessage({
+    safePostMessage({
       type: 'ERROR',
       requestId,
       error: `Chat handler error: ${errorMessage}`
