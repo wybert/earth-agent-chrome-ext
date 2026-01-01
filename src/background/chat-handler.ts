@@ -815,15 +815,26 @@ ${profile.prompt.trim()}`;
               }
 
               // Pass the full result object for tools that have structured data (like diff)
-              // Only truncate string results to prevent huge payloads
+              // The Vercel AI SDK wraps results in { type: 'tool-result', result: <actual-result> }
+              // We need to extract the actual result from the wrapper
               let eventResult: any;
+              console.log(`   - Raw result type: ${typeof result}`);
+              console.log(`   - Raw result keys: ${result ? Object.keys(result).join(', ') : 'null'}`);
+              console.log(`   - Raw result:`, JSON.stringify(result, null, 2)?.substring(0, 500));
+
               if (!result) {
                 eventResult = undefined;
               } else if (typeof result === 'string') {
                 eventResult = result.substring(0, 500);
               } else if (typeof result === 'object') {
-                // Keep the full object for structured results (editCode, insertAtLine, etc.)
-                eventResult = result;
+                // Check if this is a Vercel AI SDK wrapper object
+                // The actual tool result is in result.output (not result.result!)
+                const actualResult = result.output !== undefined ? result.output :
+                                     result.result !== undefined ? result.result : result;
+                console.log(`   - Extracted result keys: ${actualResult ? Object.keys(actualResult).join(', ') : 'null'}`);
+                console.log(`   - Extracted result has diff: ${!!(actualResult?.diff)}`);
+                console.log(`   - Extracted result:`, JSON.stringify(actualResult, null, 2)?.substring(0, 500));
+                eventResult = actualResult;
               } else {
                 eventResult = 'completed';
               }

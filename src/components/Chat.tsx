@@ -811,7 +811,8 @@ export function ChatUI() {
               toolName: response.event.toolName,
               hasResult: !!response.event.result,
               resultType: typeof response.event.result,
-              result: response.event.result
+              resultKeys: response.event.result ? Object.keys(response.event.result) : [],
+              resultJSON: JSON.stringify(response.event.result, null, 2)?.substring(0, 1000)
             });
 
             if (
