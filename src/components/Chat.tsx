@@ -829,9 +829,8 @@ export function ChatUI() {
                   hunkCount: diff.hunks?.length
                 });
                 setEditDiff(diff as EditDiffData);
-                const added = diff.summary?.added ?? 0;
-                const removed = diff.summary?.removed ?? 0;
-                setShowEditDiff(added > 0 || removed > 0);
+                // Don't auto-show the card - user can click the diff button to see it
+                // setShowEditDiff is controlled by the button click
               }
             }
           } catch (e) {
@@ -1600,22 +1599,15 @@ export function ChatUI() {
               onProviderChange={setApiProvider}
               onModelChange={setSelectedModel}
               className="flex-1 min-h-0"
+              diffSummary={editDiff?.summary ? { added: editDiff.summary.added, removed: editDiff.summary.removed, hunks: editDiff.summary.hunks } : undefined}
+              diffHunks={editDiff?.hunks}
+              onDiffUndo={handleShadowUndo}
+              onDiffClose={() => setEditDiff(null)}
             />
 
-            {/* Edit diff card - shown when editCode tool completes */}
-            {showEditDiff && editDiff ? (
-              <div className="absolute bottom-20 left-2 right-2 z-20">
-                <EditDiffCard
-                  diff={editDiff}
-                  onUndo={handleShadowUndo}
-                  onClose={() => setShowEditDiff(false)}
-                />
-              </div>
-            ) : null}
-
-            {/* Legacy shadow diff card - shown for old shadow workflow */}
-            {showShadowDiff && shadowDiff && !showEditDiff ? (
-              <div className="absolute bottom-20 left-2 right-2 z-20">
+            {/* Legacy shadow diff card - shown for old shadow workflow (when no editDiff) */}
+            {showShadowDiff && shadowDiff && !editDiff ? (
+              <div className="absolute bottom-32 left-2 right-2 z-20">
                 <ShadowDiffCard
                   diff={shadowDiff}
                   onSyncToEditor={handleShadowSyncToEditor}
@@ -1629,7 +1621,7 @@ export function ChatUI() {
             {/* Error and Fallback Displays - Positioned at bottom above input */}
             {/* Removed duplicate error display - errors are now shown as assistant messages in the chat */}
             {fallbackMode && (
-              <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
+              <Card className="absolute bottom-32 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
                 <p className="text-sm font-medium">Fallback Mode</p>
                 <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
                 {apiConfigured && (
