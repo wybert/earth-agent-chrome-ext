@@ -44,9 +44,9 @@ export function DiffStatusBar({
   if (!hasChanges) return null;
 
   return (
-    <div className={cn('border-b border-border bg-muted/30', className)}>
+    <div className={cn('bg-muted/50 overflow-hidden', className)}>
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 py-2">
+      <div className="flex items-center justify-between px-3 py-1.5">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center gap-2 text-sm text-foreground hover:text-foreground/80 transition-colors"
