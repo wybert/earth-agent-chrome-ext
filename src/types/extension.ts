@@ -77,8 +77,7 @@ export type ToolKey =
   | 'undoEdit'
   // Earth Engine tools
   | 'earthEngineDataset'
-  | 'earthEngineScript'  // Legacy: full replacement
-  | 'earthEngineRunCode'
+  | 'runCurrentCode'
   // Browser interaction tools
   | 'screenshot'
   | 'snapshot'
@@ -86,7 +85,6 @@ export type ToolKey =
   | 'clickByCoordinates'
   // Earth Engine state tools
   | 'resetMapInspectorConsole'
-  | 'clearScript'
   | 'getConsoleOutput'
   | 'getScript'
   | 'getMapInfo'
