@@ -657,26 +657,37 @@ ${profile.prompt.trim()}`;
 
     // Create all AI tools with event callback
     const {
+      // Utility tools
       weatherTool,
       dateTimeTool,
+      // Simplified code editing tools (Claude Code-style)
+      readCodeTool,
+      editCodeTool,
+      insertAtLineTool,
+      undoEditTool,
+      // Earth Engine tools
       earthEngineDatasetTool,
       earthEngineScriptTool,
       earthEngineRunCodeTool,
+      // Browser interaction tools
       screenshotTool,
       snapshotTool,
       clickByRefIdTool,
+      clickByCoordinatesTool,
+      // Earth Engine state tools
       resetMapInspectorConsoleTool,
       clearScriptTool,
-      clickByCoordinatesTool,
       getConsoleOutputTool,
       getScriptTool,
       getMapInfoTool,
       getInspectorOutputTool
     } = createAITools(onToolEvent);
 
+    // Read-only tools for "ask" mode
     const readOnlyTools = {
       weather: weatherTool,
       dateTime: dateTimeTool,
+      readCode: readCodeTool,  // Can read code (no modifications)
       earthEngineDataset: earthEngineDatasetTool,
       screenshot: screenshotTool,
       snapshot: snapshotTool,
@@ -688,8 +699,12 @@ ${profile.prompt.trim()}`;
       getInspectorOutput: getInspectorOutputTool,
     };
 
+    // Write tools for "do" mode (includes all read-only tools plus these)
     const writeTools = {
-      earthEngineScript: earthEngineScriptTool,
+      editCode: editCodeTool,
+      insertAtLine: insertAtLineTool,
+      undoEdit: undoEditTool,
+      earthEngineScript: earthEngineScriptTool,  // Legacy: full replacement
       earthEngineRunCode: earthEngineRunCodeTool,
       resetMapInspectorConsole: resetMapInspectorConsoleTool,
       clearScript: clearScriptTool
@@ -799,11 +814,36 @@ ${profile.prompt.trim()}`;
                 }
               }
 
+              // Pass the full result object for tools that have structured data (like diff)
+              // The Vercel AI SDK wraps results in { type: 'tool-result', result: <actual-result> }
+              // We need to extract the actual result from the wrapper
+              let eventResult: any;
+              console.log(`   - Raw result type: ${typeof result}`);
+              console.log(`   - Raw result keys: ${result ? Object.keys(result).join(', ') : 'null'}`);
+              console.log(`   - Raw result:`, JSON.stringify(result, null, 2)?.substring(0, 500));
+
+              if (!result) {
+                eventResult = undefined;
+              } else if (typeof result === 'string') {
+                eventResult = result.substring(0, 500);
+              } else if (typeof result === 'object') {
+                // Check if this is a Vercel AI SDK wrapper object
+                // The actual tool result is in result.output (not result.result!)
+                const actualResult = result.output !== undefined ? result.output :
+                                     result.result !== undefined ? result.result : result;
+                console.log(`   - Extracted result keys: ${actualResult ? Object.keys(actualResult).join(', ') : 'null'}`);
+                console.log(`   - Extracted result has diff: ${!!(actualResult?.diff)}`);
+                console.log(`   - Extracted result:`, JSON.stringify(actualResult, null, 2)?.substring(0, 500));
+                eventResult = actualResult;
+              } else {
+                eventResult = 'completed';
+              }
+
               const event = {
                 type: 'tool_finish' as const,
                 toolName: toolCall.toolName,
                 args: toolCall.args,
-                result: result ? (typeof result === 'string' ? result.substring(0, 200) : 'completed') : undefined,
+                result: eventResult,
                 timestamp: Date.now()
               };
               console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish`);

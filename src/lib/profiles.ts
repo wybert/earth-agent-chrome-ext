@@ -11,25 +11,38 @@ export interface ToolCatalogItem {
 }
 
 export const TOOL_CATALOG: ToolCatalogItem[] = [
+  // Utility tools
   { key: 'weather', label: 'Weather', description: 'Get current weather for a location', kind: 'read' },
   { key: 'dateTime', label: 'Date/Time', description: 'Get current date/time (optional time zone)', kind: 'read' },
+
+  // Simplified code editing tools (Claude Code-style)
+  { key: 'readCode', label: 'Read Code', description: 'Read current code from Earth Engine editor', kind: 'read' },
+  { key: 'editCode', label: 'Edit Code', description: 'Edit code using old_string/new_string replacement', kind: 'write' },
+  { key: 'insertAtLine', label: 'Insert Line', description: 'Insert text at a specific line number', kind: 'write' },
+  { key: 'undoEdit', label: 'Undo Edit', description: 'Undo the last code edit', kind: 'write' },
+
+  // Earth Engine tools
   { key: 'earthEngineDataset', label: 'EE Dataset Docs', description: 'Search Earth Engine dataset documentation', kind: 'read' },
+  { key: 'earthEngineScript', label: 'Set Script', description: 'Replace entire script content (legacy)', kind: 'write' },
+  { key: 'earthEngineRunCode', label: 'Run Script', description: 'Execute Earth Engine script', kind: 'write' },
+
+  // Browser interaction tools
   { key: 'screenshot', label: 'Screenshot', description: 'Take a screenshot of the current page', kind: 'read' },
   { key: 'snapshot', label: 'Snapshot', description: 'Capture accessibility snapshot of the page', kind: 'read' },
   { key: 'clickByRefId', label: 'Click (Ref ID)', description: 'Click an element by ref id', kind: 'read' },
   { key: 'clickByCoordinates', label: 'Click (Coords)', description: 'Click by x/y coordinates', kind: 'read' },
+
+  // Earth Engine state tools
   { key: 'getConsoleOutput', label: 'Console Output', description: 'Get Earth Engine console output', kind: 'read' },
   { key: 'getScript', label: 'Get Script', description: 'Read current Earth Engine script', kind: 'read' },
   { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
   { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
-
-  { key: 'earthEngineScript', label: 'Edit Script', description: 'Insert/modify code in Earth Engine editor', kind: 'write' },
-  { key: 'earthEngineRunCode', label: 'Run Script', description: 'Execute Earth Engine script', kind: 'write' },
   { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
   { key: 'clearScript', label: 'Clear Script', description: 'Clear the editor script', kind: 'write' },
 ];
 
 export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
+  'readCode',
   'dateTime',
   'weather',
   'earthEngineDataset',
@@ -78,4 +91,3 @@ export function migrateProfiles(raw: unknown): AgentProfile[] {
     })
     .filter(Boolean) as AgentProfile[];
 }
-

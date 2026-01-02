@@ -67,21 +67,30 @@ export interface ExtensionMessage {
 
 // Tool keys exposed to the LLM (and selectable in custom profiles)
 export type ToolKey =
+  // Utility tools
   | 'weather'
   | 'dateTime'
+  // Simplified code editing tools (Claude Code-style)
+  | 'readCode'
+  | 'editCode'
+  | 'insertAtLine'
+  | 'undoEdit'
+  // Earth Engine tools
   | 'earthEngineDataset'
+  | 'earthEngineScript'  // Legacy: full replacement
+  | 'earthEngineRunCode'
+  // Browser interaction tools
   | 'screenshot'
   | 'snapshot'
   | 'clickByRefId'
   | 'clickByCoordinates'
+  // Earth Engine state tools
+  | 'resetMapInspectorConsole'
+  | 'clearScript'
   | 'getConsoleOutput'
   | 'getScript'
   | 'getMapInfo'
-  | 'getInspectorOutput'
-  | 'earthEngineScript'
-  | 'earthEngineRunCode'
-  | 'resetMapInspectorConsole'
-  | 'clearScript';
+  | 'getInspectorOutput';
 
 export interface AgentProfile {
   id: string;
