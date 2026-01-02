@@ -273,12 +273,15 @@ export function Chat({
 
       {/* Diff status bar - shown above input when there are code changes */}
       {diffSummary && (diffSummary.added > 0 || diffSummary.removed > 0) && (
-        <DiffStatusBar
-          summary={diffSummary}
-          hunks={diffHunks}
-          onUndo={onDiffUndo}
-          onClose={onDiffClose}
-        />
+        <div className="shrink-0 px-3 pb-2">
+          <DiffStatusBar
+            summary={diffSummary}
+            hunks={diffHunks}
+            onUndo={onDiffUndo}
+            onClose={onDiffClose}
+            className="rounded-lg border border-border"
+          />
+        </div>
       )}
 
       <ChatForm
