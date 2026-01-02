@@ -23,8 +23,7 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
 
   // Earth Engine tools
   { key: 'earthEngineDataset', label: 'EE Dataset Docs', description: 'Search Earth Engine dataset documentation', kind: 'read' },
-  { key: 'earthEngineScript', label: 'Set Script', description: 'Replace entire script content (legacy)', kind: 'write' },
-  { key: 'earthEngineRunCode', label: 'Run Script', description: 'Execute Earth Engine script', kind: 'write' },
+  { key: 'runCurrentCode', label: 'Run Code', description: 'Execute current code in editor', kind: 'write' },
 
   // Browser interaction tools
   { key: 'screenshot', label: 'Screenshot', description: 'Take a screenshot of the current page', kind: 'read' },
@@ -38,7 +37,6 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
   { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
   { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
-  { key: 'clearScript', label: 'Clear Script', description: 'Clear the editor script', kind: 'write' },
 ];
 
 export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
