@@ -155,7 +155,7 @@ export function ChatUI() {
   const [shadowDiff, setShadowDiff] = useState<any | null>(null);
   const [showShadowDiff, setShowShadowDiff] = useState(false);
 
-  // Edit diff visualization (for editCode tool - already applied changes)
+  // Edit diff visualization (for editCode, insertAtLine tools - already applied changes)
   const [editDiff, setEditDiff] = useState<EditDiffData | null>(null);
   const [showEditDiff, setShowEditDiff] = useState(false);
 

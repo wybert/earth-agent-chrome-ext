@@ -1,6 +1,7 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
 module.exports = {
   mode: 'development',
@@ -25,7 +26,7 @@ module.exports = {
       {
         test: /\.css$/,
         use: [
-          'style-loader',
+          MiniCssExtractPlugin.loader, // Extract CSS to separate file (CSP-safe for Manifest V3)
           'css-loader',
           {
             loader: 'postcss-loader',
@@ -49,6 +50,9 @@ module.exports = {
     }
   },
   plugins: [
+    new MiniCssExtractPlugin({
+      filename: '[name].css', // Output CSS files (sidepanel.css, etc.)
+    }),
     new CopyPlugin({
       patterns: [
         { from: 'src/manifest.json', to: 'manifest.json' },
@@ -57,11 +61,16 @@ module.exports = {
           from: 'src/sidepanel/index.html',
           to: 'sidepanel.html',
           transform(content, absoluteFrom) {
-            // Inject the script tag for sidepanel.js
-            return content.toString().replace(
-              '<script src="index.tsx"></script>',
-              '<script src="sidepanel.js"></script>'
-            );
+            // Inject the CSS link and script tag for sidepanel
+            return content.toString()
+              .replace(
+                '</head>',
+                '  <link rel="stylesheet" href="sidepanel.css">\n</head>'
+              )
+              .replace(
+                '<script src="index.tsx"></script>',
+                '<script src="sidepanel.js"></script>'
+              );
           }
         }
       ]
