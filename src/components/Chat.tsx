@@ -19,6 +19,8 @@ import { TokenUsageDisplay } from "@/components/ui/TokenUsageDisplay";
 import { DEFAULT_MODELS } from '@/constants/models';
 import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { ShadowDiffCard } from '@/components/ui/ShadowDiffCard';
+import { EditDiffCard, type EditDiffData } from '@/components/ui/EditDiffCard';
 
 // Define Zod schema for message responses (Restore)
 const MessageContentSchema = z.string().min(1);
@@ -149,8 +151,18 @@ export function ChatUI() {
   const [profiles, setProfiles] = useState<AgentProfile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
 
+  // Shadow diff visualization (legacy - changes since last sync to editor)
+  const [shadowDiff, setShadowDiff] = useState<any | null>(null);
+  const [showShadowDiff, setShowShadowDiff] = useState(false);
+
+  // Edit diff visualization (for editCode tool - already applied changes)
+  const [editDiff, setEditDiff] = useState<EditDiffData | null>(null);
+  const [showEditDiff, setShowEditDiff] = useState(false);
+
   // Restore port connection state and logic
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
+  // Important: the Port message listener is registered once; use a ref to avoid stale closures.
+  const portRef = useRef<chrome.runtime.Port | null>(null);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const MAX_CONNECTION_ATTEMPTS = 3;
 
@@ -434,6 +446,7 @@ export function ChatUI() {
         console.log('Connecting to background script...');
         currentPort = chrome.runtime.connect({ name: 'sidepanel' });
         setPort(currentPort);
+        portRef.current = currentPort;
         setConnectionAttempts(0);
         setFallbackMode(false);
         setError(null);
@@ -450,6 +463,7 @@ export function ChatUI() {
         // Create and store disconnect listener reference
         disconnectListener = () => {
           console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
+          portRef.current = null;
 
           // Clean up this connection's listener
           if (currentPort && messageListener) {
@@ -457,32 +471,32 @@ export function ChatUI() {
               currentPort.onMessage.removeListener(messageListener);
             } catch (e) {
               console.warn('Error removing message listener:', e);
-  }
-}
+            }
+          }
 
           setPort(prevPort => (prevPort === currentPort ? null : prevPort));
           isConnecting = false; // Release lock on disconnect
 
           if (isActive && !isConnecting) {
-             if (chrome.runtime.lastError) {
-                console.error('Disconnect error:', chrome.runtime.lastError.message);
-                setError(new Error(`Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`));
-                setConnectionAttempts(prev => {
-                   const nextAttempts = prev + 1;
-                   if (nextAttempts <= MAX_CONNECTION_ATTEMPTS) {
-                     console.log(`Attempting to reconnect (${nextAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
-                     reconnectTimer = setTimeout(connectToBackground, 1000 * nextAttempts);
-                     return nextAttempts;
+            if (chrome.runtime.lastError) {
+              console.error('Disconnect error:', chrome.runtime.lastError.message);
+              setError(new Error(`Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`));
+              setConnectionAttempts(prev => {
+                const nextAttempts = prev + 1;
+                if (nextAttempts <= MAX_CONNECTION_ATTEMPTS) {
+                  console.log(`Attempting to reconnect (${nextAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
+                  reconnectTimer = setTimeout(connectToBackground, 1000 * nextAttempts);
+                  return nextAttempts;
+                }
+
+                setFallbackMode(true);
+                setError(new Error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switched to Fallback Mode.`));
+                console.error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switching to fallback mode.`);
+                return nextAttempts;
+              });
             } else {
-              setFallbackMode(true);
-                     setError(new Error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switched to Fallback Mode.`));
-                     console.error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switching to fallback mode.`);
-                     return nextAttempts;
-                   }
-                });
-             } else {
-               console.log('Port disconnected normally, will reconnect...');
-               reconnectTimer = setTimeout(connectToBackground, 500);
+              console.log('Port disconnected normally, will reconnect...');
+              reconnectTimer = setTimeout(connectToBackground, 500);
             }
           }
         };
@@ -491,13 +505,15 @@ export function ChatUI() {
 
         console.log('Connected to background script');
         currentPort.postMessage({ type: 'PING' });
+        // Prime shadow diff state so "Changes" UI can appear without waiting for a tool event.
+        currentPort.postMessage({ type: 'SHADOW_GET_DIFF' });
         isConnecting = false; // Release lock after successful connection
       } catch (error: any) {
         isConnecting = false; // Release lock on error
         if (isActive) {
-        console.error('Failed to connect to background script:', error);
-           setError(new Error(`Failed to connect: ${error.message}. Using Fallback Mode.`));
-        setFallbackMode(true);
+          console.error('Failed to connect to background script:', error);
+          setError(new Error(`Failed to connect: ${error.message}. Using Fallback Mode.`));
+          setFallbackMode(true);
         }
       }
     };
@@ -531,6 +547,7 @@ export function ChatUI() {
       }
 
       setPort(null);
+      portRef.current = null;
     };
   }, [connectionAttempts]); // Restore dependency
 
@@ -786,7 +803,53 @@ export function ChatUI() {
             }
             return prevMessages;
           });
+
+          // If editCode or insertAtLine was called, extract diff from the result and show it
+          try {
+            console.log('🎨 [Chat] Processing tool event:', {
+              type: response.event.type,
+              toolName: response.event.toolName,
+              hasResult: !!response.event.result,
+              resultType: typeof response.event.result,
+              resultKeys: response.event.result ? Object.keys(response.event.result) : [],
+              resultJSON: JSON.stringify(response.event.result, null, 2)?.substring(0, 1000)
+            });
+
+            if (
+              response.event.type === 'tool_finish' &&
+              (response.event.toolName === 'editCode' || response.event.toolName === 'insertAtLine') &&
+              response.event.result?.success &&
+              response.event.result?.diff
+            ) {
+              const { diff } = response.event.result;
+              console.log('🎨 [Chat] Found diff data:', diff);
+              if (diff?.hunks && diff?.summary) {
+                console.log('🎨 [Chat] Setting edit diff card with:', {
+                  summary: diff.summary,
+                  hunkCount: diff.hunks?.length
+                });
+                setEditDiff(diff as EditDiffData);
+                // Don't auto-show the card - user can click the diff button to see it
+                // setShowEditDiff is controlled by the button click
+              }
+            }
+          } catch (e) {
+            console.error('🎨 [Chat] Error processing diff:', e);
+          }
         }
+        break;
+      case 'SHADOW_DIFF_UPDATE':
+        if (response.diff) {
+          setShadowDiff(response.diff);
+          const added = response.diff?.summary?.added ?? 0;
+          const removed = response.diff?.summary?.removed ?? 0;
+          setShowShadowDiff(added > 0 || removed > 0);
+        }
+        break;
+      case 'SHADOW_UNDO_SUCCESS':
+        // Clear the editDiff when undo is successful
+        setEditDiff(null);
+        console.log('🎨 [Chat] Undo successful, cleared editDiff');
         break;
       case 'ERROR':
         console.error('Background script error:', response.error);
@@ -1130,6 +1193,21 @@ export function ChatUI() {
     } else {
         port.postMessage({ type: 'PING' });
     }
+  }, [port]);
+
+  const handleShadowUndo = useCallback(() => {
+    if (!port) return;
+    port.postMessage({ type: 'SHADOW_UNDO' });
+  }, [port]);
+
+  const handleShadowRedo = useCallback(() => {
+    if (!port) return;
+    port.postMessage({ type: 'SHADOW_REDO' });
+  }, [port]);
+
+  const handleShadowSyncToEditor = useCallback(() => {
+    if (!port) return;
+    port.postMessage({ type: 'SHADOW_SYNC_TO_EDITOR' });
   }, [port]);
 
   const handleSelectSession = useCallback((sessionId: string) => {
@@ -1526,12 +1604,29 @@ export function ChatUI() {
               onProviderChange={setApiProvider}
               onModelChange={setSelectedModel}
               className="flex-1 min-h-0"
+              diffSummary={editDiff?.summary ? { added: editDiff.summary.added, removed: editDiff.summary.removed, hunks: editDiff.summary.hunks } : undefined}
+              diffHunks={editDiff?.hunks}
+              onDiffUndo={handleShadowUndo}
+              onDiffClose={() => setEditDiff(null)}
             />
+
+            {/* Legacy shadow diff card - shown for old shadow workflow (when no editDiff) */}
+            {showShadowDiff && shadowDiff && !editDiff ? (
+              <div className="absolute bottom-32 left-2 right-2 z-20">
+                <ShadowDiffCard
+                  diff={shadowDiff}
+                  onSyncToEditor={handleShadowSyncToEditor}
+                  onUndo={handleShadowUndo}
+                  onRedo={handleShadowRedo}
+                  onClose={() => setShowShadowDiff(false)}
+                />
+              </div>
+            ) : null}
 
             {/* Error and Fallback Displays - Positioned at bottom above input */}
             {/* Removed duplicate error display - errors are now shown as assistant messages in the chat */}
             {fallbackMode && (
-              <Card className="absolute bottom-20 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
+              <Card className="absolute bottom-32 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
                 <p className="text-sm font-medium">Fallback Mode</p>
                 <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
                 {apiConfigured && (
