@@ -1739,9 +1739,21 @@ chrome.runtime.onConnect.addListener((newPort) => {
               postToPort(newPort, { type: 'ERROR', error: 'No Earth Engine tab found for undo' });
               break;
             }
-            shadowWorkspaceSingleton.undo(tabId, 'current_editor');
+            // Undo in shadow workspace
+            const afterState = shadowWorkspaceSingleton.undo(tabId, 'current_editor');
+
+            // Sync the reverted content back to the editor
+            const syncResult = await setEditorContent(afterState.content, tabId);
+            if (!syncResult.success) {
+              postToPort(newPort, { type: 'ERROR', error: `Undo failed to sync to editor: ${syncResult.error}` });
+              break;
+            }
+
+            // Mark as synced and get diff (should be empty now)
+            shadowWorkspaceSingleton.markSynced(tabId, 'current_editor');
             const diff = shadowWorkspaceSingleton.diffSinceSynced(tabId, 'current_editor');
             postToPort(newPort, { type: 'SHADOW_DIFF_UPDATE', diff });
+            postToPort(newPort, { type: 'SHADOW_UNDO_SUCCESS' });
           } catch (e: any) {
             postToPort(newPort, { type: 'ERROR', error: e?.message || String(e) });
           }

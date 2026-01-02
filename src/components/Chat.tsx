@@ -846,6 +846,11 @@ export function ChatUI() {
           setShowShadowDiff(added > 0 || removed > 0);
         }
         break;
+      case 'SHADOW_UNDO_SUCCESS':
+        // Clear the editDiff when undo is successful
+        setEditDiff(null);
+        console.log('🎨 [Chat] Undo successful, cleared editDiff');
+        break;
       case 'ERROR':
         console.error('Background script error:', response.error);
 
