@@ -667,8 +667,7 @@ ${profile.prompt.trim()}`;
       undoEditTool,
       // Earth Engine tools
       earthEngineDatasetTool,
-      earthEngineScriptTool,
-      earthEngineRunCodeTool,
+      runCurrentCodeTool,
       // Browser interaction tools
       screenshotTool,
       snapshotTool,
@@ -676,7 +675,6 @@ ${profile.prompt.trim()}`;
       clickByCoordinatesTool,
       // Earth Engine state tools
       resetMapInspectorConsoleTool,
-      clearScriptTool,
       getConsoleOutputTool,
       getScriptTool,
       getMapInfoTool,
@@ -704,10 +702,8 @@ ${profile.prompt.trim()}`;
       editCode: editCodeTool,
       insertAtLine: insertAtLineTool,
       undoEdit: undoEditTool,
-      earthEngineScript: earthEngineScriptTool,  // Legacy: full replacement
-      earthEngineRunCode: earthEngineRunCodeTool,
-      resetMapInspectorConsole: resetMapInspectorConsoleTool,
-      clearScript: clearScriptTool
+      runCurrentCode: runCurrentCodeTool,
+      resetMapInspectorConsole: resetMapInspectorConsoleTool
     };
 
     // Determine which tools to use based on mode
@@ -774,7 +770,7 @@ ${profile.prompt.trim()}`;
               console.log(`   - Args:`, toolCall.args);
 
               // Special logging for code execution tools
-              if (toolCall.toolName === 'earthEngineScript' || toolCall.toolName === 'earthEngineRunCode') {
+              if (toolCall.toolName === 'earthEngineRunCode' || toolCall.toolName === 'editCode') {
                 const code = toolCall.args?.code || '';
                 console.log(`   - Code length: ${code.length} characters`);
                 console.log(`   - Code preview: ${code.substring(0, 100)}...`);

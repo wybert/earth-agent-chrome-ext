@@ -262,6 +262,12 @@ EXAMPLE - Modify code:
   old_string: "Map.addLayer(img);"
   new_string: "Map.addLayer(img, {max: 0.3}, 'Layer');"
 
+EXAMPLE - Clear ALL code (start fresh):
+  1. First use readCode() to get the entire current content
+  2. Then: old_string: <entire content from readCode>
+          new_string: ""
+  This replaces everything with empty string, clearing the editor.
+
 WRONG - Don't duplicate:
   old_string: "print('hello')"
   new_string: "print('hello')// Comment\\nprint('hello')"  ← WRONG! Creates duplicate`,
@@ -1016,23 +1022,27 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
       },
     });
 
-    // Define Earth Engine code runner tool
-    const earthEngineRunCodeTool = tool({
-      description: 'Run JavaScript code in the Google Earth Engine code editor. WORKFLOW TIP: After running, ALWAYS check getConsoleOutput for errors and getMapInfo to verify visualizations were created.',
-      inputSchema: z.object({
-        code: z.string().describe('The Google Earth Engine JavaScript code to run in the editor')
-      }),
-      execute: async ({ code }) => {
+    // Define Run Current Code tool (just clicks Run button, no code parameter)
+    const runCurrentCodeTool = tool({
+      description: `Run the current code in the Google Earth Engine editor. This tool just clicks the Run button - it does NOT set any code.
+
+USE THIS TOOL when you have already edited code using editCode or insertAtLine and want to execute it.
+
+WORKFLOW:
+1. Use editCode or insertAtLine to modify code (shows diff)
+2. Use runCurrentCode to execute the modified code
+3. Use getConsoleOutput to check for errors`,
+      inputSchema: z.object({}) as any, // No parameters - cast to any for SDK 6 compatibility
+      execute: async () => {
         const executionId = `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] ========== TOOL EXECUTION START ==========`);
-        console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] code length: ${code.length} characters`);
+        console.log(`▶️ [RunCurrentCodeTool][${executionId}] ========== TOOL EXECUTION START ==========`);
 
         // Manually send tool_start event
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'earthEngineRunCode',
-            args: { code: code.substring(0, 100) + '...' },
+            toolName: 'runCurrentCode',
+            args: {},
             timestamp: Date.now()
           });
         }
@@ -1047,19 +1057,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
             };
           }
 
-          // Step 1: Set the code using editor-helpers (CSP-safe via chrome.scripting.executeScript)
-          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Setting editor content via MAIN world...`);
-          const setResult = await setEditorContent(code, tabId);
-          if (!setResult.success) {
-            return {
-              success: false,
-              error: `Failed to set code in editor: ${setResult.error}`,
-              suggestion: "Make sure the Earth Engine Code Editor is open and accessible"
-            };
-          }
-          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Editor content set successfully`);
-
-          // Step 2: Click the run button via content script (simple DOM click, no CSP issues)
+          // Ensure content script is ready
           const contentScriptReady = await ensureContentScript(tabId);
           if (!contentScriptReady.success) {
             return {
@@ -1070,7 +1068,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           }
 
           // Send CLICK_RUN_BUTTON message to content script
-          console.log(`🏃 [EarthEngineRunCodeTool][${executionId}] Clicking run button...`);
+          console.log(`▶️ [RunCurrentCodeTool][${executionId}] Clicking run button...`);
           const clickResult: any = await new Promise((resolve) => {
             const timeout = setTimeout(() => {
               resolve({ success: false, error: 'Timed out waiting for run button click' });
@@ -1087,26 +1085,24 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           });
 
           if (!clickResult.success) {
-            console.warn(`⚠️ [EarthEngineRunCodeTool][${executionId}] Run button click failed: ${clickResult.error}`);
-            // Still return success since code was set - user can click run manually
+            console.warn(`⚠️ [RunCurrentCodeTool][${executionId}] Run button click failed: ${clickResult.error}`);
             return {
-              success: true,
-              result: 'Code inserted into editor. Run button click may have failed - please click Run manually if needed.',
-              message: 'Code set in editor',
-              warning: clickResult.error
+              success: false,
+              error: `Failed to click Run button: ${clickResult.error}`,
+              suggestion: "Please click Run manually or refresh the Earth Engine tab"
             };
           }
 
-          console.log(`✅ [EarthEngineRunCodeTool][${executionId}] Code executed successfully`);
+          console.log(`✅ [RunCurrentCodeTool][${executionId}] Code executed successfully`);
           return {
             success: true,
             result: 'Code executed successfully',
-            message: 'Earth Engine code executed successfully',
-            nextSteps: "Check the Earth Engine console for any output or results"
+            message: 'Clicked Run button - Earth Engine code is now executing',
+            nextSteps: "Use getConsoleOutput to check for errors or output"
           };
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`❌ [EarthEngineRunCodeTool][${executionId}] Unexpected error:`, error);
+          console.error(`❌ [RunCurrentCodeTool][${executionId}] Unexpected error:`, error);
           return {
             success: false,
             error: `Unexpected error: ${errorMessage}`,
@@ -1117,9 +1113,10 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
     });
 
     // Define Screenshot tool
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const screenshotTool = tool({
       description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
-      inputSchema: z.object({}), // No parameters needed
+      inputSchema: z.object({}) as any, // No parameters needed - cast to any for SDK 6 compatibility
       execute: async () => {
         // Manually send tool_start event
         if (onToolEvent) {
@@ -1265,22 +1262,26 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         }
       },
       // toModelOutput converts the execute result into content for the AI model
-      toModelOutput: (result: any) => {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
         console.log('📸 [ScreenshotTool] Converting result to model output');
 
-        if (!result.success) {
+        if (!output.success) {
           // Return error as text
           return {
             type: 'content',
-            value: [{ type: 'text', text: `Error taking screenshot: ${result.error || 'Unknown error'}` }]
+            value: [{ type: 'text', text: `Error taking screenshot: ${output.error || 'Unknown error'}` }]
           };
         }
 
         // Extract the base64 content from the data URL
-        let base64Data = result.screenshotDataUrl;
+        let base64Data = output.screenshotDataUrl || '';
         // Remove the data URL prefix if it exists (e.g., "data:image/jpeg;base64,")
-        if (base64Data.includes(';base64,')) {
-          base64Data = base64Data.split(';base64,')[1];
+        if (base64Data && base64Data.includes(';base64,')) {
+          base64Data = base64Data.split(';base64,')[1] || base64Data;
           console.log('📸 [ScreenshotTool] Extracted base64 data from data URL');
         }
 
@@ -1418,20 +1419,24 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           };
         }
       },
-      toModelOutput: (result: any) => {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
         console.log('🔎 [SnapshotTool] Converting result to model output');
 
-        if (!result.success) {
-          console.error('❌ [SnapshotTool] Error in toModelOutput - result not successful:', result.error);
+        if (!output.success) {
+          console.error('❌ [SnapshotTool] Error in toModelOutput - result not successful:', output.error);
           return {
             type: 'content',
-            value: [{ type: 'text', text: `Error taking snapshot: ${result.error || 'Unknown error'}` }]
+            value: [{ type: 'text', text: `Error taking snapshot: ${output.error || 'Unknown error'}` }]
           };
         }
 
-        if (result.snapshot) {
+        if (output.snapshot) {
           console.log('🔎 [SnapshotTool] Full snapshot data for model output (copy from here):');
-          console.log(result.snapshot);
+          console.log(output.snapshot);
         } else {
           console.warn('⚠️ [SnapshotTool] No snapshot data found in result for model output, though success was true.');
           return {
@@ -1444,7 +1449,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         return {
           type: 'content',
           value: [
-            { type: 'text', text: 'Here is the accessibility snapshot of the current browser tab:\n' + result.snapshot }
+            { type: 'text', text: 'Here is the accessibility snapshot of the current browser tab:\n' + output.snapshot }
           ]
         };
       },
@@ -1524,10 +1529,14 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           return { success: false, error: `Error clicking by refId: ${errorMessage}` };
         }
       },
-      toModelOutput: (result: any) => {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
         return {
           type: 'content',
-          value: [{ type: 'text', text: result.success ? (result.message || `Successfully clicked element with refId ${result.refId}.`) : `Error clicking element: ${result.error}` }]
+          value: [{ type: 'text', text: output.success ? (output.message || 'Successfully clicked element.') : `Error clicking element: ${output.error}` }]
         };
       },
     });
@@ -1651,222 +1660,22 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           };
         }
       },
-      toModelOutput: (result: any) => {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
         return {
           type: 'content',
           value: [{
             type: 'text',
-            text: result.success
+            text: output.success
               ? '✅ Google Earth Engine environment has been reset successfully. The map, inspector, and console are now cleared.'
-              : `❌ Failed to reset GEE environment: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
+              : `❌ Failed to reset GEE environment: ${output.error}${output.suggestion ? ' Suggestion: ' + output.suggestion : ''}`
           }]
         };
       },
     });
-
-    // Define Clear Script tool
-    const clearScriptTool = tool({
-      description: 'Clear all code from the Google Earth Engine code editor, removing all scripts and returning to a blank editor state. WORKFLOW TIP: After clearing, use earthEngineScript to write new code. WARNING: Do NOT use earthEngineRunCode immediately after this without writing code first.',
-      inputSchema: z.object({}), // No parameters needed
-      execute: async () => {
-        // Manually send tool_start event
-        if (onToolEvent) {
-          onToolEvent({
-            type: 'tool_start',
-            toolName: 'clearScript',
-            args: {},
-            timestamp: Date.now()
-          });
-        }
-
-        try {
-          console.log(`🧹 [ClearScriptTool] Tool called to clear GEE code editor`);
-          console.time('ClearScriptTool execution');
-
-          if (typeof chrome === 'undefined' || !chrome.tabs || !chrome.scripting) {
-            console.warn('❌ [ClearScriptTool] Chrome API not available.');
-            return { 
-              success: false, 
-              error: 'Chrome API not available for clear script tool',
-              suggestion: 'This tool requires running in a Chrome extension environment'
-            };
-          }
-
-          // Find the Earth Engine tab
-          const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
-            chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
-              resolve(tabs || []);
-            });
-          });
-
-          if (earthEngineTabs.length === 0) {
-            console.warn('❌ [ClearScriptTool] No Earth Engine tab found');
-            return {
-              success: false,
-              error: 'No Google Earth Engine tab found',
-              suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
-            };
-          }
-
-          // Smart tab selection: prefer active or recently used tab
-          const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
-          const tabId = selectedTab?.id;
-          if (!tabId) {
-            console.warn('❌ [ClearScriptTool] Invalid Earth Engine tab');
-            return {
-              success: false,
-              error: 'Invalid Earth Engine tab',
-              suggestion: "Please reload your Earth Engine tab and try again"
-            };
-          }
-
-          // Ensure content script is ready
-          try {
-            await new Promise<void>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Content script ping timed out for ClearScriptTool')), 500);
-              chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
-                clearTimeout(timeout);
-                if (chrome.runtime.lastError || !(response && response.type === 'PONG')) {
-                  chrome.scripting.executeScript(
-                    { target: { tabId }, files: ['content.js'] },
-                    () => chrome.runtime.lastError ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`)) : setTimeout(resolve, 500)
-                  );
-                } else {
-                  resolve();
-                }
-              });
-            });
-          } catch (err) {
-            console.error('❌ [ClearScriptTool] Content script check/injection failed:', err);
-            return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
-          }
-
-          // First try clicking the clear script directly (menu might already be accessible)
-          console.log('🧹 [ClearScriptTool] Attempting direct clear script click...');
-          let clearResult: { success: boolean; message?: string; error?: string } = await new Promise((resolve) => {
-            chrome.tabs.sendMessage(tabId, { 
-              type: 'CLICK_BY_SELECTOR', 
-              payload: { 
-                selector: 'div.goog-menuitem-content',
-                elementDescription: 'Clear script menu option (direct)'
-              } 
-            }, (response) => {
-              resolve(response || { success: false, error: 'No response from content script for direct clear' });
-            });
-          });
-
-          if (clearResult.success) {
-            console.log('✅ [ClearScriptTool] Direct clear script successful');
-            console.timeEnd('ClearScriptTool execution');
-            return {
-              success: true,
-              message: 'Google Earth Engine code editor has been cleared successfully. All scripts have been removed.',
-              action: 'clear_completed'
-            };
-          }
-
-          console.log('🧹 [ClearScriptTool] Direct click failed, trying dropdown approach...');
-          
-          // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
-          const dropdownSelectors = [
-            'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-            'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-            '.goog-toolbar-menu-button'
-          ];
-          
-          let dropdownResult: any = null;
-          for (const selector of dropdownSelectors) {
-            console.log(`🧹 [ClearScriptTool] Trying dropdown selector: ${selector}`);
-            dropdownResult = await new Promise((resolve) => {
-              chrome.tabs.sendMessage(tabId, { 
-                type: 'CLICK_BY_SELECTOR', 
-                payload: { 
-                  selector: selector,
-                  elementDescription: `Reset dropdown arrow (${selector})`
-                } 
-              }, (response) => {
-                resolve(response || { success: false, error: `No response for selector: ${selector}` });
-              });
-            });
-            
-            if (dropdownResult.success) {
-              console.log(`✅ [ClearScriptTool] Dropdown opened with selector: ${selector}`);
-              break;
-            } else {
-              console.log(`❌ [ClearScriptTool] Selector failed: ${selector} - ${dropdownResult.error}`);
-            }
-          }
-          
-          if (dropdownResult && dropdownResult.success) {
-            console.log('🧹 [ClearScriptTool] Reset dropdown opened successfully, waiting for menu...');
-            // Wait for menu to appear
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            // Step 2: Click "Clear script" option in the dropdown menu
-            console.log('🧹 [ClearScriptTool] Clicking Clear script option...');
-            clearResult = await new Promise((resolve) => {
-              chrome.tabs.sendMessage(tabId, { 
-                type: 'CLICK_BY_SELECTOR', 
-                payload: { 
-                  selector: 'div.goog-menuitem-content',
-                  elementDescription: 'Clear script menu option'
-                } 
-              }, (response) => {
-                resolve(response || { success: false, error: 'No response from content script for clear menu option' });
-              });
-            });
-            
-            if (clearResult.success) {
-              console.log('✅ [ClearScriptTool] Code cleared successfully');
-              console.timeEnd('ClearScriptTool execution');
-              return {
-                success: true,
-                message: 'Google Earth Engine code editor has been cleared successfully. All scripts have been removed.',
-                action: 'clear_completed'
-              };
-            } else {
-              console.warn('❌ [ClearScriptTool] Failed to click clear script option:', clearResult.error);
-              console.timeEnd('ClearScriptTool execution');
-              return {
-                success: false,
-                error: clearResult.error || 'Failed to click clear script option',
-                suggestion: 'Make sure the dropdown menu is visible and the clear script option is available'
-              };
-            }
-          } else {
-            console.warn('❌ [ClearScriptTool] Failed to open reset dropdown with any selector');
-            console.timeEnd('ClearScriptTool execution');
-            return {
-              success: false,
-              error: 'Failed to open reset dropdown menu',
-              suggestion: 'Make sure you are on the Google Earth Engine code editor page and the reset dropdown is visible'
-            };
-          }
-
-        } catch (error: unknown) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`❌ [ClearScriptTool] Error:`, error);
-          console.timeEnd('ClearScriptTool execution');
-          return { 
-            success: false, 
-            error: `Error clearing GEE code editor: ${errorMessage}`,
-            suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
-          };
-        }
-      },
-      toModelOutput: (result: any) => {
-        return {
-          type: 'content',
-          value: [{
-            type: 'text',
-            text: result.success
-              ? '✅ Google Earth Engine code editor has been cleared successfully. All scripts have been removed and you now have a blank editor.'
-              : `❌ Failed to clear GEE code editor: ${result.error}${result.suggestion ? ' Suggestion: ' + result.suggestion : ''}`
-          }]
-        };
-      },
-    });
-
     // Define Click by Coordinates tool
     const clickByCoordinatesTool = tool({
       description: 'Clicks an element on the page at the specified (x, y) coordinates.',
@@ -1942,10 +1751,14 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           return { success: false, error: `Error clicking by coordinates: ${errorMessage}` };
         }
       },
-      toModelOutput: (result: any) => {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
         return {
           type: 'content',
-          value: [{ type: 'text', text: result.success ? (result.message || `Successfully clicked at coordinates (${result.x}, ${result.y}).`) : `Error clicking by coordinates: ${result.error}` }]
+          value: [{ type: 'text', text: output.success ? (output.message || 'Successfully clicked at coordinates.') : `Error clicking by coordinates: ${output.error}` }]
         };
       },
     });
@@ -2070,18 +1883,22 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           };
         }
       },
-      toModelOutput: (result: any) => {
-        if (!result.success) {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
+        if (!output.success) {
           return {
             type: 'content',
             value: [{
               type: 'text',
-              text: `❌ Failed to read console: ${result.error}${result.suggestion ? '\n\nSuggestion: ' + result.suggestion : ''}`
+              text: `❌ Failed to read console: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`
             }]
           };
         }
 
-        if (result.count === 0) {
+        if (output.count === 0) {
           return {
             type: 'content',
             value: [{
@@ -2092,7 +1909,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         }
 
         // Format console outputs with chart detection
-        const formattedOutputs = result.outputs.map((output: any, i: number) => {
+        const formattedOutputs = output.outputs.map((output: any, i: number) => {
           let icon = 'ℹ️';
           if (output.type === 'error') {
             icon = '❌';
@@ -2118,7 +1935,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         }).join('\n');
 
         // Check if any charts were detected
-        const chartCount = result.outputs.filter((o: any) => o.type === 'chart').length;
+        const chartCount = output.outputs.filter((o: any) => o.type === 'chart').length;
         const chartNote = chartCount > 0
           ? `\n\n💡 Tip: ${chartCount} chart(s) detected. Use the screenshot tool to capture and view the visualizations.`
           : '';
@@ -2127,7 +1944,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           type: 'content',
           value: [{
             type: 'text',
-            text: `📋 Console Output (${result.count} entries):\n\n${formattedOutputs}${chartNote}`
+            text: `📋 Console Output (${output.count} entries):\n\n${formattedOutputs}${chartNote}`
           }]
         };
       },
@@ -2194,14 +2011,18 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           };
         }
       },
-      toModelOutput: (result: any) => {
+      toModelOutput: (
+        {
+          output
+        }
+      ) => {
         return {
           type: 'content',
           value: [{
             type: 'text',
-            text: result.success
-              ? `✅ Current script content (${result.lineCount} lines):\n\n\`\`\`javascript\n${result.content}\n\`\`\``
-              : `❌ Failed to read script: ${result.error}${result.suggestion ? '\n\nSuggestion: ' + result.suggestion : ''}`
+            text: output.success
+              ? `✅ Current script content (${output.lineCount} lines):\n\n\`\`\`javascript\n${output.content}\n\`\`\``
+              : `❌ Failed to read script: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`
           }]
         };
       },
@@ -2209,9 +2030,10 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
 
   // Define Inspect Map tool
   // Define Get Map Info tool
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getMapInfoTool = tool({
     description: 'Get information about the Google Earth Engine map including current layers, bounds, center coordinates, and viewport dimensions. WORKFLOW TIP: Use this after earthEngineRunCode to verify visualization layers were created.',
-    inputSchema: z.object({}),
+    inputSchema: z.object({}) as any, // Cast to any for SDK 6 toModelOutput compatibility
     execute: async () => {
       // Manually send tool_start event
       if (onToolEvent) {
@@ -2309,19 +2131,23 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         };
       }
     },
-    toModelOutput: (result: any) => {
-      if (!result.success) {
+    toModelOutput: (
+      {
+        output
+      }
+    ) => {
+      if (!output.success) {
         return {
           type: 'content',
           value: [{
             type: 'text',
-            text: `❌ Failed to get map info: ${result.error}`
+            text: `❌ Failed to get map info: ${output.error}`
           }]
         };
       }
 
-      const data = result.data;
-      const output = `✅ Map Information:
+      const data = output.data;
+      const outputText = `✅ Map Information:
 
 **Map Bounds:**
 - Position: (${data.mapBounds.x}, ${data.mapBounds.y})
@@ -2339,12 +2165,13 @@ To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${dat
 
       return {
         type: 'content',
-        value: [{ type: 'text', text: output }]
+        value: [{ type: 'text', text: outputText }]
       };
     },
   });
 
   // Define Get Inspector Output tool (renamed from inspectMapTool for consistency)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getInspectorOutputTool = tool({
     description: `Get complete information from the Google Earth Engine Inspector panel including Point data, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.).
 
@@ -2361,7 +2188,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
         lat: z.number().describe('Latitude of the location to inspect'),
         lng: z.number().describe('Longitude of the location to inspect')
       }).optional().describe('Optional coordinates to verify against Inspector data. If provided, tool will check that Inspector shows data for these coordinates (within ~10km tolerance).')
-    }),
+    }) as any, // Cast to any for SDK 6 toModelOutput compatibility
     execute: async ({ coordinates }) => {
       // Manually send tool_start event
       if (onToolEvent) {
@@ -2474,66 +2301,70 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
         };
       }
     },
-    toModelOutput: (result: any) => {
-      if (!result.success) {
+    toModelOutput: (
+      {
+        output
+      }
+    ) => {
+      if (!output.success) {
         return {
           type: 'content',
           value: [{
             type: 'text',
-            text: `❌ Failed to inspect map: ${result.error}${result.suggestion ? '\n\nSuggestion: ' + result.suggestion : ''}`
+            text: `❌ Failed to inspect map: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`
           }]
         };
       }
 
-      const data = result.data;
-      let output = `✅ Inspector Data at (${data.inspectedCoordinates.lng}, ${data.inspectedCoordinates.lat}):\n\n`;
+      const data = output.data;
+      let outputText = `✅ Inspector Data at (${data.inspectedCoordinates.lng}, ${data.inspectedCoordinates.lat}):\n\n`;
 
       // Include Point information
       if (data.point) {
-        output += `**Point Information:**\n`;
+        outputText += `**Point Information:**\n`;
         Object.entries(data.point).forEach(([key, value]) => {
-          output += `  - ${key}: ${value}\n`;
+          outputText += `  - ${key}: ${value}\n`;
         });
-        output += '\n';
+        outputText += '\n';
       }
 
       // Include Pixels section
       if (data.pixels && data.pixels.length > 0) {
-        output += `**Pixel Values:**\n`;
+        outputText += `**Pixel Values:**\n`;
         data.pixels.forEach((pixel: any, i: number) => {
-          output += `  Layer ${i + 1}: ${pixel.layerName}\n`;
+          outputText += `  Layer ${i + 1}: ${pixel.layerName}\n`;
           if (pixel.data !== null && pixel.data !== undefined) {
             if (typeof pixel.data === 'object') {
-              output += `    ${JSON.stringify(pixel.data, null, 2).split('\n').join('\n    ')}\n`;
+              outputText += `    ${JSON.stringify(pixel.data, null, 2).split('\n').join('\n    ')}\n`;
             } else {
-              output += `    Value: ${pixel.data}\n`;
+              outputText += `    Value: ${pixel.data}\n`;
             }
           }
         });
-        output += '\n';
+        outputText += '\n';
       }
 
       // Include Objects section (with EPSG data)
       if (data.objects && data.objects.length > 0) {
-        output += `**Object Metadata (includes CRS/EPSG):**\n`;
+        outputText += `**Object Metadata (includes CRS/EPSG):**\n`;
         data.objects.forEach((obj: any, i: number) => {
-          output += `  Layer ${i + 1}: ${obj.layerName}\n`;
+          outputText += `  Layer ${i + 1}: ${obj.layerName}\n`;
           if (obj.data) {
             const jsonStr = JSON.stringify(obj.data, null, 2);
-            output += `    ${jsonStr.split('\n').join('\n    ')}\n`;
+            outputText += `    ${jsonStr.split('\n').join('\n    ')}\n`;
           }
         });
-        output += '\n';
+        outputText += '\n';
       }
 
-      // Add suggestion if Objects section is empty
-      if (result.suggestion) {
-        output += `\n⚠️ **Note:** ${result.suggestion}\n`;
+      // Add suggestion if available
+      if (output.suggestion) {
+        outputText += `\n⚠️ **Note:** ${output.suggestion}\n`;
       }
 
       return {
         type: 'content',
-        value: [{ type: 'text', text: output }]
+        value: [{ type: 'text', text: outputText }]
       };
     },
   });
@@ -2554,8 +2385,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
 
     // Earth Engine tools
     earthEngineDatasetTool,
-    earthEngineScriptTool,  // Legacy: full replacement (kept for backwards compatibility)
-    earthEngineRunCodeTool,
+    runCurrentCodeTool,
 
     // Browser interaction tools
     screenshotTool,
@@ -2565,7 +2395,6 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
 
     // Earth Engine state tools
     resetMapInspectorConsoleTool,
-    clearScriptTool,
     getConsoleOutputTool,
     getScriptTool,
     getMapInfoTool,
