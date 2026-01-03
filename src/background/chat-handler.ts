@@ -694,6 +694,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Utility tools
       weatherTool,
       dateTimeTool,
+      waitTool,
       // Simplified code editing tools (Claude Code-style)
       readCodeTool,
       editCodeTool,
@@ -719,6 +720,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     const readOnlyTools = {
       weather: weatherTool,
       dateTime: dateTimeTool,
+      wait: waitTool,  // Wait for long-running operations
       readCode: readCodeTool,  // Can read code (no modifications)
       earthEngineDataset: earthEngineDatasetTool,
       screenshot: screenshotTool,
