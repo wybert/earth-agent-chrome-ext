@@ -208,6 +208,9 @@ Use this tool FIRST before making any edits to see the current state of the code
 Returns the full code content with line count.`,
       inputSchema: z.object({}),
       execute: async () => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'readCode', args: {}, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -277,6 +280,9 @@ WRONG - Don't duplicate:
         replace_all: z.boolean().optional().describe('If true, replace ALL occurrences. Default: false'),
       }),
       execute: async ({ old_string, new_string, replace_all }) => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'editCode', args: { old_string: old_string.substring(0, 50) + '...', new_string: new_string.substring(0, 50) + '...' }, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -376,6 +382,9 @@ WRONG - Don't duplicate:
       description: 'Undo the last code edit. Reverts the code to the previous version.',
       inputSchema: z.object({}),
       execute: async () => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'undoEdit', args: {}, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -443,6 +452,9 @@ After inserting, the code is automatically applied to the editor.`,
         text: z.string().describe('The text to insert. Use \\n for multiple lines.'),
       }),
       execute: async ({ line, text }) => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'insertAtLine', args: { line, text: text.substring(0, 50) + '...' }, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 

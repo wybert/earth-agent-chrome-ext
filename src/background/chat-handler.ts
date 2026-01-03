@@ -754,6 +754,9 @@ ${profile.prompt.trim()}`;
       if (onToolEvent) {
         console.log('🔧 [Chat Handler] onToolEvent callback is provided, setting up step callbacks');
 
+        // Track tool start times for duration calculation
+        const toolStartTimes = new Map<string, number>();
+
         // Note: tool_start events are sent manually by each tool's execute function
         // This ensures they're sent before the tool actually starts executing
         streamOptions.onStepStart = ({ toolCalls }: { toolCalls?: any[] }) => {
@@ -762,15 +765,18 @@ ${profile.prompt.trim()}`;
           console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
           console.log('🔧 [Chat Handler] toolCalls:', JSON.stringify(toolCalls, null, 2));
 
-          // Don't send tool_start events here - they're sent by the tools themselves
+          // Record start times for each tool
           if (toolCalls && toolCalls.length > 0) {
             toolCalls.forEach((toolCall: any, index: number) => {
+              const toolId = toolCall.toolCallId || `${toolCall.toolName}_${index}`;
+              toolStartTimes.set(toolId, Date.now());
+
               console.log(`🛠️ [Tool Start][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`);
-              console.log(`   - Tool ID: ${toolCall.toolCallId || 'N/A'}`);
+              console.log(`   - Tool ID: ${toolId}`);
               console.log(`   - Args:`, toolCall.args);
 
               // Special logging for code execution tools
-              if (toolCall.toolName === 'earthEngineRunCode' || toolCall.toolName === 'editCode') {
+              if (toolCall.toolName === 'editCode') {
                 const code = toolCall.args?.code || '';
                 console.log(`   - Code length: ${code.length} characters`);
                 console.log(`   - Code preview: ${code.substring(0, 100)}...`);
@@ -835,14 +841,20 @@ ${profile.prompt.trim()}`;
                 eventResult = 'completed';
               }
 
+              // Calculate duration from start time
+              const toolId = toolCall.toolCallId || `${toolCall.toolName}_${index}`;
+              const startTime = toolStartTimes.get(toolId);
+              const duration = startTime ? Date.now() - startTime : undefined;
+
               const event = {
                 type: 'tool_finish' as const,
                 toolName: toolCall.toolName,
                 args: toolCall.args,
                 result: eventResult,
+                duration,  // Add duration in milliseconds
                 timestamp: Date.now()
               };
-              console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish`);
+              console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish (duration: ${duration}ms)`);
               onToolEvent(event);
             });
           } else {

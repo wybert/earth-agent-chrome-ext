@@ -167,8 +167,8 @@ export function ChatUI() {
   const MAX_CONNECTION_ATTEMPTS = 3;
 
   // Tool events state for debugging panel
-  const [toolEvents, setToolEvents] = useState<Array<{type: string, toolName?: string, args?: any, result?: any, timestamp: number}>>([]);
-  const toolEventsRef = useRef<Array<{type: string, toolName?: string, args?: any, result?: any, timestamp: number}>>([]);
+  const [toolEvents, setToolEvents] = useState<Array<{type: string, toolName?: string, args?: any, result?: any, duration?: number, timestamp: number}>>([]);
+  const toolEventsRef = useRef<Array<{type: string, toolName?: string, args?: any, result?: any, duration?: number, timestamp: number}>>([]);
 
   // Title editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -780,9 +780,15 @@ export function ChatUI() {
               const toolStatusLines: string[] = [];
               toolEventsRef.current.forEach(event => {
                 if (event.type === 'tool_start') {
-                  toolStatusLines.push(`⚙️ Tool executing: ${event.toolName}`);
+                  toolStatusLines.push(`⏳ ${event.toolName}...`);
                 } else if (event.type === 'tool_finish') {
-                  toolStatusLines.push(`✅ Tool completed: ${event.toolName}`);
+                  const duration = event.duration ? ` (${(event.duration / 1000).toFixed(1)}s)` : '';
+                  if (event.result?.success === false) {
+                    const errorMsg = event.result.error || 'failed';
+                    toolStatusLines.push(`❌ ${event.toolName} - ${errorMsg}`);
+                  } else {
+                    toolStatusLines.push(`✅ ${event.toolName}${duration}`);
+                  }
                 }
               });
 
