@@ -169,6 +169,7 @@ export function ChatUI() {
   // Tool events state for debugging panel
   const [toolEvents, setToolEvents] = useState<Array<{type: string, toolName?: string, args?: any, result?: any, duration?: number, timestamp: number}>>([]);
   const toolEventsRef = useRef<Array<{type: string, toolName?: string, args?: any, result?: any, duration?: number, timestamp: number}>>([]);
+  const toolStartTimesRef = useRef<Map<string, number>>(new Map());
 
   // Title editing state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -685,6 +686,7 @@ export function ChatUI() {
         });
         // Clear tool events state (but keep them in the message)
         toolEventsRef.current = [];
+        toolStartTimesRef.current.clear();
         setToolEvents([]);
         break;
       case 'TOKEN_ESTIMATE':
@@ -750,8 +752,21 @@ export function ChatUI() {
         // Handle tool execution events - add to message content
         console.log('🔧 [Chat] TOOL_EVENT received:', response.event);
         if (response.event) {
+          const event = response.event;
+
+          // Track start times and calculate duration
+          if (event.type === 'tool_start' && event.toolName) {
+            toolStartTimesRef.current.set(event.toolName, event.timestamp || Date.now());
+          } else if (event.type === 'tool_finish' && event.toolName) {
+            const startTime = toolStartTimesRef.current.get(event.toolName);
+            if (startTime) {
+              event.duration = (event.timestamp || Date.now()) - startTime;
+              toolStartTimesRef.current.delete(event.toolName);
+            }
+          }
+
           // Update tool events ref and state
-          toolEventsRef.current = [...toolEventsRef.current, response.event];
+          toolEventsRef.current = [...toolEventsRef.current, event];
           setToolEvents(toolEventsRef.current);
 
           console.log('🔧 [Chat] Current tool events:', toolEventsRef.current);
@@ -1059,6 +1074,7 @@ export function ChatUI() {
     setIsLocalLoading(true);
     setError(null);
     toolEventsRef.current = []; // Clear previous tool events
+    toolStartTimesRef.current.clear();
     setToolEvents([]);
     
     const messagesForApi = sessions[activeSessionId]?.messages

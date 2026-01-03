@@ -27,6 +27,16 @@ export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
 const NETWORK_RETRY_ATTEMPTS = 3;
 const NETWORK_RETRY_BASE_DELAY_MS = 700;
 
+/**
+ * Sequential Tool Execution Configuration
+ *
+ * When true: Tools are executed one at a time (safer for stateful operations like Earth Engine editor)
+ * When false: Tools may be executed in parallel (faster but may cause race conditions)
+ *
+ * Supported natively by: OpenAI, Anthropic
+ * Fallback via prompt for: Google, Qwen, Ollama, custom providers
+ */
+const SEQUENTIAL_TOOL_EXECUTION = true;
 
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
@@ -594,6 +604,23 @@ ${profile.prompt.trim()}`;
       console.log(`📋 [Chat Handler] Applied profile prompt (${profile.prompt.trim().length} chars)`);
     }
 
+    // Add sequential tool execution instruction for providers without native support
+    // OpenAI and Anthropic have native providerOptions, others need prompt-based control
+    if (SEQUENTIAL_TOOL_EXECUTION) {
+      if (['openai', 'anthropic'].includes(provider)) {
+        console.log(`📋 [Chat Handler] Sequential tool execution enabled for ${provider} (native providerOptions)`);
+      } else {
+        finalSystemPrompt = `${finalSystemPrompt}
+
+## Tool Execution Rules
+
+IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its result before calling the next tool. Do not call multiple tools in parallel.`;
+        console.log(`📋 [Chat Handler] Sequential tool execution enabled for ${provider} (prompt fallback)`);
+      }
+    } else {
+      console.log(`📋 [Chat Handler] Parallel tool execution enabled (SEQUENTIAL_TOOL_EXECUTION = false)`);
+    }
+
     // Configure stream options based on provider
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
@@ -605,6 +632,13 @@ ${profile.prompt.trim()}`;
       messages: formattedMessages,
       temperature: 0.7,
       maxRetries: 3,
+      // Provider-specific options for sequential tool execution
+      providerOptions: {
+        // OpenAI: parallelToolCalls = false means sequential
+        openai: { parallelToolCalls: !SEQUENTIAL_TOOL_EXECUTION },
+        // Anthropic: disableParallelToolUse = true means sequential
+        anthropic: { disableParallelToolUse: SEQUENTIAL_TOOL_EXECUTION },
+      },
       // Add onError callback to capture streaming errors and store them
       onError: ({ error }: { error: any }) => {
         console.error(`❌ [Chat Handler] Streaming error occurred for ${provider} provider:`, error);
