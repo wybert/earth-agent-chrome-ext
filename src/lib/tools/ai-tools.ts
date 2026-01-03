@@ -159,6 +159,38 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
       },
     });
 
+    // Wait tool for handling long-running operations
+    const waitTool = tool({
+      description: `Wait for a specified number of seconds. Use this to:
+- Wait for Earth Engine code execution to complete
+- Wait for map layers to finish loading
+- Give time for async operations to complete
+
+After waiting, use getConsoleOutput or screenshot to check if execution is done.
+- Console shows "Computing" or spinning gear icon = still running
+- Map shows gray progress bar in Layers button = still loading`,
+      inputSchema: z.object({
+        seconds: z.number().min(0.5).max(60)
+          .describe('Number of seconds to wait (0.5 to 60)'),
+      }),
+      execute: async ({ seconds }) => {
+        onToolEvent?.({
+          type: 'tool_start',
+          toolName: 'wait',
+          args: { seconds },
+          timestamp: Date.now()
+        });
+
+        await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
+        return {
+          success: true,
+          message: `Waited ${seconds} seconds`,
+          suggestion: 'Use getConsoleOutput or screenshot to check execution status'
+        };
+      },
+    });
+
     const getActiveEarthEngineTabId = async (): Promise<number | null> => {
       if (typeof chrome === 'undefined' || !chrome.tabs) return null;
       const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
@@ -2388,6 +2420,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     // Utility tools
     weatherTool,
     dateTimeTool,
+    waitTool,
 
     // Simplified code editing tools (Claude Code-style) - PRIMARY
     readCodeTool,
