@@ -14,6 +14,7 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   // Utility tools
   { key: 'weather', label: 'Weather', description: 'Get current weather for a location', kind: 'read' },
   { key: 'dateTime', label: 'Date/Time', description: 'Get current date/time (optional time zone)', kind: 'read' },
+  { key: 'wait', label: 'Wait', description: 'Wait for specified seconds (for long-running operations)', kind: 'read' },
 
   // Simplified code editing tools (Claude Code-style)
   { key: 'readCode', label: 'Read Code', description: 'Read current code from Earth Engine editor', kind: 'read' },

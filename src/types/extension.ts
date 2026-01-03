@@ -70,6 +70,7 @@ export type ToolKey =
   // Utility tools
   | 'weather'
   | 'dateTime'
+  | 'wait'
   // Simplified code editing tools (Claude Code-style)
   | 'readCode'
   | 'editCode'
