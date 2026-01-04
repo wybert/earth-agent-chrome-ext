@@ -14,6 +14,7 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   // Utility tools
   { key: 'weather', label: 'Weather', description: 'Get current weather for a location', kind: 'read' },
   { key: 'dateTime', label: 'Date/Time', description: 'Get current date/time (optional time zone)', kind: 'read' },
+  { key: 'wait', label: 'Wait', description: 'Wait for specified seconds (for long-running operations)', kind: 'read' },
 
   // Simplified code editing tools (Claude Code-style)
   { key: 'readCode', label: 'Read Code', description: 'Read current code from Earth Engine editor', kind: 'read' },
@@ -33,7 +34,6 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
 
   // Earth Engine state tools
   { key: 'getConsoleOutput', label: 'Console Output', description: 'Get Earth Engine console output', kind: 'read' },
-  { key: 'getScript', label: 'Get Script', description: 'Read current Earth Engine script', kind: 'read' },
   { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
   { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
   { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
@@ -45,7 +45,6 @@ export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
   'weather',
   'earthEngineDataset',
   'snapshot',
-  'getScript',
   'getMapInfo',
   'getConsoleOutput',
 ];

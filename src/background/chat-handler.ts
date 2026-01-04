@@ -27,6 +27,16 @@ export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
 const NETWORK_RETRY_ATTEMPTS = 3;
 const NETWORK_RETRY_BASE_DELAY_MS = 700;
 
+/**
+ * Sequential Tool Execution Configuration
+ *
+ * When true: Tools are executed one at a time (safer for stateful operations like Earth Engine editor)
+ * When false: Tools may be executed in parallel (faster but may cause race conditions)
+ *
+ * Supported natively by: OpenAI, Anthropic
+ * Fallback via prompt for: Google, Qwen, Ollama, custom providers
+ */
+const SEQUENTIAL_TOOL_EXECUTION = true;
 
 // Custom fetch function for Anthropic to handle CORS
 const corsProxyFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
@@ -594,6 +604,23 @@ ${profile.prompt.trim()}`;
       console.log(`📋 [Chat Handler] Applied profile prompt (${profile.prompt.trim().length} chars)`);
     }
 
+    // Add sequential tool execution instruction for providers without native support
+    // OpenAI and Anthropic have native providerOptions, others need prompt-based control
+    if (SEQUENTIAL_TOOL_EXECUTION) {
+      if (['openai', 'anthropic'].includes(provider)) {
+        console.log(`📋 [Chat Handler] Sequential tool execution enabled for ${provider} (native providerOptions)`);
+      } else {
+        finalSystemPrompt = `${finalSystemPrompt}
+
+## Tool Execution Rules
+
+IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its result before calling the next tool. Do not call multiple tools in parallel.`;
+        console.log(`📋 [Chat Handler] Sequential tool execution enabled for ${provider} (prompt fallback)`);
+      }
+    } else {
+      console.log(`📋 [Chat Handler] Parallel tool execution enabled (SEQUENTIAL_TOOL_EXECUTION = false)`);
+    }
+
     // Configure stream options based on provider
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
@@ -605,6 +632,13 @@ ${profile.prompt.trim()}`;
       messages: formattedMessages,
       temperature: 0.7,
       maxRetries: 3,
+      // Provider-specific options for sequential tool execution
+      providerOptions: {
+        // OpenAI: parallelToolCalls = false means sequential
+        openai: { parallelToolCalls: !SEQUENTIAL_TOOL_EXECUTION },
+        // Anthropic: disableParallelToolUse = true means sequential
+        anthropic: { disableParallelToolUse: SEQUENTIAL_TOOL_EXECUTION },
+      },
       // Add onError callback to capture streaming errors and store them
       onError: ({ error }: { error: any }) => {
         console.error(`❌ [Chat Handler] Streaming error occurred for ${provider} provider:`, error);
@@ -660,6 +694,7 @@ ${profile.prompt.trim()}`;
       // Utility tools
       weatherTool,
       dateTimeTool,
+      waitTool,
       // Simplified code editing tools (Claude Code-style)
       readCodeTool,
       editCodeTool,
@@ -676,7 +711,6 @@ ${profile.prompt.trim()}`;
       // Earth Engine state tools
       resetMapInspectorConsoleTool,
       getConsoleOutputTool,
-      getScriptTool,
       getMapInfoTool,
       getInspectorOutputTool
     } = createAITools(onToolEvent);
@@ -685,6 +719,7 @@ ${profile.prompt.trim()}`;
     const readOnlyTools = {
       weather: weatherTool,
       dateTime: dateTimeTool,
+      wait: waitTool,  // Wait for long-running operations
       readCode: readCodeTool,  // Can read code (no modifications)
       earthEngineDataset: earthEngineDatasetTool,
       screenshot: screenshotTool,
@@ -692,7 +727,6 @@ ${profile.prompt.trim()}`;
       clickByRefId: clickByRefIdTool,
       clickByCoordinates: clickByCoordinatesTool,
       getConsoleOutput: getConsoleOutputTool,
-      getScript: getScriptTool,
       getMapInfo: getMapInfoTool,
       getInspectorOutput: getInspectorOutputTool,
     };
@@ -754,6 +788,9 @@ ${profile.prompt.trim()}`;
       if (onToolEvent) {
         console.log('🔧 [Chat Handler] onToolEvent callback is provided, setting up step callbacks');
 
+        // Track tool start times for duration calculation
+        const toolStartTimes = new Map<string, number>();
+
         // Note: tool_start events are sent manually by each tool's execute function
         // This ensures they're sent before the tool actually starts executing
         streamOptions.onStepStart = ({ toolCalls }: { toolCalls?: any[] }) => {
@@ -762,15 +799,18 @@ ${profile.prompt.trim()}`;
           console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
           console.log('🔧 [Chat Handler] toolCalls:', JSON.stringify(toolCalls, null, 2));
 
-          // Don't send tool_start events here - they're sent by the tools themselves
+          // Record start times for each tool
           if (toolCalls && toolCalls.length > 0) {
             toolCalls.forEach((toolCall: any, index: number) => {
+              const toolId = toolCall.toolCallId || `${toolCall.toolName}_${index}`;
+              toolStartTimes.set(toolId, Date.now());
+
               console.log(`🛠️ [Tool Start][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`);
-              console.log(`   - Tool ID: ${toolCall.toolCallId || 'N/A'}`);
+              console.log(`   - Tool ID: ${toolId}`);
               console.log(`   - Args:`, toolCall.args);
 
               // Special logging for code execution tools
-              if (toolCall.toolName === 'earthEngineRunCode' || toolCall.toolName === 'editCode') {
+              if (toolCall.toolName === 'editCode') {
                 const code = toolCall.args?.code || '';
                 console.log(`   - Code length: ${code.length} characters`);
                 console.log(`   - Code preview: ${code.substring(0, 100)}...`);
@@ -835,14 +875,20 @@ ${profile.prompt.trim()}`;
                 eventResult = 'completed';
               }
 
+              // Calculate duration from start time
+              const toolId = toolCall.toolCallId || `${toolCall.toolName}_${index}`;
+              const startTime = toolStartTimes.get(toolId);
+              const duration = startTime ? Date.now() - startTime : undefined;
+
               const event = {
                 type: 'tool_finish' as const,
                 toolName: toolCall.toolName,
                 args: toolCall.args,
                 result: eventResult,
+                duration,  // Add duration in milliseconds
                 timestamp: Date.now()
               };
-              console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish`);
+              console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish (duration: ${duration}ms)`);
               onToolEvent(event);
             });
           } else {

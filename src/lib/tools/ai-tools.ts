@@ -159,6 +159,38 @@ export function createAITools(onToolEvent?: ToolEventCallback) {
       },
     });
 
+    // Wait tool for handling long-running operations
+    const waitTool = tool({
+      description: `Wait for a specified number of seconds. Use this to:
+- Wait for Earth Engine code execution to complete
+- Wait for map layers to finish loading
+- Give time for async operations to complete
+
+After waiting, use getConsoleOutput or screenshot to check if execution is done.
+- Console shows "Computing" or spinning gear icon = still running
+- Map shows gray progress bar in Layers button = still loading`,
+      inputSchema: z.object({
+        seconds: z.number().min(0.5).max(60)
+          .describe('Number of seconds to wait (0.5 to 60)'),
+      }),
+      execute: async ({ seconds }) => {
+        onToolEvent?.({
+          type: 'tool_start',
+          toolName: 'wait',
+          args: { seconds },
+          timestamp: Date.now()
+        });
+
+        await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+
+        return {
+          success: true,
+          message: `Waited ${seconds} seconds`,
+          suggestion: 'Use getConsoleOutput or screenshot to check execution status'
+        };
+      },
+    });
+
     const getActiveEarthEngineTabId = async (): Promise<number | null> => {
       if (typeof chrome === 'undefined' || !chrome.tabs) return null;
       const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) =>
@@ -208,6 +240,9 @@ Use this tool FIRST before making any edits to see the current state of the code
 Returns the full code content with line count.`,
       inputSchema: z.object({}),
       execute: async () => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'readCode', args: {}, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -277,6 +312,9 @@ WRONG - Don't duplicate:
         replace_all: z.boolean().optional().describe('If true, replace ALL occurrences. Default: false'),
       }),
       execute: async ({ old_string, new_string, replace_all }) => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'editCode', args: { old_string: old_string.substring(0, 50) + '...', new_string: new_string.substring(0, 50) + '...' }, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -376,6 +414,9 @@ WRONG - Don't duplicate:
       description: 'Undo the last code edit. Reverts the code to the previous version.',
       inputSchema: z.object({}),
       execute: async () => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'undoEdit', args: {}, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -443,6 +484,9 @@ After inserting, the code is automatically applied to the editor.`,
         text: z.string().describe('The text to insert. Use \\n for multiple lines.'),
       }),
       execute: async ({ line, text }) => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'insertAtLine', args: { line, text: text.substring(0, 50) + '...' }, timestamp: Date.now() });
+
         const tabId = await getActiveEarthEngineTabId();
         if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
 
@@ -2376,6 +2420,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     // Utility tools
     weatherTool,
     dateTimeTool,
+    waitTool,
 
     // Simplified code editing tools (Claude Code-style) - PRIMARY
     readCodeTool,
@@ -2396,7 +2441,6 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     // Earth Engine state tools
     resetMapInspectorConsoleTool,
     getConsoleOutputTool,
-    getScriptTool,
     getMapInfoTool,
     getInspectorOutputTool
   };
