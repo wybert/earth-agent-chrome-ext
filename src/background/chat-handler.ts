@@ -545,8 +545,13 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
 
+    const modelForProvider =
+      provider === 'z-ai'
+        ? (llmProvider as ReturnType<typeof createOpenAI>).chat(effectiveModel as any)
+        : llmProvider(effectiveModel);
+
     let streamOptions: any = {
-      model: llmProvider(effectiveModel),
+      model: modelForProvider,
       // Temporarily remove system prompt for Ollama to match curl format
       system: finalSystemPrompt,
       messages: formattedMessages,
