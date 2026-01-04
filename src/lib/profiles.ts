@@ -23,7 +23,7 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   { key: 'undoEdit', label: 'Undo Edit', description: 'Undo the last code edit', kind: 'write' },
 
   // Earth Engine tools
-  { key: 'earthEngineDataset', label: 'EE Dataset Docs', description: 'Search Earth Engine dataset documentation', kind: 'read' },
+  { key: 'geeDocs', label: 'GEE Docs', description: 'Search GEE datasets (official/community) and API documentation', kind: 'read' },
   { key: 'runCurrentCode', label: 'Run Code', description: 'Execute current code in editor', kind: 'write' },
 
   // Browser interaction tools
@@ -43,7 +43,7 @@ export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
   'readCode',
   'dateTime',
   'weather',
-  'earthEngineDataset',
+  'geeDocs',
   'snapshot',
   'getMapScreenPosition',
   'getConsoleOutput',

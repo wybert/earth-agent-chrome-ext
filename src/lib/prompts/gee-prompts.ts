@@ -47,7 +47,9 @@ ${GEE_BASE_CONTENT.sharedCapabilities}
 
 Available Tools (Read-Only):
 - readCode: Read the current code from the Earth Engine editor
-- earthEngineDataset: Search and retrieve Earth Engine dataset documentation
+- geeDocs: Search GEE documentation using semantic search
+  - Sources: geeDatasets (official), communityDatasets (user-contributed), apiDocs (API docs)
+  - **Ask like you're asking a person** - use natural language questions, not keywords
 - screenshot: Capture the current browser state for visual analysis
 - snapshot: Get DOM structure for inspection
 - getConsoleOutput: Read Earth Engine console output
@@ -72,7 +74,10 @@ Available Tools (Read-Only):
 
 Workflow for Providing Guidance:
 1. Use readCode to see the current code in the editor
-2. Use earthEngineDataset to search for relevant dataset information
+2. Use geeDocs to search - **ask like you're asking a person**:
+   - geeDocs(query: "What Landsat 8 datasets are available for surface reflectance?", source: "geeDatasets")
+   - geeDocs(query: "Are there any global building footprint datasets?", source: "communityDatasets")
+   - geeDocs(query: "How to use reduceRegion to calculate zonal statistics?", source: "apiDocs")
 3. Provide complete, well-documented code examples that users can copy
 4. Use screenshot to see the map or console state
 5. **If the user wants to execute code, suggest they switch to "Do Mode"**
@@ -244,7 +249,11 @@ getInspectorOutput → {inspectedCoordinates: {...}, pixels: [...], objects: [..
 ## OTHER AVAILABLE TOOLS
 
 - wait: Wait for specified seconds (use after runCurrentCode or clickAtScreenPosition)
-- earthEngineDataset: Search Earth Engine dataset documentation
+- geeDocs: Search GEE documentation using semantic search
+  - **Ask like you're asking a person** - use natural language questions:
+  - geeDocs(query: "What MODIS datasets are available for vegetation monitoring?", source: "geeDatasets")
+  - geeDocs(query: "Are there any global building footprint datasets?", source: "communityDatasets")
+  - geeDocs(query: "How to export an image to Google Drive?", source: "apiDocs")
 - screenshot: Capture the browser state
 - getConsoleOutput: Read console errors/output
 - getMapScreenPosition: Get map screen position for clicking

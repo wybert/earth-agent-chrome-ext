@@ -77,7 +77,7 @@ export type ToolKey =
   | 'writeCode'
   | 'undoEdit'
   // Earth Engine tools
-  | 'earthEngineDataset'
+  | 'geeDocs'
   | 'runCurrentCode'
   // Browser interaction tools
   | 'screenshot'

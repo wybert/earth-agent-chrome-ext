@@ -896,60 +896,82 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
       },
     });
 
-    // Define Earth Engine dataset documentation tool
-    const earthEngineDatasetTool = tool({
-      description: 'Get information about Earth Engine datasets including documentation and code examples. WORKFLOW TIP: After finding a dataset, use earthEngineScript to write code with the correct dataset ID and band names.',
+    // Define GEE documentation search tool (supports multiple sources)
+    const geeDocsTool = tool({
+      description: `Search Google Earth Engine documentation and datasets using semantic search.
+
+**Query Tips:** Ask like you're asking a person - use natural language questions for best results:
+- Good: "How to load and visualize LANDSAT 8 surface reflectance imagery?"
+- Good: "What nighttime light datasets are available for urban analysis?"
+- Bad: "LANDSAT" (too vague, use descriptive sentences instead)
+
+Sources:
+- geeDatasets: Official GEE dataset catalog (dataset IDs, bands, code examples)
+- communityDatasets: Awesome GEE community datasets contributed by users
+- apiDocs: GEE API documentation (functions, usage, best practices)`,
       inputSchema: z.object({
-        datasetQuery: z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
+        query: z.string().describe('Natural language question describing what you need (e.g., "How to calculate NDVI from Sentinel-2?", "What datasets have global building footprints?")'),
+        source: z.enum(['geeDatasets', 'communityDatasets', 'apiDocs'])
+          .describe('geeDatasets: Official catalog | communityDatasets: User datasets | apiDocs: API docs')
       }),
-      execute: async ({ datasetQuery }) => {
+      execute: async ({ query, source }) => {
         // Manually send tool_start event since onStepStart is not reliable
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'earthEngineDataset',
-            args: { datasetQuery },
+            toolName: 'geeDocs',
+            args: { query, source },
             timestamp: Date.now()
           });
         }
 
+        // Map source to library ID
+        const libraryMap: Record<string, string> = {
+          geeDatasets: 'wybert/earthengine-dataset-catalog-md',
+          communityDatasets: 'samapriya/awesome-gee-community-datasets',
+          apiDocs: 'wybert/earthengine-doc-md'
+        };
+        const libraryId = libraryMap[source];
+
         try {
-          console.log(`🌍 [EarthEngineDatasetTool] Tool called with query: "${datasetQuery}"`);
-          console.time('EarthEngineDatasetTool execution');
-          
-          // Use the Context7 getDocumentation function to fetch dataset information
-          // The Earth Engine dataset catalog is stored in wybert/earthengine-dataset-catalog-md
+          console.log(`🌍 [GeeDocsTool] Tool called with query: "${query}", source: "${source}"`);
+          console.log(`🌍 [GeeDocsTool] Using library: ${libraryId}`);
+          console.time('GeeDocsTool execution');
+
           const result = await getDocumentation(
-            'wybert/earthengine-dataset-catalog-md',
-            datasetQuery,
-            { tokens: 15000 } // Get a good amount of content
+            libraryId,
+            query,
+            { tokens: 15000 }
           );
-          
-          console.timeEnd('EarthEngineDatasetTool execution');
-          
+
+          console.timeEnd('GeeDocsTool execution');
+
           if (!result.success || !result.content) {
-            console.warn(`❌ [EarthEngineDatasetTool] No results found for "${datasetQuery}". Error: ${result.message}`);
+            console.warn(`❌ [GeeDocsTool] No results found for "${query}" in ${source}. Error: ${result.message}`);
             return {
               found: false,
-              message: result.message || `Could not find documentation for "${datasetQuery}"`,
-              suggestion: "Try a more general search term or check the spelling of the dataset name."
+              source,
+              message: result.message || `Could not find documentation for "${query}" in ${source}`,
+              suggestion: "Try a different search term or check another source."
             };
           }
-          
-          console.log(`✅ [EarthEngineDatasetTool] Found documentation for "${datasetQuery}". Content length: ${result.content.length} chars`);
-          
+
+          console.log(`✅ [GeeDocsTool] Found documentation for "${query}" in ${source}. Content length: ${result.content.length} chars`);
+
           return {
             found: true,
-            query: datasetQuery,
+            query,
+            source,
             documentation: result.content,
-            message: `Documentation found for Earth Engine dataset related to "${datasetQuery}"`
+            message: `Documentation found for "${query}" in ${source}`
           };
         } catch (error) {
-          console.error(`❌ [EarthEngineDatasetTool] Error fetching Earth Engine dataset info:`, error);
+          console.error(`❌ [GeeDocsTool] Error fetching documentation:`, error);
           return {
             found: false,
-            message: `Error retrieving Earth Engine dataset information: ${error instanceof Error ? error.message : String(error)}`,
-            suggestion: "Try again with a different dataset name or more specific query."
+            source,
+            message: `Error retrieving documentation: ${error instanceof Error ? error.message : String(error)}`,
+            suggestion: "Try again with a different query or source."
           };
         }
       },
@@ -2483,7 +2505,7 @@ Returns the coordinates of the inspected location along with all available data.
     undoEditTool,
 
     // Earth Engine tools
-    earthEngineDatasetTool,
+    geeDocsTool,
     runCurrentCodeTool,
 
     // Browser interaction tools
