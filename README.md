@@ -49,24 +49,20 @@ After installation, you'll need to configure your AI provider:
 1. Click the Earth Agent extension icon in Chrome
 2. Go to Settings
 3. Choose your AI provider:
-   - **OpenAI**: Add your OpenAI API key (supports GPT-4o, GPT-4.1, GPT-o3, etc.)
-   - **Anthropic**: Add your Anthropic API key (supports Claude models)
-   - **Google**: Add your Google API key (supports Gemini models)
-   - **Qwen**: Add your DashScope API key (supports Qwen models)
-   - **Ollama**: Configure local Ollama server (requires local installation)
+   - **OpenAI**: Add your OpenAI API key (supports GPT-5.2, GPT-5.2 Pro, GPT-5.1)
+   - **Anthropic**: Add your Anthropic API key (supports Claude Opus 4.5, Sonnet 4.5, Haiku 4.5)
+   - **Google**: Add your Google API key (supports Gemini 2.5 Pro, Gemini 3 Flash Preview)
+   - **Z.AI**: Add your Z.AI API key (supports GLM-4.7)
 4. Select your preferred model
 5. Start chatting with Earth Engine!
 
-### Ollama Setup (Local AI Models)
+### Custom OpenAI-Compatible Providers
 
-For Ollama local models:
+You can also add custom providers that use the OpenAI API format:
 
-1. [Install Ollama](https://ollama.com/) on your machine
-2. Pull your desired models: `ollama pull gemma3` or `ollama pull llama3`
-3. **Important**: Start Ollama with CORS enabled: `OLLAMA_ORIGINS="*" ollama serve`
-4. In the extension settings, select "Ollama" as provider
-5. Enter your model name (e.g., "gemma3:1b", "llama3:latest")
-6. **Tool Support**: Not all models support tools - check [Ollama model search](https://ollama.com/search) for models with "tools" tag for full Earth Engine integration
+1. Click "Add Custom Provider" in Settings
+2. Enter provider name, base URL, API key, and default model
+3. Use providers like DeepSeek, Together AI, or any OpenAI-compatible API
 
 ## Environment Management
 
@@ -80,16 +76,18 @@ These tools help maintain a clean workspace during development and are particula
 
 ## AI Model Tool Support
 
-The extension provides powerful Earth Engine integration tools, but tool support varies by AI provider and model:
+The extension provides powerful Earth Engine integration tools. All built-in providers support tool calling:
 
-- **✅ Full Tool Support**: OpenAI GPT models, Anthropic Claude models, Google Gemini models, Qwen models
-- **⚠️ Variable Tool Support**: Ollama models - tool support depends on the specific model
-  - **Tool-Compatible Ollama Models**: Check [Ollama model search](https://ollama.com/search) for models with "tools" tag
-  - **Examples with tools**: `qwen3`, `llama3.1`, `mistral`, `codellama`, `firefunction-v2`
-  - **Basic Chat Only**: Models without tool support can still provide Earth Engine guidance and code suggestions
-- **📖 Documentation**: For other providers, refer to their respective documentation for tool/function calling capabilities
+| Provider | Tool Support | Multimodal (Screenshot) |
+|----------|-------------|------------------------|
+| OpenAI | ✅ Full | ✅ Supported |
+| Anthropic | ✅ Full | ✅ Supported |
+| Google | ✅ Full | ✅ Supported |
+| Z.AI | ✅ Full | ❌ Not supported |
 
-**Tip**: For the best Earth Engine integration experience with automated code execution, use tool-compatible models from any provider.
+**Note**: Z.AI currently does not support multimodal inputs, so screenshot analysis features are unavailable when using Z.AI models.
+
+**Tip**: For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
 
 ## How to Use the Extension
 
@@ -108,6 +106,34 @@ The Earth Agent works as your intelligent assistant for Google Earth Engine deve
 - **Get help debugging** existing code in your editor
 - **Analyze and explain** maps, data, and results
 - **Manage your workspace** with automatic cleanup tools
+
+### Ask Mode vs Do Mode
+
+The agent operates in two modes that you can switch between:
+
+#### **Ask Mode (Read-Only)** 🔍
+Analysis and guidance mode - the agent can observe but not modify:
+- ✅ Read current code from the editor
+- ✅ Search documentation (geeDocs)
+- ✅ Take screenshots and inspect the page
+- ✅ Read console output and map state
+- ❌ Cannot insert or modify code
+- ❌ Cannot execute code
+- ❌ Cannot clear or reset the environment
+
+**Best for**: Learning, understanding code, exploring datasets, getting explanations
+
+#### **Do Mode (Full Access)** ⚡
+Full execution mode - the agent can take action:
+- ✅ All Ask Mode capabilities
+- ✅ Write and edit code in the editor
+- ✅ Execute code and monitor results
+- ✅ Clear map, console, and inspector
+- ✅ Complete end-to-end workflows
+
+**Best for**: Building scripts, debugging, automated analysis, multi-step tasks
+
+**Tip**: Start in Ask Mode when exploring new concepts, switch to Do Mode when ready to implement
 
 ## Example Prompts to Try
 
@@ -184,16 +210,22 @@ The Earth Agent includes powerful tools that enable it to interact directly with
 ### 🌍 **Earth Engine Integration Tools**
 
 #### **Code Editor Integration**
-- **Insert Code**: Automatically write code directly into your GEE Code Editor
-- **Execute Code**: Run the code in your editor and monitor execution
-- **Code Analysis**: Analyze existing code and suggest improvements
-- **Error Debugging**: Identify and fix errors in your Earth Engine scripts
+- **readCode**: Read current code from the Earth Engine editor
+- **writeCode**: Write new code to the editor (replaces all content)
+- **editCode**: Modify specific parts of existing code
+- **runCurrentCode**: Execute the code in your editor and monitor execution
+- **undoEdit**: Revert the last code edit
 
-#### **Dataset Discovery**
-- **Dataset Search**: Find relevant Earth Engine datasets based on your needs
-- **Dataset Documentation**: Get detailed information about specific datasets
-- **Data Catalog Access**: Browse and explore the complete Earth Engine Data Catalog
-- **Community Datasets**: Access community-contributed datasets and collections
+#### **Dataset Discovery (geeDocs Tool)**
+The `geeDocs` tool uses semantic search to find relevant documentation. **Ask like you're asking a person** - use natural language questions for best results:
+- **geeDatasets**: Official Earth Engine dataset catalog (dataset IDs, bands, code examples)
+- **communityDatasets**: Awesome GEE community datasets contributed by users
+- **apiDocs**: Earth Engine API documentation (functions, usage, best practices)
+
+Example queries:
+- "What nighttime light datasets are available for urban analysis?"
+- "How to load and visualize LANDSAT 8 surface reflectance imagery?"
+- "Are there any global building footprint datasets?"
 
 #### **Map and Visualization Tools**
 - **Map Inspection**: Analyze what's currently displayed on your map
@@ -202,24 +234,23 @@ The Earth Agent includes powerful tools that enable it to interact directly with
 - **Legend Creation**: Generate appropriate legends for your data
 
 #### **Environment Management**
-- **Reset Map/Inspector/Console**: Clean up your workspace with a single command
-- **Clear Script**: Remove all code from the editor to start fresh
-- **Screenshot Capture**: Take snapshots of your work for documentation
-- **Console Monitoring**: Check console output and error messages
+- **clearMapInspectorAndConsole**: Clean up your workspace with a single command
+- **getConsoleOutput**: Check console output and error messages
+- **getMapScreenPosition**: Get map screen coordinates for inspection
+- **getInspectorOutput**: Read Inspector panel data after clicking on map
+- **screenshot**: Take snapshots of your work for documentation
+- **snapshot**: Get DOM structure for page inspection
 
 ### 🌐 **Browser Automation Tools**
 
 #### **Web Page Interaction**
-- **Element Clicking**: Click buttons, links, and interface elements
-- **Text Input**: Fill forms and input fields automatically
-- **Page Navigation**: Navigate through web interfaces
-- **Element Inspection**: Analyze web page structure and content
+- **clickByRefId**: Click elements by reference ID
+- **clickAtScreenPosition**: Click at specific screen pixel coordinates
+- **wait**: Wait for specified seconds (useful for page loading)
 
 #### **Visual Analysis**
-- **Screenshot Capture**: Take full-page or selective screenshots
-- **Element Detection**: Find and identify specific page elements
-- **Content Extraction**: Extract text and data from web pages
-- **Accessibility Analysis**: Generate accessibility reports for web content
+- **screenshot**: Capture the current browser state as an image
+- **snapshot**: Get DOM structure snapshot for inspection
 
 ### 🔍 **Information and Research Tools**
 
@@ -228,11 +259,11 @@ The Earth Agent includes powerful tools that enable it to interact directly with
 - **Weather Data**: Access meteorological data for analysis
 - **Climate Information**: Historical and current climate data
 
-#### **Documentation Access**
-- **Context7 Integration**: Access comprehensive Earth Engine documentation
-- **API Reference**: Get detailed API documentation and examples
-- **Best Practices**: Learn recommended approaches and patterns
+#### **Documentation Access (geeDocs)**
+- **Semantic Search**: Natural language queries across all Earth Engine documentation
+- **Three Sources**: Official datasets, community datasets, and API documentation
 - **Code Examples**: Access curated code examples and tutorials
+- **Best Practices**: Learn recommended approaches and patterns
 
 ### 🤖 **AI Agent Capabilities**
 
@@ -257,22 +288,17 @@ The Earth Agent includes powerful tools that enable it to interact directly with
 ## Tool Compatibility by Provider
 
 ### ✅ **Full Tool Support**
-**OpenAI, Anthropic, Google, Qwen**: All tools and functions available
+**OpenAI, Anthropic, Google, Z.AI**: All tools and functions available
 - Complete Earth Engine integration
 - Full browser automation
 - Advanced multi-step workflows
 - Error recovery and debugging
 
-### ⚠️ **Variable Tool Support**
-**Ollama**: Tool availability depends on the specific model
-- **With Tools**: Models tagged with "tools" on [Ollama search](https://ollama.com/search)
-  - Examples: `qwen3`, `llama3.1`, `mistral`, `codellama`, `firefunction-v2`
-  - Full Earth Engine integration available
-  - Complete browser automation support
-- **Chat Only**: Models without tool support
-  - Provides expert guidance and code suggestions
-  - Can explain concepts and help with debugging
-  - Limited to conversational assistance (no direct code execution)
+### ⚠️ **Multimodal Limitation**
+**Z.AI (GLM-4.7)**: Does not support multimodal inputs
+- All text-based tools work fully
+- Screenshot analysis features unavailable
+- Use OpenAI, Anthropic, or Google for visual analysis tasks
 
 ### 💡 **Usage Tips**
 
@@ -293,7 +319,7 @@ The Earth Agent includes powerful tools that enable it to interact directly with
 
 The extension includes a comprehensive testing framework for evaluating AI agent performance:
 
-- **Multi-Provider Support**: Test with OpenAI GPT models, Anthropic Claude models, Google Gemini, Qwen models, or Ollama local models
+- **Multi-Provider Support**: Test with OpenAI GPT models, Anthropic Claude models, Google Gemini, Z.AI models, or custom providers
 - **Batch Testing**: Run multiple prompts automatically with configurable intervals
 - **Environment Controls**: Configure reset and clear functions, including optional GEE editor reload
 - **Results Analysis**: Export detailed test results with screenshots and metadata
@@ -369,18 +395,21 @@ Please create a complete workflow that:
 - **Refresh the Earth Engine tab** and try again
 - **Check your API keys** in the extension settings
 - **Verify internet connection** for cloud-based providers
-- **For Ollama**: Ensure it's running with `OLLAMA_ORIGINS="*" ollama serve`
 
 #### **🚫 Tools Not Working**
-- **Check model compatibility**: Ensure your selected model supports tools
-- **For Ollama**: Use models with "tools" tag from [Ollama search](https://ollama.com/search)
-- **Try a different provider**: Switch to OpenAI, Anthropic, Google, or Qwen for guaranteed tool support
+- **Check model compatibility**: All built-in providers (OpenAI, Anthropic, Google, Z.AI) support tools
+- **Try a different model**: Some newer models may have better tool support
+- **Refresh the extension**: Close and reopen the side panel
+
+#### **📷 Screenshot Analysis Not Working**
+- **Z.AI limitation**: Z.AI does not support multimodal inputs
+- **Switch to another provider**: Use OpenAI, Anthropic, or Google for screenshot analysis
+- **Text-based tools still work**: All other tools function normally with Z.AI
 
 #### **⚡ Performance Issues**
 - **Use more specific prompts** to reduce processing time
 - **Break complex tasks** into smaller steps
 - **Check Earth Engine quotas** if operations fail
-- **For local models**: Ensure sufficient system resources
 
 #### **🐛 Code Errors**
 - **Ask the agent to debug**: "This code has an error, please fix it"
@@ -389,8 +418,7 @@ Please create a complete workflow that:
 
 #### **📡 Connectivity Issues**
 - **Verify API keys** are correctly entered
-- **Check provider status** (OpenAI, Anthropic, Google, Qwen status pages)
-- **For Ollama**: Confirm local server is accessible at `http://localhost:11434`
+- **Check provider status** (OpenAI, Anthropic, Google status pages)
 
 ### Getting Help
 
