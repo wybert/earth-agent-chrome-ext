@@ -74,7 +74,7 @@ export type ToolKey =
   // Simplified code editing tools (Claude Code-style)
   | 'readCode'
   | 'editCode'
-  | 'insertAtLine'
+  | 'writeCode'
   | 'undoEdit'
   // Earth Engine tools
   | 'earthEngineDataset'

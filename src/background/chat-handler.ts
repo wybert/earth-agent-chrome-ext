@@ -698,7 +698,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Simplified code editing tools (Claude Code-style)
       readCodeTool,
       editCodeTool,
-      insertAtLineTool,
+      writeCodeTool,
       undoEditTool,
       // Earth Engine tools
       earthEngineDatasetTool,
@@ -734,7 +734,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     // Write tools for "do" mode (includes all read-only tools plus these)
     const writeTools = {
       editCode: editCodeTool,
-      insertAtLine: insertAtLineTool,
+      writeCode: writeCodeTool,
       undoEdit: undoEditTool,
       runCurrentCode: runCurrentCodeTool,
       resetMapInspectorConsole: resetMapInspectorConsoleTool
