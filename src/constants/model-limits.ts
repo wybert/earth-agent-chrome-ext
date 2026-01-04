@@ -26,6 +26,10 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'gemini-3-flash-preview': 1000000,
   'gemini-2.5-pro': 2000000,      // 2M context window
   'gemini-2.5-flash': 1000000,    // 1M context window
+
+  // Z.AI / GLM Models
+  'glm-4.7': 128000,
+  'glm-4.6': 128000,
 };
 
 /**
@@ -37,6 +41,11 @@ export function getModelContextLimit(model: string): number {
   // Try exact match first
   if (MODEL_CONTEXT_LIMITS[model]) {
     return MODEL_CONTEXT_LIMITS[model];
+  }
+
+  const normalizedModel = model.toLowerCase();
+  if (MODEL_CONTEXT_LIMITS[normalizedModel]) {
+    return MODEL_CONTEXT_LIMITS[normalizedModel];
   }
 
   // For custom/unknown models, use a conservative default

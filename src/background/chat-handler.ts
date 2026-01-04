@@ -169,6 +169,7 @@ export async function handleChatRequest(
     // Setup LLM provider
     let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI>;
     let effectiveModel: string;
+    let forceChatCompletions = false;
 
     if (provider === 'openai') {
       // Validate API key
@@ -297,6 +298,7 @@ export async function handleChatRequest(
       console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
     } else if (provider === 'z-ai') {
       effectiveModel = model || DEFAULT_MODELS['z-ai'];
+      forceChatCompletions = true;
 
       if (!apiKey) {
         console.error(`❌ [Chat Handler] Z.AI API key is missing`);
@@ -422,6 +424,9 @@ export async function handleChatRequest(
 
         llmProvider = createOpenAI(customOpenAIConfig);
         effectiveModel = model || customConfig.modelName;
+        if (customConfig.baseURL.toLowerCase().includes('api.z.ai')) {
+          forceChatCompletions = true;
+        }
 
         console.log(`✅ [Chat Handler] Using custom provider "${customConfig.name}" with model: ${effectiveModel} at ${customConfig.baseURL}${heliconeHeaders ? ' (with Helicone)' : ''}`);
       } catch (error) {
@@ -546,7 +551,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     let streamError: { message: string } | null = null;
 
     const modelForProvider =
-      provider === 'z-ai'
+      forceChatCompletions
         ? (llmProvider as ReturnType<typeof createOpenAI>).chat(effectiveModel as any)
         : llmProvider(effectiveModel);
 
