@@ -407,6 +407,65 @@ WRONG - Don't duplicate:
     });
 
     /**
+     * writeCode - Overwrite entire editor content (Claude Code Write-style)
+     * Use when starting fresh or when editor is empty
+     */
+    const writeCodeTool = tool({
+      description: `Overwrite the entire editor content with new code.
+
+Use this tool when:
+- Starting fresh with completely new code
+- The editor is empty and you need to write initial code
+- You want to replace ALL code (not just modify parts)
+
+For partial edits (modifying specific lines), use editCode instead.`,
+      inputSchema: z.object({
+        content: z.string().describe('The complete code to write to the editor. This will REPLACE all existing code.'),
+      }),
+      execute: async ({ content }) => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'writeCode', args: { contentLength: content.length }, timestamp: Date.now() });
+
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+
+        const scriptId = 'current_editor';
+
+        // Get current content for diff calculation
+        const fetchResponse = await getEditorContent(tabId);
+        const previousContent = fetchResponse.success ? fetchResponse.content || '' : '';
+        const previousLineCount = previousContent.split('\n').length;
+
+        // Set the new content in shadow workspace
+        const state = shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, content, 'writeCode');
+
+        // Sync to editor (using MAIN world)
+        const syncResult = await setEditorContent(content, tabId);
+
+        if (!syncResult.success) {
+          return {
+            success: false,
+            error: `Failed to write to editor: ${syncResult.error}`,
+            suggestion: 'The editor may not be ready. Try again.'
+          };
+        }
+
+        // Mark as synced
+        shadowWorkspaceSingleton.markSynced(tabId, scriptId);
+
+        const newLineCount = content.split('\n').length;
+
+        return {
+          success: true,
+          lineCount: newLineCount,
+          previousLineCount: previousLineCount,
+          message: `Wrote ${newLineCount} lines to editor (replaced ${previousLineCount} lines)`,
+          hint: 'Use runCurrentCode to execute the code'
+        };
+      },
+    });
+
+    /**
      * undoEdit - Undo the last code edit
      * Reverts to previous version and syncs to editor
      */
@@ -2425,7 +2484,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     // Simplified code editing tools (Claude Code-style) - PRIMARY
     readCodeTool,
     editCodeTool,
-    insertAtLineTool,
+    writeCodeTool,
     undoEditTool,
 
     // Earth Engine tools

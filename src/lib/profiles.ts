@@ -19,7 +19,7 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   // Simplified code editing tools (Claude Code-style)
   { key: 'readCode', label: 'Read Code', description: 'Read current code from Earth Engine editor', kind: 'read' },
   { key: 'editCode', label: 'Edit Code', description: 'Edit code using old_string/new_string replacement', kind: 'write' },
-  { key: 'insertAtLine', label: 'Insert Line', description: 'Insert text at a specific line number', kind: 'write' },
+  { key: 'writeCode', label: 'Write Code', description: 'Overwrite entire editor content', kind: 'write' },
   { key: 'undoEdit', label: 'Undo Edit', description: 'Undo the last code edit', kind: 'write' },
 
   // Earth Engine tools
