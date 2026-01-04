@@ -5,7 +5,7 @@ import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, 
 // Project uses custom Message type for Chrome extension communication
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
-import { Message, ExtensionMessage, Provider } from '../types/extension';
+import { Message, ExtensionMessage, Provider, type OpenAICompatibleConfig } from '../types/extension';
 import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview } from './chat-helpers';
 import type { AgentProfile } from '@/types/extension';
 import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
@@ -16,7 +16,7 @@ import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
 import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
 import { TokenUsageDisplay } from "@/components/ui/TokenUsageDisplay";
-import { DEFAULT_MODELS } from '@/constants/models';
+import { DEFAULT_MODELS, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '@/constants/models';
 import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ShadowDiffCard } from '@/components/ui/ShadowDiffCard';
@@ -279,11 +279,21 @@ export function ChatUI() {
       Z_AI_API_KEY_STORAGE_KEY,
       OLLAMA_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY,
-      MODEL_STORAGE_KEY
+      MODEL_STORAGE_KEY,
+      OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY
     ], (result) => {
       const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-      // Use default model for provider if no model is stored
-      const model = result[MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
+      const isCustomProvider = provider.startsWith('custom:');
+      const customConfigs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+      const customConfig = isCustomProvider
+        ? customConfigs.find((config) => config.id === provider.replace('custom:', ''))
+        : null;
+
+      const storedModel = result[MODEL_STORAGE_KEY];
+      const fallbackModel = isCustomProvider
+        ? customConfig?.modelName
+        : DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
+      const model = storedModel || fallbackModel || DEFAULT_MODELS.openai;
 
       // Determine if an API key is configured for the selected provider
       let hasKey = false;
@@ -305,6 +315,9 @@ export function ChatUI() {
         currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
         hasKey = true; // Ollama doesn't require an API key for local instances
         console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
+      } else if (isCustomProvider) {
+        currentKey = customConfig?.apiKey || '';
+        hasKey = !!customConfig?.enabled;
       }
 
       const hasApiKey = hasKey;
@@ -1645,35 +1658,7 @@ export function ChatUI() {
               </div>
             ) : null}
 
-            {/* Error and Fallback Displays - Positioned at bottom above input */}
-            {/* Removed duplicate error display - errors are now shown as assistant messages in the chat */}
-            {fallbackMode && (
-              <Card className="absolute bottom-32 left-2 right-2 p-4 bg-yellow-100 border-yellow-300 text-yellow-800 z-10">
-                <p className="text-sm font-medium">Fallback Mode</p>
-                <p className="text-sm mt-1">Could not connect. Limited local responses.</p>
-                {apiConfigured && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleRetryAPI}
-                    className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200"
-                    disabled={currentLoading || (port !== null && connectionAttempts === 0)}
-                  >
-                    <RefreshCw size={14} className="mr-2" /> Reconnect
-                  </Button>
-                )}
-                {!apiConfigured && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => setShowSettings(true)}
-                    className="mt-2 rounded-md border-yellow-300 text-yellow-800 hover:bg-yellow-200"
-                  >
-                    Configure API Key
-                  </Button>
-                )}
-              </Card>
-            )}
+            {/* Error display is shown in the chat stream; no fallback banner */}
           </div>
         </div>
 

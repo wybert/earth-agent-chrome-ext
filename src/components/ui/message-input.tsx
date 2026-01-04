@@ -117,16 +117,8 @@ export function MessageInput({
     models: models
   }))
 
-  // Get display name for model (supports custom providers)
+  // Get display name for built-in models
   const getModelDisplayName = (modelId: string) => {
-    // Check if it's a custom provider
-    if (provider?.startsWith('custom:')) {
-      const configId = provider.replace('custom:', '')
-      const config = customProviders.find(c => c.id === configId)
-      if (config) {
-        return `${config.name} - ${modelId}`
-      }
-    }
     return MODEL_DISPLAY_NAMES[modelId] || modelId
   }
 
