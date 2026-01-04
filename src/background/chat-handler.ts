@@ -711,7 +711,6 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Earth Engine state tools
       resetMapInspectorConsoleTool,
       getConsoleOutputTool,
-      getScriptTool,
       getMapInfoTool,
       getInspectorOutputTool
     } = createAITools(onToolEvent);
@@ -728,7 +727,6 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       clickByRefId: clickByRefIdTool,
       clickByCoordinates: clickByCoordinatesTool,
       getConsoleOutput: getConsoleOutputTool,
-      getScript: getScriptTool,
       getMapInfo: getMapInfoTool,
       getInspectorOutput: getInspectorOutputTool,
     };

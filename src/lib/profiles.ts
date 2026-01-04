@@ -34,7 +34,6 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
 
   // Earth Engine state tools
   { key: 'getConsoleOutput', label: 'Console Output', description: 'Get Earth Engine console output', kind: 'read' },
-  { key: 'getScript', label: 'Get Script', description: 'Read current Earth Engine script', kind: 'read' },
   { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
   { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
   { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
@@ -46,7 +45,6 @@ export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
   'weather',
   'earthEngineDataset',
   'snapshot',
-  'getScript',
   'getMapInfo',
   'getConsoleOutput',
 ];

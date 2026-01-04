@@ -2441,7 +2441,6 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     // Earth Engine state tools
     resetMapInspectorConsoleTool,
     getConsoleOutputTool,
-    getScriptTool,
     getMapInfoTool,
     getInspectorOutputTool
   };

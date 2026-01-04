@@ -87,7 +87,6 @@ export type ToolKey =
   // Earth Engine state tools
   | 'resetMapInspectorConsole'
   | 'getConsoleOutput'
-  | 'getScript'
   | 'getMapInfo'
   | 'getInspectorOutput';
 
