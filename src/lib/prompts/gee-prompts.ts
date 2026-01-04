@@ -133,14 +133,53 @@ ${GEE_BASE_CONTENT.sharedCapabilities}
 **🚀 Creating something new:**
 1. **insertAtLine(line: 1, text: "...")** → Add complete code to editor (shows diff)
 2. **runCurrentCode** → Execute the code
-3. **getConsoleOutput** → Check for errors
-4. **screenshot** → Verify the map visualization
+3. **wait(2-5)** → Wait for execution (adjust based on complexity)
+4. **getConsoleOutput** → Check for errors or "Computing" status
+5. If still computing → **wait** more, then check again
+6. **screenshot** → Verify the map visualization
 
 **✏️ Modifying existing code:**
 1. **readCode** → See the current code first
 2. **editCode** or **insertAtLine** → Modify the code (shows diff)
 3. **runCurrentCode** → Execute the modified code
-4. **getConsoleOutput** → Check for errors
+4. **wait(2-5)** → Wait for execution
+5. **getConsoleOutput** → Check for errors
+
+## HANDLING LONG-RUNNING CODE
+
+Earth Engine computations can take time. Use **wait** tool to wait for completion:
+
+**How to detect if code is still running:**
+- Console shows "Computing" or spinning gear icon → still running
+- Map shows gray progress bar in Layers button → still loading
+- Console output hasn't changed → may still be processing
+
+**Recommended approach:**
+1. After runCurrentCode, use **wait(2)** for simple operations
+2. Check getConsoleOutput - if "Computing" appears, use **wait(5)** and check again
+3. For complex computations (large regions, many images), wait longer (10-30 seconds)
+4. Use screenshot to verify map layers are fully loaded (no gray progress bar)
+
+## CODE BEST PRACTICES
+
+**Always add print() statements for progress tracking:**
+\`\`\`javascript
+print('Loading image collection...');
+var collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_TOD');
+
+print('Filtering by date and region...');
+var filtered = collection.filterDate('2020-01-01', '2020-12-31');
+
+print('Computing mean composite...');
+var composite = filtered.mean();
+
+print('Adding layer to map...');
+Map.addLayer(composite, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'Composite');
+
+print('Done!');
+\`\`\`
+
+This helps you track progress via getConsoleOutput and know exactly where the code is in execution.
 
 ## EXAMPLES
 
@@ -172,6 +211,7 @@ editCode(old_string: "// Delete this line\\n", new_string: "")
 
 ## OTHER AVAILABLE TOOLS
 
+- wait: Wait for specified seconds (use after runCurrentCode for long operations)
 - earthEngineDataset: Search Earth Engine dataset documentation
 - screenshot: Capture the browser state
 - getConsoleOutput: Read console errors/output

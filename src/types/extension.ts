@@ -70,6 +70,7 @@ export type ToolKey =
   // Utility tools
   | 'weather'
   | 'dateTime'
+  | 'wait'
   // Simplified code editing tools (Claude Code-style)
   | 'readCode'
   | 'editCode'
@@ -86,7 +87,6 @@ export type ToolKey =
   // Earth Engine state tools
   | 'resetMapInspectorConsole'
   | 'getConsoleOutput'
-  | 'getScript'
   | 'getMapInfo'
   | 'getInspectorOutput';
 
