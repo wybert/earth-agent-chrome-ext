@@ -74,20 +74,20 @@ export type ToolKey =
   // Simplified code editing tools (Claude Code-style)
   | 'readCode'
   | 'editCode'
-  | 'insertAtLine'
+  | 'writeCode'
   | 'undoEdit'
   // Earth Engine tools
-  | 'earthEngineDataset'
+  | 'geeDocs'
   | 'runCurrentCode'
   // Browser interaction tools
   | 'screenshot'
   | 'snapshot'
   | 'clickByRefId'
-  | 'clickByCoordinates'
+  | 'clickAtScreenPosition'
   // Earth Engine state tools
-  | 'resetMapInspectorConsole'
+  | 'clearMapInspectorAndConsole'
   | 'getConsoleOutput'
-  | 'getMapInfo'
+  | 'getMapScreenPosition'
   | 'getInspectorOutput';
 
 export interface AgentProfile {

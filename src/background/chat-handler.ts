@@ -698,20 +698,20 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Simplified code editing tools (Claude Code-style)
       readCodeTool,
       editCodeTool,
-      insertAtLineTool,
+      writeCodeTool,
       undoEditTool,
       // Earth Engine tools
-      earthEngineDatasetTool,
+      geeDocsTool,
       runCurrentCodeTool,
       // Browser interaction tools
       screenshotTool,
       snapshotTool,
       clickByRefIdTool,
-      clickByCoordinatesTool,
+      clickAtScreenPositionTool,
       // Earth Engine state tools
-      resetMapInspectorConsoleTool,
+      clearMapInspectorAndConsoleTool,
       getConsoleOutputTool,
-      getMapInfoTool,
+      getMapScreenPositionTool,
       getInspectorOutputTool
     } = createAITools(onToolEvent);
 
@@ -721,23 +721,23 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       dateTime: dateTimeTool,
       wait: waitTool,  // Wait for long-running operations
       readCode: readCodeTool,  // Can read code (no modifications)
-      earthEngineDataset: earthEngineDatasetTool,
+      geeDocs: geeDocsTool,
       screenshot: screenshotTool,
       snapshot: snapshotTool,
       clickByRefId: clickByRefIdTool,
-      clickByCoordinates: clickByCoordinatesTool,
+      clickAtScreenPosition: clickAtScreenPositionTool,
       getConsoleOutput: getConsoleOutputTool,
-      getMapInfo: getMapInfoTool,
+      getMapScreenPosition: getMapScreenPositionTool,
       getInspectorOutput: getInspectorOutputTool,
     };
 
     // Write tools for "do" mode (includes all read-only tools plus these)
     const writeTools = {
       editCode: editCodeTool,
-      insertAtLine: insertAtLineTool,
+      writeCode: writeCodeTool,
       undoEdit: undoEditTool,
       runCurrentCode: runCurrentCodeTool,
-      resetMapInspectorConsole: resetMapInspectorConsoleTool
+      clearMapInspectorAndConsole: clearMapInspectorAndConsoleTool
     };
 
     // Determine which tools to use based on mode
