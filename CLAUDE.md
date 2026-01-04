@@ -313,6 +313,56 @@ The extension includes two testing panels:
 5. Update Settings UI to include provider option
 6. Add default model to `DEFAULT_MODELS` constant
 
+### Updating Model Options
+
+Model options are defined in `src/constants/models.ts`. To update available models:
+
+1. **Fetch latest models from API** (optional, to see what's available):
+   ```bash
+   # OpenAI
+   curl https://api.openai.com/v1/models \
+     -H "Authorization: Bearer $OPENAI_API_KEY" | jq '.data[].id' | grep -E "gpt|o[0-9]"
+
+   # Anthropic
+   curl https://api.anthropic.com/v1/models \
+     --header "x-api-key: $ANTHROPIC_API_KEY" \
+     --header "anthropic-version: 2023-06-01" | jq '.data[].id'
+
+   # Google Gemini
+   curl "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY" \
+     | jq '.models[].name' | grep -i gemini
+   ```
+
+2. **Update `AVAILABLE_MODELS`** - Add/remove model IDs for each provider:
+   ```typescript
+   export const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
+     openai: ['gpt-5.2', 'gpt-5.2-mini', ...],
+     anthropic: ['claude-opus-4-5-20251101', 'claude-sonnet-4-5-20250929', ...],
+     google: ['gemini-2.5-pro', 'gemini-3-flash', ...],
+     // ...
+   };
+   ```
+
+3. **Update `MODEL_DISPLAY_NAMES`** - Add human-readable names for new models:
+   ```typescript
+   export const MODEL_DISPLAY_NAMES: Record<string, string> = {
+     'gpt-5.2': 'GPT-5.2 (Latest)',
+     'claude-opus-4-5-20251101': 'Claude Opus 4.5 (Best)',
+     // ...
+   };
+   ```
+
+4. **Update `DEFAULT_MODELS`** - Change default if needed:
+   ```typescript
+   export const DEFAULT_MODELS: Record<ApiProvider, string> = {
+     openai: 'gpt-5.2',
+     anthropic: 'claude-sonnet-4-5-20250929',
+     // ...
+   };
+   ```
+
+5. **Build and test**: `npm run build`
+
 ### Adding a New Tool
 
 1. Create tool implementation in appropriate `src/lib/tools/` subdirectory

@@ -24,7 +24,7 @@ export interface TokenUsage {
 }
 
 // Built-in providers
-export type BuiltInProvider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+export type BuiltInProvider = 'openai' | 'anthropic' | 'google' | 'z-ai';
 
 // Custom provider format: 'custom:{uuid}'
 export type Provider = BuiltInProvider | `custom:${string}`;
