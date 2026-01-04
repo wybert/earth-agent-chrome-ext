@@ -3,8 +3,6 @@ import type { Message, Provider, BuiltInProvider, OpenAICompatibleConfig } from 
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { createQwen } from 'qwen-ai-provider';
-import { createOllama } from 'ollama-ai-provider';
 import { createResilientFetch } from '../lib/utils';
 import { GEE_ASK_MODE_PROMPT, GEE_DO_MODE_PROMPT, GEE_SYSTEM_PROMPT } from '../lib/prompts/gee-prompts';
 import { createAITools, type ToolEventCallback } from '../lib/tools/ai-tools';
@@ -20,8 +18,7 @@ export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.5-pro',
-  qwen: 'qwen-max-latest',
-  ollama: 'phi3'
+  'z-ai': 'glm-4.7'
 };
 
 const NETWORK_RETRY_ATTEMPTS = 3;
@@ -34,7 +31,7 @@ const NETWORK_RETRY_BASE_DELAY_MS = 700;
  * When false: Tools may be executed in parallel (faster but may cause race conditions)
  *
  * Supported natively by: OpenAI, Anthropic
- * Fallback via prompt for: Google, Qwen, Ollama, custom providers
+ * Fallback via prompt for: Google, custom providers
  */
 const SEQUENTIAL_TOOL_EXECUTION = true;
 
@@ -138,7 +135,7 @@ export async function handleChatRequest(
     // Debug log at start of request
     console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}, mode: ${mode}`);
     
-    if (!apiKey && provider !== 'ollama') {
+    if (!apiKey && !provider.startsWith('custom:')) {
       console.error(`❌ [Chat Handler] API key not configured for ${provider}`);
       return new Response(JSON.stringify({
         error: 'API key not configured',
@@ -170,8 +167,9 @@ export async function handleChatRequest(
     }
 
     // Setup LLM provider
-    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI> | ReturnType<typeof createQwen> | ReturnType<typeof createOllama>;
+    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI>;
     let effectiveModel: string;
+    let forceChatCompletions = false;
 
     if (provider === 'openai') {
       // Validate API key
@@ -298,156 +296,80 @@ export async function handleChatRequest(
       }
       
       console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
-    } else if (provider === 'qwen') {
-      effectiveModel = model || DEFAULT_MODELS.qwen;
+    } else if (provider === 'z-ai') {
+      effectiveModel = model || DEFAULT_MODELS['z-ai'];
+      forceChatCompletions = true;
 
-      // Validate API key for Qwen (should be a DashScope API key)
-      if (!apiKey || apiKey.trim() === '') {
-        console.error(`❌ [Chat Handler] Qwen API key is missing or empty`);
-        return new Response(JSON.stringify({ 
-          error: 'Qwen API key is required. Please check your Qwen API key in settings.' 
+      if (!apiKey) {
+        console.error(`❌ [Chat Handler] Z.AI API key is missing`);
+        return new Response(JSON.stringify({
+          error: 'Z.AI API key is required',
+          message: 'Please configure your Z.AI API key in the extension settings.'
         }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
       }
+
+      console.log(`🔧 [Chat Handler] Configuring Z.AI provider`);
       
-      // Create the Qwen provider with the specified base URL
-      const qwenConfig: any = {
-        apiKey,
-        baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-        fetch: createResilientFetch({
-          label: 'ChatHandler:Qwen',
-          maxAttempts: NETWORK_RETRY_ATTEMPTS,
-          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
-        }),
-      };
-      
-      if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
-        console.log('🔍 [Chat Handler] Configuring Qwen with Helicone observability');
-        // Note: Helicone support for Qwen might need different configuration
-        qwenConfig.headers = heliconeHeaders;
-      }
-      
-      console.log(`🔧 [Chat Handler] Creating Qwen provider with config:`, {
-        apiKeyPrefix: apiKey.substring(0, 10) + '...',
-        model: effectiveModel,
-        baseURL: qwenConfig.baseURL,
-        hasHeliconeHeaders: !!heliconeHeaders
-      });
-      
-      try {
-        llmProvider = createQwen(qwenConfig);
-        console.log(`✅ [Chat Handler] Qwen provider created successfully`);
-      } catch (error) {
-        console.error(`❌ [Chat Handler] Failed to create Qwen provider:`, error);
-        return new Response(JSON.stringify({ 
-          error: `Failed to create Qwen provider: ${error instanceof Error ? error.message : String(error)}` 
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      console.log(`Using Qwen provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
-    } else if (provider === 'ollama') {
-      console.log(`🔧 [Chat Handler] Processing Ollama request:`, {
-        requestedModel: model,
-        baseURL: baseURL,
-        hasApiKey: !!apiKey,
-        defaultModel: DEFAULT_MODELS.ollama
-      });
-      
-      // Use the requested model if provided, otherwise use the default
-      let selectedModel = model;
-      if (!selectedModel || selectedModel.trim() === '') {
-        console.log(`⚠️ [Chat Handler] No Ollama model specified. Using default.`);
-        selectedModel = DEFAULT_MODELS.ollama;
-      }
-      
-      effectiveModel = selectedModel;
-      
-      // Use baseURL from parameter or default Ollama baseURL
-      const ollamaBaseURL = baseURL || 'http://localhost:11434/api';
-      
-      // Create a simple fetch function for Ollama with proper headers
-      const ollamaFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
-        // Add required headers for Ollama
-        const defaultHeaders = {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'User-Agent': 'Chrome-Extension'
-        };
-        
-        // Merge with existing headers
-        options.headers = {
-          ...defaultHeaders,
-          ...options.headers
-        };
-        
+      // Custom fetch for Z.AI to debug connection issues
+      const zAiFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
         const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-        console.log(`🔄 [Ollama Fetch] Making request to: ${url} (${options.method || 'GET'})`);
+        console.log(`🌐 [Z.AI Debug] Requesting URL: ${url}`);
+        console.log(`🌐 [Z.AI Debug] Method: ${options.method || 'GET'}`);
+        
+        // Log headers to debug auth issues
+        const headers = options.headers ? new Headers(options.headers) : new Headers();
+        const authHeader = headers.get('Authorization');
+        if (authHeader) {
+          console.log(`🌐 [Z.AI Debug] Authorization header present: ${authHeader.startsWith('Bearer ') ? 'Bearer <token>' : 'Non-Bearer format'}`);
+          console.log(`🌐 [Z.AI Debug] Token length: ${authHeader.replace('Bearer ', '').length}`);
+          console.log(`🌐 [Z.AI Debug] Token prefix: ${authHeader.replace('Bearer ', '').substring(0, 5)}...`);
+        } else {
+          console.error(`❌ [Z.AI Debug] Missing Authorization header!`);
+        }
         
         try {
           const response = await fetch(input, options);
+          console.log(`🌐 [Z.AI Debug] Response status: ${response.status} ${response.statusText}`);
+          
           if (!response.ok) {
-            console.error(`❌ [Ollama Fetch] Error: ${response.status} ${response.statusText}`);
+            try {
+              const text = await response.clone().text();
+              console.error(`❌ [Z.AI Debug] Error body: ${text}`);
+            } catch (e) {
+              console.error(`❌ [Z.AI Debug] Could not read error body`);
+            }
           }
+          
           return response;
         } catch (error) {
-          console.error(`❌ [Ollama Fetch] Network error:`, error);
+          console.error(`❌ [Z.AI Debug] Network error:`, error);
           throw error;
         }
       };
 
-      const resilientOllamaFetch = createResilientFetch({
-        label: 'ChatHandler:Ollama',
-        fetchImpl: ollamaFetch,
-        maxAttempts: NETWORK_RETRY_ATTEMPTS,
-        baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
-      });
-      
-      // Create the Ollama provider with the specified base URL
-      const ollamaConfig: any = {
-        baseURL: ollamaBaseURL,
-        // Use our custom fetch for Ollama requests
-        fetch: resilientOllamaFetch
+      // Configure Z.AI as an OpenAI-compatible provider
+      const zAiConfig: any = {
+        apiKey,
+        baseURL: 'https://api.z.ai/api/coding/paas/v4',
+        compatibility: 'compatible', // Force standard OpenAI compatibility
+        fetch: createResilientFetch({
+          label: 'ChatHandler:Z.AI',
+          fetchImpl: zAiFetch, // Use our debug fetch
+          maxAttempts: NETWORK_RETRY_ATTEMPTS,
+          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+        })
       };
-      
-      // Add the API key only if it exists and is not empty
-      if (apiKey && apiKey.trim() !== '') {
-        console.log('🔧 [Chat Handler] Adding API key to Ollama config');
-        ollamaConfig.apiKey = apiKey;
-      } else {
-        console.log('🔧 [Chat Handler] No API key provided for Ollama (expected for local instances)');
-      }
-      
+
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
-        console.log('🔍 [Chat Handler] Configuring Ollama with Helicone observability');
-        ollamaConfig.headers = heliconeHeaders;
+        console.log('🔍 [Chat Handler] Configuring Z.AI with Helicone observability');
+        zAiConfig.headers = heliconeHeaders;
       }
-      
-      console.log(`🔧 [Chat Handler] Creating Ollama provider with config:`, {
-        model: effectiveModel,
-        baseURL: ollamaBaseURL,
-        hasApiKey: !!ollamaConfig.apiKey,
-        hasHeliconeHeaders: !!heliconeHeaders
-      });
-      
-      try {
-        llmProvider = createOllama(ollamaConfig);
-        console.log(`✅ [Chat Handler] Ollama provider created successfully`);
-      } catch (error) {
-        console.error(`❌ [Chat Handler] Failed to create Ollama provider:`, error);
-        return new Response(JSON.stringify({ 
-          error: `Failed to create Ollama provider: ${error instanceof Error ? error.message : String(error)}` 
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      console.log(`Using Ollama provider with model: ${effectiveModel} at ${ollamaBaseURL} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+
+      llmProvider = createOpenAI(zAiConfig);
+      console.log(`✅ [Chat Handler] Z.AI provider created successfully with model: ${effectiveModel}`);
     } else if (provider.startsWith('custom:')) {
       // Handle custom OpenAI Compatible providers
       const configId = provider.replace('custom:', '');
@@ -502,6 +424,9 @@ export async function handleChatRequest(
 
         llmProvider = createOpenAI(customOpenAIConfig);
         effectiveModel = model || customConfig.modelName;
+        if (customConfig.baseURL.toLowerCase().includes('api.z.ai')) {
+          forceChatCompletions = true;
+        }
 
         console.log(`✅ [Chat Handler] Using custom provider "${customConfig.name}" with model: ${effectiveModel} at ${customConfig.baseURL}${heliconeHeaders ? ' (with Helicone)' : ''}`);
       } catch (error) {
@@ -625,10 +550,15 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
 
+    const modelForProvider =
+      forceChatCompletions
+        ? (llmProvider as ReturnType<typeof createOpenAI>).chat(effectiveModel as any)
+        : llmProvider(effectiveModel);
+
     let streamOptions: any = {
-      model: llmProvider(effectiveModel),
+      model: modelForProvider,
       // Temporarily remove system prompt for Ollama to match curl format
-      ...(provider !== 'ollama' && { system: finalSystemPrompt }),
+      system: finalSystemPrompt,
       messages: formattedMessages,
       temperature: 0.7,
       maxRetries: 3,
@@ -770,12 +700,6 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     if (provider === 'google') {
       console.log(`🔧 [Chat Handler] Using Google provider with API key length: ${apiKey.length}`);
       console.log(`🔧 [Chat Handler] Google model being used: ${effectiveModel}`);
-    }
-    
-    // For Ollama provider, add specific logging (now using normal AI SDK flow)
-    if (provider === 'ollama') {
-      console.log(`🔧 [Chat Handler] Using Ollama provider with model: ${effectiveModel}`);
-      console.log(`🔧 [Chat Handler] Ollama base URL: ${baseURL || 'http://localhost:11434/api'}`);
     }
       
 

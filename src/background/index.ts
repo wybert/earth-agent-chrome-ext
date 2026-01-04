@@ -14,7 +14,7 @@ interface MessageBase {
 }
 
 // Provider type for API providers
-type Provider = 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+type Provider = 'openai' | 'anthropic' | 'google';
 
 // Store active port connections
 let port: chrome.runtime.Port | null = null;
@@ -70,9 +70,7 @@ const MAX_TAB_ACTION_RETRIES = 3;
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
-const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
-const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
-const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
+const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
@@ -484,9 +482,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             OPENAI_API_KEY_STORAGE_KEY,
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
-            QWEN_API_KEY_STORAGE_KEY,
-            OLLAMA_API_KEY_STORAGE_KEY,
-            OLLAMA_BASE_URL_STORAGE_KEY,
+            Z_AI_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY
           ]);
@@ -501,10 +497,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
           } else if (provider === 'google') {
             apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'qwen') {
-            apiKey = config[QWEN_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'ollama') {
-            apiKey = config[OLLAMA_API_KEY_STORAGE_KEY] || ''; // Ollama often doesn't need API key for local instances
+          } else if (provider === 'z-ai') {
+            apiKey = config[Z_AI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
           }
           
           const model = config[MODEL_STORAGE_KEY];
@@ -515,7 +509,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             apiKeyLength: apiKey ? apiKey.length : 0
           });
           
-          if (!apiKey && provider !== 'ollama') {
+          if (!apiKey) {
             console.error(`❌ [Background] API key not configured for ${provider}`);
             sendResponse({
               type: 'ERROR',
@@ -552,23 +546,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           }
           
           try {
-            // Get Ollama base URL if provider is ollama
-            let baseURL: string | undefined;
-            if (provider === 'ollama') {
-              baseURL = config[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
-              console.log(`🔧 [Background] Ollama configuration:`, {
-                baseURL: baseURL,
-                model: model,
-                hasApiKey: !!apiKey,
-                messageCount: chatMessages.length
-              });
-            }
-            
             console.log(`🔧 [Background] Calling handleChatRequest with:`, {
               provider: provider,
               model: model,
               hasApiKey: !!apiKey,
-              baseURL: baseURL,
               messageCount: chatMessages.length
             });
             
@@ -579,7 +560,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               provider as Provider,
               model,
               message.heliconeHeaders, // Include Helicone headers if provided
-              baseURL, // Include base URL for Ollama
+              undefined, // No base URL
               undefined,
               message.mode || 'ask',
               {
@@ -1983,76 +1964,135 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     
     console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
     
-    // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
-    const apiConfig = await new Promise<{apiKey: string, provider: string, model: string, baseURL?: string}>(
-      (resolve, reject) => {
-        chrome.storage.sync.get(
-          [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, QWEN_API_KEY_STORAGE_KEY, OLLAMA_API_KEY_STORAGE_KEY, OLLAMA_BASE_URL_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
-          (result) => {
-            if (chrome.runtime.lastError) {
-              reject(new Error(chrome.runtime.lastError.message));
-              return;
-            }
-            
-            // Use provider and model from test message if provided, otherwise use stored settings
-            const provider = message.provider || result[API_PROVIDER_STORAGE_KEY] || 'openai';
-            const model = message.model || result[MODEL_STORAGE_KEY] || '';
-            
-            // Choose the appropriate API key based on provider
-            let apiKey = '';
-            if (provider === 'openai') {
-              apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-            } else if (provider === 'anthropic') {
-              apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-            } else if (provider === 'google') {
-              apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-              console.log(`🐛 [Debug] Google API key retrieval:`, {
-                googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
-                fallbackKey: result[API_KEY_STORAGE_KEY] ? 'present' : 'missing',
-                finalKey: apiKey ? 'present' : 'missing',
-                keyLength: apiKey ? apiKey.length : 0,
-                keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
-              });
-            } else if (provider === 'qwen') {
-              apiKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-            } else if (provider === 'ollama') {
-              apiKey = result[OLLAMA_API_KEY_STORAGE_KEY] || ''; // Ollama often doesn't need API key for local instances
-            } else {
-              apiKey = result[API_KEY_STORAGE_KEY] || '';
-            }
-            
-            // Get baseURL for Ollama if needed
-            let baseURL: string | undefined;
-            if (provider === 'ollama') {
-              baseURL = result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api';
-            }
-            
-            console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
-            console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
-            if (baseURL) {
-              console.log(`[${requestId}] Base URL: ${baseURL}`);
-            }
-            
-            resolve({
-              apiKey,
-              provider,
-              model: model,
-              baseURL
-            });
-          }
-        );
-      }
-    );
+            // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
     
-    if (!apiConfig.apiKey && apiConfig.provider !== 'ollama') {
-      console.error(`[${requestId}] API key not configured`);
-      safePostMessage({ 
-        type: 'ERROR',
-        requestId,
-        error: 'API key not configured. Please configure it in the extension settings.'
-      });
-      return;
-    }
+            const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
+    
+              (resolve, reject) => {
+    
+                chrome.storage.sync.get(
+    
+                  [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, Z_AI_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
+    
+                  (result) => {
+    
+                    if (chrome.runtime.lastError) {
+    
+                      reject(new Error(chrome.runtime.lastError.message));
+    
+                      return;
+    
+                    }
+    
+                    
+    
+                    // Use provider and model from test message if provided, otherwise use stored settings
+    
+                    const provider = message.provider || result[API_PROVIDER_STORAGE_KEY] || 'openai';
+    
+                    const model = message.model || result[MODEL_STORAGE_KEY] || '';
+    
+                    
+    
+                    let apiKey = '';
+    
+                    if (provider === 'openai') {
+    
+                      apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+    
+                    } else if (provider === 'anthropic') {
+    
+                      apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+    
+                    } else if (provider === 'google') {
+    
+                      apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+    
+                      console.log(`🐛 [Debug] Google API key retrieval:`, {
+    
+                        googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
+    
+                        fallbackKey: result[API_KEY_STORAGE_KEY] ? 'present' : 'missing',
+    
+                        finalKey: apiKey ? 'present' : 'missing',
+    
+                        keyLength: apiKey ? apiKey.length : 0,
+    
+                        keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
+    
+                      });
+    
+                    } else if (provider === 'z-ai') {
+    
+                      apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+    
+                    } else {
+    
+                      apiKey = result[API_KEY_STORAGE_KEY] || '';
+    
+                    }
+    
+                
+    
+                console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
+    
+                console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
+    
+                
+    
+                resolve({
+    
+                  apiKey,
+    
+                  provider,
+    
+                  model: model
+    
+                });
+    
+              }
+    
+            );
+    
+          }
+    
+        );
+    
+        
+    
+                if (!apiConfig.apiKey && !apiConfig.provider.startsWith('custom:')) {
+    
+        
+    
+                  console.error(`[${requestId}] API key not configured`);
+    
+        
+    
+                  safePostMessage({ 
+    
+        
+    
+                    type: 'ERROR',
+    
+        
+    
+                    requestId,
+    
+        
+    
+                    error: 'API key not configured. Please configure it in the extension settings.'
+    
+        
+    
+                  });
+    
+        
+    
+                  return;
+    
+        
+    
+                }
     
     // Check if any messages have parts or attachments
     const hasMultiModalContent = conversationMessages.some((msg: any) => msg.parts && Array.isArray(msg.parts));
@@ -2088,7 +2128,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       apiConfig.provider as any, // Cast to Provider type
       apiConfig.model,
       message.heliconeHeaders,
-      apiConfig.baseURL,
+      undefined, // No base URL
       onToolEvent,
       mode,
       {
