@@ -51,7 +51,7 @@ Available Tools (Read-Only):
 - screenshot: Capture the current browser state for visual analysis
 - snapshot: Get DOM structure for inspection
 - getConsoleOutput: Read Earth Engine console output
-- getMapInfo: Inspect map layers and metadata
+- getMapScreenPosition: Get map screen position for clicking
 - weather: Get real-time weather information
 - dateTime: Get the current date and time in any timezone
 
@@ -217,8 +217,8 @@ writeCode(content: "// New empty script")
 - earthEngineDataset: Search Earth Engine dataset documentation
 - screenshot: Capture the browser state
 - getConsoleOutput: Read console errors/output
-- getMapInfo: Inspect map layers
-- resetMapInspectorConsole: Clear map and console
+- getMapScreenPosition: Get map screen position
+- clearMapInspectorAndConsole: Clear map, inspector, and console
 
 ## IMPORTANT RULES
 

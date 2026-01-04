@@ -707,11 +707,11 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       screenshotTool,
       snapshotTool,
       clickByRefIdTool,
-      clickByCoordinatesTool,
+      clickAtScreenPositionTool,
       // Earth Engine state tools
-      resetMapInspectorConsoleTool,
+      clearMapInspectorAndConsoleTool,
       getConsoleOutputTool,
-      getMapInfoTool,
+      getMapScreenPositionTool,
       getInspectorOutputTool
     } = createAITools(onToolEvent);
 
@@ -725,9 +725,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       screenshot: screenshotTool,
       snapshot: snapshotTool,
       clickByRefId: clickByRefIdTool,
-      clickByCoordinates: clickByCoordinatesTool,
+      clickAtScreenPosition: clickAtScreenPositionTool,
       getConsoleOutput: getConsoleOutputTool,
-      getMapInfo: getMapInfoTool,
+      getMapScreenPosition: getMapScreenPositionTool,
       getInspectorOutput: getInspectorOutputTool,
     };
 
@@ -737,7 +737,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       writeCode: writeCodeTool,
       undoEdit: undoEditTool,
       runCurrentCode: runCurrentCodeTool,
-      resetMapInspectorConsole: resetMapInspectorConsoleTool
+      clearMapInspectorAndConsole: clearMapInspectorAndConsoleTool
     };
 
     // Determine which tools to use based on mode

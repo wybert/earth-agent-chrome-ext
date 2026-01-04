@@ -30,13 +30,13 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   { key: 'screenshot', label: 'Screenshot', description: 'Take a screenshot of the current page', kind: 'read' },
   { key: 'snapshot', label: 'Snapshot', description: 'Capture accessibility snapshot of the page', kind: 'read' },
   { key: 'clickByRefId', label: 'Click (Ref ID)', description: 'Click an element by ref id', kind: 'read' },
-  { key: 'clickByCoordinates', label: 'Click (Coords)', description: 'Click by x/y coordinates', kind: 'read' },
+  { key: 'clickAtScreenPosition', label: 'Click (Screen)', description: 'Click at screen x/y position', kind: 'read' },
 
   // Earth Engine state tools
   { key: 'getConsoleOutput', label: 'Console Output', description: 'Get Earth Engine console output', kind: 'read' },
-  { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
+  { key: 'getMapScreenPosition', label: 'Map Position', description: 'Get map screen position and bounds', kind: 'read' },
   { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
-  { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
+  { key: 'clearMapInspectorAndConsole', label: 'Clear All', description: 'Clear map, inspector, and console', kind: 'write' },
 ];
 
 export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
@@ -45,7 +45,7 @@ export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
   'weather',
   'earthEngineDataset',
   'snapshot',
-  'getMapInfo',
+  'getMapScreenPosition',
   'getConsoleOutput',
 ];
 

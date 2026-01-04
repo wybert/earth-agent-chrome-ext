@@ -1644,16 +1644,16 @@ WORKFLOW:
       },
     });
 
-    // Define Reset Map/Inspector/Console tool
-    const resetMapInspectorConsoleTool = tool({
-      description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment. WORKFLOW TIP: Follow this with clearScript to start completely fresh, then use earthEngineScript to write new code.',
+    // Define Clear Map, Inspector, and Console tool
+    const clearMapInspectorAndConsoleTool = tool({
+      description: 'Clear the Google Earth Engine map, inspector, and console to return to a clean environment. Use this to start fresh before writing new code.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         // Manually send tool_start event
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'resetMapInspectorConsole',
+            toolName: 'clearMapInspectorAndConsole',
             args: {},
             timestamp: Date.now()
           });
@@ -1779,19 +1779,19 @@ WORKFLOW:
         };
       },
     });
-    // Define Click by Coordinates tool
-    const clickByCoordinatesTool = tool({
-      description: 'Clicks an element on the page at the specified (x, y) coordinates.',
+    // Define Click at Screen Position tool
+    const clickAtScreenPositionTool = tool({
+      description: 'Clicks at the specified screen (x, y) pixel position. Use getMapScreenPosition to get map coordinates first.',
       inputSchema: z.object({
-        x: z.number().describe('The x-coordinate to click.'),
-        y: z.number().describe('The y-coordinate to click.'),
+        x: z.number().describe('The x screen pixel position to click.'),
+        y: z.number().describe('The y screen pixel position to click.'),
       }),
       execute: async ({ x, y }) => {
         // Manually send tool_start event
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'clickByCoordinates',
+            toolName: 'clickAtScreenPosition',
             args: { x, y },
             timestamp: Date.now()
           });
@@ -2131,18 +2131,17 @@ WORKFLOW:
       },
     });
 
-  // Define Inspect Map tool
-  // Define Get Map Info tool
+  // Define Get Map Screen Position tool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getMapInfoTool = tool({
-    description: 'Get information about the Google Earth Engine map including current layers, bounds, center coordinates, and viewport dimensions. WORKFLOW TIP: Use this after earthEngineRunCode to verify visualization layers were created.',
+  const getMapScreenPositionTool = tool({
+    description: 'Get the screen position and bounds of the Google Earth Engine map element. Returns pixel coordinates for use with clickAtScreenPosition.',
     inputSchema: z.object({}) as any, // Cast to any for SDK 6 toModelOutput compatibility
     execute: async () => {
       // Manually send tool_start event
       if (onToolEvent) {
         onToolEvent({
           type: 'tool_start',
-          toolName: 'getMapInfo',
+          toolName: 'getMapScreenPosition',
           args: {},
           timestamp: Date.now()
         });
@@ -2273,38 +2272,36 @@ To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${dat
     },
   });
 
-  // Define Get Inspector Output tool (renamed from inspectMapTool for consistency)
+  // Define Get Inspector Output tool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getInspectorOutputTool = tool({
-    description: `Get complete information from the Google Earth Engine Inspector panel including Point data, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.).
+    description: `Read data from the Google Earth Engine Inspector panel.
 
-WORKFLOW TIP: Use clickByCoordinates BEFORE this tool to activate the Inspector at specific coordinates.
+Returns Point coordinates, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.) from whatever location was last clicked on the map.
 
-IMPORTANT REQUIREMENTS:
-1. User must manually click on the map OR you must use clickByCoordinates tool to populate the Inspector panel
-2. User must manually expand the Objects section in the Inspector panel (click on "Objects" to expand it)
-3. Once expanded, this tool will extract all visible data including EPSG, CRS transform, data type, dimensions, origin, and properties
+WORKFLOW:
+1. User clicks on the map to populate the Inspector panel
+2. Wait 1-3 seconds for data to load (use the wait tool if needed)
+3. Call this tool to read the Inspector data
+4. If data is still loading, wait another 1-2 seconds and try again
 
-The Objects section uses on-demand rendering and will NOT appear unless manually expanded by the user. If you need CRS/EPSG information, explicitly ask the user to expand the Objects section before calling this tool.`,
-    inputSchema: z.object({
-      coordinates: z.object({
-        lat: z.number().describe('Latitude of the location to inspect'),
-        lng: z.number().describe('Longitude of the location to inspect')
-      }).optional().describe('Optional coordinates to verify against Inspector data. If provided, tool will check that Inspector shows data for these coordinates (within ~10km tolerance).')
-    }) as any, // Cast to any for SDK 6 toModelOutput compatibility
-    execute: async ({ coordinates }) => {
+NOTE: For Object details (CRS/EPSG), user may need to expand the Objects section manually.
+
+Returns the coordinates of the inspected location along with all available data.`,
+    inputSchema: z.object({}) as any, // No parameters - just reads current Inspector state
+    execute: async () => {
       // Manually send tool_start event
       if (onToolEvent) {
         onToolEvent({
           type: 'tool_start',
           toolName: 'getInspectorOutput',
-          args: { coordinates },
+          args: {},
           timestamp: Date.now()
         });
       }
 
       try {
-        console.log(`🔍 [InspectMapTool] Tool called${coordinates ? ` with coordinates: lat=${coordinates.lat}, lng=${coordinates.lng}` : ' without coordinates'}`);
+        console.log(`🔍 [InspectMapTool] Reading Inspector panel data`);
         console.time('InspectMapTool execution');
 
         // Validate Chrome APIs
@@ -2361,7 +2358,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
 
         // Send message to content script to read Inspector data
         const result: any = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tabId, { type: 'INSPECT_MAP', coordinates }, (response) => {
+          chrome.tabs.sendMessage(tabId, { type: 'INSPECT_MAP' }, (response) => {
             if (chrome.runtime.lastError) {
               resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
             } else {
@@ -2378,10 +2375,8 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
             success: false,
             error: result.error || 'Failed to read Inspector data',
             suggestion: result.error?.includes('Inspector is empty')
-              ? 'Make sure to manually click on the map at the desired location first, then try again'
-              : result.error?.includes('different from requested')
-              ? 'Click on the map at the correct location first'
-              : 'Ensure the Inspector tab is activated and you have clicked on the map',
+              ? 'Click on the map first to populate the Inspector panel'
+              : 'Ensure the Inspector tab is open and you have clicked on the map',
             data: result.data
           };
         }
@@ -2495,12 +2490,12 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     screenshotTool,
     snapshotTool,
     clickByRefIdTool,
-    clickByCoordinatesTool,
+    clickAtScreenPositionTool,
 
     // Earth Engine state tools
-    resetMapInspectorConsoleTool,
+    clearMapInspectorAndConsoleTool,
     getConsoleOutputTool,
-    getMapInfoTool,
+    getMapScreenPositionTool,
     getInspectorOutputTool
   };
 }
