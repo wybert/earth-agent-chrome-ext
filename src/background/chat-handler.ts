@@ -701,7 +701,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       writeCodeTool,
       undoEditTool,
       // Earth Engine tools
-      earthEngineDatasetTool,
+      geeDocsTool,
       runCurrentCodeTool,
       // Browser interaction tools
       screenshotTool,
@@ -721,7 +721,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       dateTime: dateTimeTool,
       wait: waitTool,  // Wait for long-running operations
       readCode: readCodeTool,  // Can read code (no modifications)
-      earthEngineDataset: earthEngineDatasetTool,
+      geeDocs: geeDocsTool,
       screenshot: screenshotTool,
       snapshot: snapshotTool,
       clickByRefId: clickByRefIdTool,
