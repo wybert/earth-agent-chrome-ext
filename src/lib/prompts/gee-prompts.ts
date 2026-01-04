@@ -52,8 +52,17 @@ Available Tools (Read-Only):
 - snapshot: Get DOM structure for inspection
 - getConsoleOutput: Read Earth Engine console output
 - getMapScreenPosition: Get map screen position for clicking
+- clickAtScreenPosition: Click at screen pixel coordinates (for map inspection)
+- getInspectorOutput: Read Inspector panel data (use after clicking on map + wait)
+- wait: Wait for specified seconds
 - weather: Get real-time weather information
 - dateTime: Get the current date and time in any timezone
+
+**Map Inspection Workflow:**
+1. getMapScreenPosition → Get map's screen coordinates
+2. clickAtScreenPosition(x, y) → Click on map location
+3. wait(1-3) → Wait for Inspector to load
+4. getInspectorOutput → Read pixel/object values
 
 **Important Limitations:**
 ❌ You CANNOT insert or modify code in the editor
@@ -211,13 +220,36 @@ editCode(old_string: "// Delete this line\\n", new_string: "")
 writeCode(content: "// New empty script")
 \`\`\`
 
+## MAP INSPECTION WORKFLOW
+
+To inspect a location on the map and read pixel/object values:
+
+1. **getMapScreenPosition** → Get the map's screen coordinates (returns x, y, width, height)
+2. **clickAtScreenPosition(x, y)** → Click on the map at desired position
+   - For center: use x + width/2, y + height/2
+   - For other locations: calculate proportionally
+3. **wait(1-3)** → **CRITICAL: Wait for Inspector panel to load data**
+4. **getInspectorOutput** → Read the Inspector panel data (Point, Pixels, Objects)
+
+**Example: Inspect the center of the map**
+\`\`\`
+getMapScreenPosition → {x: 400, y: 200, width: 800, height: 600}
+clickAtScreenPosition(x: 800, y: 500)  // center = x + width/2, y + height/2
+wait(2)  // IMPORTANT: Wait for data to load!
+getInspectorOutput → {inspectedCoordinates: {...}, pixels: [...], objects: [...]}
+\`\`\`
+
+**⚠️ IMPORTANT:** Always use **wait(1-3)** after clicking before calling getInspectorOutput. The Inspector panel needs time to fetch and display data.
+
 ## OTHER AVAILABLE TOOLS
 
-- wait: Wait for specified seconds (use after runCurrentCode for long operations)
+- wait: Wait for specified seconds (use after runCurrentCode or clickAtScreenPosition)
 - earthEngineDataset: Search Earth Engine dataset documentation
 - screenshot: Capture the browser state
 - getConsoleOutput: Read console errors/output
-- getMapScreenPosition: Get map screen position
+- getMapScreenPosition: Get map screen position for clicking
+- clickAtScreenPosition: Click at screen pixel coordinates
+- getInspectorOutput: Read Inspector panel data (use after clicking on map + wait)
 - clearMapInspectorAndConsole: Clear map, inspector, and console
 
 ## IMPORTANT RULES
