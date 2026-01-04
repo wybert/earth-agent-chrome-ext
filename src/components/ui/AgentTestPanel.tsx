@@ -36,7 +36,7 @@ interface TestResult {
 
 interface TestConfiguration {
   prompts: TestPrompt[];
-  provider: 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'google' | 'ollama';
   model: string;
   heliconeApiKey: string;
   intervalMs: number;
@@ -57,6 +57,9 @@ interface AgentTestPanelProps {
 
 const MODEL_OPTIONS = {
   openai: [
+    { value: 'gpt-5.2', label: 'GPT-5.2' },
+    { value: 'gpt-5.2-pro', label: 'GPT-5.2 Pro' },
+    { value: 'gpt-5.1', label: 'GPT-5.1' },
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
@@ -65,57 +68,29 @@ const MODEL_OPTIONS = {
     { value: 'o3-mini', label: 'o3 Mini' }
   ],
   anthropic: [
-    { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
-    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
+    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
+    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
     { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
-    { value: 'claude-3-sonnet-20240229', label: 'Claude 3 Sonnet' },
-    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku' }
+    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
   ],
   google: [
     { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview (Thinking)' },
-    { value: 'gemini-2.5-pro-preview-06-05', label: 'Gemini 2.5 Pro Preview (June 5)' },
-    { value: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash Preview (May 20)' },
+    { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
+    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite' },
     { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-    { value: 'gemini-1.5-pro-latest', label: 'Gemini 1.5 Pro (Latest)' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
-    { value: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash (Latest)' },
-    { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B' },
-    { value: 'gemini-1.5-flash-8b-latest', label: 'Gemini 1.5 Flash 8B (Latest)' }
-  ],
-  qwen: [
-    { value: 'qwen-max-latest', label: 'Qwen-Max (Latest)' },
-    { value: 'qwen-max', label: 'Qwen-Max' },
-    { value: 'qwen-plus-latest', label: 'Qwen-Plus (Latest)' },
-    { value: 'qwen-plus', label: 'Qwen-Plus' },
-    { value: 'qwen-turbo-latest', label: 'Qwen-Turbo (Latest)' },
-    { value: 'qwen-turbo', label: 'Qwen-Turbo' },
-    { value: 'qwen-vl-max', label: 'Qwen-VL-Max' },
-    { value: 'qwen2.5-72b-instruct', label: 'Qwen2.5-72B-Instruct' },
-    { value: 'qwen2.5-14b-instruct-1m', label: 'Qwen2.5-14B-Instruct-1M' },
-    { value: 'qwen2.5-vl-72b-instruct', label: 'Qwen2.5-VL-72B-Instruct' }
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }
   ],
   ollama: [
     { value: 'phi3', label: 'Phi-3 (Recommended)' },
-    { value: 'llama3.3:70b', label: 'Llama 3.3 70B' },
     { value: 'llama3.3', label: 'Llama 3.3' },
-    { value: 'llama3.2:90b', label: 'Llama 3.2 90B' },
-    { value: 'llama3.2:70b', label: 'Llama 3.2 70B' },
     { value: 'llama3.2', label: 'Llama 3.2' },
-    { value: 'llama3.1:70b', label: 'Llama 3.1 70B' },
-    { value: 'llama3.1', label: 'Llama 3.1' },
     { value: 'mistral', label: 'Mistral' },
     { value: 'codellama', label: 'Code Llama' },
     { value: 'deepseek-coder-v2', label: 'DeepSeek Coder V2' },
-    { value: 'qwen2.5', label: 'Qwen 2.5' },
-    { value: 'gemma2', label: 'Gemma 2' },
-    { value: 'llava', label: 'LLaVA (Vision)' },
-    { value: 'llava-llama3', label: 'LLaVA Llama3 (Vision)' },
-    { value: 'llava-phi3', label: 'LLaVA Phi3 (Vision)' },
-    { value: 'moondream', label: 'Moondream (Vision)' }
+    { value: 'gemma2', label: 'Gemma 2' }
   ]
 };
 
@@ -864,7 +839,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="provider">AI Provider</Label>
-                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' | 'google' | 'qwen' | 'ollama' })}>
+                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' | 'google' | 'ollama' })}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -872,7 +847,6 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         <SelectItem value="openai">OpenAI</SelectItem>
                         <SelectItem value="anthropic">Anthropic</SelectItem>
                         <SelectItem value="google">Google</SelectItem>
-                        <SelectItem value="qwen">Qwen</SelectItem>
                         <SelectItem value="ollama">Ollama</SelectItem>
                       </SelectContent>
                     </Select>

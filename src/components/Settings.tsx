@@ -19,8 +19,7 @@ const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
-const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
-const OLLAMA_BASE_URL_STORAGE_KEY = 'earth_engine_ollama_base_url';
+const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const PROJECT_NAME_STORAGE_KEY = 'earth_engine_project_name';
 const PROJECT_CONTEXT_STORAGE_KEY = 'earth_engine_project_context';
 
@@ -33,14 +32,13 @@ export function Settings({ onClose }: SettingsProps) {
   const [openaiApiKey, setOpenaiApiKey] = useState('');
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
   const [googleApiKey, setGoogleApiKey] = useState('');
-  const [qwenApiKey, setQwenApiKey] = useState('');
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState('http://localhost:11434/api');
+  const [zAiApiKey, setZAiApiKey] = useState('');
 
   // Show/hide API keys
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showGoogleKey, setShowGoogleKey] = useState(false);
-  const [showQwenKey, setShowQwenKey] = useState(false);
+  const [showZAiKey, setShowZAiKey] = useState(false);
 
   // Status
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -64,14 +62,12 @@ export function Settings({ onClose }: SettingsProps) {
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
-      QWEN_API_KEY_STORAGE_KEY,
-      OLLAMA_BASE_URL_STORAGE_KEY
+      Z_AI_API_KEY_STORAGE_KEY
     ], (result) => {
       setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '');
       setAnthropicApiKey(result[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
       setGoogleApiKey(result[GOOGLE_API_KEY_STORAGE_KEY] || '');
-      setQwenApiKey(result[QWEN_API_KEY_STORAGE_KEY] || '');
-      setOllamaBaseUrl(result[OLLAMA_BASE_URL_STORAGE_KEY] || 'http://localhost:11434/api');
+      setZAiApiKey(result[Z_AI_API_KEY_STORAGE_KEY] || '');
     });
 
     // Load project context from local storage
@@ -89,21 +85,19 @@ export function Settings({ onClose }: SettingsProps) {
   }, []);
 
   const handleSaveApiKey = (provider: ApiProvider, apiKey: string) => {
+    const trimmedApiKey = apiKey.trim();
     const storageData: { [key: string]: string } = {};
 
     // Store API key in the provider-specific key
     if (provider === 'openai') {
-      storageData[OPENAI_API_KEY_STORAGE_KEY] = apiKey;
-      storageData[API_KEY_STORAGE_KEY] = apiKey; // Keep legacy key
+      storageData[OPENAI_API_KEY_STORAGE_KEY] = trimmedApiKey;
+      storageData[API_KEY_STORAGE_KEY] = trimmedApiKey; // Keep legacy key
     } else if (provider === 'anthropic') {
-      storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = apiKey;
+      storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = trimmedApiKey;
     } else if (provider === 'google') {
-      storageData[GOOGLE_API_KEY_STORAGE_KEY] = apiKey;
-    } else if (provider === 'qwen') {
-      storageData[QWEN_API_KEY_STORAGE_KEY] = apiKey;
-    } else if (provider === 'ollama') {
-      // Ollama doesn't use API keys, only save Base URL
-      storageData[OLLAMA_BASE_URL_STORAGE_KEY] = ollamaBaseUrl;
+      storageData[GOOGLE_API_KEY_STORAGE_KEY] = trimmedApiKey;
+    } else if (provider === 'z-ai') {
+      storageData[Z_AI_API_KEY_STORAGE_KEY] = trimmedApiKey;
     }
 
     chrome.storage.sync.set(storageData, () => {
@@ -336,44 +330,27 @@ export function Settings({ onClose }: SettingsProps) {
               </div>
             </div>
 
-            {/* Qwen */}
+            {/* Z.AI */}
             <div>
-              <label className="text-sm mb-1 block">Qwen API Key</label>
+              <label className="text-sm mb-1 block">Z.AI API Key</label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input
-                    type={showQwenKey ? 'text' : 'password'}
-                    value={qwenApiKey}
-                    onChange={(e) => setQwenApiKey(e.target.value)}
+                    type={showZAiKey ? 'text' : 'password'}
+                    value={zAiApiKey}
+                    onChange={(e) => setZAiApiKey(e.target.value)}
                     placeholder="sk-..."
                     className="pr-10"
                   />
                   <button
                     type="button"
                     className="absolute inset-y-0 right-0 px-3 flex items-center"
-                    onClick={() => setShowQwenKey(!showQwenKey)}
+                    onClick={() => setShowZAiKey(!showZAiKey)}
                   >
-                    {showQwenKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showZAiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button onClick={() => handleSaveApiKey('qwen', qwenApiKey)} disabled={!qwenApiKey}>
-                  Save
-                </Button>
-              </div>
-            </div>
-
-            {/* Ollama */}
-            <div>
-              <label className="text-sm mb-1 block">Ollama Base URL</label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  value={ollamaBaseUrl}
-                  onChange={(e) => setOllamaBaseUrl(e.target.value)}
-                  placeholder="http://localhost:11434/api"
-                  className="flex-1"
-                />
-                <Button onClick={() => handleSaveApiKey('ollama', '')}>
+                <Button onClick={() => handleSaveApiKey('z-ai', zAiApiKey)} disabled={!zAiApiKey}>
                   Save
                 </Button>
               </div>

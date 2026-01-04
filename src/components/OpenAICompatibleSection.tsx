@@ -30,7 +30,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
   const [enabled, setEnabled] = useState(config.enabled);
   const [showApiKey, setShowApiKey] = useState(false);
 
-  const isValid = name.trim() && baseURL.trim() && apiKey.trim() && modelName.trim();
+  const isValid = name.trim() && baseURL.trim() && modelName.trim();
 
   const handleSave = () => {
     if (!isValid) return;
@@ -108,7 +108,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
 
           {/* API Key */}
           <div>
-            <label className="text-sm mb-1 block">API Key *</label>
+            <label className="text-sm mb-1 block">API Key (optional)</label>
             <div className="relative">
               <Input
                 type={showApiKey ? 'text' : 'password'}
