@@ -430,7 +430,7 @@ if (shouldExecute && !messageListenerAdded) {
         return true; // Will respond asynchronously
         
       case 'INSPECT_MAP':
-        handleInspectMap(message.coordinates, sendResponse);
+        handleInspectMap(sendResponse);
         return true; // Will respond asynchronously
         
       case 'GET_TASKS':
@@ -892,14 +892,11 @@ function extractInspectorTreeAsJSON(explorer: Element): any {
 }
 
 /**
- * Handles inspecting the map at specific coordinates
+ * Handles reading data from the Inspector panel
  */
-async function handleInspectMap(coordinates: {lat: number, lng: number} | undefined, sendResponse: (response: any) => void) {
+async function handleInspectMap(sendResponse: (response: any) => void) {
   try {
     console.log(`🔍 [InspectMap] Reading Inspector panel data`);
-    if (coordinates) {
-      console.log(`🔍 [InspectMap] Requested coordinates: lat=${coordinates.lat}, lng=${coordinates.lng}`);
-    }
 
     // Check if Inspector panel exists
     const inspectPanel = document.querySelector('.inspect-panel');
@@ -922,7 +919,7 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
       console.warn('⚠️ [InspectMap] Inspector is empty');
       sendResponse({
         success: false,
-        error: 'Inspector is empty. Please manually click on the map at the location you want to inspect, then try again.'
+        error: 'Inspector is empty or still loading. Please click on the map first, then wait 1-3 seconds for data to load before calling this tool again.'
       });
       return;
     }
@@ -975,26 +972,6 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
 
     console.log(`📍 [InspectMap] Extracted coordinates: lng=${inspectedCoords.lng}, lat=${inspectedCoords.lat}`);
 
-    // Verify coordinates match if provided
-    if (coordinates) {
-      const latDiff = Math.abs(coordinates.lat - inspectedCoords.lat);
-      const lngDiff = Math.abs(coordinates.lng - inspectedCoords.lng);
-      const tolerance = 0.1; // roughly 10km at equator
-
-      if (latDiff > tolerance || lngDiff > tolerance) {
-        console.warn(`⚠️ [InspectMap] Coordinate mismatch - requested (${coordinates.lng}, ${coordinates.lat}), found (${inspectedCoords.lng}, ${inspectedCoords.lat})`);
-        sendResponse({
-          success: false,
-          error: `Inspector shows data for coordinates (${inspectedCoords.lng}, ${inspectedCoords.lat}), which is different from requested coordinates (${coordinates.lng}, ${coordinates.lat}). Please click on the map at the desired location first.`,
-          data: {
-            requestedCoordinates: coordinates,
-            inspectedCoordinates: inspectedCoords
-          }
-        });
-        return;
-      }
-    }
-
     // Step 4: Extract Pixels section
     const pixelsSection = Array.from(inspectPanel.querySelectorAll('.inspect-view.inspect-image'));
     const pixelsData = pixelsSection.map((section) => {
@@ -1030,7 +1007,6 @@ async function handleInspectMap(coordinates: {lat: number, lng: number} | undefi
     sendResponse({
       success: true,
       data: {
-        requestedCoordinates: coordinates,
         inspectedCoordinates: inspectedCoords,
         point: pointData,
         pixels: pixelsData,

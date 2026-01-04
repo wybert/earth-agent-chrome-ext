@@ -19,33 +19,33 @@ export const TOOL_CATALOG: ToolCatalogItem[] = [
   // Simplified code editing tools (Claude Code-style)
   { key: 'readCode', label: 'Read Code', description: 'Read current code from Earth Engine editor', kind: 'read' },
   { key: 'editCode', label: 'Edit Code', description: 'Edit code using old_string/new_string replacement', kind: 'write' },
-  { key: 'insertAtLine', label: 'Insert Line', description: 'Insert text at a specific line number', kind: 'write' },
+  { key: 'writeCode', label: 'Write Code', description: 'Overwrite entire editor content', kind: 'write' },
   { key: 'undoEdit', label: 'Undo Edit', description: 'Undo the last code edit', kind: 'write' },
 
   // Earth Engine tools
-  { key: 'earthEngineDataset', label: 'EE Dataset Docs', description: 'Search Earth Engine dataset documentation', kind: 'read' },
+  { key: 'geeDocs', label: 'GEE Docs', description: 'Search GEE datasets (official/community) and API documentation', kind: 'read' },
   { key: 'runCurrentCode', label: 'Run Code', description: 'Execute current code in editor', kind: 'write' },
 
   // Browser interaction tools
   { key: 'screenshot', label: 'Screenshot', description: 'Take a screenshot of the current page', kind: 'read' },
   { key: 'snapshot', label: 'Snapshot', description: 'Capture accessibility snapshot of the page', kind: 'read' },
   { key: 'clickByRefId', label: 'Click (Ref ID)', description: 'Click an element by ref id', kind: 'read' },
-  { key: 'clickByCoordinates', label: 'Click (Coords)', description: 'Click by x/y coordinates', kind: 'read' },
+  { key: 'clickAtScreenPosition', label: 'Click (Screen)', description: 'Click at screen x/y position', kind: 'read' },
 
   // Earth Engine state tools
   { key: 'getConsoleOutput', label: 'Console Output', description: 'Get Earth Engine console output', kind: 'read' },
-  { key: 'getMapInfo', label: 'Map Info', description: 'Inspect map layers and metadata', kind: 'read' },
+  { key: 'getMapScreenPosition', label: 'Map Position', description: 'Get map screen position and bounds', kind: 'read' },
   { key: 'getInspectorOutput', label: 'Inspector Output', description: 'Get map inspector output', kind: 'read' },
-  { key: 'resetMapInspectorConsole', label: 'Reset Inspector', description: 'Reset map inspector/console state', kind: 'write' },
+  { key: 'clearMapInspectorAndConsole', label: 'Clear All', description: 'Clear map, inspector, and console', kind: 'write' },
 ];
 
 export const DEFAULT_PROFILE_TOOLS: ToolKey[] = [
   'readCode',
   'dateTime',
   'weather',
-  'earthEngineDataset',
+  'geeDocs',
   'snapshot',
-  'getMapInfo',
+  'getMapScreenPosition',
   'getConsoleOutput',
 ];
 

@@ -407,6 +407,65 @@ WRONG - Don't duplicate:
     });
 
     /**
+     * writeCode - Overwrite entire editor content (Claude Code Write-style)
+     * Use when starting fresh or when editor is empty
+     */
+    const writeCodeTool = tool({
+      description: `Overwrite the entire editor content with new code.
+
+Use this tool when:
+- Starting fresh with completely new code
+- The editor is empty and you need to write initial code
+- You want to replace ALL code (not just modify parts)
+
+For partial edits (modifying specific lines), use editCode instead.`,
+      inputSchema: z.object({
+        content: z.string().describe('The complete code to write to the editor. This will REPLACE all existing code.'),
+      }),
+      execute: async ({ content }) => {
+        // Send tool_start event
+        onToolEvent?.({ type: 'tool_start', toolName: 'writeCode', args: { contentLength: content.length }, timestamp: Date.now() });
+
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+
+        const scriptId = 'current_editor';
+
+        // Get current content for diff calculation
+        const fetchResponse = await getEditorContent(tabId);
+        const previousContent = fetchResponse.success ? fetchResponse.content || '' : '';
+        const previousLineCount = previousContent.split('\n').length;
+
+        // Set the new content in shadow workspace
+        const state = shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, content, 'writeCode');
+
+        // Sync to editor (using MAIN world)
+        const syncResult = await setEditorContent(content, tabId);
+
+        if (!syncResult.success) {
+          return {
+            success: false,
+            error: `Failed to write to editor: ${syncResult.error}`,
+            suggestion: 'The editor may not be ready. Try again.'
+          };
+        }
+
+        // Mark as synced
+        shadowWorkspaceSingleton.markSynced(tabId, scriptId);
+
+        const newLineCount = content.split('\n').length;
+
+        return {
+          success: true,
+          lineCount: newLineCount,
+          previousLineCount: previousLineCount,
+          message: `Wrote ${newLineCount} lines to editor (replaced ${previousLineCount} lines)`,
+          hint: 'Use runCurrentCode to execute the code'
+        };
+      },
+    });
+
+    /**
      * undoEdit - Undo the last code edit
      * Reverts to previous version and syncs to editor
      */
@@ -837,60 +896,82 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
       },
     });
 
-    // Define Earth Engine dataset documentation tool
-    const earthEngineDatasetTool = tool({
-      description: 'Get information about Earth Engine datasets including documentation and code examples. WORKFLOW TIP: After finding a dataset, use earthEngineScript to write code with the correct dataset ID and band names.',
+    // Define GEE documentation search tool (supports multiple sources)
+    const geeDocsTool = tool({
+      description: `Search Google Earth Engine documentation and datasets using semantic search.
+
+**Query Tips:** Ask like you're asking a person - use natural language questions for best results:
+- Good: "How to load and visualize LANDSAT 8 surface reflectance imagery?"
+- Good: "What nighttime light datasets are available for urban analysis?"
+- Bad: "LANDSAT" (too vague, use descriptive sentences instead)
+
+Sources:
+- geeDatasets: Official GEE dataset catalog (dataset IDs, bands, code examples)
+- communityDatasets: Awesome GEE community datasets contributed by users
+- apiDocs: GEE API documentation (functions, usage, best practices)`,
       inputSchema: z.object({
-        datasetQuery: z.string().describe('The Earth Engine dataset or topic to search for (e.g., "LANDSAT", "elevation", "MODIS")')
+        query: z.string().describe('Natural language question describing what you need (e.g., "How to calculate NDVI from Sentinel-2?", "What datasets have global building footprints?")'),
+        source: z.enum(['geeDatasets', 'communityDatasets', 'apiDocs'])
+          .describe('geeDatasets: Official catalog | communityDatasets: User datasets | apiDocs: API docs')
       }),
-      execute: async ({ datasetQuery }) => {
+      execute: async ({ query, source }) => {
         // Manually send tool_start event since onStepStart is not reliable
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'earthEngineDataset',
-            args: { datasetQuery },
+            toolName: 'geeDocs',
+            args: { query, source },
             timestamp: Date.now()
           });
         }
 
+        // Map source to library ID
+        const libraryMap: Record<string, string> = {
+          geeDatasets: 'wybert/earthengine-dataset-catalog-md',
+          communityDatasets: 'samapriya/awesome-gee-community-datasets',
+          apiDocs: 'wybert/earthengine-doc-md'
+        };
+        const libraryId = libraryMap[source];
+
         try {
-          console.log(`🌍 [EarthEngineDatasetTool] Tool called with query: "${datasetQuery}"`);
-          console.time('EarthEngineDatasetTool execution');
-          
-          // Use the Context7 getDocumentation function to fetch dataset information
-          // The Earth Engine dataset catalog is stored in wybert/earthengine-dataset-catalog-md
+          console.log(`🌍 [GeeDocsTool] Tool called with query: "${query}", source: "${source}"`);
+          console.log(`🌍 [GeeDocsTool] Using library: ${libraryId}`);
+          console.time('GeeDocsTool execution');
+
           const result = await getDocumentation(
-            'wybert/earthengine-dataset-catalog-md',
-            datasetQuery,
-            { tokens: 15000 } // Get a good amount of content
+            libraryId,
+            query,
+            { tokens: 15000 }
           );
-          
-          console.timeEnd('EarthEngineDatasetTool execution');
-          
+
+          console.timeEnd('GeeDocsTool execution');
+
           if (!result.success || !result.content) {
-            console.warn(`❌ [EarthEngineDatasetTool] No results found for "${datasetQuery}". Error: ${result.message}`);
+            console.warn(`❌ [GeeDocsTool] No results found for "${query}" in ${source}. Error: ${result.message}`);
             return {
               found: false,
-              message: result.message || `Could not find documentation for "${datasetQuery}"`,
-              suggestion: "Try a more general search term or check the spelling of the dataset name."
+              source,
+              message: result.message || `Could not find documentation for "${query}" in ${source}`,
+              suggestion: "Try a different search term or check another source."
             };
           }
-          
-          console.log(`✅ [EarthEngineDatasetTool] Found documentation for "${datasetQuery}". Content length: ${result.content.length} chars`);
-          
+
+          console.log(`✅ [GeeDocsTool] Found documentation for "${query}" in ${source}. Content length: ${result.content.length} chars`);
+
           return {
             found: true,
-            query: datasetQuery,
+            query,
+            source,
             documentation: result.content,
-            message: `Documentation found for Earth Engine dataset related to "${datasetQuery}"`
+            message: `Documentation found for "${query}" in ${source}`
           };
         } catch (error) {
-          console.error(`❌ [EarthEngineDatasetTool] Error fetching Earth Engine dataset info:`, error);
+          console.error(`❌ [GeeDocsTool] Error fetching documentation:`, error);
           return {
             found: false,
-            message: `Error retrieving Earth Engine dataset information: ${error instanceof Error ? error.message : String(error)}`,
-            suggestion: "Try again with a different dataset name or more specific query."
+            source,
+            message: `Error retrieving documentation: ${error instanceof Error ? error.message : String(error)}`,
+            suggestion: "Try again with a different query or source."
           };
         }
       },
@@ -1585,16 +1666,16 @@ WORKFLOW:
       },
     });
 
-    // Define Reset Map/Inspector/Console tool
-    const resetMapInspectorConsoleTool = tool({
-      description: 'Reset the Google Earth Engine map, inspector, and console to clear the current state and return to a clean environment. WORKFLOW TIP: Follow this with clearScript to start completely fresh, then use earthEngineScript to write new code.',
+    // Define Clear Map, Inspector, and Console tool
+    const clearMapInspectorAndConsoleTool = tool({
+      description: 'Clear the Google Earth Engine map, inspector, and console to return to a clean environment. Use this to start fresh before writing new code.',
       inputSchema: z.object({}), // No parameters needed
       execute: async () => {
         // Manually send tool_start event
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'resetMapInspectorConsole',
+            toolName: 'clearMapInspectorAndConsole',
             args: {},
             timestamp: Date.now()
           });
@@ -1720,19 +1801,19 @@ WORKFLOW:
         };
       },
     });
-    // Define Click by Coordinates tool
-    const clickByCoordinatesTool = tool({
-      description: 'Clicks an element on the page at the specified (x, y) coordinates.',
+    // Define Click at Screen Position tool
+    const clickAtScreenPositionTool = tool({
+      description: 'Clicks at the specified screen (x, y) pixel position. Use getMapScreenPosition to get map coordinates first.',
       inputSchema: z.object({
-        x: z.number().describe('The x-coordinate to click.'),
-        y: z.number().describe('The y-coordinate to click.'),
+        x: z.number().describe('The x screen pixel position to click.'),
+        y: z.number().describe('The y screen pixel position to click.'),
       }),
       execute: async ({ x, y }) => {
         // Manually send tool_start event
         if (onToolEvent) {
           onToolEvent({
             type: 'tool_start',
-            toolName: 'clickByCoordinates',
+            toolName: 'clickAtScreenPosition',
             args: { x, y },
             timestamp: Date.now()
           });
@@ -2072,18 +2153,17 @@ WORKFLOW:
       },
     });
 
-  // Define Inspect Map tool
-  // Define Get Map Info tool
+  // Define Get Map Screen Position tool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getMapInfoTool = tool({
-    description: 'Get information about the Google Earth Engine map including current layers, bounds, center coordinates, and viewport dimensions. WORKFLOW TIP: Use this after earthEngineRunCode to verify visualization layers were created.',
+  const getMapScreenPositionTool = tool({
+    description: 'Get the screen position and bounds of the Google Earth Engine map element. Returns pixel coordinates for use with clickAtScreenPosition.',
     inputSchema: z.object({}) as any, // Cast to any for SDK 6 toModelOutput compatibility
     execute: async () => {
       // Manually send tool_start event
       if (onToolEvent) {
         onToolEvent({
           type: 'tool_start',
-          toolName: 'getMapInfo',
+          toolName: 'getMapScreenPosition',
           args: {},
           timestamp: Date.now()
         });
@@ -2214,38 +2294,36 @@ To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${dat
     },
   });
 
-  // Define Get Inspector Output tool (renamed from inspectMapTool for consistency)
+  // Define Get Inspector Output tool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getInspectorOutputTool = tool({
-    description: `Get complete information from the Google Earth Engine Inspector panel including Point data, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.).
+    description: `Read data from the Google Earth Engine Inspector panel.
 
-WORKFLOW TIP: Use clickByCoordinates BEFORE this tool to activate the Inspector at specific coordinates.
+Returns Point coordinates, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.) from whatever location was last clicked on the map.
 
-IMPORTANT REQUIREMENTS:
-1. User must manually click on the map OR you must use clickByCoordinates tool to populate the Inspector panel
-2. User must manually expand the Objects section in the Inspector panel (click on "Objects" to expand it)
-3. Once expanded, this tool will extract all visible data including EPSG, CRS transform, data type, dimensions, origin, and properties
+WORKFLOW:
+1. User clicks on the map to populate the Inspector panel
+2. Wait 1-3 seconds for data to load (use the wait tool if needed)
+3. Call this tool to read the Inspector data
+4. If data is still loading, wait another 1-2 seconds and try again
 
-The Objects section uses on-demand rendering and will NOT appear unless manually expanded by the user. If you need CRS/EPSG information, explicitly ask the user to expand the Objects section before calling this tool.`,
-    inputSchema: z.object({
-      coordinates: z.object({
-        lat: z.number().describe('Latitude of the location to inspect'),
-        lng: z.number().describe('Longitude of the location to inspect')
-      }).optional().describe('Optional coordinates to verify against Inspector data. If provided, tool will check that Inspector shows data for these coordinates (within ~10km tolerance).')
-    }) as any, // Cast to any for SDK 6 toModelOutput compatibility
-    execute: async ({ coordinates }) => {
+NOTE: For Object details (CRS/EPSG), user may need to expand the Objects section manually.
+
+Returns the coordinates of the inspected location along with all available data.`,
+    inputSchema: z.object({}) as any, // No parameters - just reads current Inspector state
+    execute: async () => {
       // Manually send tool_start event
       if (onToolEvent) {
         onToolEvent({
           type: 'tool_start',
           toolName: 'getInspectorOutput',
-          args: { coordinates },
+          args: {},
           timestamp: Date.now()
         });
       }
 
       try {
-        console.log(`🔍 [InspectMapTool] Tool called${coordinates ? ` with coordinates: lat=${coordinates.lat}, lng=${coordinates.lng}` : ' without coordinates'}`);
+        console.log(`🔍 [InspectMapTool] Reading Inspector panel data`);
         console.time('InspectMapTool execution');
 
         // Validate Chrome APIs
@@ -2302,7 +2380,7 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
 
         // Send message to content script to read Inspector data
         const result: any = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tabId, { type: 'INSPECT_MAP', coordinates }, (response) => {
+          chrome.tabs.sendMessage(tabId, { type: 'INSPECT_MAP' }, (response) => {
             if (chrome.runtime.lastError) {
               resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
             } else {
@@ -2319,10 +2397,8 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
             success: false,
             error: result.error || 'Failed to read Inspector data',
             suggestion: result.error?.includes('Inspector is empty')
-              ? 'Make sure to manually click on the map at the desired location first, then try again'
-              : result.error?.includes('different from requested')
-              ? 'Click on the map at the correct location first'
-              : 'Ensure the Inspector tab is activated and you have clicked on the map',
+              ? 'Click on the map first to populate the Inspector panel'
+              : 'Ensure the Inspector tab is open and you have clicked on the map',
             data: result.data
           };
         }
@@ -2425,23 +2501,23 @@ The Objects section uses on-demand rendering and will NOT appear unless manually
     // Simplified code editing tools (Claude Code-style) - PRIMARY
     readCodeTool,
     editCodeTool,
-    insertAtLineTool,
+    writeCodeTool,
     undoEditTool,
 
     // Earth Engine tools
-    earthEngineDatasetTool,
+    geeDocsTool,
     runCurrentCodeTool,
 
     // Browser interaction tools
     screenshotTool,
     snapshotTool,
     clickByRefIdTool,
-    clickByCoordinatesTool,
+    clickAtScreenPositionTool,
 
     // Earth Engine state tools
-    resetMapInspectorConsoleTool,
+    clearMapInspectorAndConsoleTool,
     getConsoleOutputTool,
-    getMapInfoTool,
+    getMapScreenPositionTool,
     getInspectorOutputTool
   };
 }
