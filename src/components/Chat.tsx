@@ -331,7 +331,7 @@ export function ChatUI() {
         chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
       }
 
-      if (!hasKey) {
+      if (!hasKey && !isCustomProvider) {
         setShowSettings(true);
       }
     });
