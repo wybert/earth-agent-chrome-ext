@@ -83,11 +83,11 @@ export type ToolKey =
   | 'screenshot'
   | 'snapshot'
   | 'clickByRefId'
-  | 'clickByCoordinates'
+  | 'clickAtScreenPosition'
   // Earth Engine state tools
-  | 'resetMapInspectorConsole'
+  | 'clearMapInspectorAndConsole'
   | 'getConsoleOutput'
-  | 'getMapInfo'
+  | 'getMapScreenPosition'
   | 'getInspectorOutput';
 
 export interface AgentProfile {
