@@ -152,7 +152,7 @@ export function MessageInput({
       'openai': 'OpenAI',
       'anthropic': 'Anthropic',
       'google': 'Google',
-      'qwen': 'Qwen',
+      'z-ai': 'Z.AI',
       'ollama': 'Ollama'
     }
     return names[provider] || provider

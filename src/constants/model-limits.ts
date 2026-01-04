@@ -5,57 +5,27 @@
 
 export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   // OpenAI Models
-  'gpt-4.1': 128000,
-  'gpt-4o': 128000,
-  'gpt-5': 128000,
+  'gpt-5.2': 128000,
+  'gpt-5.2-pro': 128000,
+  'gpt-5.2-chat-latest': 128000,
   'gpt-5.1': 128000,
   'gpt-5.1-codex': 128000,
   'gpt-5.1-chat-latest': 128000,
+  'gpt-4o': 128000,
+  'gpt-4o-mini': 128000,
 
   // Anthropic Models
+  'claude-opus-4-5-20251101': 200000,
   'claude-sonnet-4-5-20250929': 200000,
   'claude-haiku-4-5-20251001': 200000,
-  'claude-opus-4-1-20250805': 200000,
-  'claude-opus-4-20250514': 200000,
-  'claude-sonnet-4-20250514': 200000,
-  'claude-3-7-sonnet-20250219': 200000,
+  'claude-3-5-sonnet-20241022': 200000,
   'claude-3-5-haiku-20241022': 200000,
 
   // Google Models
+  'gemini-3-pro-preview': 2000000, // 2M context window
+  'gemini-3-flash-preview': 1000000,
   'gemini-2.5-pro': 2000000,      // 2M context window
   'gemini-2.5-flash': 1000000,    // 1M context window
-  'gemini-3-pro-preview': 2000000, // 2M context window
-
-  // Qwen Models
-  'qwen-max-latest': 32768,
-  'qwen-max': 32768,
-  'qwen-plus-latest': 32768,
-  'qwen-plus': 32768,
-  'qwen-turbo-latest': 8192,
-  'qwen-turbo': 8192,
-  'qwen-vl-max': 32768,
-  'qwen2.5-72b-instruct': 32768,
-  'qwen2.5-14b-instruct-1m': 1000000,  // 1M context window
-  'qwen2.5-vl-72b-instruct': 32768,
-
-  // Ollama Models (typical local model limits)
-  'phi3': 4096,
-  'llama3.3:70b': 128000,
-  'llama3.3': 128000,
-  'llama3.2:90b': 128000,
-  'llama3.2:70b': 128000,
-  'llama3.2': 128000,
-  'llama3.1:70b': 128000,
-  'llama3.1': 128000,
-  'mistral': 32768,
-  'codellama': 16384,
-  'deepseek-coder-v2': 128000,
-  'qwen2.5': 32768,
-  'gemma2': 8192,
-  'llava': 4096,
-  'llava-llama3': 8192,
-  'llava-phi3': 4096,
-  'moondream': 2048,
 };
 
 /**

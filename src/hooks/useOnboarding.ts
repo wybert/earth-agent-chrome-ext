@@ -31,7 +31,7 @@ export const useOnboarding = (): UseOnboardingReturn => {
     {
       id: 'settings',
       title: 'Configure API Key',
-      description: 'First, set up your API key here\n\nSupported: OpenAI, Anthropic, Google, Qwen, Ollama',
+      description: 'First, set up your API key here\n\nSupported: OpenAI, Anthropic, Google, Ollama',
       target: '[data-onboarding="settings-button"]',
       position: 'bottom',
     },

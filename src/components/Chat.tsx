@@ -58,7 +58,7 @@ const MAX_SESSIONS = 50; // Maximum number of chat sessions to keep
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
-const QWEN_API_KEY_STORAGE_KEY = 'earth_engine_qwen_api_key';
+const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
@@ -276,7 +276,7 @@ export function ChatUI() {
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
-      QWEN_API_KEY_STORAGE_KEY,
+      Z_AI_API_KEY_STORAGE_KEY,
       OLLAMA_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY,
       MODEL_STORAGE_KEY
@@ -298,8 +298,8 @@ export function ChatUI() {
       } else if (provider === 'google') {
         currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
-      } else if (provider === 'qwen') {
-        currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+      } else if (provider === 'z-ai') {
+        currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
       } else if (provider === 'ollama') {
         currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
@@ -1416,7 +1416,7 @@ export function ChatUI() {
         OPENAI_API_KEY_STORAGE_KEY,
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
-        QWEN_API_KEY_STORAGE_KEY,
+        Z_AI_API_KEY_STORAGE_KEY,
         OLLAMA_API_KEY_STORAGE_KEY,
         API_PROVIDER_STORAGE_KEY,
         MODEL_STORAGE_KEY
@@ -1438,8 +1438,8 @@ export function ChatUI() {
         } else if (provider === 'google') {
           currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
-        } else if (provider === 'qwen') {
-          currentKey = result[QWEN_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        } else if (provider === 'z-ai') {
+          currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
         } else if (provider === 'ollama') {
           currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
