@@ -51,7 +51,6 @@ const ChatResponseSchema = z.object({
 // Chrome storage keys (Keep)
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
 const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 
 // Session management limits
 const MAX_SESSIONS = 50; // Maximum number of chat sessions to keep
@@ -59,7 +58,6 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
-const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
@@ -272,12 +270,10 @@ export function ChatUI() {
   // Restore API config check useEffect
   useEffect(() => {
     chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY,
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       Z_AI_API_KEY_STORAGE_KEY,
-      OLLAMA_API_KEY_STORAGE_KEY,
       API_PROVIDER_STORAGE_KEY,
       MODEL_STORAGE_KEY,
       OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY
@@ -300,24 +296,20 @@ export function ChatUI() {
       let currentKey = '';
 
       if (provider === 'openai') {
-        currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
       } else if (provider === 'anthropic') {
-        currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
       } else if (provider === 'google') {
-        currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
       } else if (provider === 'z-ai') {
-        currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+        currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
         hasKey = !!currentKey;
-      } else if (provider === 'ollama') {
-        currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
-        hasKey = true; // Ollama doesn't require an API key for local instances
-        console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
       } else if (isCustomProvider) {
         currentKey = customConfig?.apiKey || '';
-        hasKey = !!customConfig?.enabled;
+        hasKey = !!currentKey;
       }
 
       const hasApiKey = hasKey;
@@ -1425,14 +1417,13 @@ export function ChatUI() {
     return <Settings onClose={() => {
       setShowSettings(false);
       chrome.storage.sync.get([
-        API_KEY_STORAGE_KEY,
         OPENAI_API_KEY_STORAGE_KEY,
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
         Z_AI_API_KEY_STORAGE_KEY,
-        OLLAMA_API_KEY_STORAGE_KEY,
         API_PROVIDER_STORAGE_KEY,
-        MODEL_STORAGE_KEY
+        MODEL_STORAGE_KEY,
+        OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY
       ], (result) => {
         const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
         // Use default model for provider if no model is stored
@@ -1441,22 +1432,26 @@ export function ChatUI() {
         // Determine if an API key is configured for the selected provider
         let hasKey = false;
         let currentKey = '';
+        const isCustomProvider = provider.startsWith('custom:');
 
         if (provider === 'openai') {
-          currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
         } else if (provider === 'anthropic') {
-          currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
         } else if (provider === 'google') {
-          currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
         } else if (provider === 'z-ai') {
-          currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
+          currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
           hasKey = !!currentKey;
-        } else if (provider === 'ollama') {
-          currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
-          hasKey = true; // Ollama doesn't require an API key for local instances
+        } else if (isCustomProvider) {
+          const customConfigs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+          const customId = provider.replace('custom:', '');
+          const customConfig = customConfigs.find(c => c.id === customId);
+          currentKey = customConfig?.apiKey || '';
+          hasKey = !!currentKey;
         }
 
         setApiConfigured(hasKey);

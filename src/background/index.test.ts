@@ -102,7 +102,7 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
 
   it('handles API_REQUEST success and returns data', async () => {
     (getMock as any).mockResolvedValue({
-      earth_engine_llm_api_key: 'sk-123',
+      earth_engine_openai_api_key: 'sk-123',
       earth_engine_llm_provider: 'openai',
       earth_engine_llm_model: 'gpt',
     });

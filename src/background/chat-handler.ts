@@ -393,17 +393,6 @@ export async function handleChatRequest(
           });
         }
 
-        if (!customConfig.enabled) {
-          console.error(`❌ [Chat Handler] Custom provider is disabled: ${customConfig.name}`);
-          return new Response(JSON.stringify({
-            error: 'Custom provider is disabled',
-            message: `The provider "${customConfig.name}" is currently disabled. Please enable it in settings.`
-          }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-
         console.log(`✅ [Chat Handler] Found custom provider config: ${customConfig.name}`);
 
         // Store the supportsImages flag for later use
