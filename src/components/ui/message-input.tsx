@@ -95,15 +95,14 @@ export function MessageInput({
   useEffect(() => {
     chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY], (result) => {
       const configs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || []
-      // Only include enabled providers
-      setCustomProviders(configs.filter(c => c.enabled))
+      setCustomProviders(configs)
     })
 
     // Listen for changes to custom providers
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'sync' && changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]) {
         const configs: OpenAICompatibleConfig[] = changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || []
-        setCustomProviders(configs.filter(c => c.enabled))
+        setCustomProviders(configs)
       }
     }
 
