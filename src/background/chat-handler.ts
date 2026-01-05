@@ -643,7 +643,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       getConsoleOutputTool,
       getMapScreenPositionTool,
       getInspectorOutputTool
-    } = createAITools(onToolEvent);
+    } = createAITools(onToolEvent, { provider });
 
     // Read-only tools for "ask" mode
     const readOnlyTools = {
