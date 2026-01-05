@@ -332,7 +332,7 @@ export function Settings({ onClose }: SettingsProps) {
 
             {/* Z.AI */}
             <div>
-              <label className="text-sm mb-1 block">Z.AI API Key</label>
+              <label className="text-sm mb-1 block">Z.AI API Key <span className="text-xs text-muted-foreground">(Text Only - No Screenshot Analysis)</span></label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input
