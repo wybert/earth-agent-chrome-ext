@@ -17,6 +17,7 @@ import {
 } from '../utils';
 import { shadowWorkspaceSingleton } from '@/background/shadow-workspace';
 import { getEditorContent, setEditorContent } from '@/background/editor-helpers';
+import { Provider } from '@/types/extension';
 
 // Tool event callback type (used by chat-handler)
 export type ToolEventCallback = (event: {
@@ -27,11 +28,24 @@ export type ToolEventCallback = (event: {
   timestamp: number;
 }) => void;
 
+// Options for createAITools
+export interface CreateAIToolsOptions {
+  provider?: Provider;
+}
+
+// Providers that do NOT support multimodal (image) inputs
+const NON_MULTIMODAL_PROVIDERS: string[] = ['z-ai'];
+
 /**
  * Create all tools with the given event callback
  * This factory function allows tools to emit events for tracking
+ * @param onToolEvent - Callback for tool lifecycle events
+ * @param options - Options including provider for capability detection
  */
-export function createAITools(onToolEvent?: ToolEventCallback) {
+export function createAITools(onToolEvent?: ToolEventCallback, options?: CreateAIToolsOptions) {
+    // Determine if the current provider supports multimodal inputs
+    const supportsMultimodal = !NON_MULTIMODAL_PROVIDERS.includes(options?.provider || '');
+    const currentProvider = options?.provider || 'unknown';
     const weatherFetch = createResilientFetch({
       label: 'WeatherTool',
       maxAttempts: 3,
@@ -1402,6 +1416,18 @@ WORKFLOW:
           };
         }
 
+        // Check if provider supports multimodal inputs
+        if (!supportsMultimodal) {
+          console.log(`📸 [ScreenshotTool] Provider ${currentProvider} does not support multimodal - returning text-only response`);
+          return {
+            type: 'content',
+            value: [{
+              type: 'text',
+              text: `Screenshot captured successfully, but the current model (${currentProvider}) does not support image analysis. The screenshot shows the current browser state but cannot be analyzed visually. To use screenshot analysis, please switch to a multimodal-capable provider (OpenAI, Anthropic, or Google).`
+            }]
+          };
+        }
+
         // Extract the base64 content from the data URL
         let base64Data = output.screenshotDataUrl || '';
         // Remove the data URL prefix if it exists (e.g., "data:image/jpeg;base64,")
@@ -1410,7 +1436,7 @@ WORKFLOW:
           console.log('📸 [ScreenshotTool] Extracted base64 data from data URL');
         }
 
-        // Return both text and media for successful screenshots
+        // Return both text and media for successful screenshots (multimodal providers)
         return {
           type: 'content',
           value: [
