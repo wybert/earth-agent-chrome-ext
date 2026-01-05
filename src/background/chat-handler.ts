@@ -170,6 +170,7 @@ export async function handleChatRequest(
     let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI>;
     let effectiveModel: string;
     let forceChatCompletions = false;
+    let customProviderSupportsImages: boolean | undefined; // For custom providers: multimodal support flag
 
     if (provider === 'openai') {
       // Validate API key
@@ -404,6 +405,10 @@ export async function handleChatRequest(
         }
 
         console.log(`✅ [Chat Handler] Found custom provider config: ${customConfig.name}`);
+
+        // Store the supportsImages flag for later use
+        customProviderSupportsImages = customConfig.supportsImages ?? false;
+        console.log(`🖼️ [Chat Handler] Custom provider supportsImages: ${customProviderSupportsImages}`);
 
         // Use the custom provider's configuration
         const customOpenAIConfig: any = {
@@ -643,7 +648,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       getConsoleOutputTool,
       getMapScreenPositionTool,
       getInspectorOutputTool
-    } = createAITools(onToolEvent, { provider });
+    } = createAITools(onToolEvent, { provider, customProviderSupportsImages });
 
     // Read-only tools for "ask" mode
     const readOnlyTools = {

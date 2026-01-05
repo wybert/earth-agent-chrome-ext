@@ -28,6 +28,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
   const [apiKey, setApiKey] = useState(config.apiKey);
   const [modelName, setModelName] = useState(config.modelName);
   const [enabled, setEnabled] = useState(config.enabled);
+  const [supportsImages, setSupportsImages] = useState(config.supportsImages ?? false);
   const [showApiKey, setShowApiKey] = useState(false);
 
   const isValid = name.trim() && baseURL.trim() && modelName.trim();
@@ -42,6 +43,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
       apiKey: apiKey.trim(),
       modelName: modelName.trim(),
       enabled,
+      supportsImages,
       updatedAt: Date.now()
     });
   };
@@ -143,27 +145,36 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
             />
           </div>
 
-          {/* Enabled Toggle and Actions */}
+          {/* Enabled Toggle, Supports Images, and Actions */}
           <div className="flex items-center justify-between pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm">Enabled</span>
-            </label>
-
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSave}
-                disabled={!isValid}
-                size="sm"
-              >
-                Save
-              </Button>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(e) => setEnabled(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Enabled</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={supportsImages}
+                  onChange={(e) => setSupportsImages(e.target.checked)}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">Supports Images</span>
+              </label>
             </div>
+
+            <Button
+              onClick={handleSave}
+              disabled={!isValid}
+              size="sm"
+            >
+              Save
+            </Button>
           </div>
         </div>
       )}
@@ -223,6 +234,7 @@ export function OpenAICompatibleSection() {
       apiKey: '',
       modelName: '',
       enabled: true,
+      supportsImages: false,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };

@@ -31,6 +31,7 @@ export type ToolEventCallback = (event: {
 // Options for createAITools
 export interface CreateAIToolsOptions {
   provider?: Provider;
+  customProviderSupportsImages?: boolean; // For custom providers: whether they support multimodal
 }
 
 // Providers that do NOT support multimodal (image) inputs
@@ -44,7 +45,19 @@ const NON_MULTIMODAL_PROVIDERS: string[] = ['z-ai'];
  */
 export function createAITools(onToolEvent?: ToolEventCallback, options?: CreateAIToolsOptions) {
     // Determine if the current provider supports multimodal inputs
-    const supportsMultimodal = !NON_MULTIMODAL_PROVIDERS.includes(options?.provider || '');
+    const supportsMultimodal = (() => {
+      const provider = options?.provider || '';
+      // Built-in non-multimodal providers
+      if (NON_MULTIMODAL_PROVIDERS.includes(provider)) {
+        return false;
+      }
+      // Custom providers: check the supportsImages flag
+      if (provider.startsWith('custom:')) {
+        return options?.customProviderSupportsImages ?? false;
+      }
+      // Built-in multimodal providers (openai, anthropic, google)
+      return true;
+    })();
     const currentProvider = options?.provider || 'unknown';
     const weatherFetch = createResilientFetch({
       label: 'WeatherTool',
