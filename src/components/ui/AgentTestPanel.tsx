@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import JSZip from 'jszip';
 
 import { screenshot } from '@/lib/tools/browser/screenshot';
 import { clickBySelector } from '@/lib/tools/browser/clickBySelector';
@@ -914,6 +915,23 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     updateConfig({ sessionId: `test-session-${Date.now()}` });
   };
 
+  const buildResultsCsv = () => {
+    return [
+      ['Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error', 'Screenshot ID'],
+      ...results.map(result => [
+        result.timestamp.toISOString(),
+        `"${result.prompt.replace(/"/g, '""')}"`,
+        `"${result.response.replace(/"/g, '""')}"`,
+        result.provider,
+        result.model,
+        result.duration.toString(),
+        result.success.toString(),
+        result.error || '',
+        result.screenshotId || ''
+      ])
+    ].map(row => row.join(',')).join('\n');
+  };
+
   const downloadPrompts = (format: 'csv' | 'json') => {
     const timestamp = Date.now();
     if (config.prompts.length === 0) {
@@ -952,21 +970,87 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     URL.revokeObjectURL(url);
   };
 
+  const downloadResultsBundle = async () => {
+    if (results.length === 0) {
+      toast.warning('No results to download');
+      return;
+    }
+
+    try {
+      const zip = new JSZip();
+      const csvContent = buildResultsCsv();
+      zip.file(`agent-test-results-${config.sessionId}.csv`, csvContent);
+
+      const manifestLines: string[] = [];
+
+      for (const result of results) {
+        if (!result.screenshotId) continue;
+
+        if (result.screenshotId.startsWith('screenshot-')) {
+          const storageKey = `screenshot_${result.screenshotId}`;
+          const stored = await chromeServices.storage.get<string>([storageKey]);
+          const screenshotData = stored[storageKey];
+          if (screenshotData) {
+            const base64Marker = 'base64,';
+            const base64Index = screenshotData.indexOf(base64Marker);
+            if (base64Index !== -1) {
+              const base64Data = screenshotData.slice(base64Index + base64Marker.length);
+              zip.file(`screenshots/${result.screenshotId}.png`, base64Data, { base64: true });
+            } else {
+              manifestLines.push(`${result.id} | missing base64 data for local screenshot`);
+            }
+          } else {
+            manifestLines.push(`${result.id} | missing local screenshot data`);
+          }
+          continue;
+        }
+
+        if (result.screenshotId.startsWith('download-')) {
+          const downloadId = Number(result.screenshotId.replace('download-', ''));
+          const downloadItems = await new Promise<chrome.downloads.DownloadItem[]>((resolve) => {
+            chrome.downloads.search({ id: downloadId }, resolve);
+          });
+          const filename = downloadItems[0]?.filename;
+          const promptSnippet = result.prompt.replace(/\s+/g, ' ').slice(0, 120);
+          manifestLines.push(`${result.id} | ${promptSnippet} | downloads: ${filename || result.screenshotId}`);
+          continue;
+        }
+
+        if (result.screenshotId.startsWith('drive-')) {
+          const fileId = result.screenshotId.replace('drive-', '');
+          const promptSnippet = result.prompt.replace(/\s+/g, ' ').slice(0, 120);
+          manifestLines.push(`${result.id} | ${promptSnippet} | drive: https://drive.google.com/file/d/${fileId}/view`);
+          continue;
+        }
+
+        manifestLines.push(`${result.id} | unknown screenshot reference: ${result.screenshotId}`);
+      }
+
+      if (manifestLines.length > 0) {
+        zip.file('screenshots-manifest.txt', manifestLines.join('\n'));
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `agent-test-results-${config.sessionId}.zip`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      if (manifestLines.length > 0) {
+        toast.info('Some screenshots are stored externally and listed in screenshots-manifest.txt');
+      }
+    } catch (error) {
+      console.error('Failed to download results bundle:', error);
+      toast.error('Failed to download results bundle', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  };
+
   const exportResults = () => {
-    const csvContent = [
-      ['Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error', 'Screenshot ID'],
-      ...results.map(result => [
-        result.timestamp.toISOString(),
-        `"${result.prompt.replace(/"/g, '""')}"`,
-        `"${result.response.replace(/"/g, '""')}"`,
-        result.provider,
-        result.model,
-        result.duration.toString(),
-        result.success.toString(),
-        result.error || '',
-        result.screenshotId || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
+    const csvContent = buildResultsCsv();
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -1728,6 +1812,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
                 <div className="flex gap-2">
+                  <Button onClick={downloadResultsBundle} variant="outline" size="sm" disabled={results.length === 0}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Results
+                  </Button>
                   {results.some(r => r.screenshotId) && (
                     <Button onClick={downloadAllScreenshots} variant="outline" size="sm">
                       <Download className="h-4 w-4 mr-2" />
