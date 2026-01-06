@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, RefreshCw, Wrench, Plus, FlaskConical, Menu, Edit2, X, HelpCircle } from 'lucide-react';
+import { Settings as SettingsIcon, RefreshCw, Plus, FlaskConical, Menu, Edit2, X, HelpCircle } from 'lucide-react';
 // Project uses custom Message type for Chrome extension communication
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
@@ -9,7 +9,6 @@ import { Message, ExtensionMessage, Provider, type OpenAICompatibleConfig } from
 import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview } from './chat-helpers';
 import type { AgentProfile } from '@/types/extension';
 import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
-import ToolsTestPanel from './ui/ToolsTestPanel';
 import AgentTestPanel from './ui/AgentTestPanel';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
@@ -130,7 +129,6 @@ export function ChatUI() {
   useEffect(() => {
     console.log('🎯 [Chat] Onboarding state:', { showWelcome, showTour, currentStep });
   }, [showWelcome, showTour, currentStep]);
-  const [showToolsTest, setShowToolsTest] = useState(false);
   const [showAgentTest, setShowAgentTest] = useState(false);
   const [apiConfigured, setApiConfigured] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -1485,9 +1483,6 @@ export function ChatUI() {
               Clear
             </Button>
           <TabStatusIndicator />
-          <Button variant="outline" size="icon" onClick={() => setShowToolsTest(true)} aria-label="Test Tools" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={fallbackMode || !port} title="Test Tools">
-            <Wrench className="h-4 w-4 text-gray-600" />
-          </Button>
           <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
             <FlaskConical className="h-4 w-4 text-gray-600" />
           </Button>
@@ -1585,7 +1580,6 @@ export function ChatUI() {
         </div>
 
         {/* Overlay Panels */}
-        <ToolsTestPanel isOpen={showToolsTest} onClose={() => setShowToolsTest(false)} />
         <AgentTestPanel isOpen={showAgentTest} onClose={() => setShowAgentTest(false)} />
       </Card>
 
