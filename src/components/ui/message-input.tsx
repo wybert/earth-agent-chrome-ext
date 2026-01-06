@@ -555,10 +555,7 @@ export function MessageInput({
                         key={`custom:${config.id}`}
                         value={`custom:${config.id}:${config.modelName}`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          <span>{config.name} - {config.modelName}</span>
-                        </div>
+                        {config.name} - {config.modelName}
                       </SelectItem>
                     ))}
                   </>

@@ -57,7 +57,6 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
       {/* Collapsed Header */}
       <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" onClick={onToggle}>
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
           <span className="font-medium">{config.name || 'Unnamed Provider'}</span>
         </div>
         <div className="flex items-center gap-2">
