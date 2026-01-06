@@ -393,17 +393,6 @@ export async function handleChatRequest(
           });
         }
 
-        if (!customConfig.enabled) {
-          console.error(`❌ [Chat Handler] Custom provider is disabled: ${customConfig.name}`);
-          return new Response(JSON.stringify({
-            error: 'Custom provider is disabled',
-            message: `The provider "${customConfig.name}" is currently disabled. Please enable it in settings.`
-          }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-
         console.log(`✅ [Chat Handler] Found custom provider config: ${customConfig.name}`);
 
         // Store the supportsImages flag for later use
@@ -549,6 +538,33 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       }
     } else {
       console.log(`📋 [Chat Handler] Parallel tool execution enabled (SEQUENTIAL_TOOL_EXECUTION = false)`);
+    }
+
+    // Add multimodal capability warning for providers that don't support images
+    const NON_MULTIMODAL_PROVIDERS = ['z-ai'];
+    const supportsMultimodal = (() => {
+      if (NON_MULTIMODAL_PROVIDERS.includes(provider)) {
+        return false;
+      }
+      if (provider.startsWith('custom:')) {
+        return customProviderSupportsImages ?? false;
+      }
+      return true; // Built-in multimodal providers (openai, anthropic, google)
+    })();
+
+    if (!supportsMultimodal) {
+      finalSystemPrompt = `${finalSystemPrompt}
+
+## CRITICAL: Image Capability Limitation
+
+**You CANNOT see, view, or analyze images.** The current model does not support multimodal/image inputs.
+
+- The screenshot tool will capture images but you will NOT be able to see or analyze them
+- Do NOT claim to see, describe, or analyze any screenshots or images
+- If you take a screenshot, tell the user: "I captured a screenshot but I cannot view or analyze images with this model"
+- Use the snapshot tool instead to get a text-based accessibility tree of the page
+- If the user asks you to look at or analyze something visual, explain that you cannot see images and suggest they switch to a multimodal-capable model (OpenAI, Anthropic, or Google Gemini)`;
+      console.log(`⚠️ [Chat Handler] Added multimodal limitation warning for provider: ${provider}`);
     }
 
     // Configure stream options based on provider

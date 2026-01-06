@@ -71,7 +71,6 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
 
@@ -411,26 +410,20 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       if (message.payload && message.payload.endpoint === '/api/chat') {
         (async () => {
           try {
-            // Get API key/provider from storage
-            const config = await chrome.storage.local.get([
-              API_KEY_STORAGE_KEY,
-              API_PROVIDER_STORAGE_KEY,
-              MODEL_STORAGE_KEY
-            ]);
-            const apiKey = config[API_KEY_STORAGE_KEY];
-            const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
-            const model = config[MODEL_STORAGE_KEY];
+            // Get API key/provider from storage using unified utility
+            const { loadProviderConfig } = await import('@/lib/config-utils');
+            const providerConfig = await loadProviderConfig();
 
-            if (!apiKey) {
+            if (!providerConfig.apiKey) {
               throw new Error('API key not found in storage');
             }
 
-            const body = message.payload.body || {}; 
+            const body = message.payload.body || {};
             const response = await handleChatRequest(
               body.messages,
-              apiKey,
-              provider,
-              model,
+              providerConfig.apiKey,
+              providerConfig.provider,
+              providerConfig.model,
               undefined, // No Helicone headers for direct API requests
               undefined, // No base URL
               undefined, // No tool event callback
@@ -476,32 +469,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         try {
           console.log('Processing chat message');
           
-          // Get API key/provider from storage
-          const config = await chrome.storage.local.get([
-            API_KEY_STORAGE_KEY,
-            OPENAI_API_KEY_STORAGE_KEY,
-            ANTHROPIC_API_KEY_STORAGE_KEY,
-            GOOGLE_API_KEY_STORAGE_KEY,
-            Z_AI_API_KEY_STORAGE_KEY,
-            API_PROVIDER_STORAGE_KEY,
-            MODEL_STORAGE_KEY
-          ]);
-          
-          // Determine provider and API key to use
-          const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
-          let apiKey = '';
-          
-          if (provider === 'openai') {
-            apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'anthropic') {
-            apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'google') {
-            apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'z-ai') {
-            apiKey = config[Z_AI_API_KEY_STORAGE_KEY] || config[API_KEY_STORAGE_KEY] || '';
-          }
-          
-          const model = config[MODEL_STORAGE_KEY];
+          // Get API key/provider from storage using unified utility
+          const { loadProviderConfig } = await import('@/lib/config-utils');
+          const providerConfig = await loadProviderConfig();
+          const { provider, apiKey, model } = providerConfig;
           
           console.log(`🔧 [Background] API key validation for ${provider}:`, {
             hasApiKey: !!apiKey,
@@ -1971,65 +1942,59 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               (resolve, reject) => {
     
                 chrome.storage.sync.get(
-    
-                  [API_KEY_STORAGE_KEY, OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, Z_AI_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], 
-    
+
+                  [OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, Z_AI_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY],
+
                   (result) => {
-    
+
                     if (chrome.runtime.lastError) {
-    
+
                       reject(new Error(chrome.runtime.lastError.message));
-    
+
                       return;
-    
+
                     }
-    
-                    
-    
+
+
+
                     // Use provider and model from test message if provided, otherwise use stored settings
-    
+
                     const provider = message.provider || result[API_PROVIDER_STORAGE_KEY] || 'openai';
-    
+
                     const model = message.model || result[MODEL_STORAGE_KEY] || '';
-    
-                    
-    
+
+
+
                     let apiKey = '';
-    
+
                     if (provider === 'openai') {
-    
-                      apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-    
+
+                      apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || '';
+
                     } else if (provider === 'anthropic') {
-    
-                      apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-    
+
+                      apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
+
                     } else if (provider === 'google') {
-    
-                      apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-    
+
+                      apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || '';
+
                       console.log(`🐛 [Debug] Google API key retrieval:`, {
-    
+
                         googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
-    
-                        fallbackKey: result[API_KEY_STORAGE_KEY] ? 'present' : 'missing',
-    
+
                         finalKey: apiKey ? 'present' : 'missing',
-    
+
                         keyLength: apiKey ? apiKey.length : 0,
-    
+
                         keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
-    
+
                       });
-    
+
                     } else if (provider === 'z-ai') {
-    
-                      apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-    
-                    } else {
-    
-                      apiKey = result[API_KEY_STORAGE_KEY] || '';
-    
+
+                      apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
+
                     }
     
                 

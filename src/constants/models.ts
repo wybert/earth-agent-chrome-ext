@@ -56,5 +56,13 @@ export const DEFAULT_MODELS: Record<ApiProvider, string> = {
   'z-ai': 'glm-4.7'
 };
 
+// Storage keys for API configuration
+export const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
+export const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
+export const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
+export const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
+export const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
+export const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+
 // Storage key for OpenAI Compatible provider configurations
 export const OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY = 'earth_engine_openai_compatible_configs';
