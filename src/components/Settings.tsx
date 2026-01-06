@@ -15,7 +15,6 @@ import {
 } from '@/lib/profiles';
 
 // Storage keys
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
@@ -58,13 +57,12 @@ export function Settings({ onClose }: SettingsProps) {
   useEffect(() => {
     // Load API keys from sync storage
     chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY,
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
       Z_AI_API_KEY_STORAGE_KEY
     ], (result) => {
-      setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '');
+      setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY] || '');
       setAnthropicApiKey(result[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
       setGoogleApiKey(result[GOOGLE_API_KEY_STORAGE_KEY] || '');
       setZAiApiKey(result[Z_AI_API_KEY_STORAGE_KEY] || '');
@@ -91,7 +89,6 @@ export function Settings({ onClose }: SettingsProps) {
     // Store API key in the provider-specific key
     if (provider === 'openai') {
       storageData[OPENAI_API_KEY_STORAGE_KEY] = trimmedApiKey;
-      storageData[API_KEY_STORAGE_KEY] = trimmedApiKey; // Keep legacy key
     } else if (provider === 'anthropic') {
       storageData[ANTHROPIC_API_KEY_STORAGE_KEY] = trimmedApiKey;
     } else if (provider === 'google') {

@@ -95,15 +95,14 @@ export function MessageInput({
   useEffect(() => {
     chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY], (result) => {
       const configs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || []
-      // Only include enabled providers
-      setCustomProviders(configs.filter(c => c.enabled))
+      setCustomProviders(configs)
     })
 
     // Listen for changes to custom providers
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'sync' && changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]) {
         const configs: OpenAICompatibleConfig[] = changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || []
-        setCustomProviders(configs.filter(c => c.enabled))
+        setCustomProviders(configs)
       }
     }
 
@@ -556,10 +555,7 @@ export function MessageInput({
                         key={`custom:${config.id}`}
                         value={`custom:${config.id}:${config.modelName}`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          <span>{config.name} - {config.modelName}</span>
-                        </div>
+                        {config.name} - {config.modelName}
                       </SelectItem>
                     ))}
                   </>

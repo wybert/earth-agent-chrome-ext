@@ -36,7 +36,6 @@ export interface OpenAICompatibleConfig {
   baseURL: string;         // API endpoint URL
   apiKey: string;          // API key for this provider
   modelName: string;       // Default model name to use
-  enabled: boolean;        // Whether this config is currently active
   supportsImages: boolean; // Whether this provider supports multimodal (image) inputs
   createdAt: number;       // Creation timestamp
   updatedAt: number;       // Last update timestamp

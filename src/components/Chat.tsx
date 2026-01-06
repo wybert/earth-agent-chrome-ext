@@ -16,7 +16,17 @@ import { z } from 'zod'; // Restore Zod
 import { Chat } from "@/components/ui/chat"; // Keep the UI component
 import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
 import { TokenUsageDisplay } from "@/components/ui/TokenUsageDisplay";
-import { DEFAULT_MODELS, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '@/constants/models';
+import {
+  DEFAULT_MODELS,
+  OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
+  OPENAI_API_KEY_STORAGE_KEY,
+  ANTHROPIC_API_KEY_STORAGE_KEY,
+  GOOGLE_API_KEY_STORAGE_KEY,
+  Z_AI_API_KEY_STORAGE_KEY,
+  API_PROVIDER_STORAGE_KEY,
+  MODEL_STORAGE_KEY
+} from '@/constants/models';
+import { loadProviderConfig, hasApiKeyConfigured } from '@/lib/config-utils';
 import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ShadowDiffCard } from '@/components/ui/ShadowDiffCard';
@@ -51,17 +61,9 @@ const ChatResponseSchema = z.object({
 // Chrome storage keys (Keep)
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
 const ACTIVE_SESSION_ID_KEY = 'earth_engine_active_session_id';
-const API_KEY_STORAGE_KEY = 'earth_engine_llm_api_key'; // Legacy key
 
 // Session management limits
 const MAX_SESSIONS = 50; // Maximum number of chat sessions to keep
-const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
-const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
-const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
-const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
-const OLLAMA_API_KEY_STORAGE_KEY = 'earth_engine_ollama_api_key';
-const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider';
-const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
 // Helper function to handle image files
 const processImageFile = (file: File): Promise<string> => {
@@ -271,65 +273,21 @@ export function ChatUI() {
 
   // Restore API config check useEffect
   useEffect(() => {
-    chrome.storage.sync.get([
-      API_KEY_STORAGE_KEY,
-      OPENAI_API_KEY_STORAGE_KEY,
-      ANTHROPIC_API_KEY_STORAGE_KEY,
-      GOOGLE_API_KEY_STORAGE_KEY,
-      Z_AI_API_KEY_STORAGE_KEY,
-      OLLAMA_API_KEY_STORAGE_KEY,
-      API_PROVIDER_STORAGE_KEY,
-      MODEL_STORAGE_KEY,
-      OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY
-    ], (result) => {
-      const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-      const isCustomProvider = provider.startsWith('custom:');
-      const customConfigs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
-      const customConfig = isCustomProvider
-        ? customConfigs.find((config) => config.id === provider.replace('custom:', ''))
-        : null;
+    loadProviderConfig().then((config) => {
+      const hasKey = hasApiKeyConfigured(config);
+      const isCustomProvider = config.provider.startsWith('custom:');
 
-      const storedModel = result[MODEL_STORAGE_KEY];
-      const fallbackModel = isCustomProvider
-        ? customConfig?.modelName
-        : DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
-      const model = storedModel || fallbackModel || DEFAULT_MODELS.openai;
-
-      // Determine if an API key is configured for the selected provider
-      let hasKey = false;
-      let currentKey = '';
-
-      if (provider === 'openai') {
-        currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        hasKey = !!currentKey;
-      } else if (provider === 'anthropic') {
-        currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        hasKey = !!currentKey;
-      } else if (provider === 'google') {
-        currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        hasKey = !!currentKey;
-      } else if (provider === 'z-ai') {
-        currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-        hasKey = !!currentKey;
-      } else if (provider === 'ollama') {
-        currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
-        hasKey = true; // Ollama doesn't require an API key for local instances
-        console.log('🔧 [Chat] Ollama provider selected, skipping API key requirement check');
-      } else if (isCustomProvider) {
-        currentKey = customConfig?.apiKey || '';
-        hasKey = !!customConfig?.enabled;
-      }
-
-      const hasApiKey = hasKey;
-      setApiConfigured(hasApiKey);
-      setApiKey(currentKey);
-      setApiProvider(provider as any);
-      setSelectedModel(model);
+      setApiConfigured(hasKey);
+      setApiKey(config.apiKey);
+      setApiProvider(config.provider as any);
+      setSelectedModel(config.model);
 
       // Save the default model to storage if none was set
-      if (!result[MODEL_STORAGE_KEY]) {
-        chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
-      }
+      chrome.storage.sync.get([MODEL_STORAGE_KEY], (result) => {
+        if (!result[MODEL_STORAGE_KEY]) {
+          chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: config.model });
+        }
+      });
 
       if (!hasKey && !isCustomProvider) {
         setShowSettings(true);
@@ -1095,19 +1053,16 @@ export function ChatUI() {
       .concat(newUserMessage) || [newUserMessage];
     
     // Get provider and model from storage before sending the message
-    chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
-      const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-      const model = result[MODEL_STORAGE_KEY] || '';
-      
-      console.log(`🐛 [Debug] Chat sending message with provider: ${provider}, model: ${model}`);
-      
+    loadProviderConfig().then((config) => {
+      console.log(`🐛 [Debug] Chat sending message with provider: ${config.provider}, model: ${config.model}`);
+
       const messagePayload: ExtensionMessage = {
         type: 'CHAT_MESSAGE',
         message: input.trim(),
         messages: messagesForApi,
         attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
-        provider: provider,
-        model: model,
+        provider: config.provider,
+        model: config.model,
         ...(() => {
           const cfg = resolveModeAndProfile();
           return {
@@ -1128,13 +1083,13 @@ export function ChatUI() {
         messagesCount: messagePayload.messages?.length || 0,
         hasAttachments: !!messagePayload.attachments
       });
-      
+
       if (imageAttachments.length > 0) {
         console.log(`Sending message with ${imageAttachments.length} image attachments`);
-        console.log(`Image attachments: ${imageAttachments.map(img => 
+        console.log(`Image attachments: ${imageAttachments.map(img =>
           `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
       }
-      
+
       port.postMessage(messagePayload);
     });
   }, [input, isLocalLoading, port, activeSessionId, sessions, resolveModeAndProfile]);
@@ -1158,19 +1113,16 @@ export function ChatUI() {
           .filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'));
       
       // Get provider and model from storage before sending the regenerate message
-      chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY], (result) => {
-        const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-        const model = result[MODEL_STORAGE_KEY] || '';
-        
+      loadProviderConfig().then((config) => {
         const cfg = resolveModeAndProfile();
-        console.log(`🐛 [Debug] Chat regenerating with provider: ${provider}, model: ${model}, mode: ${cfg.baseMode}`);
+        console.log(`🐛 [Debug] Chat regenerating with provider: ${config.provider}, model: ${config.model}, mode: ${cfg.baseMode}`);
 
         const messagePayload: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
           message: lastUserMessage.content,
           messages: messagesForApi,
-          provider: provider,
-          model: model,
+          provider: config.provider,
+          model: config.model,
           ...(() => {
             const cfg = resolveModeAndProfile();
             return {
@@ -1424,51 +1376,21 @@ export function ChatUI() {
   if (showSettings) {
     return <Settings onClose={() => {
       setShowSettings(false);
-      chrome.storage.sync.get([
-        API_KEY_STORAGE_KEY,
-        OPENAI_API_KEY_STORAGE_KEY,
-        ANTHROPIC_API_KEY_STORAGE_KEY,
-        GOOGLE_API_KEY_STORAGE_KEY,
-        Z_AI_API_KEY_STORAGE_KEY,
-        OLLAMA_API_KEY_STORAGE_KEY,
-        API_PROVIDER_STORAGE_KEY,
-        MODEL_STORAGE_KEY
-      ], (result) => {
-        const provider = result[API_PROVIDER_STORAGE_KEY] || 'openai';
-        // Use default model for provider if no model is stored
-        const model = result[MODEL_STORAGE_KEY] || DEFAULT_MODELS[provider as keyof typeof DEFAULT_MODELS] || DEFAULT_MODELS.openai;
-
-        // Determine if an API key is configured for the selected provider
-        let hasKey = false;
-        let currentKey = '';
-
-        if (provider === 'openai') {
-          currentKey = result[OPENAI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-          hasKey = !!currentKey;
-        } else if (provider === 'anthropic') {
-          currentKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-          hasKey = !!currentKey;
-        } else if (provider === 'google') {
-          currentKey = result[GOOGLE_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-          hasKey = !!currentKey;
-        } else if (provider === 'z-ai') {
-          currentKey = result[Z_AI_API_KEY_STORAGE_KEY] || result[API_KEY_STORAGE_KEY] || '';
-          hasKey = !!currentKey;
-        } else if (provider === 'ollama') {
-          currentKey = result[OLLAMA_API_KEY_STORAGE_KEY] || '';
-          hasKey = true; // Ollama doesn't require an API key for local instances
-        }
+      loadProviderConfig().then((config) => {
+        const hasKey = hasApiKeyConfigured(config);
 
         setApiConfigured(hasKey);
-        setApiKey(currentKey);
-        setApiProvider(provider as any);
-        setSelectedModel(model);
+        setApiKey(config.apiKey);
+        setApiProvider(config.provider as any);
+        setSelectedModel(config.model);
 
         // Save the default model to storage if none was set
-        if (!result[MODEL_STORAGE_KEY]) {
-          chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: model });
-        }
-        
+        chrome.storage.sync.get([MODEL_STORAGE_KEY], (result) => {
+          if (!result[MODEL_STORAGE_KEY]) {
+            chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: config.model });
+          }
+        });
+
         if (hasKey && fallbackMode) {
           handleRetryAPI();
         } else if (!hasKey) {
