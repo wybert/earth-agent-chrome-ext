@@ -410,39 +410,20 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       if (message.payload && message.payload.endpoint === '/api/chat') {
         (async () => {
           try {
-            // Get API key/provider from storage
-            const config = await chrome.storage.local.get([
-              OPENAI_API_KEY_STORAGE_KEY,
-              ANTHROPIC_API_KEY_STORAGE_KEY,
-              GOOGLE_API_KEY_STORAGE_KEY,
-              Z_AI_API_KEY_STORAGE_KEY,
-              API_PROVIDER_STORAGE_KEY,
-              MODEL_STORAGE_KEY
-            ]);
-            const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
-            const model = config[MODEL_STORAGE_KEY];
+            // Get API key/provider from storage using unified utility
+            const { loadProviderConfig } = await import('@/lib/config-utils');
+            const providerConfig = await loadProviderConfig();
 
-            let apiKey = '';
-            if (provider === 'openai') {
-              apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || '';
-            } else if (provider === 'anthropic') {
-              apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
-            } else if (provider === 'google') {
-              apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || '';
-            } else if (provider === 'z-ai') {
-              apiKey = config[Z_AI_API_KEY_STORAGE_KEY] || '';
-            }
-
-            if (!apiKey) {
+            if (!providerConfig.apiKey) {
               throw new Error('API key not found in storage');
             }
 
-            const body = message.payload.body || {}; 
+            const body = message.payload.body || {};
             const response = await handleChatRequest(
               body.messages,
-              apiKey,
-              provider,
-              model,
+              providerConfig.apiKey,
+              providerConfig.provider,
+              providerConfig.model,
               undefined, // No Helicone headers for direct API requests
               undefined, // No base URL
               undefined, // No tool event callback
@@ -488,31 +469,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         try {
           console.log('Processing chat message');
           
-          // Get API key/provider from storage
-          const config = await chrome.storage.local.get([
-            OPENAI_API_KEY_STORAGE_KEY,
-            ANTHROPIC_API_KEY_STORAGE_KEY,
-            GOOGLE_API_KEY_STORAGE_KEY,
-            Z_AI_API_KEY_STORAGE_KEY,
-            API_PROVIDER_STORAGE_KEY,
-            MODEL_STORAGE_KEY
-          ]);
-
-          // Determine provider and API key to use
-          const provider = config[API_PROVIDER_STORAGE_KEY] || 'openai';
-          let apiKey = '';
-
-          if (provider === 'openai') {
-            apiKey = config[OPENAI_API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'anthropic') {
-            apiKey = config[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'google') {
-            apiKey = config[GOOGLE_API_KEY_STORAGE_KEY] || '';
-          } else if (provider === 'z-ai') {
-            apiKey = config[Z_AI_API_KEY_STORAGE_KEY] || '';
-          }
-          
-          const model = config[MODEL_STORAGE_KEY];
+          // Get API key/provider from storage using unified utility
+          const { loadProviderConfig } = await import('@/lib/config-utils');
+          const providerConfig = await loadProviderConfig();
+          const { provider, apiKey, model } = providerConfig;
           
           console.log(`🔧 [Background] API key validation for ${provider}:`, {
             hasApiKey: !!apiKey,

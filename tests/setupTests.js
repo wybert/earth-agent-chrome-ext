@@ -70,5 +70,10 @@ global.chrome = {
       set: jest.fn(() => Promise.resolve()),
       remove: jest.fn(() => Promise.resolve()),
     },
+    sync: {
+      get: jest.fn((keys, cb) => cb && cb({})),
+      set: jest.fn((data, cb) => cb && cb()),
+      remove: jest.fn((keys, cb) => cb && cb()),
+    },
   },
 };

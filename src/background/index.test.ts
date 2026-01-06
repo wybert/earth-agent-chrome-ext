@@ -84,7 +84,7 @@ describe('sendMessageToEarthEngineTab', () => {
 });
 
 describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
-  const getMock = chrome.storage?.local?.get as unknown as jest.Mock;
+  const getMock = chrome.storage?.sync?.get as unknown as jest.Mock;
   const tabsSendMessageMock = chrome.tabs.sendMessage as unknown as jest.Mock;
 
   const loadHandler = async () => {
@@ -101,10 +101,12 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
   });
 
   it('handles API_REQUEST success and returns data', async () => {
-    (getMock as any).mockResolvedValue({
-      earth_engine_openai_api_key: 'sk-123',
-      earth_engine_llm_provider: 'openai',
-      earth_engine_llm_model: 'gpt',
+    (getMock as any).mockImplementation((keys: string[], cb: (result: any) => void) => {
+      cb({
+        earth_engine_openai_api_key: 'sk-123',
+        earth_engine_llm_provider: 'openai',
+        earth_engine_llm_model: 'gpt',
+      });
     });
 
     const handler = await loadHandler();
@@ -132,7 +134,9 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
   });
 
   it('handles API_REQUEST missing api key and returns error', async () => {
-    (getMock as any).mockResolvedValue({});
+    (getMock as any).mockImplementation((keys: string[], cb: (result: any) => void) => {
+      cb({});
+    });
     const handler = await loadHandler();
     const sendResponse = jest.fn();
 
@@ -154,9 +158,11 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
   });
 
   it('streams CHAT_MESSAGE chunks to the sender tab', async () => {
-    (getMock as any).mockResolvedValue({
-      earth_engine_openai_api_key: 'sk-123',
-      earth_engine_llm_provider: 'openai',
+    (getMock as any).mockImplementation((keys: string[], cb: (result: any) => void) => {
+      cb({
+        earth_engine_openai_api_key: 'sk-123',
+        earth_engine_llm_provider: 'openai',
+      });
     });
 
     let readCount = 0;
@@ -203,7 +209,9 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
   });
 
   it('fails CHAT_MESSAGE when api key missing', async () => {
-    (getMock as any).mockResolvedValue({});
+    (getMock as any).mockImplementation((keys: string[], cb: (result: any) => void) => {
+      cb({});
+    });
     const handler = await loadHandler();
     const sendResponse = jest.fn();
 
