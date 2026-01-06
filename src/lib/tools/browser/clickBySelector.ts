@@ -11,6 +11,7 @@ import { detectEnvironment } from '@/lib/utils';
 export interface ClickBySelectorParams {
   selector: string; // CSS selector for the element to click
   elementDescription?: string; // Optional human-readable description
+  skipReload?: boolean; // Avoid reloading the GEE tab if content script ping fails
 }
 
 export interface ClickBySelectorResponse {

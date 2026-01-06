@@ -35,6 +35,8 @@ const VALIDATION = {
   DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/
 };
 
+const LIST_PAGE_SIZE = 10;
+
 interface TestPrompt {
   id: string;
   text: string;
@@ -138,6 +140,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
   const [profiles, setProfiles] = useState<AgentProfile[]>([]);
   const [downloadFormat, setDownloadFormat] = useState<string>('');
+  const [promptsPage, setPromptsPage] = useState(1);
+  const [resultsPage, setResultsPage] = useState(1);
   const [screenshotPreviews, setScreenshotPreviews] = useState<Record<string, string>>({});
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [currentTestStartTime, setCurrentTestStartTime] = useState<number | null>(null);
@@ -195,6 +199,14 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     .filter((entry): entry is SelectedModelEntry => Boolean(entry));
 
   const totalTests = config.prompts.length * resolvedSelectedModels.length;
+  const promptsPageCount = Math.max(1, Math.ceil(config.prompts.length / LIST_PAGE_SIZE));
+  const resultsPageCount = Math.max(1, Math.ceil(results.length / LIST_PAGE_SIZE));
+  const promptsPageStart = (promptsPage - 1) * LIST_PAGE_SIZE;
+  const promptsPageEnd = Math.min(promptsPageStart + LIST_PAGE_SIZE, config.prompts.length);
+  const resultsPageStart = (resultsPage - 1) * LIST_PAGE_SIZE;
+  const resultsPageEnd = Math.min(resultsPageStart + LIST_PAGE_SIZE, results.length);
+  const pagedPrompts = config.prompts.slice(promptsPageStart, promptsPageEnd);
+  const pagedResults = results.slice(resultsPageStart, resultsPageEnd);
 
   const resolveModeAndProfile = (): {
     baseMode: 'ask' | 'do';
@@ -251,6 +263,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
     return () => clearInterval(intervalId);
   }, [isRunning, currentTestStartTime]);
+
+  useEffect(() => {
+    if (promptsPage > promptsPageCount) {
+      setPromptsPage(promptsPageCount);
+    }
+  }, [promptsPage, promptsPageCount]);
+
+  useEffect(() => {
+    if (resultsPage > resultsPageCount) {
+      setResultsPage(resultsPageCount);
+    }
+  }, [resultsPage, resultsPageCount]);
 
   useEffect(() => {
     chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY], (result) => {
@@ -622,7 +646,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         console.log('Resetting Google Earth Engine map, inspector, and console...');
         const resetResult = await clickBySelector({
           selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
-          elementDescription: 'Reset button to clear map, inspector, and console'
+          elementDescription: 'Reset button to clear map, inspector, and console',
+          skipReload: true
         });
         
         if (resetResult.success) {
@@ -646,7 +671,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           console.log('Trying to click Clear script directly...');
           const directResult = await clickBySelector({
             selector: 'div.goog-menuitem-content',
-            elementDescription: 'Clear script menu option (direct)'
+            elementDescription: 'Clear script menu option (direct)',
+            skipReload: true
           });
           
           if (directResult.success) {
@@ -672,7 +698,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             console.log(`Trying dropdown selector: ${selector}`);
             dropdownResult = await clickBySelector({
               selector: selector,
-              elementDescription: `Reset dropdown arrow (${selector})`
+              elementDescription: `Reset dropdown arrow (${selector})`,
+              skipReload: true
             });
             
             if (dropdownResult.success) {
@@ -692,7 +719,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             console.log('Step 2: Clicking Clear script option...');
             const clearResult = await clickBySelector({
               selector: 'div.goog-menuitem-content',
-              elementDescription: 'Clear script menu option'
+              elementDescription: 'Clear script menu option',
+              skipReload: true
             });
             
             if (clearResult.success) {
@@ -1118,6 +1146,56 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
   };
 
+  const toggleAllScreenshotPreviews = async () => {
+    if (Object.keys(screenshotPreviews).length > 0) {
+      setScreenshotPreviews({});
+      return;
+    }
+
+    const localResults = results.filter(result =>
+      result.screenshotId &&
+      !result.screenshotId.startsWith('download-') &&
+      !result.screenshotId.startsWith('drive-')
+    );
+
+    if (localResults.length === 0) {
+      toast.info('No local screenshots available for preview');
+      return;
+    }
+
+    const nextPreviews: Record<string, string> = {};
+    let missingCount = 0;
+    let externalCount = 0;
+
+    for (const result of results) {
+      if (!result.screenshotId) continue;
+      if (result.screenshotId.startsWith('download-') || result.screenshotId.startsWith('drive-')) {
+        externalCount += 1;
+        continue;
+      }
+
+      const storageKey = `screenshot_${result.screenshotId}`;
+      const stored = await chromeServices.storage.get<string>([storageKey]);
+      const screenshotData = stored[storageKey];
+      if (screenshotData) {
+        nextPreviews[result.screenshotId] = screenshotData;
+      } else {
+        missingCount += 1;
+      }
+    }
+
+    setScreenshotPreviews(nextPreviews);
+
+    if (externalCount > 0 || missingCount > 0) {
+      const details = [];
+      if (externalCount > 0) details.push(`${externalCount} external`);
+      if (missingCount > 0) details.push(`${missingCount} missing`);
+      toast.info('Some previews are not available', {
+        description: details.join(', ')
+      });
+    }
+  };
+
   const toggleScreenshotPreview = async (screenshotId: string) => {
     if (screenshotPreviews[screenshotId]) {
       // Remove from previews
@@ -1239,11 +1317,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             </TabsList>
             
             {/* Setup Tab */}
-            <TabsContent value="setup" className="flex-1 overflow-auto space-y-6">
+            <TabsContent value="setup" className="flex-1 overflow-auto space-y-6 px-1">
               <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <Label>Models</Label>
+                    <Label className="mb-2 block">Models</Label>
                     <div className="mt-2 space-y-4">
                       {Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => (
                         <div key={providerKey} className="space-y-2">
@@ -1298,10 +1376,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="mode">Mode</Label>
+                  <div className="overflow-visible">
+                    <Label htmlFor="mode" className="mb-2 block">Mode</Label>
                     <Select value={config.modeSelection} onValueChange={(value) => updateConfig({ modeSelection: value })}>
-                      <SelectTrigger id="mode">
+                      <SelectTrigger id="mode" className="focus:ring-offset-0">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1327,9 +1405,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </div>
 
                   <div>
-                    <Label htmlFor="interval" className="flex items-center gap-2">
+                    <Label htmlFor="interval" className="mb-2 block">
                       Interval Between Tests (s)
-                      <span className="text-xs text-muted-foreground">(Optional)</span>
                     </Label>
                     <Input
                       id="interval"
@@ -1346,9 +1423,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </div>
                   
                   <div>
-                    <Label htmlFor="timeout" className="flex items-center gap-2">
+                    <Label htmlFor="timeout" className="mb-2 block">
                       Test Timeout (s)
-                      <span className="text-xs text-muted-foreground">(Optional)</span>
                     </Label>
                     <Input
                       id="timeout"
@@ -1368,11 +1444,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </div>
                 </div>
                 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
-                    <Label htmlFor="helicone-key" className="flex items-center gap-2">
-                      Helicone API Key
-                      <span className="text-xs text-muted-foreground">(Optional)</span>
+                    <Label htmlFor="helicone-key" className="mb-2 block">
+                      Helicone API Key <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </Label>
                     <div className="relative">
                       <Input
@@ -1401,11 +1476,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </div>
                   
                   <div>
-                    <Label htmlFor="session-id" className="flex items-center gap-2">
-                      Session ID
-                      <span className="text-xs text-muted-foreground">(Optional)</span>
+                    <Label htmlFor="session-id" className="mb-2 block">
+                      Session ID <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </Label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       <Input
                         id="session-id"
                         value={config.sessionId}
@@ -1423,14 +1497,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </div>
                   </div>
                   
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="screenshotStorage" className="flex items-center gap-2">
+                  <div className="space-y-4">
+                    <div className="overflow-visible">
+                      <Label htmlFor="screenshotStorage" className="mb-2 block">
                         Screenshot Storage
-                        <span className="text-xs text-muted-foreground">(Optional)</span>
                       </Label>
                       <Select value={config.screenshotStorage} onValueChange={(value) => updateConfig({ screenshotStorage: value as 'local' | 'downloads' | 'google-drive' })}>
-                        <SelectTrigger>
+                        <SelectTrigger className="focus:ring-offset-0">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1448,13 +1521,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
                     {config.screenshotStorage === 'google-drive' && (
                       <>
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-                          <h4 className="font-medium text-blue-900 mb-2">Google Drive Setup Required</h4>
-                          <p className="text-sm text-blue-800 mb-3">
+                        <div className="p-4 bg-muted/50 border border-border rounded-md">
+                          <h4 className="font-medium text-foreground mb-2">Google Drive Setup Required</h4>
+                          <p className="text-sm text-muted-foreground mb-3">
                             To use Google Drive storage, you need to configure OAuth2 authentication:
                           </p>
-                          <ol className="text-sm text-blue-800 space-y-1 ml-4">
-                            <li>1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
+                          <ol className="text-sm text-muted-foreground space-y-1 ml-4">
+                            <li>1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline text-primary">Google Cloud Console</a></li>
                             <li>2. Create OAuth2 credentials for Chrome Extension</li>
                             <li>3. Enable Google Drive API</li>
                             <li>4. Update manifest.json with your client_id</li>
@@ -1462,9 +1535,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           </ol>
                         </div>
                         <div>
-                          <Label htmlFor="drive-folder-id" className="flex items-center gap-2">
-                            Drive Folder ID
-                            <span className="text-xs text-muted-foreground">(Optional)</span>
+                          <Label htmlFor="drive-folder-id" className="mb-2 block">
+                            Drive Folder ID <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                           </Label>
                           <Input
                             id="drive-folder-id"
@@ -1479,6 +1551,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         <div>
                           <Button
                             variant="outline"
+                            size="sm"
                             onClick={async () => {
                               try {
                                 await authenticateGoogleDrive();
@@ -1496,10 +1569,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       </>
                     )}
                   </div>
-                  
-                  <div className="pt-4">
+
+                  <div className="flex gap-2 pt-2">
                     <Button
                       variant="outline"
+                      size="sm"
                       onClick={async () => {
                         console.log('Testing connection...');
                         try {
@@ -1531,9 +1605,6 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     >
                       Test Connection
                     </Button>
-                  </div>
-                  
-                  <div className="pt-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1596,21 +1667,22 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             </TabsContent>
             
             {/* Prompts Tab */}
-            <TabsContent value="prompts" className="flex-1 overflow-hidden flex flex-col space-y-4">
-              <div className="flex gap-4 items-end">
-                <div className="flex-1">
-                  <Label htmlFor="new-prompt">Add New Prompt</Label>
+            <TabsContent value="prompts" className="flex-1 overflow-hidden flex flex-col space-y-4 px-1">
+              <div className="space-y-3">
+                <Label htmlFor="new-prompt" className="block">Add New Prompt</Label>
+                <div className="flex gap-3 items-end">
                   <Textarea
                     id="new-prompt"
                     value={promptText}
                     onChange={(e) => setPromptText(e.target.value)}
                     placeholder="Enter a test prompt..."
                     rows={3}
+                    className="flex-1 focus:ring-offset-0"
                   />
+                  <Button onClick={addPrompt} disabled={!promptText.trim()} size="sm">
+                    Add Prompt
+                  </Button>
                 </div>
-                <Button onClick={addPrompt} disabled={!promptText.trim()}>
-                  Add Prompt
-                </Button>
               </div>
               
               <div className="flex gap-2 items-center">
@@ -1646,7 +1718,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">Test Prompts ({config.prompts.length})</h3>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center overflow-visible">
                       <Select
                         value={downloadFormat}
                         onValueChange={(value) => {
@@ -1657,7 +1729,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           }
                         }}
                       >
-                        <SelectTrigger className="h-8 px-3 text-sm">
+                        <SelectTrigger className="h-8 w-[120px] text-sm focus:ring-offset-0">
                           <SelectValue placeholder="Download" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1677,12 +1749,12 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </div>
                   </div>
                   
-                  {config.prompts.map((prompt, index) => (
+                  {pagedPrompts.map((prompt, index) => (
                     <Card key={prompt.id} className="p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary">#{index + 1}</Badge>
+                            <Badge variant="secondary">#{promptsPageStart + index + 1}</Badge>
                             {prompt.description && (
                               <span className="text-sm text-muted-foreground">{prompt.description}</span>
                             )}
@@ -1700,12 +1772,37 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       </div>
                     </Card>
                   ))}
+                  {config.prompts.length > LIST_PAGE_SIZE && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {promptsPageStart + 1}-{promptsPageEnd} of {config.prompts.length}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPromptsPage((prev) => Math.max(1, prev - 1))}
+                          disabled={promptsPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPromptsPage((prev) => Math.min(promptsPageCount, prev + 1))}
+                          disabled={promptsPage === promptsPageCount}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>
             
             {/* Run Tests Tab */}
-            <TabsContent value="run" className="flex-1 space-y-6">
+            <TabsContent value="run" className="flex-1 space-y-6 px-1">
               <div className="grid grid-cols-3 gap-4">
                 <Card className="p-4">
                   <div className="text-2xl font-bold">{totalTests}</div>
@@ -1779,7 +1876,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <h3 className="text-lg font-medium">Recent Results</h3>
                 <div className="max-h-96 overflow-auto space-y-2">
                   {results.slice(-5).reverse().map((result, index) => (
-                    <Card key={result.id} className={`p-3 ${result.success ? 'border-green-200' : 'border-red-200'}`}>
+                    <Card key={result.id} className={`p-3 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -1797,7 +1894,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           {result.success ? (
                             <p className="text-sm text-muted-foreground line-clamp-2">{result.response}</p>
                           ) : (
-                            <p className="text-sm text-red-600">{result.error}</p>
+                            <p className="text-sm text-destructive">{result.error}</p>
                           )}
                         </div>
                       </div>
@@ -1808,22 +1905,26 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             </TabsContent>
             
             {/* Results Tab */}
-            <TabsContent value="results" className="flex-1 overflow-hidden flex flex-col space-y-4">
-              <div className="flex items-center justify-between">
+            <TabsContent value="results" className="flex-1 overflow-hidden flex flex-col space-y-4 px-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={toggleAllScreenshotPreviews} variant="outline" size="sm" disabled={results.length === 0}>
+                    <FileText className="h-4 w-4 mr-1.5" />
+                    {Object.keys(screenshotPreviews).length > 0 ? 'Hide Previews' : 'Show Previews'}
+                  </Button>
                   <Button onClick={downloadResultsBundle} variant="outline" size="sm" disabled={results.length === 0}>
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className="h-4 w-4 mr-1.5" />
                     Download Results
                   </Button>
                   {results.some(r => r.screenshotId) && (
                     <Button onClick={downloadAllScreenshots} variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download All Screenshots
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Download Screenshots
                     </Button>
                   )}
-                  <Button onClick={exportResults} disabled={results.length === 0} variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
+                  <Button onClick={exportResults} disabled={results.length === 0} variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-1.5" />
                     Export CSV
                   </Button>
                 </div>
@@ -1831,13 +1932,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
               
               <div className="flex-1 overflow-auto">
                 <div className="space-y-2">
-                  {results.map((result, index) => (
-                    <Card key={result.id} className={`p-4 ${result.success ? 'border-green-200' : 'border-red-200'}`}>
+                  {pagedResults.map((result, index) => (
+                    <Card key={result.id} className={`p-4 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant={result.success ? "default" : "destructive"}>
-                              #{index + 1} - {result.success ? 'Success' : 'Failed'}
+                              #{resultsPageStart + index + 1} - {result.success ? 'Success' : 'Failed'}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
                               {result.timestamp.toLocaleString()}
@@ -1852,31 +1953,31 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                               onClick={() => toggleScreenshotPreview(result.screenshotId!)}
                               className="inline-flex items-center"
                             >
-                              <Badge variant="outline" className="cursor-pointer hover:bg-blue-50 transition-colors">
+                              <Badge variant="outline" className="cursor-pointer hover:bg-muted transition-colors">
                                 <FileText className="h-3 w-3 mr-1" />
                                 {screenshotPreviews[result.screenshotId!] ? 'Hide Preview' : 'Show Preview'}
                               </Badge>
                             </button>
                           )}
                         </div>
-                        
+
                         <div>
                           <h4 className="font-medium text-sm mb-1">Prompt:</h4>
-                          <p className="text-sm bg-gray-50 p-2 rounded">{result.prompt}</p>
+                          <p className="text-sm bg-muted/50 p-2 rounded">{result.prompt}</p>
                         </div>
-                        
+
                         {result.success ? (
                           <div>
                             <h4 className="font-medium text-sm mb-1">Response:</h4>
-                            <p className="text-sm bg-green-50 p-2 rounded">{result.response}</p>
+                            <p className="text-sm bg-primary/5 p-2 rounded">{result.response}</p>
                           </div>
                         ) : (
                           <div>
                             <h4 className="font-medium text-sm mb-1">Error:</h4>
-                            <p className="text-sm bg-red-50 p-2 rounded text-red-600">{result.error}</p>
+                            <p className="text-sm bg-destructive/10 p-2 rounded text-destructive">{result.error}</p>
                           </div>
                         )}
-                        
+
                         {result.screenshotId && screenshotPreviews[result.screenshotId] && (
                           <div>
                             <div className="flex items-center justify-between mb-2">
@@ -1890,7 +1991,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                                 Download
                               </Button>
                             </div>
-                            <div className="bg-gray-50 p-2 rounded">
+                            <div className="bg-muted/50 p-2 rounded">
                               <img
                                 src={screenshotPreviews[result.screenshotId]}
                                 alt={`Screenshot for test ${index + 1}`}
@@ -1903,6 +2004,31 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       </div>
                     </Card>
                   ))}
+                  {results.length > LIST_PAGE_SIZE && (
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        Showing {resultsPageStart + 1}-{resultsPageEnd} of {results.length}
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setResultsPage((prev) => Math.max(1, prev - 1))}
+                          disabled={resultsPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setResultsPage((prev) => Math.min(resultsPageCount, prev + 1))}
+                          disabled={resultsPage === resultsPageCount}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </TabsContent>

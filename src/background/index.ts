@@ -169,9 +169,13 @@ async function validateServerIdentity(host: string, port: number): Promise<boole
 }
 
 // Forward message to Earth Engine tab with improved error handling and retries
-export async function sendMessageToEarthEngineTab(message: any, options?: { timeout?: number, retries?: number }): Promise<any> {
+export async function sendMessageToEarthEngineTab(
+  message: any,
+  options?: { timeout?: number; retries?: number; allowReload?: boolean }
+): Promise<any> {
   const timeout = options?.timeout || CONTENT_SCRIPT_PING_TIMEOUT;
   const maxRetries = options?.retries || MAX_TAB_ACTION_RETRIES;
+  const allowReload = options?.allowReload ?? message?.payload?.skipReload !== true;
   let retryCount = 0;
   
   console.log('Forwarding message to Earth Engine tab:', message);
@@ -217,6 +221,13 @@ export async function sendMessageToEarthEngineTab(message: any, options?: { time
           };
         }
         
+        if (!allowReload) {
+          retryCount++;
+          console.log(`Skipping tab reload; retrying ping (attempt ${retryCount}/${maxRetries})...`);
+          await new Promise(resolve => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
+          return attemptSend();
+        }
+
         // Try to reload the content script by refreshing the tab
         try {
           console.log(`Attempting to reload content script in tab ${tabId}...`);
