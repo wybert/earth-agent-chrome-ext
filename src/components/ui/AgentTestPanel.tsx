@@ -140,6 +140,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
   const [profiles, setProfiles] = useState<AgentProfile[]>([]);
   const [downloadFormat, setDownloadFormat] = useState<string>('');
+  const [resultsDownloadFormat, setResultsDownloadFormat] = useState<string>('');
   const [promptsPage, setPromptsPage] = useState(1);
   const [resultsPage, setResultsPage] = useState(1);
   const [screenshotPreviews, setScreenshotPreviews] = useState<Record<string, string>>({});
@@ -1379,7 +1380,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   <div className="overflow-visible">
                     <Label htmlFor="mode" className="mb-2 block">Mode</Label>
                     <Select value={config.modeSelection} onValueChange={(value) => updateConfig({ modeSelection: value })}>
-                      <SelectTrigger id="mode" className="focus:ring-offset-0">
+                      <SelectTrigger id="mode">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1503,7 +1504,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         Screenshot Storage
                       </Label>
                       <Select value={config.screenshotStorage} onValueChange={(value) => updateConfig({ screenshotStorage: value as 'local' | 'downloads' | 'google-drive' })}>
-                        <SelectTrigger className="focus:ring-offset-0">
+                        <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1512,10 +1513,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           <SelectItem value="google-drive">Google Drive (Cloud)</SelectItem>
                         </SelectContent>
                       </Select>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {config.screenshotStorage === 'local' && '⚠️ Limited to ~20 screenshots due to browser storage limits'}
                         {config.screenshotStorage === 'downloads' && '✅ Unlimited storage - saves to Downloads/earth-agent-screenshots/'}
-                        {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires API key below'}
+                        {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires OAuth2 setup below'}
                       </p>
                     </div>
 
@@ -1677,7 +1678,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     onChange={(e) => setPromptText(e.target.value)}
                     placeholder="Enter a test prompt..."
                     rows={3}
-                    className="flex-1 focus:ring-offset-0"
+                    className="flex-1"
                   />
                   <Button onClick={addPrompt} disabled={!promptText.trim()} size="sm">
                     Add Prompt
@@ -1729,7 +1730,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           }
                         }}
                       >
-                        <SelectTrigger className="h-8 w-[120px] text-sm focus:ring-offset-0">
+                        <SelectTrigger className="h-8 w-[120px] text-sm">
                           <SelectValue placeholder="Download" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1908,25 +1909,39 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             <TabsContent value="results" className="flex-1 overflow-hidden flex flex-col space-y-4 px-1">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center overflow-visible">
                   <Button onClick={toggleAllScreenshotPreviews} variant="outline" size="sm" disabled={results.length === 0}>
                     <FileText className="h-4 w-4 mr-1.5" />
                     {Object.keys(screenshotPreviews).length > 0 ? 'Hide Previews' : 'Show Previews'}
                   </Button>
-                  <Button onClick={downloadResultsBundle} variant="outline" size="sm" disabled={results.length === 0}>
-                    <Download className="h-4 w-4 mr-1.5" />
-                    Download Results
-                  </Button>
-                  {results.some(r => r.screenshotId) && (
-                    <Button onClick={downloadAllScreenshots} variant="outline" size="sm">
+                  <Select
+                    value={resultsDownloadFormat}
+                    onValueChange={(value) => {
+                      setResultsDownloadFormat(value);
+                      if (value === 'bundle') {
+                        downloadResultsBundle();
+                        setResultsDownloadFormat('');
+                      } else if (value === 'screenshots') {
+                        downloadAllScreenshots();
+                        setResultsDownloadFormat('');
+                      } else if (value === 'csv') {
+                        exportResults();
+                        setResultsDownloadFormat('');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[130px] text-sm" disabled={results.length === 0}>
                       <Download className="h-4 w-4 mr-1.5" />
-                      Download Screenshots
-                    </Button>
-                  )}
-                  <Button onClick={exportResults} disabled={results.length === 0} variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-1.5" />
-                    Export CSV
-                  </Button>
+                      <SelectValue placeholder="Download" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bundle">Results (ZIP)</SelectItem>
+                      {results.some(r => r.screenshotId) && (
+                        <SelectItem value="screenshots">All Screenshots</SelectItem>
+                      )}
+                      <SelectItem value="csv">Export CSV</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
