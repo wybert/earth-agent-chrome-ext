@@ -704,7 +704,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     );
     streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
-    streamOptions.stopWhen = stepCountIs(12); // Stop after 12 steps
+    streamOptions.stopWhen = stepCountIs(50); // Allow up to 50 reasoning/tool steps
     
     // For Anthropic models, add special headers for browser usage
     if (provider === 'anthropic') {
