@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,9 +10,23 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
 import { screenshot } from '@/lib/tools/browser/screenshot';
 import { clickBySelector } from '@/lib/tools/browser/clickBySelector';
+import { chromeServices } from '@/lib/services/chrome-storage-service';
+
+// Validation constants
+const VALIDATION = {
+  MIN_INTERVAL_MS: 1000,     // 1 second minimum
+  MAX_INTERVAL_MS: 300000,   // 5 minutes maximum
+  MIN_TIMEOUT_MS: 10000,     // 10 seconds minimum
+  MAX_TIMEOUT_MS: 300000,    // 5 minutes maximum
+  MAX_PROMPTS: 1000,         // Rate limiting
+  MAX_PREVIEW_COUNT: 10,     // Maximum screenshot previews in memory
+  DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/,
+  OLLAMA_MODEL_PATTERN: /^[a-zA-Z0-9][a-zA-Z0-9_-]*(:[a-zA-Z0-9][a-zA-Z0-9._-]*)?$/,
+};
 
 interface TestPrompt {
   id: string;
@@ -147,24 +161,85 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [screenshotPreviews, setScreenshotPreviews] = useState<Record<string, string>>({});
-  
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  const [currentTestStartTime, setCurrentTestStartTime] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const testTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isRunningRef = useRef(false);
 
-  // Update the ref whenever isRunning state changes
-  useEffect(() => {
-    isRunningRef.current = isRunning;
-  }, [isRunning]);
+  // Cleanup refs for memory leak prevention
+  const activeTimeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
+  const activePortsRef = useRef<Set<chrome.runtime.Port>>(new Set());
+  const testPortRef = useRef<chrome.runtime.Port | null>(null);
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const configChangedRef = useRef(false);
 
-  // Load stored configuration
+  // Sync setter for isRunning to avoid stale closures
+  const setIsRunningWithRef = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setIsRunning((prev) => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+      isRunningRef.current = newValue;
+      return newValue;
+    });
+  }, []);
+
+  // Update elapsed time during test execution
   useEffect(() => {
-    if (isOpen) {
-      chrome.storage.local.get(['agentTestConfig'], (result) => {
+    if (!isRunning || !currentTestStartTime) {
+      setElapsedTime(0);
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - currentTestStartTime) / 1000));
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isRunning, currentTestStartTime]);
+
+  // Cleanup all resources on unmount
+  useEffect(() => {
+    return () => {
+      // Clear all active timeouts
+      activeTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      activeTimeoutsRef.current.clear();
+
+      // Disconnect all active ports
+      activePortsRef.current.forEach(port => {
+        try { port.disconnect(); } catch (e) { /* already disconnected */ }
+      });
+      activePortsRef.current.clear();
+
+      // Clear test port
+      if (testPortRef.current) {
+        try { testPortRef.current.disconnect(); } catch (e) { /* already disconnected */ }
+        testPortRef.current = null;
+      }
+
+      // Clear save timer
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Load stored configuration with loading state
+  useEffect(() => {
+    if (!isOpen) {
+      setIsLoadingConfig(false);
+      return;
+    }
+
+    setIsLoadingConfig(true);
+    chromeServices.storage.get<Partial<TestConfiguration>>(['agentTestConfig'])
+      .then((result) => {
         if (result.agentTestConfig) {
           console.log('Loading stored config:', result.agentTestConfig);
-          setConfig(prev => ({ 
-            ...prev, 
+          setConfig(prev => ({
+            ...prev,
             ...result.agentTestConfig,
             // Always generate a new session ID but keep other settings
             sessionId: `test-session-${Date.now()}`,
@@ -172,30 +247,58 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             timeoutMs: result.agentTestConfig.timeoutMs || 60000
           }));
         }
+      })
+      .catch((error) => {
+        console.error('Failed to load config:', error);
+        toast.error('Failed to load saved configuration');
+      })
+      .finally(() => {
+        setIsLoadingConfig(false);
       });
-    }
   }, [isOpen]);
 
-  // Save configuration changes (excluding prompts and sessionId which are session-specific)
+  // Track when config changes
   useEffect(() => {
-    if (isOpen) {
-      const configToSave = {
-        provider: config.provider,
-        model: config.model,
-        heliconeApiKey: config.heliconeApiKey,
-        intervalMs: config.intervalMs,
-        timeoutMs: config.timeoutMs,
-        enableScreenshots: config.enableScreenshots,
-        clearCodeBeforeTest: config.clearCodeBeforeTest,
-        resetMapBeforeTest: config.resetMapBeforeTest,
-        reloadGeeEditor: config.reloadGeeEditor,
-        screenshotStorage: config.screenshotStorage,
-        driveFolderId: config.driveFolderId
-      };
-      console.log('Saving config to storage:', configToSave);
-      chrome.storage.local.set({ agentTestConfig: configToSave });
+    configChangedRef.current = true;
+  }, [config]);
+
+  // Debounced save - reduces storage writes from 11 deps to 2
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
     }
-  }, [config.provider, config.model, config.heliconeApiKey, config.intervalMs, config.timeoutMs, config.enableScreenshots, config.clearCodeBeforeTest, config.resetMapBeforeTest, config.reloadGeeEditor, config.screenshotStorage, config.driveFolderId, isOpen]);
+
+    saveTimerRef.current = setTimeout(() => {
+      if (configChangedRef.current) {
+        const configToSave = {
+          provider: config.provider,
+          model: config.model,
+          heliconeApiKey: config.heliconeApiKey,
+          intervalMs: config.intervalMs,
+          timeoutMs: config.timeoutMs,
+          enableScreenshots: config.enableScreenshots,
+          clearCodeBeforeTest: config.clearCodeBeforeTest,
+          resetMapBeforeTest: config.resetMapBeforeTest,
+          reloadGeeEditor: config.reloadGeeEditor,
+          screenshotStorage: config.screenshotStorage,
+          driveFolderId: config.driveFolderId
+        };
+        chromeServices.storage.set({ agentTestConfig: configToSave })
+          .catch((error) => {
+            console.error('Failed to save config:', error);
+          });
+        configChangedRef.current = false;
+      }
+    }, 500); // 500ms debounce
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [isOpen, config]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
     // If provider is changing to Ollama and no model is specified, set default
@@ -214,13 +317,19 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
   const addPrompt = () => {
     if (!promptText.trim()) return;
-    
+
+    // Rate limiting check
+    if (config.prompts.length >= VALIDATION.MAX_PROMPTS) {
+      toast.error(`Maximum ${VALIDATION.MAX_PROMPTS} prompts allowed`);
+      return;
+    }
+
     const newPrompt: TestPrompt = {
       id: `prompt-${Date.now()}`,
       text: promptText.trim(),
       description: 'Custom prompt'
     };
-    
+
     updateConfig({ prompts: [...config.prompts, newPrompt] });
     setPromptText('');
   };
@@ -234,25 +343,37 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     if (!file) return;
 
     setUploadedFile(file);
-    
+
     try {
       const text = await file.text();
       let prompts: TestPrompt[] = [];
-      
+
       if (file.name.endsWith('.json')) {
-        const data = JSON.parse(text);
-        if (Array.isArray(data)) {
-          prompts = data.map((item, index) => ({
-            id: `uploaded-${index}`,
-            text: typeof item === 'string' ? item : item.text || item.prompt || '',
-            description: typeof item === 'object' ? item.description : `Uploaded prompt ${index + 1}`
-          }));
+        try {
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) {
+            prompts = data.map((item, index) => ({
+              id: `uploaded-${index}`,
+              text: typeof item === 'string' ? item : item.text || item.prompt || '',
+              description: typeof item === 'object' ? item.description : `Uploaded prompt ${index + 1}`
+            }));
+          } else {
+            toast.error('Invalid JSON format', { description: 'Expected an array of prompts' });
+            return;
+          }
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          toast.error('Invalid JSON file', {
+            description: parseError instanceof Error ? parseError.message : 'Could not parse file contents',
+            duration: 5000,
+          });
+          return;
         }
       } else if (file.name.endsWith('.csv')) {
         const lines = text.split('\n').filter(line => line.trim());
         const hasHeader = lines[0]?.toLowerCase().includes('prompt') || lines[0]?.toLowerCase().includes('text');
         const startIndex = hasHeader ? 1 : 0;
-        
+
         prompts = lines.slice(startIndex).map((line, index) => {
           const columns = line.split(',').map(col => col.trim().replace(/^"(.*)"$/, '$1'));
           return {
@@ -261,15 +382,33 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             description: columns[1] || `Uploaded prompt ${index + 1}`
           };
         });
+      } else {
+        toast.error('Unsupported file format', { description: 'Please upload a .json or .csv file' });
+        return;
       }
-      
-      if (prompts.length > 0) {
-        updateConfig({ prompts: [...config.prompts, ...prompts.filter(p => p.text)] });
+
+      const validPrompts = prompts.filter(p => p.text);
+      if (validPrompts.length > 0) {
+        // Check rate limit
+        const totalPrompts = config.prompts.length + validPrompts.length;
+        if (totalPrompts > VALIDATION.MAX_PROMPTS) {
+          toast.warning(`Only adding first ${VALIDATION.MAX_PROMPTS - config.prompts.length} prompts (limit: ${VALIDATION.MAX_PROMPTS})`);
+          const allowedCount = VALIDATION.MAX_PROMPTS - config.prompts.length;
+          updateConfig({ prompts: [...config.prompts, ...validPrompts.slice(0, allowedCount)] });
+        } else {
+          updateConfig({ prompts: [...config.prompts, ...validPrompts] });
+          toast.success(`Added ${validPrompts.length} prompts`);
+        }
+      } else {
+        toast.warning('No valid prompts found in file');
       }
     } catch (error) {
       console.error('Error processing uploaded file:', error);
+      toast.error('Failed to process file', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
-    
+
     // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -279,53 +418,35 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
   // Add new storage functions
   const saveScreenshotDownloads = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
+    // Convert data URL to blob
+    const response = await fetch(screenshotData);
+    const blob = await response.blob();
+
+    // Create safe filename
+    const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `earth-agent-test-${testId}-${safePromptText}-${timestamp}.png`;
+
+    // Create ObjectURL and ensure it gets revoked
+    const url = URL.createObjectURL(blob);
     try {
-      // Convert data URL to blob
-      const response = await fetch(screenshotData);
-      const blob = await response.blob();
-      
-      // Create safe filename
-      const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `earth-agent-test-${testId}-${safePromptText}-${timestamp}.png`;
-      
-      // Use Downloads API
-      const downloadId = await new Promise<number>((resolve, reject) => {
-        chrome.downloads.download({
-          url: URL.createObjectURL(blob),
-          filename: `earth-agent-screenshots/${config.sessionId}/${filename}`,
-          saveAs: false
-        }, (downloadId) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve(downloadId);
-          }
-        });
+      const downloadId = await chromeServices.downloads.download({
+        url,
+        filename: `earth-agent-screenshots/${config.sessionId}/${filename}`,
+        saveAs: false
       });
-      
       return `download-${downloadId}`;
-    } catch (error) {
-      console.error('Error saving screenshot to downloads:', error);
-      throw error;
+    } finally {
+      // Always revoke to prevent memory leak
+      URL.revokeObjectURL(url);
     }
   };
 
   const authenticateGoogleDrive = async (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      // Use Chrome Identity API for OAuth2 authentication
-      chrome.identity.getAuthToken({
-        interactive: true,
-        scopes: ['https://www.googleapis.com/auth/drive.file']
-      }, (token) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(`Google Drive authentication failed: ${chrome.runtime.lastError.message}`));
-        } else if (token) {
-          resolve(token);
-        } else {
-          reject(new Error('No access token received'));
-        }
-      });
+    // Uses chromeServices which has a 60-second timeout built in
+    return chromeServices.identity.getAuthToken({
+      interactive: true,
+      scopes: ['https://www.googleapis.com/auth/drive.file']
     });
   };
 
@@ -381,15 +502,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     switch (config.screenshotStorage) {
       case 'downloads':
         return await saveScreenshotDownloads(screenshotData, testId, promptText);
-      
+
       case 'google-drive':
         return await saveScreenshotGoogleDrive(screenshotData, testId, promptText);
-      
+
       case 'local':
       default:
         // Keep existing local storage for small-scale testing
         const screenshotId = `screenshot-${testId}-${Date.now()}`;
-        chrome.storage.local.set({
+        await chromeServices.storage.set({
           [`screenshot_${screenshotId}`]: screenshotData
         });
         return screenshotId;
@@ -620,18 +741,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   };
 
   const runTests = async () => {
-    console.log('runTests called');
-    console.log('Current config:', config);
-    console.log('Prompts length:', config.prompts.length);
-    
+    console.log('runTests called, prompts:', config.prompts.length);
+
     if (config.prompts.length === 0) {
-      console.log('No prompts configured, returning early');
+      toast.warning('No prompts configured');
       return;
     }
-    
+
     console.log('Starting tests...');
-    setIsRunning(true);
-    isRunningRef.current = true;
+    setIsRunningWithRef(true);
     setCurrentTestIndex(0);
     setResults([]);
     setTestProgress(0);
@@ -642,56 +760,52 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         console.log('Tests stopped by user at index', i);
         break;
       }
-      
+
       console.log(`Running test ${i + 1}/${config.prompts.length}`);
       setCurrentTestIndex(i);
+      setCurrentTestStartTime(Date.now());
       const prompt = config.prompts[i];
-      
-      try {
-        const result = await executeTest(prompt);
-        console.log('Test result:', result);
-        setResults(prev => [...prev, result]);
-        
-        const progress = ((i + 1) / config.prompts.length) * 100;
-        setTestProgress(progress);
-        
-        // Wait for interval before next test (except for last test)
-        if (i < config.prompts.length - 1) {
-          console.log(`Waiting ${config.intervalMs}ms before next test`);
-          await new Promise(resolve => {
-            testTimeoutRef.current = setTimeout(resolve, config.intervalMs);
-          });
-        }
-      } catch (error) {
-        console.error('Error in test execution:', error);
-        // Continue with next test even if one fails
-        const errorResult: TestResult = {
-          id: `result-${Date.now()}`,
-          prompt: prompt.text,
-          response: '',
-          provider: config.provider,
-          model: config.model,
-          timestamp: new Date(),
-          duration: 0,
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        };
-        setResults(prev => [...prev, errorResult]);
+
+      const result = await executeTest(prompt);
+      console.log('Test result:', result);
+      setResults(prev => [...prev, result]);
+
+      const progress = ((i + 1) / config.prompts.length) * 100;
+      setTestProgress(progress);
+      setCurrentTestStartTime(null);
+
+      // Wait for interval before next test (except for last test)
+      if (i < config.prompts.length - 1 && isRunningRef.current) {
+        console.log(`Waiting ${config.intervalMs}ms before next test`);
+        await new Promise(resolve => {
+          testTimeoutRef.current = setTimeout(resolve, config.intervalMs);
+        });
       }
     }
-    
+
     console.log('Tests completed');
-    setIsRunning(false);
-    isRunningRef.current = false;
+    setIsRunningWithRef(false);
+    setCurrentTestStartTime(null);
+    toast.success(`Tests completed: ${results.length + 1} tests run`);
   };
 
-  const stopTests = () => {
-    setIsRunning(false);
-    isRunningRef.current = false;
+  const stopTests = useCallback(() => {
+    setIsRunningWithRef(false);
+    setCurrentTestStartTime(null);
+
     if (testTimeoutRef.current) {
       clearTimeout(testTimeoutRef.current);
+      testTimeoutRef.current = null;
     }
-  };
+
+    // Disconnect test port
+    if (testPortRef.current) {
+      try { testPortRef.current.disconnect(); } catch (e) { /* already disconnected */ }
+      testPortRef.current = null;
+    }
+
+    toast.info('Tests stopped');
+  }, [setIsRunningWithRef]);
 
   const resetTests = () => {
     setResults([]);
@@ -730,7 +844,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       // Handle different storage types
       if (screenshotId.startsWith('download-')) {
         // Already downloaded to filesystem
-        alert('Screenshot was already saved to your Downloads folder');
+        toast.info('Screenshot already saved to Downloads folder');
         return;
       } else if (screenshotId.startsWith('drive-')) {
         // Open Google Drive file
@@ -740,14 +854,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       } else {
         // Local storage
         const storageKey = `screenshot_${screenshotId}`;
-        const result = await chrome.storage.local.get([storageKey]);
+        const result = await chromeServices.storage.get<string>([storageKey]);
         const screenshotData = result[storageKey];
-        
+
         if (!screenshotData) {
           console.error('Screenshot not found in storage');
+          toast.error('Screenshot not found', { description: 'It may have been deleted from storage' });
           return;
         }
-        
+
         // Convert data URL to blob and download
         const link = document.createElement('a');
         link.href = screenshotData;
@@ -755,9 +870,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
         link.download = `screenshot_${safePromptText}_${screenshotId}.png`;
         link.click();
+        toast.success('Screenshot downloaded');
       }
     } catch (error) {
       console.error('Error downloading screenshot:', error);
+      toast.error('Failed to download screenshot', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   };
 
@@ -777,39 +896,96 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
   };
 
-    const toggleScreenshotPreview = async (screenshotId: string) => {
+  const toggleScreenshotPreview = async (screenshotId: string) => {
     if (screenshotPreviews[screenshotId]) {
       // Remove from previews
       const newPreviews = { ...screenshotPreviews };
       delete newPreviews[screenshotId];
       setScreenshotPreviews(newPreviews);
     } else {
+      // Check preview limit before loading
+      const currentCount = Object.keys(screenshotPreviews).length;
+      if (currentCount >= VALIDATION.MAX_PREVIEW_COUNT) {
+        toast.warning(`Maximum ${VALIDATION.MAX_PREVIEW_COUNT} previews shown`, {
+          description: 'Close some previews to view more'
+        });
+        return;
+      }
+
       // Load and show preview
       try {
         if (screenshotId.startsWith('download-') || screenshotId.startsWith('drive-')) {
           // Can't preview files from downloads or drive directly
-          alert('Preview not available for external storage. Use download/view button instead.');
+          toast.info('Preview not available for external storage', {
+            description: 'Use download/view button instead'
+          });
           return;
         }
 
         // Local storage
         const storageKey = `screenshot_${screenshotId}`;
-        const result = await chrome.storage.local.get([storageKey]);
+        const result = await chromeServices.storage.get<string>([storageKey]);
         const screenshotData = result[storageKey];
-    
+
         if (screenshotData) {
           setScreenshotPreviews(prev => ({
             ...prev,
             [screenshotId]: screenshotData
           }));
+        } else {
+          toast.error('Screenshot not found');
         }
       } catch (error) {
         console.error('Error loading screenshot preview:', error);
+        toast.error('Failed to load preview');
       }
     }
   };
 
+  // Close handler with confirmation when tests are running
+  const handleClose = useCallback(() => {
+    if (isRunning) {
+      const confirmStop = window.confirm(
+        'Tests are still running. Stop tests and close panel?'
+      );
+      if (!confirmStop) return;
+      stopTests();
+    }
+    onClose();
+  }, [isRunning, onClose, stopTests]);
+
+  // Helper for estimated remaining time
+  const formatEstimatedTime = (
+    completedResults: TestResult[],
+    remainingCount: number,
+    intervalMs: number
+  ): string => {
+    if (completedResults.length === 0 || remainingCount === 0) return 'calculating...';
+
+    const avgDuration = completedResults.reduce((sum, r) => sum + r.duration, 0) / completedResults.length;
+    const totalMs = remainingCount * (avgDuration + intervalMs);
+
+    const minutes = Math.floor(totalMs / 60000);
+    const seconds = Math.floor((totalMs % 60000) / 1000);
+
+    return minutes > 0 ? `~${minutes}m ${seconds}s` : `~${seconds}s`;
+  };
+
   if (!isOpen) return null;
+
+  // Show loading state while config is being fetched
+  if (isLoadingConfig) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="p-8">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent" />
+            <span>Loading configuration...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   const remainingTests = config.prompts.length - currentTestIndex;
   const successRate = results.length > 0 ? (results.filter(r => r.success).length / results.length) * 100 : 0;
@@ -819,7 +995,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       <Card className="w-full max-w-6xl h-[90vh] flex flex-col">
         <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-xl font-semibold">Agent Testing Panel</CardTitle>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={handleClose}>
             <X className="h-5 w-5" />
           </Button>
         </CardHeader>
@@ -1020,15 +1196,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             });
                             
                             if (resetResult.success) {
-                              alert('✅ Reset Map/Inspector/Console test successful!');
+                              toast.success('Reset Map/Inspector/Console test successful!');
                               console.log('Reset successful:', resetResult.message);
                             } else {
-                              alert(`❌ Reset test failed: ${resetResult.error}`);
+                              toast.error('Reset test failed', { description: resetResult.error });
                               console.error('Reset failed:', resetResult.error);
                             }
                           } catch (error) {
                             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-                            alert(`❌ Reset test error: ${errorMsg}`);
+                            toast.error('Reset test error', { description: errorMsg });
                             console.error('Reset test error:', error);
                           }
                         }}
@@ -1052,7 +1228,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                              
                              if (directResult.success) {
                                console.log('Direct clear script successful:', directResult.message);
-                               alert('✅ Clear Script successful (direct click)!');
+                               toast.success('Clear Script successful (direct click)!');
                                return;
                              } else {
                                console.log('Direct click failed, trying dropdown approach...');
@@ -1126,19 +1302,21 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                                }
                                
                                if (clearResult.success) {
-                                 alert('✅ Clear Script test successful!');
+                                 toast.success('Clear Script test successful!');
                                  console.log('Clear script successful:', clearResult.message);
                                } else {
-                                 alert(`❌ Clear script test failed: ${clearResult.error}`);
+                                 toast.error('Clear script test failed', { description: clearResult.error });
                                  console.error('Clear script failed:', clearResult.error);
                                }
                              } else {
-                               alert(`❌ Failed to open dropdown. Try manually opening the Reset menu first, then test again.`);
+                               toast.error('Failed to open dropdown', {
+                                 description: 'Try manually opening the Reset menu first, then test again.'
+                               });
                                console.error('All dropdown selectors failed');
                              }
                            } catch (error) {
                              const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-                             alert(`❌ Clear script test error: ${errorMsg}`);
+                             toast.error('Clear script test error', { description: errorMsg });
                              console.error('Clear script test error:', error);
                            }
                          }}
@@ -1207,9 +1385,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                               onClick={async () => {
                                 try {
                                   await authenticateGoogleDrive();
-                                  alert('Google Drive authentication successful!');
+                                  toast.success('Google Drive authentication successful!');
                                 } catch (error) {
-                                  alert(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                  toast.error('Authentication failed', {
+                                    description: error instanceof Error ? error.message : 'Unknown error'
+                                  });
                                 }
                               }}
                             >
@@ -1261,9 +1441,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
+                      onClick={async () => {
                         console.log('Clearing stored configuration...');
-                        chrome.storage.local.remove(['agentTestConfig'], () => {
+                        try {
+                          await chromeServices.storage.remove(['agentTestConfig']);
                           // Reset to default config
                           setConfig({
                             prompts: EXAMPLE_PROMPTS,
@@ -1280,8 +1461,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             screenshotStorage: 'downloads',
                             driveFolderId: ''
                           });
-                          console.log('Configuration cleared and reset to defaults');
-                        });
+                          toast.success('Settings cleared and reset to defaults');
+                        } catch (error) {
+                          toast.error('Failed to clear settings');
+                        }
                       }}
                     >
                       Clear Stored Settings
@@ -1468,10 +1651,27 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 
                 {isRunning && currentTestIndex < config.prompts.length && (
                   <Card className="p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge>Running Test #{currentTestIndex + 1}</Badge>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge>Running Test #{currentTestIndex + 1}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Step {currentTestIndex + 1} of {config.prompts.length}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono text-sm">
+                        <span>{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          / {Math.floor(config.timeoutMs / 1000)}s
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-sm">{config.prompts[currentTestIndex]?.text}</p>
+                    <Progress value={(elapsedTime / (config.timeoutMs / 1000)) * 100} className="h-1 mb-2" />
+                    <p className="text-sm line-clamp-2">{config.prompts[currentTestIndex]?.text}</p>
+                    {results.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Est. remaining: {formatEstimatedTime(results, config.prompts.length - currentTestIndex - 1, config.intervalMs)}
+                      </p>
+                    )}
                   </Card>
                 )}
               </div>
