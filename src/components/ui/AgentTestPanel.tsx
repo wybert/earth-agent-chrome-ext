@@ -15,6 +15,13 @@ import { toast } from 'sonner';
 import { screenshot } from '@/lib/tools/browser/screenshot';
 import { clickBySelector } from '@/lib/tools/browser/clickBySelector';
 import { chromeServices } from '@/lib/services/chrome-storage-service';
+import { AVAILABLE_MODELS, DEFAULT_MODELS, MODEL_DISPLAY_NAMES, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY, type ApiProvider } from '@/constants/models';
+import type { AgentProfile, OpenAICompatibleConfig, Provider } from '@/types/extension';
+import {
+  PROFILES_STORAGE_KEY,
+  inferBaseModeFromTools,
+  migrateProfiles
+} from '@/lib/profiles';
 
 // Validation constants
 const VALIDATION = {
@@ -24,8 +31,7 @@ const VALIDATION = {
   MAX_TIMEOUT_MS: 300000,    // 5 minutes maximum
   MAX_PROMPTS: 1000,         // Rate limiting
   MAX_PREVIEW_COUNT: 10,     // Maximum screenshot previews in memory
-  DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/,
-  OLLAMA_MODEL_PATTERN: /^[a-zA-Z0-9][a-zA-Z0-9_-]*(:[a-zA-Z0-9][a-zA-Z0-9._-]*)?$/,
+  DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/
 };
 
 interface TestPrompt {
@@ -38,7 +44,7 @@ interface TestResult {
   id: string;
   prompt: string;
   response: string;
-  provider: string;
+  provider: Provider;
   model: string;
   timestamp: Date;
   duration: number;
@@ -48,17 +54,19 @@ interface TestResult {
   heliconeRequestId?: string;
 }
 
+interface SelectedModelEntry {
+  provider: Provider;
+  model: string;
+  label: string;
+}
+
 interface TestConfiguration {
   prompts: TestPrompt[];
-  provider: 'openai' | 'anthropic' | 'google' | 'ollama';
-  model: string;
+  selectedModels: string[];
+  modeSelection: string;
   heliconeApiKey: string;
   intervalMs: number;
   timeoutMs: number;
-  enableScreenshots: boolean;
-  clearCodeBeforeTest: boolean;
-  resetMapBeforeTest: boolean;
-  reloadGeeEditor: boolean;
   sessionId: string;
   screenshotStorage: 'local' | 'downloads' | 'google-drive';
   driveFolderId?: string;
@@ -68,45 +76,6 @@ interface AgentTestPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const MODEL_OPTIONS = {
-  openai: [
-    { value: 'gpt-5.2', label: 'GPT-5.2' },
-    { value: 'gpt-5.2-pro', label: 'GPT-5.2 Pro' },
-    { value: 'gpt-5.1', label: 'GPT-5.1' },
-    { value: 'gpt-4o', label: 'GPT-4o' },
-    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-    { value: 'o1-preview', label: 'o1 Preview' },
-    { value: 'o1-mini', label: 'o1 Mini' },
-    { value: 'o3-mini', label: 'o3 Mini' }
-  ],
-  anthropic: [
-    { value: 'claude-opus-4-5-20251101', label: 'Claude Opus 4.5' },
-    { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
-    { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
-  ],
-  google: [
-    { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview (Thinking)' },
-    { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-    { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
-    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' }
-  ],
-  ollama: [
-    { value: 'phi3', label: 'Phi-3 (Recommended)' },
-    { value: 'llama3.3', label: 'Llama 3.3' },
-    { value: 'llama3.2', label: 'Llama 3.2' },
-    { value: 'mistral', label: 'Mistral' },
-    { value: 'codellama', label: 'Code Llama' },
-    { value: 'deepseek-coder-v2', label: 'DeepSeek Coder V2' },
-    { value: 'gemma2', label: 'Gemma 2' }
-  ]
-};
 
 const EXAMPLE_PROMPTS = [
   {
@@ -136,18 +105,23 @@ const EXAMPLE_PROMPTS = [
   }
 ];
 
+const PROVIDER_LABELS: Record<string, string> = {
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  google: 'Google',
+  'z-ai': 'Z.AI'
+};
+
+const DEFAULT_SELECTED_MODELS = [DEFAULT_MODELS.openai];
+
 export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps) {
   const [config, setConfig] = useState<TestConfiguration>({
     prompts: EXAMPLE_PROMPTS,
-    provider: 'openai',
-    model: 'gpt-4o',
+    selectedModels: [...DEFAULT_SELECTED_MODELS],
+    modeSelection: 'ask',
     heliconeApiKey: '',
     intervalMs: 5000,
     timeoutMs: 60000,
-    enableScreenshots: true,
-    clearCodeBeforeTest: true,
-    resetMapBeforeTest: true,
-    reloadGeeEditor: false,
     sessionId: `test-session-${Date.now()}`,
     screenshotStorage: 'downloads',
     driveFolderId: ''
@@ -160,10 +134,88 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [promptText, setPromptText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
+  const [profiles, setProfiles] = useState<AgentProfile[]>([]);
+  const [downloadFormat, setDownloadFormat] = useState<string>('');
   const [screenshotPreviews, setScreenshotPreviews] = useState<Record<string, string>>({});
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [currentTestStartTime, setCurrentTestStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+
+  const getModelDisplayName = (modelId: string) => MODEL_DISPLAY_NAMES[modelId] || modelId;
+
+  const getProviderDisplayName = (provider: string) => PROVIDER_LABELS[provider] || provider;
+
+  const findProviderForModel = (modelId: string): ApiProvider | null => {
+    for (const [providerKey, models] of Object.entries(AVAILABLE_MODELS)) {
+      if (models.includes(modelId)) {
+        return providerKey as ApiProvider;
+      }
+    }
+    return null;
+  };
+
+  const resolveSelectedModel = (value: string): SelectedModelEntry | null => {
+    if (value.startsWith('custom:')) {
+      const parts = value.split(':');
+      if (parts.length < 3) return null;
+      const configId = parts[1];
+      const modelName = parts.slice(2).join(':');
+      const customConfig = customProviders.find(config => config.id === configId);
+      if (!customConfig) return null;
+
+      return {
+        provider: `custom:${configId}` as Provider,
+        model: modelName,
+        label: `${customConfig.name} - ${modelName}`
+      };
+    }
+
+    const provider = findProviderForModel(value);
+    if (!provider) return null;
+
+    return {
+      provider,
+      model: value,
+      label: getModelDisplayName(value)
+    };
+  };
+
+  const toggleModelSelection = (value: string) => {
+    updateConfig({
+      selectedModels: config.selectedModels.includes(value)
+        ? config.selectedModels.filter(modelId => modelId !== value)
+        : [...config.selectedModels, value]
+    });
+  };
+
+  const resolvedSelectedModels = config.selectedModels
+    .map(resolveSelectedModel)
+    .filter((entry): entry is SelectedModelEntry => Boolean(entry));
+
+  const totalTests = config.prompts.length * resolvedSelectedModels.length;
+
+  const resolveModeAndProfile = (): {
+    baseMode: 'ask' | 'do';
+    profileId?: string;
+    profilePrompt?: string;
+    profileTools?: string[];
+  } => {
+    if (config.modeSelection.startsWith('profile:')) {
+      const id = config.modeSelection.slice('profile:'.length);
+      const profile = profiles.find((p) => p.id === id);
+      if (!profile) {
+        return { baseMode: 'ask' };
+      }
+      return {
+        baseMode: inferBaseModeFromTools(profile.tools),
+        profileId: profile.id,
+        profilePrompt: profile.prompt || undefined,
+        profileTools: profile.tools as any,
+      };
+    }
+    return { baseMode: (config.modeSelection as 'ask' | 'do') || 'ask' };
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const testTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -198,6 +250,39 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
     return () => clearInterval(intervalId);
   }, [isRunning, currentTestStartTime]);
+
+  useEffect(() => {
+    chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY], (result) => {
+      const configs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+      setCustomProviders(configs);
+    });
+
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName === 'sync' && changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]) {
+        const configs: OpenAICompatibleConfig[] = changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || [];
+        setCustomProviders(configs);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    chrome.storage.local.get([PROFILES_STORAGE_KEY], (result) => {
+      setProfiles(migrateProfiles(result[PROFILES_STORAGE_KEY]));
+    });
+
+    const handleProfileChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName !== 'local') return;
+      if (changes[PROFILES_STORAGE_KEY]) {
+        setProfiles(migrateProfiles(changes[PROFILES_STORAGE_KEY].newValue));
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleProfileChange);
+    return () => chrome.storage.onChanged.removeListener(handleProfileChange);
+  }, []);
 
   // Cleanup all resources on unmount
   useEffect(() => {
@@ -234,17 +319,41 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
 
     setIsLoadingConfig(true);
-    chromeServices.storage.get<Partial<TestConfiguration>>(['agentTestConfig'])
+    chromeServices.storage.get<Partial<TestConfiguration> & { model?: string; provider?: string; reloadGeeEditor?: boolean }>(['agentTestConfig'])
       .then((result) => {
         if (result.agentTestConfig) {
           console.log('Loading stored config:', result.agentTestConfig);
+          const storedConfig = result.agentTestConfig;
+          const {
+            model: legacyModelValue,
+            provider: _legacyProvider,
+            reloadGeeEditor: _legacyReload,
+            ...storedConfigWithoutLegacy
+          } = storedConfig;
+          const storedSelectedModels = Array.isArray(storedConfig.selectedModels)
+            ? storedConfig.selectedModels
+            : [];
+          const legacyModel = typeof legacyModelValue === 'string' ? legacyModelValue : '';
+          const candidateModels = storedSelectedModels.length > 0
+            ? storedSelectedModels
+            : legacyModel
+              ? [legacyModel]
+              : [...DEFAULT_SELECTED_MODELS];
+          const normalizedModels = candidateModels.filter((value) => {
+            if (value.startsWith('custom:')) return true;
+            return Boolean(findProviderForModel(value));
+          });
+          const selectedModels = normalizedModels.length > 0 ? normalizedModels : [...DEFAULT_SELECTED_MODELS];
+
           setConfig(prev => ({
             ...prev,
-            ...result.agentTestConfig,
+            ...storedConfigWithoutLegacy,
             // Always generate a new session ID but keep other settings
             sessionId: `test-session-${Date.now()}`,
+            selectedModels,
             // Provide default timeout if not present in saved config
-            timeoutMs: result.agentTestConfig.timeoutMs || 60000
+            timeoutMs: storedConfigWithoutLegacy.timeoutMs || prev.timeoutMs,
+            intervalMs: storedConfigWithoutLegacy.intervalMs || prev.intervalMs
           }));
         }
       })
@@ -273,15 +382,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     saveTimerRef.current = setTimeout(() => {
       if (configChangedRef.current) {
         const configToSave = {
-          provider: config.provider,
-          model: config.model,
+          selectedModels: config.selectedModels,
+          modeSelection: config.modeSelection,
           heliconeApiKey: config.heliconeApiKey,
           intervalMs: config.intervalMs,
           timeoutMs: config.timeoutMs,
-          enableScreenshots: config.enableScreenshots,
-          clearCodeBeforeTest: config.clearCodeBeforeTest,
-          resetMapBeforeTest: config.resetMapBeforeTest,
-          reloadGeeEditor: config.reloadGeeEditor,
           screenshotStorage: config.screenshotStorage,
           driveFolderId: config.driveFolderId
         };
@@ -301,17 +406,6 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   }, [isOpen, config]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
-    // If provider is changing to Ollama and no model is specified, set default
-    if (updates.provider === 'ollama' && !updates.model) {
-      updates.model = 'phi3';
-    }
-    // If provider is changing from Ollama to another provider, set appropriate default
-    else if (updates.provider && updates.provider !== 'ollama' && updates.provider !== config.provider) {
-      if (MODEL_OPTIONS[updates.provider] && MODEL_OPTIONS[updates.provider].length > 0) {
-        updates.model = MODEL_OPTIONS[updates.provider][0].value;
-      }
-    }
-    
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
@@ -517,107 +611,103 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
   };
 
-  const executeTest = async (prompt: TestPrompt): Promise<TestResult> => {
+  const executeTest = async (prompt: TestPrompt, modelEntry: SelectedModelEntry): Promise<TestResult> => {
     console.log('executeTest called for prompt:', prompt);
     const startTime = Date.now();
     
     try {
-      // Reset map, inspector, and console before test if enabled
-      if (config.resetMapBeforeTest) {
-        try {
-          console.log('Resetting Google Earth Engine map, inspector, and console...');
-          const resetResult = await clickBySelector({
-            selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
-            elementDescription: 'Reset button to clear map, inspector, and console'
-          });
-          
-          if (resetResult.success) {
-            console.log('Reset button clicked successfully');
-            // Wait a moment for the reset to take effect
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } else {
-            console.warn('Failed to click reset button:', resetResult.error);
-          }
-        } catch (error) {
-          console.error('Failed to reset map/inspector/console:', error);
-          // Don't fail the test, just log the error and continue
+      // Reset map, inspector, and console before test
+      try {
+        console.log('Resetting Google Earth Engine map, inspector, and console...');
+        const resetResult = await clickBySelector({
+          selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
+          elementDescription: 'Reset button to clear map, inspector, and console'
+        });
+        
+        if (resetResult.success) {
+          console.log('Reset button clicked successfully');
+          // Wait a moment for the reset to take effect
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+          console.warn('Failed to click reset button:', resetResult.error);
         }
+      } catch (error) {
+        console.error('Failed to reset map/inspector/console:', error);
+        // Don't fail the test, just log the error and continue
       }
       
-      // Clear code editor before test if enabled
-      if (config.clearCodeBeforeTest) {
-        try {
-          console.log('Clearing Google Earth Engine code editor using clickBySelector...');
+      // Clear code editor before test
+      try {
+        console.log('Clearing Google Earth Engine code editor using clickBySelector...');
           
-          // First try clicking the clear script directly (menu might already be accessible)
-          try {
-            console.log('Trying to click Clear script directly...');
-            const directResult = await clickBySelector({
-              selector: 'div.goog-menuitem-content',
-              elementDescription: 'Clear script menu option (direct)'
-            });
-            
-            if (directResult.success) {
-              console.log('Direct clear script successful:', directResult.message);
-              await new Promise(resolve => setTimeout(resolve, 500));
-            } else {
-              console.log('Direct click failed, trying dropdown approach...');
-              throw new Error('Direct click failed');
-            }
-          } catch (error) {
-            console.log('Direct click error, trying dropdown approach...');
-            
-            // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
-            console.log('Step 1: Opening Reset dropdown menu...');
-            const dropdownSelectors = [
-              'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-              'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-              '.goog-toolbar-menu-button'
-            ];
-            
-            let dropdownResult: any = null;
-            for (const selector of dropdownSelectors) {
-              console.log(`Trying dropdown selector: ${selector}`);
-              dropdownResult = await clickBySelector({
-                selector: selector,
-                elementDescription: `Reset dropdown arrow (${selector})`
-              });
-              
-              if (dropdownResult.success) {
-                console.log(`Dropdown opened with selector: ${selector}`);
-                break;
-              } else {
-                console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
-              }
-            }
-            
-            if (dropdownResult && dropdownResult.success) {
-              console.log('Reset dropdown opened successfully');
-              // Wait for menu to appear
-              await new Promise(resolve => setTimeout(resolve, 800));
-              
-              // Step 2: Click "Clear script" option in the dropdown menu
-              console.log('Step 2: Clicking Clear script option...');
-              const clearResult = await clickBySelector({
-                selector: 'div.goog-menuitem-content',
-                elementDescription: 'Clear script menu option'
-              });
-              
-              if (clearResult.success) {
-                console.log('Code cleared successfully using clickBySelector');
-                // Wait for clearing to take effect
-                await new Promise(resolve => setTimeout(resolve, 500));
-              } else {
-                console.warn('Failed to click clear script option:', clearResult.error);
-              }
-            } else {
-              console.warn('Failed to open reset dropdown with any selector');
-            }
+        // First try clicking the clear script directly (menu might already be accessible)
+        try {
+          console.log('Trying to click Clear script directly...');
+          const directResult = await clickBySelector({
+            selector: 'div.goog-menuitem-content',
+            elementDescription: 'Clear script menu option (direct)'
+          });
+          
+          if (directResult.success) {
+            console.log('Direct clear script successful:', directResult.message);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } else {
+            console.log('Direct click failed, trying dropdown approach...');
+            throw new Error('Direct click failed');
           }
         } catch (error) {
-          console.error('Failed to clear code editor:', error);
-          // Don't fail the test, just log the error and continue
+          console.log('Direct click error, trying dropdown approach...');
+          
+          // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
+          console.log('Step 1: Opening Reset dropdown menu...');
+          const dropdownSelectors = [
+            'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+            'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
+            '.goog-toolbar-menu-button'
+          ];
+          
+          let dropdownResult: any = null;
+          for (const selector of dropdownSelectors) {
+            console.log(`Trying dropdown selector: ${selector}`);
+            dropdownResult = await clickBySelector({
+              selector: selector,
+              elementDescription: `Reset dropdown arrow (${selector})`
+            });
+            
+            if (dropdownResult.success) {
+              console.log(`Dropdown opened with selector: ${selector}`);
+              break;
+            } else {
+              console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
+            }
+          }
+          
+          if (dropdownResult && dropdownResult.success) {
+            console.log('Reset dropdown opened successfully');
+            // Wait for menu to appear
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            // Step 2: Click "Clear script" option in the dropdown menu
+            console.log('Step 2: Clicking Clear script option...');
+            const clearResult = await clickBySelector({
+              selector: 'div.goog-menuitem-content',
+              elementDescription: 'Clear script menu option'
+            });
+            
+            if (clearResult.success) {
+              console.log('Code cleared successfully using clickBySelector');
+              // Wait for clearing to take effect
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } else {
+              console.warn('Failed to click clear script option:', clearResult.error);
+            }
+          } else {
+            console.warn('Failed to open reset dropdown with any selector');
+          }
         }
+      } catch (error) {
+        console.error('Failed to clear code editor:', error);
+        // Don't fail the test, just log the error and continue
       }
       
       // Send message to the agent through the extension's messaging system first
@@ -630,13 +720,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         
         // Create isolated session for each test to prevent conversation memory carryover
         // Each test gets its own unique session ID to ensure independent results
+        const modeConfig = resolveModeAndProfile();
         const chatMessage = {
           type: 'CHAT_MESSAGE',
           message: prompt.text,
           messages: [{ role: 'user', content: prompt.text }],
-          provider: config.provider,
-          model: config.model,
-          sessionId: `${config.sessionId}-test-${prompt.id}-${Date.now()}`
+          provider: modelEntry.provider,
+          model: modelEntry.model,
+          sessionId: `${config.sessionId}-test-${prompt.id}-${Date.now()}`,
+          mode: modeConfig.baseMode,
+          profileId: modeConfig.profileId,
+          profilePrompt: modeConfig.profilePrompt,
+          profileTools: modeConfig.profileTools
         };
 
         console.log('Sending chat message:', chatMessage);
@@ -687,20 +782,16 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       
       // Now take screenshot AFTER the agent has completed and UI has settled
       let screenshotId: string | undefined;
-      let screenshotSuccess = false;
-      if (config.enableScreenshots) {
-        try {
-          console.log('Taking screenshot after agent completion...');
-          const screenshotResult = await screenshot();
-          if (screenshotResult.success && screenshotResult.screenshotData) {
-            // Use new storage system
-            screenshotId = await saveScreenshot(screenshotResult.screenshotData, prompt.id, prompt.text);
-            screenshotSuccess = true;
-            console.log('Screenshot saved with ID:', screenshotId);
-          }
-        } catch (error) {
-          console.error('Screenshot failed:', error);
+      try {
+        console.log('Taking screenshot after agent completion...');
+        const screenshotResult = await screenshot();
+        if (screenshotResult.success && screenshotResult.screenshotData) {
+          // Use new storage system
+          screenshotId = await saveScreenshot(screenshotResult.screenshotData, prompt.id, prompt.text);
+          console.log('Screenshot saved with ID:', screenshotId);
         }
+      } catch (error) {
+        console.error('Screenshot failed:', error);
       }
 
       const duration = Date.now() - startTime;
@@ -715,8 +806,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         id: `result-${Date.now()}`,
         prompt: prompt.text,
         response,
-        provider: config.provider,
-        model: config.model,
+        provider: modelEntry.provider,
+        model: modelEntry.model,
         timestamp: new Date(),
         duration,
         success: true,
@@ -730,8 +821,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         id: `result-${Date.now()}`,
         prompt: prompt.text,
         response: '',
-        provider: config.provider,
-        model: config.model,
+        provider: modelEntry.provider,
+        model: modelEntry.model,
         timestamp: new Date(),
         duration,
         success: false,
@@ -748,34 +839,43 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       return;
     }
 
+    if (resolvedSelectedModels.length === 0) {
+      toast.warning('Select at least one model');
+      return;
+    }
+
     console.log('Starting tests...');
     setIsRunningWithRef(true);
     setCurrentTestIndex(0);
     setResults([]);
     setTestProgress(0);
 
-    for (let i = 0; i < config.prompts.length; i++) {
+    const testQueue = config.prompts.flatMap(prompt =>
+      resolvedSelectedModels.map(modelEntry => ({ prompt, modelEntry }))
+    );
+
+    for (let i = 0; i < testQueue.length; i++) {
       // Use the current state instead of stale closure
       if (!isRunningRef.current) {
         console.log('Tests stopped by user at index', i);
         break;
       }
 
-      console.log(`Running test ${i + 1}/${config.prompts.length}`);
+      console.log(`Running test ${i + 1}/${testQueue.length}`);
       setCurrentTestIndex(i);
       setCurrentTestStartTime(Date.now());
-      const prompt = config.prompts[i];
+      const { prompt, modelEntry } = testQueue[i];
 
-      const result = await executeTest(prompt);
+      const result = await executeTest(prompt, modelEntry);
       console.log('Test result:', result);
       setResults(prev => [...prev, result]);
 
-      const progress = ((i + 1) / config.prompts.length) * 100;
+      const progress = ((i + 1) / testQueue.length) * 100;
       setTestProgress(progress);
       setCurrentTestStartTime(null);
 
       // Wait for interval before next test (except for last test)
-      if (i < config.prompts.length - 1 && isRunningRef.current) {
+      if (i < testQueue.length - 1 && isRunningRef.current) {
         console.log(`Waiting ${config.intervalMs}ms before next test`);
         await new Promise(resolve => {
           testTimeoutRef.current = setTimeout(resolve, config.intervalMs);
@@ -786,7 +886,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     console.log('Tests completed');
     setIsRunningWithRef(false);
     setCurrentTestStartTime(null);
-    toast.success(`Tests completed: ${results.length + 1} tests run`);
+    toast.success(`Tests completed: ${testQueue.length} tests run`);
   };
 
   const stopTests = useCallback(() => {
@@ -812,6 +912,44 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     setCurrentTestIndex(0);
     setTestProgress(0);
     updateConfig({ sessionId: `test-session-${Date.now()}` });
+  };
+
+  const downloadPrompts = (format: 'csv' | 'json') => {
+    const timestamp = Date.now();
+    if (config.prompts.length === 0) {
+      toast.warning('No prompts to download');
+      return;
+    }
+    if (format === 'json') {
+      const payload = config.prompts.map((prompt) => (
+        prompt.description
+          ? { text: prompt.text, description: prompt.description }
+          : { text: prompt.text }
+      ));
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `agent-test-prompts-${timestamp}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    const rows = [
+      ['prompt', 'description'],
+      ...config.prompts.map(prompt => [prompt.text, prompt.description || ''])
+    ];
+    const csvContent = rows
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `agent-test-prompts-${timestamp}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportResults = () => {
@@ -987,8 +1125,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     );
   }
 
-  const remainingTests = config.prompts.length - currentTestIndex;
+  const remainingTests = Math.max(totalTests - currentTestIndex, 0);
   const successRate = results.length > 0 ? (results.filter(r => r.success).length / results.length) * 100 : 0;
+  const currentPromptIndex = resolvedSelectedModels.length > 0
+    ? Math.floor(currentTestIndex / resolvedSelectedModels.length)
+    : 0;
+  const currentPrompt = config.prompts[currentPromptIndex];
+  const currentModelLabel = resolvedSelectedModels.length > 0
+    ? resolvedSelectedModels[currentTestIndex % resolvedSelectedModels.length]?.label
+    : undefined;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1014,74 +1159,124 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="provider">AI Provider</Label>
-                    <Select value={config.provider} onValueChange={(value) => updateConfig({ provider: value as 'openai' | 'anthropic' | 'google' | 'ollama' })}>
-                      <SelectTrigger>
+                    <Label>Models</Label>
+                    <div className="mt-2 space-y-4">
+                      {Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => (
+                        <div key={providerKey} className="space-y-2">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase">
+                            {getProviderDisplayName(providerKey)}
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {models.map((modelId) => {
+                              const inputId = `model-${providerKey}-${modelId}`;
+                              return (
+                                <label key={modelId} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                                  <input
+                                    id={inputId}
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-input"
+                                    checked={config.selectedModels.includes(modelId)}
+                                    onChange={() => toggleModelSelection(modelId)}
+                                  />
+                                  <span className="truncate">{getModelDisplayName(modelId)}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+
+                      {customProviders.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="text-xs font-semibold text-muted-foreground uppercase">
+                            Custom Providers
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {customProviders.map((customProvider) => {
+                              const value = `custom:${customProvider.id}:${customProvider.modelName}`;
+                              const inputId = `model-custom-${customProvider.id}`;
+                              return (
+                                <label key={value} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                                  <input
+                                    id={inputId}
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-input"
+                                    checked={config.selectedModels.includes(value)}
+                                    onChange={() => toggleModelSelection(value)}
+                                  />
+                                  <span className="truncate">{customProvider.name} - {customProvider.modelName}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="mode">Mode</Label>
+                    <Select value={config.modeSelection} onValueChange={(value) => updateConfig({ modeSelection: value })}>
+                      <SelectTrigger id="mode">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="openai">OpenAI</SelectItem>
-                        <SelectItem value="anthropic">Anthropic</SelectItem>
-                        <SelectItem value="google">Google</SelectItem>
-                        <SelectItem value="ollama">Ollama</SelectItem>
+                        <SelectItem value="ask">Ask</SelectItem>
+                        <SelectItem value="do">Do</SelectItem>
+                        {profiles.length > 0 && (
+                          <>
+                            <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                            <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                              Profiles
+                            </div>
+                            {profiles.map((profile) => (
+                              <SelectItem key={profile.id} value={`profile:${profile.id}`}>
+                                <span className="truncate" title={profile.name}>
+                                  {profile.name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
-                    <Label htmlFor="model">
-                      {config.provider === 'ollama' ? 'Model ID' : 'Model'}
+                    <Label htmlFor="interval" className="flex items-center gap-2">
+                      Interval Between Tests (s)
+                      <span className="text-xs text-muted-foreground">(Optional)</span>
                     </Label>
-                    {config.provider === 'ollama' ? (
-                      <div>
-                        <Input
-                          id="model"
-                          value={config.model}
-                          onChange={(e) => updateConfig({ model: e.target.value })}
-                          placeholder="Enter Ollama model ID (e.g., llama3.2, phi3, mistral)"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Enter any Ollama model ID. Popular models: phi3, llama3.3, llama3.2, mistral, codellama, qwen2.5, gemma2
-                        </p>
-                      </div>
-                    ) : (
-                      <Select value={config.model} onValueChange={(value) => updateConfig({ model: value })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {MODEL_OPTIONS[config.provider].map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="interval">Interval Between Tests (ms)</Label>
                     <Input
                       id="interval"
                       type="number"
-                      value={config.intervalMs}
-                      onChange={(e) => updateConfig({ intervalMs: parseInt(e.target.value) || 5000 })}
-                      min="1000"
-                      step="1000"
+                      value={Math.round(config.intervalMs / 1000)}
+                      onChange={(e) => {
+                        const seconds = parseInt(e.target.value, 10);
+                        updateConfig({ intervalMs: (Number.isFinite(seconds) ? seconds : 5) * 1000 });
+                      }}
+                      min={VALIDATION.MIN_INTERVAL_MS / 1000}
+                      max={VALIDATION.MAX_INTERVAL_MS / 1000}
+                      step="1"
                     />
                   </div>
                   
                   <div>
-                    <Label htmlFor="timeout">Test Timeout (ms)</Label>
+                    <Label htmlFor="timeout" className="flex items-center gap-2">
+                      Test Timeout (s)
+                      <span className="text-xs text-muted-foreground">(Optional)</span>
+                    </Label>
                     <Input
                       id="timeout"
                       type="number"
-                      value={config.timeoutMs}
-                      onChange={(e) => updateConfig({ timeoutMs: parseInt(e.target.value) || 60000 })}
-                      min="10000"
-                      max="300000"
-                      step="5000"
+                      value={Math.round(config.timeoutMs / 1000)}
+                      onChange={(e) => {
+                        const seconds = parseInt(e.target.value, 10);
+                        updateConfig({ timeoutMs: (Number.isFinite(seconds) ? seconds : 60) * 1000 });
+                      }}
+                      min={VALIDATION.MIN_TIMEOUT_MS / 1000}
+                      max={VALIDATION.MAX_TIMEOUT_MS / 1000}
+                      step="5"
                     />
                     <p className="text-sm text-muted-foreground mt-1">
                       How long to wait for each test to complete (10-300 seconds). Complex prompts may need longer timeouts.
@@ -1091,7 +1286,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="helicone-key">Helicone API Key</Label>
+                    <Label htmlFor="helicone-key" className="flex items-center gap-2">
+                      Helicone API Key
+                      <span className="text-xs text-muted-foreground">(Optional)</span>
+                    </Label>
                     <div className="relative">
                       <Input
                         id="helicone-key"
@@ -1119,7 +1317,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </div>
                   
                   <div>
-                    <Label htmlFor="session-id">Session ID</Label>
+                    <Label htmlFor="session-id" className="flex items-center gap-2">
+                      Session ID
+                      <span className="text-xs text-muted-foreground">(Optional)</span>
+                    </Label>
                     <div className="flex gap-2">
                       <Input
                         id="session-id"
@@ -1138,268 +1339,79 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="screenshots"
-                      checked={config.enableScreenshots}
-                      onCheckedChange={(checked) => updateConfig({ enableScreenshots: checked })}
-                    />
-                    <Label htmlFor="screenshots">Enable Screenshots</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="clear-code"
-                      checked={config.clearCodeBeforeTest}
-                      onCheckedChange={(checked) => updateConfig({ clearCodeBeforeTest: checked })}
-                    />
-                    <Label htmlFor="clear-code">Clear Code Before Each Test</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="reset-map"
-                      checked={config.resetMapBeforeTest}
-                      onCheckedChange={(checked) => updateConfig({ resetMapBeforeTest: checked })}
-                    />
-                    <Label htmlFor="reset-map">Reset Map/Inspector/Console Before Each Test</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="reload-gee-editor"
-                      checked={config.reloadGeeEditor}
-                      onCheckedChange={(checked) => updateConfig({ reloadGeeEditor: checked })}
-                    />
-                    <Label htmlFor="reload-gee-editor">Reload Google Earth Engine Editor Between Tests</Label>
-                  </div>
-                  <div className="text-sm text-muted-foreground ml-6 -mt-1">
-                    ⚠️ <strong>Disabled by default.</strong> Reloading the GEE editor clears all state but may cause interruptions.
-                  </div>
-
-                  {/* Test Functions Section */}
-                  <div className="border-t pt-4">
-                    <h4 className="text-lg font-medium mb-3">Test Functions</h4>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Test these functions individually before running agent tests to ensure they work properly.
-                    </p>
-                    <div className="flex gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          console.log('Testing Reset Map/Inspector/Console function...');
-                          try {
-                            const resetResult = await clickBySelector({
-                              selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
-                              elementDescription: 'Reset button to clear map, inspector, and console'
-                            });
-                            
-                            if (resetResult.success) {
-                              toast.success('Reset Map/Inspector/Console test successful!');
-                              console.log('Reset successful:', resetResult.message);
-                            } else {
-                              toast.error('Reset test failed', { description: resetResult.error });
-                              console.error('Reset failed:', resetResult.error);
-                            }
-                          } catch (error) {
-                            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-                            toast.error('Reset test error', { description: errorMsg });
-                            console.error('Reset test error:', error);
-                          }
-                        }}
-                      >
-                        🔄 Test Reset Map/Inspector/Console
-                      </Button>
-                      
-                                             <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={async () => {
-                           console.log('Testing Clear Script function...');
-                           
-                           // First try clicking the clear script directly (menu might already be accessible)
-                           try {
-                             console.log('Trying to click Clear script directly...');
-                             const directResult = await clickBySelector({
-                               selector: 'div.goog-menuitem-content',
-                               elementDescription: 'Clear script menu option (direct)'
-                             });
-                             
-                             if (directResult.success) {
-                               console.log('Direct clear script successful:', directResult.message);
-                               toast.success('Clear Script successful (direct click)!');
-                               return;
-                             } else {
-                               console.log('Direct click failed, trying dropdown approach...');
-                             }
-                           } catch (error) {
-                             console.log('Direct click error, trying dropdown approach...');
-                           }
-                           
-                           try {
-                             // If direct click failed, try opening dropdown first
-                             const dropdownSelectors = [
-                               'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-                               'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-                               '.goog-toolbar-menu-button',
-                               'button[title="Reset (Ctrl+Alt+Enter)"] + button',
-                               '.goog-button[role="button"][tabindex="0"]:not([title])',
-                               'button.goog-button:has(+ .goog-menu)',
-                               '.goog-toolbar-button[role="button"]',
-                               'button.goog-button.goog-toolbar-button',
-                               '[role="button"][aria-haspopup="menu"]',
-                               'button[aria-haspopup="true"]',
-                               '.goog-button[aria-haspopup="true"]',
-                               'button.goog-button[tabindex="0"]'
-                             ];
-                             
-                             let dropdownResult: any = null;
-                             
-                             for (const selector of dropdownSelectors) {
-                               console.log(`Trying dropdown selector: ${selector}`);
-                               dropdownResult = await clickBySelector({
-                                 selector: selector,
-                                 elementDescription: `Reset dropdown arrow (${selector})`
-                               });
-                               
-                               if (dropdownResult.success) {
-                                 console.log(`Dropdown opened with selector: ${selector}`);
-                                 break;
-                               } else {
-                                 console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
-                               }
-                             }
-                             
-                             if (dropdownResult && dropdownResult.success) {
-                               console.log('Reset dropdown opened successfully');
-                               // Wait for menu to appear
-                               await new Promise(resolve => setTimeout(resolve, 1000));
-                               
-                               // Step 2: Click "Clear script" option in the dropdown menu
-                               console.log('Step 2: Clicking Clear script option...');
-                               const clearSelectors = [
-                                 'div.goog-menuitem-content',
-                                 'div.goog-menuitem[role="menuitem"]',
-                                 '.goog-menuitem-content:contains("Clear script")',
-                                 'div[role="menuitem"]:has(.goog-menuitem-content)'
-                               ];
-                               
-                               let clearResult: any = null;
-                               for (const clearSelector of clearSelectors) {
-                                 console.log(`Trying clear selector: ${clearSelector}`);
-                                 clearResult = await clickBySelector({
-                                   selector: clearSelector,
-                                   elementDescription: `Clear script menu option (${clearSelector})`
-                                 });
-                                 
-                                 if (clearResult.success) {
-                                   console.log(`Clear script successful with selector: ${clearSelector}`);
-                                   break;
-                                 } else {
-                                   console.log(`Clear selector failed: ${clearSelector} - ${clearResult.error}`);
-                                 }
-                               }
-                               
-                               if (clearResult.success) {
-                                 toast.success('Clear Script test successful!');
-                                 console.log('Clear script successful:', clearResult.message);
-                               } else {
-                                 toast.error('Clear script test failed', { description: clearResult.error });
-                                 console.error('Clear script failed:', clearResult.error);
-                               }
-                             } else {
-                               toast.error('Failed to open dropdown', {
-                                 description: 'Try manually opening the Reset menu first, then test again.'
-                               });
-                               console.error('All dropdown selectors failed');
-                             }
-                           } catch (error) {
-                             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-                             toast.error('Clear script test error', { description: errorMsg });
-                             console.error('Clear script test error:', error);
-                           }
-                         }}
-                       >
-                         🧹 Test Clear Script
-                       </Button>
-                    </div>
-                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                      <p className="text-sm text-yellow-800">
-                        💡 <strong>Clear Script Tip:</strong> If the Clear Script test fails, try manually clicking the Reset button dropdown in Google Earth Engine first, then test again. The dropdown needs to be accessible for the script clearing to work.
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="screenshotStorage" className="flex items-center gap-2">
+                        Screenshot Storage
+                        <span className="text-xs text-muted-foreground">(Optional)</span>
+                      </Label>
+                      <Select value={config.screenshotStorage} onValueChange={(value) => updateConfig({ screenshotStorage: value as 'local' | 'downloads' | 'google-drive' })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="local">Local Storage (Limited)</SelectItem>
+                          <SelectItem value="downloads">Downloads Folder (Recommended)</SelectItem>
+                          <SelectItem value="google-drive">Google Drive (Cloud)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {config.screenshotStorage === 'local' && '⚠️ Limited to ~20 screenshots due to browser storage limits'}
+                        {config.screenshotStorage === 'downloads' && '✅ Unlimited storage - saves to Downloads/earth-agent-screenshots/'}
+                        {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires API key below'}
                       </p>
                     </div>
+
+                    {config.screenshotStorage === 'google-drive' && (
+                      <>
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                          <h4 className="font-medium text-blue-900 mb-2">Google Drive Setup Required</h4>
+                          <p className="text-sm text-blue-800 mb-3">
+                            To use Google Drive storage, you need to configure OAuth2 authentication:
+                          </p>
+                          <ol className="text-sm text-blue-800 space-y-1 ml-4">
+                            <li>1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
+                            <li>2. Create OAuth2 credentials for Chrome Extension</li>
+                            <li>3. Enable Google Drive API</li>
+                            <li>4. Update manifest.json with your client_id</li>
+                            <li>5. The extension will prompt for authentication when first used</li>
+                          </ol>
+                        </div>
+                        <div>
+                          <Label htmlFor="drive-folder-id" className="flex items-center gap-2">
+                            Drive Folder ID
+                            <span className="text-xs text-muted-foreground">(Optional)</span>
+                          </Label>
+                          <Input
+                            id="drive-folder-id"
+                            value={config.driveFolderId || ''}
+                            onChange={(e) => updateConfig({ driveFolderId: e.target.value })}
+                            placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                          />
+                          <p className="text-sm text-gray-500 mt-1">
+                            Leave empty to save to Drive root folder. Get folder ID from Drive URL.
+                          </p>
+                        </div>
+                        <div>
+                          <Button
+                            variant="outline"
+                            onClick={async () => {
+                              try {
+                                await authenticateGoogleDrive();
+                                toast.success('Google Drive authentication successful!');
+                              } catch (error) {
+                                toast.error('Authentication failed', {
+                                  description: error instanceof Error ? error.message : 'Unknown error'
+                                });
+                              }
+                            }}
+                          >
+                            Test Google Drive Authentication
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
-
-                  {config.enableScreenshots && (
-                    <>
-                      <div>
-                        <Label htmlFor="screenshotStorage">Screenshot Storage</Label>
-                        <Select value={config.screenshotStorage} onValueChange={(value) => updateConfig({ screenshotStorage: value as 'local' | 'downloads' | 'google-drive' })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="local">Local Storage (Limited)</SelectItem>
-                            <SelectItem value="downloads">Downloads Folder (Recommended)</SelectItem>
-                            <SelectItem value="google-drive">Google Drive (Cloud)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {config.screenshotStorage === 'local' && '⚠️ Limited to ~20 screenshots due to browser storage limits'}
-                          {config.screenshotStorage === 'downloads' && '✅ Unlimited storage - saves to Downloads/earth-agent-screenshots/'}
-                          {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires API key below'}
-                        </p>
-                      </div>
-
-                      {config.screenshotStorage === 'google-drive' && (
-                        <>
-                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
-                            <h4 className="font-medium text-blue-900 mb-2">Google Drive Setup Required</h4>
-                            <p className="text-sm text-blue-800 mb-3">
-                              To use Google Drive storage, you need to configure OAuth2 authentication:
-                            </p>
-                            <ol className="text-sm text-blue-800 space-y-1 ml-4">
-                              <li>1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline">Google Cloud Console</a></li>
-                              <li>2. Create OAuth2 credentials for Chrome Extension</li>
-                              <li>3. Enable Google Drive API</li>
-                              <li>4. Update manifest.json with your client_id</li>
-                              <li>5. The extension will prompt for authentication when first used</li>
-                            </ol>
-                          </div>
-                          <div>
-                            <Label htmlFor="drive-folder-id">Drive Folder ID (Optional)</Label>
-                            <Input
-                              id="drive-folder-id"
-                              value={config.driveFolderId || ''}
-                              onChange={(e) => updateConfig({ driveFolderId: e.target.value })}
-                              placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-                            />
-                            <p className="text-sm text-gray-500 mt-1">
-                              Leave empty to save to Drive root folder. Get folder ID from Drive URL.
-                            </p>
-                          </div>
-                          <div>
-                            <Button
-                              variant="outline"
-                              onClick={async () => {
-                                try {
-                                  await authenticateGoogleDrive();
-                                  toast.success('Google Drive authentication successful!');
-                                } catch (error) {
-                                  toast.error('Authentication failed', {
-                                    description: error instanceof Error ? error.message : 'Unknown error'
-                                  });
-                                }
-                              }}
-                            >
-                              Test Google Drive Authentication
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
                   
                   <div className="pt-4">
                     <Button
@@ -1442,32 +1454,28 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       variant="outline"
                       size="sm"
                       onClick={async () => {
-                        console.log('Clearing stored configuration...');
+                        console.log('Resetting stored configuration...');
                         try {
                           await chromeServices.storage.remove(['agentTestConfig']);
                           // Reset to default config
                           setConfig({
                             prompts: EXAMPLE_PROMPTS,
-                            provider: 'openai',
-                            model: 'gpt-4o',
+                            selectedModels: [...DEFAULT_SELECTED_MODELS],
+                            modeSelection: 'ask',
                             heliconeApiKey: '',
                             intervalMs: 5000,
                             timeoutMs: 60000,
-                            enableScreenshots: true,
-                            clearCodeBeforeTest: true,
-                            resetMapBeforeTest: true,
-                            reloadGeeEditor: false,
                             sessionId: `test-session-${Date.now()}`,
                             screenshotStorage: 'downloads',
                             driveFolderId: ''
                           });
-                          toast.success('Settings cleared and reset to defaults');
+                          toast.success('Settings reset to defaults');
                         } catch (error) {
                           toast.error('Failed to clear settings');
                         }
                       }}
                     >
-                      Clear Stored Settings
+                      Reset Settings
                     </Button>
                   </div>
                 </div>
@@ -1555,20 +1563,24 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">Test Prompts ({config.prompts.length})</h3>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const samplePrompt: TestPrompt = {
-                            id: `sample-${Date.now()}`,
-                            text: "What is the current weather in New York?",
-                            description: "Sample test prompt"
-                          };
-                          updateConfig({ prompts: [...config.prompts, samplePrompt] });
+                      <Select
+                        value={downloadFormat}
+                        onValueChange={(value) => {
+                          setDownloadFormat(value);
+                          if (value === 'csv' || value === 'json') {
+                            downloadPrompts(value);
+                            setDownloadFormat('');
+                          }
                         }}
                       >
-                        Add Sample
-                      </Button>
+                        <SelectTrigger className="h-8 px-3 text-sm">
+                          <SelectValue placeholder="Download" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="csv">Download CSV</SelectItem>
+                          <SelectItem value="json">Download JSON</SelectItem>
+                        </SelectContent>
+                      </Select>
                       {config.prompts.length > 0 && (
                         <Button
                           variant="outline"
@@ -1612,7 +1624,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             <TabsContent value="run" className="flex-1 space-y-6">
               <div className="grid grid-cols-3 gap-4">
                 <Card className="p-4">
-                  <div className="text-2xl font-bold">{config.prompts.length}</div>
+                  <div className="text-2xl font-bold">{totalTests}</div>
                   <div className="text-sm text-muted-foreground">Total Tests</div>
                 </Card>
                 <Card className="p-4">
@@ -1630,7 +1642,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   <h3 className="text-lg font-medium">Test Progress</h3>
                   <div className="flex gap-2">
                     {!isRunning ? (
-                      <Button onClick={runTests} disabled={config.prompts.length === 0}>
+                      <Button onClick={runTests} disabled={config.prompts.length === 0 || resolvedSelectedModels.length === 0}>
                         <Play className="h-4 w-4 mr-2" />
                         Start Tests
                       </Button>
@@ -1649,13 +1661,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 
                 <Progress value={testProgress} className="w-full" />
                 
-                {isRunning && currentTestIndex < config.prompts.length && (
+                {isRunning && currentTestIndex < totalTests && (
                   <Card className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <Badge>Running Test #{currentTestIndex + 1}</Badge>
                         <span className="text-sm text-muted-foreground">
-                          Step {currentTestIndex + 1} of {config.prompts.length}
+                          Step {currentTestIndex + 1} of {totalTests}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 font-mono text-sm">
@@ -1666,10 +1678,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       </div>
                     </div>
                     <Progress value={(elapsedTime / (config.timeoutMs / 1000)) * 100} className="h-1 mb-2" />
-                    <p className="text-sm line-clamp-2">{config.prompts[currentTestIndex]?.text}</p>
+                    <p className="text-sm line-clamp-2">{currentPrompt?.text}</p>
+                    {currentModelLabel && (
+                      <p className="text-xs text-muted-foreground mt-1">{currentModelLabel}</p>
+                    )}
                     {results.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        Est. remaining: {formatEstimatedTime(results, config.prompts.length - currentTestIndex - 1, config.intervalMs)}
+                        Est. remaining: {formatEstimatedTime(results, Math.max(totalTests - currentTestIndex - 1, 0), config.intervalMs)}
                       </p>
                     )}
                   </Card>
