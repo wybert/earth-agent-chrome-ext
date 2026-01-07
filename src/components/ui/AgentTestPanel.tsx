@@ -81,11 +81,6 @@ interface AgentTestPanelProps {
 
 const EXAMPLE_PROMPTS = [
   {
-    id: 'basic-hello',
-    text: 'Hello! Can you help me get started with Google Earth Engine?',
-    description: 'Basic greeting and assistance request'
-  },
-  {
     id: 'code-generation',
     text: 'Generate JavaScript code to load and visualize Landsat 9 imagery for San Francisco from the last month.',
     description: 'Code generation for satellite imagery'
@@ -94,11 +89,6 @@ const EXAMPLE_PROMPTS = [
     id: 'dataset-info',
     text: 'What datasets are available for monitoring deforestation in the Amazon rainforest?',
     description: 'Dataset discovery and recommendation'
-  },
-  {
-    id: 'error-debugging',
-    text: 'I\'m getting a "Collection.limit: Invalid argument" error. Can you help me fix this code: var collection = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2").limit("10");',
-    description: 'Error debugging and code fixing'
   },
   {
     id: 'complex-analysis',
@@ -1658,69 +1648,45 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     )}
                   </div>
 
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        console.log('Testing connection...');
-                        try {
-                          const port = chrome.runtime.connect({ name: 'agent-test' });
-                          let connected = false;
-                          
-                          port.onMessage.addListener((message) => {
-                            console.log('Connection test message:', message);
-                            connected = true;
-                            port.disconnect();
-                          });
-                          
-                          port.onDisconnect.addListener(() => {
-                            console.log('Connection test disconnected, connected:', connected);
-                          });
-                          
-                          port.postMessage({ type: 'CONNECTION_TEST' });
-                          
-                          setTimeout(() => {
-                            if (!connected) {
-                              console.log('Connection test failed - no response');
-                              port.disconnect();
+                  {/* Test Helicone button - only shows when API key is configured */}
+                  {config.heliconeApiKey && (
+                    <div className="pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            // Test Helicone API key by making a simple API call
+                            const response = await fetch('https://api.helicone.ai/v1/request/query', {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${config.heliconeApiKey}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify({
+                                limit: 1,
+                                offset: 0
+                              })
+                            });
+
+                            if (response.ok) {
+                              toast.success('Helicone API key is valid!');
+                            } else if (response.status === 401) {
+                              toast.error('Invalid Helicone API key');
+                            } else {
+                              toast.warning(`Helicone responded with status ${response.status}`);
                             }
-                          }, 5000);
-                        } catch (error) {
-                          console.error('Connection test error:', error);
-                        }
-                      }}
-                    >
-                      Test Connection
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        console.log('Resetting stored configuration...');
-                        try {
-                          await chromeServices.storage.remove(['agentTestConfig']);
-                          // Reset to default config
-                          setConfig({
-                            prompts: EXAMPLE_PROMPTS,
-                            selectedModels: [...DEFAULT_SELECTED_MODELS],
-                            modeSelection: 'ask',
-                            heliconeApiKey: '',
-                            intervalMs: 5000,
-                            timeoutMs: 60000,
-                            sessionId: `test-session-${Date.now()}`,
-                            screenshotStorage: 'downloads',
-                            driveFolderId: ''
-                          });
-                          toast.success('Settings reset to defaults');
-                        } catch (error) {
-                          toast.error('Failed to clear settings');
-                        }
-                      }}
-                    >
-                      Reset Settings
-                    </Button>
-                  </div>
+                          } catch (error) {
+                            toast.error('Failed to connect to Helicone', {
+                              description: error instanceof Error ? error.message : 'Network error'
+                            });
+                          }
+                        }}
+                      >
+                        Test Helicone
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -2024,7 +1990,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     <SelectContent>
                       <SelectItem value="bundle">Results (ZIP)</SelectItem>
                       {results.some(r => r.screenshotId) && (
-                        <SelectItem value="screenshots">All Screenshots</SelectItem>
+                        <SelectItem value="screenshots">Screenshots</SelectItem>
                       )}
                       <SelectItem value="csv">Export CSV</SelectItem>
                     </SelectContent>
