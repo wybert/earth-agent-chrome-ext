@@ -1783,10 +1783,10 @@ chrome.runtime.onConnect.addListener((newPort) => {
     });
   } else if (newPort.name === 'agent-test') {
     console.log('Agent test connection established');
-    
+
     newPort.onMessage.addListener(async (message: any) => {
       console.log('Received message from agent test panel:', message);
-      
+
       // Handle agent test specific messages
       switch (message.type) {
         case 'CHAT_MESSAGE':
@@ -1802,6 +1802,85 @@ chrome.runtime.onConnect.addListener((newPort) => {
             console.log(`Marking agent test request ${agentTestRequestId} as cancelled`);
             cancelledRequests.set(agentTestRequestId, true);
           }
+          break;
+
+        case 'RESET_MAP_CONSOLE':
+          // Reset map, inspector, and console - uses chrome.scripting directly (CSP-safe)
+          (async () => {
+            try {
+              console.log('[Agent Test] Resetting map, inspector, and console...');
+              const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+              const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
+
+              if (!selectedTab?.id) {
+                postToPort(newPort, { type: 'RESET_MAP_CONSOLE_RESULT', success: false, error: 'No Earth Engine tab found' });
+                return;
+              }
+
+              const tabId = selectedTab.id;
+
+              // Execute script to click the reset button
+              const results = await chrome.scripting.executeScript({
+                target: { tabId },
+                func: () => {
+                  try {
+                    // Find the reset button
+                    const resetButton = document.querySelector('button.goog-button.reset-button[title="Clear map, inspector, and console"]') as HTMLElement;
+                    if (!resetButton) {
+                      return { success: false, error: 'Reset button not found' };
+                    }
+
+                    // Click the reset button
+                    resetButton.click();
+                    return { success: true, message: 'Reset button clicked successfully' };
+                  } catch (error) {
+                    return { success: false, error: `Error clicking reset button: ${error instanceof Error ? error.message : String(error)}` };
+                  }
+                }
+              });
+
+              const result = results?.[0]?.result;
+              if (result?.success) {
+                console.log('[Agent Test] Map/console reset successful');
+                postToPort(newPort, { type: 'RESET_MAP_CONSOLE_RESULT', success: true });
+              } else {
+                console.warn('[Agent Test] Map/console reset failed:', result?.error);
+                postToPort(newPort, { type: 'RESET_MAP_CONSOLE_RESULT', success: false, error: result?.error || 'Unknown error' });
+              }
+            } catch (error) {
+              console.error('[Agent Test] Error resetting map/console:', error);
+              postToPort(newPort, {
+                type: 'RESET_MAP_CONSOLE_RESULT',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              });
+            }
+          })();
+          break;
+
+        case 'CLEAR_EDITOR':
+          // Clear the code editor - uses CSP-safe setEditorContent
+          (async () => {
+            try {
+              console.log('[Agent Test] Clearing code editor...');
+              const result = await setEditorContent('');
+
+              if (result.success) {
+                console.log('[Agent Test] Code editor cleared successfully');
+                postToPort(newPort, { type: 'CLEAR_EDITOR_RESULT', success: true });
+              } else {
+                console.warn('[Agent Test] Failed to clear editor:', result.error);
+                postToPort(newPort, { type: 'CLEAR_EDITOR_RESULT', success: false, error: result.error });
+              }
+            } catch (error) {
+              console.error('[Agent Test] Error clearing editor:', error);
+              postToPort(newPort, {
+                type: 'CLEAR_EDITOR_RESULT',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+              });
+            }
+          })();
           break;
 
         default:
