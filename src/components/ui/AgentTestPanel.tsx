@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import JSZip from 'jszip';
 
 import { screenshot } from '@/lib/tools/browser/screenshot';
-import { clickBySelector } from '@/lib/tools/browser/clickBySelector';
 import { chromeServices } from '@/lib/services/chrome-storage-service';
 import { AVAILABLE_MODELS, DEFAULT_MODELS, MODEL_DISPLAY_NAMES, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY, type ApiProvider } from '@/constants/models';
 import type { AgentProfile, OpenAICompatibleConfig, Provider } from '@/types/extension';
@@ -640,17 +639,36 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const executeTest = async (prompt: TestPrompt, modelEntry: SelectedModelEntry): Promise<TestResult> => {
     console.log('executeTest called for prompt:', prompt);
     const startTime = Date.now();
-    
+
+    // Helper function to send reset messages via port
+    const sendResetMessage = (port: chrome.runtime.Port, type: string): Promise<{ success: boolean; error?: string }> => {
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          resolve({ success: false, error: 'Reset operation timed out' });
+        }, 5000);
+
+        const handler = (message: any) => {
+          if (message.type === `${type}_RESULT`) {
+            clearTimeout(timeout);
+            port.onMessage.removeListener(handler);
+            resolve({ success: message.success, error: message.error });
+          }
+        };
+
+        port.onMessage.addListener(handler);
+        port.postMessage({ type });
+      });
+    };
+
     try {
+      // Create a port for reset operations
+      const resetPort = chrome.runtime.connect({ name: 'agent-test' });
+
       // Reset map, inspector, and console before test
       try {
         console.log('Resetting Google Earth Engine map, inspector, and console...');
-        const resetResult = await clickBySelector({
-          selector: 'button.goog-button.reset-button[title="Clear map, inspector, and console"]',
-          elementDescription: 'Reset button to clear map, inspector, and console',
-          skipReload: true
-        });
-        
+        const resetResult = await sendResetMessage(resetPort, 'RESET_MAP_CONSOLE');
+
         if (resetResult.success) {
           console.log('Reset button clicked successfully');
           // Wait a moment for the reset to take effect
@@ -662,82 +680,29 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         console.error('Failed to reset map/inspector/console:', error);
         // Don't fail the test, just log the error and continue
       }
-      
+
       // Clear code editor before test
       try {
-        console.log('Clearing Google Earth Engine code editor using clickBySelector...');
-          
-        // First try clicking the clear script directly (menu might already be accessible)
-        try {
-          console.log('Trying to click Clear script directly...');
-          const directResult = await clickBySelector({
-            selector: 'div.goog-menuitem-content',
-            elementDescription: 'Clear script menu option (direct)',
-            skipReload: true
-          });
-          
-          if (directResult.success) {
-            console.log('Direct clear script successful:', directResult.message);
-            await new Promise(resolve => setTimeout(resolve, 500));
-          } else {
-            console.log('Direct click failed, trying dropdown approach...');
-            throw new Error('Direct click failed');
-          }
-        } catch (error) {
-          console.log('Direct click error, trying dropdown approach...');
-          
-          // Step 1: Click the Reset dropdown arrow to open the menu using improved selector
-          console.log('Step 1: Opening Reset dropdown menu...');
-          const dropdownSelectors = [
-            'button.goog-button.reset-button + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-            'button[title="Clear map, inspector, and console"] + div.goog-inline-block.goog-flat-menu-button[role="button"]',
-            '.goog-toolbar-menu-button'
-          ];
-          
-          let dropdownResult: any = null;
-          for (const selector of dropdownSelectors) {
-            console.log(`Trying dropdown selector: ${selector}`);
-            dropdownResult = await clickBySelector({
-              selector: selector,
-              elementDescription: `Reset dropdown arrow (${selector})`,
-              skipReload: true
-            });
-            
-            if (dropdownResult.success) {
-              console.log(`Dropdown opened with selector: ${selector}`);
-              break;
-            } else {
-              console.log(`Selector failed: ${selector} - ${dropdownResult.error}`);
-            }
-          }
-          
-          if (dropdownResult && dropdownResult.success) {
-            console.log('Reset dropdown opened successfully');
-            // Wait for menu to appear
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            // Step 2: Click "Clear script" option in the dropdown menu
-            console.log('Step 2: Clicking Clear script option...');
-            const clearResult = await clickBySelector({
-              selector: 'div.goog-menuitem-content',
-              elementDescription: 'Clear script menu option',
-              skipReload: true
-            });
-            
-            if (clearResult.success) {
-              console.log('Code cleared successfully using clickBySelector');
-              // Wait for clearing to take effect
-              await new Promise(resolve => setTimeout(resolve, 500));
-            } else {
-              console.warn('Failed to click clear script option:', clearResult.error);
-            }
-          } else {
-            console.warn('Failed to open reset dropdown with any selector');
-          }
+        console.log('Clearing Google Earth Engine code editor...');
+        const clearResult = await sendResetMessage(resetPort, 'CLEAR_EDITOR');
+
+        if (clearResult.success) {
+          console.log('Code editor cleared successfully');
+          // Wait for clearing to take effect
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+          console.warn('Failed to clear code editor:', clearResult.error);
         }
       } catch (error) {
         console.error('Failed to clear code editor:', error);
         // Don't fail the test, just log the error and continue
+      }
+
+      // Disconnect the reset port
+      try {
+        resetPort.disconnect();
+      } catch (e) {
+        // Already disconnected
       }
       
       // Send message to the agent through the extension's messaging system first
