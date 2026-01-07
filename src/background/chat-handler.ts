@@ -153,10 +153,10 @@ export async function handleChatRequest(
       });
     }
 
-    // Load project context from storage
+    // Load project context from sync storage (syncs across devices)
     let projectContext = '';
     try {
-      const storageResult = await chrome.storage.local.get(['earth_engine_project_context']);
+      const storageResult = await chrome.storage.sync.get(['earth_engine_project_context']);
       projectContext = storageResult['earth_engine_project_context'] || '';
       if (projectContext) {
         console.log(`📋 [Chat Handler] Loaded project context (${projectContext.length} characters)`);
