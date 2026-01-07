@@ -2,6 +2,14 @@ import type { AgentProfile, ToolKey } from '@/types/extension';
 
 export const PROFILES_STORAGE_KEY = 'earth_agent_profiles';
 export const ACTIVE_PROFILE_ID_STORAGE_KEY = 'earth_agent_active_profile_id';
+export const MODE_SELECTION_STORAGE_KEY = 'earth_agent_mode_selection';
+
+// Validation limits for chrome.storage.sync (100KB total, 8KB per item)
+export const PROFILE_LIMITS = {
+  MAX_PROFILES: 20,
+  MAX_NAME_LENGTH: 50,
+  MAX_PROMPT_LENGTH: 4000, // ~4KB to stay safely under 8KB per item limit
+} as const;
 
 export interface ToolCatalogItem {
   key: ToolKey;

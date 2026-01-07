@@ -8,7 +8,7 @@ import { Settings } from './Settings';
 import { Message, ExtensionMessage, Provider, type OpenAICompatibleConfig } from '../types/extension';
 import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview } from './chat-helpers';
 import type { AgentProfile } from '@/types/extension';
-import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
+import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, MODE_SELECTION_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
 import AgentTestPanel from './ui/AgentTestPanel';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
@@ -178,6 +178,12 @@ export function ChatUI() {
   // Mode selection: ask/do plus optional profile:<id>
   const [modeSelection, setModeSelection] = useState<string>('ask');
 
+  // Persist mode selection to sync storage when it changes
+  const handleModeChange = useCallback((newMode: string) => {
+    setModeSelection(newMode);
+    chrome.storage.sync.set({ [MODE_SELECTION_STORAGE_KEY]: newMode });
+  }, []);
+
   // Token usage tracking for current session
   const [sessionTokenUsage, setSessionTokenUsage] = useState<{
     totalPromptTokens: number;
@@ -327,23 +333,29 @@ export function ChatUI() {
     });
   }, [cleanupOldSessions]);
 
-  // Load profiles + listen for updates (stored locally)
+  // Load profiles + mode selection + listen for updates (stored in sync)
   useEffect(() => {
-    chrome.storage.local.get([PROFILES_STORAGE_KEY, ACTIVE_PROFILE_ID_STORAGE_KEY], (result) => {
+    chrome.storage.sync.get([PROFILES_STORAGE_KEY, ACTIVE_PROFILE_ID_STORAGE_KEY, MODE_SELECTION_STORAGE_KEY], (result) => {
       setProfiles(migrateProfilesList(result[PROFILES_STORAGE_KEY]));
       setActiveProfileId(result[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
+      if (result[MODE_SELECTION_STORAGE_KEY]) {
+        setModeSelection(result[MODE_SELECTION_STORAGE_KEY]);
+      }
     });
 
     const onStorageChange = (
       changes: { [key: string]: chrome.storage.StorageChange },
       areaName: string
     ) => {
-      if (areaName !== 'local') return;
+      if (areaName !== 'sync') return;
       if (changes[PROFILES_STORAGE_KEY]) {
         setProfiles(migrateProfilesList(changes[PROFILES_STORAGE_KEY].newValue));
       }
       if (changes[ACTIVE_PROFILE_ID_STORAGE_KEY]) {
         setActiveProfileId(changes[ACTIVE_PROFILE_ID_STORAGE_KEY].newValue || null);
+      }
+      if (changes[MODE_SELECTION_STORAGE_KEY]) {
+        setModeSelection(changes[MODE_SELECTION_STORAGE_KEY].newValue || 'ask');
       }
     };
 
@@ -1549,7 +1561,7 @@ export function ChatUI() {
               onRegenerate={handleRegenerate}
               showRegenerate={canRegenerate}
               mode={modeSelection}
-              onModeChange={setModeSelection}
+              onModeChange={handleModeChange}
               profiles={profiles.map((p) => ({ id: p.id, name: p.name }))}
               provider={apiProvider}
               model={selectedModel}

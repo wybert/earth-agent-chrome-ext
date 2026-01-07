@@ -146,6 +146,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [currentTestStartTime, setCurrentTestStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [storageUsage, setStorageUsage] = useState<{ used: number; quota: number; screenshotCount: number } | null>(null);
 
   const getModelDisplayName = (modelId: string) => MODEL_DISPLAY_NAMES[modelId] || modelId;
 
@@ -294,12 +295,12 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   }, []);
 
   useEffect(() => {
-    chrome.storage.local.get([PROFILES_STORAGE_KEY], (result) => {
+    chrome.storage.sync.get([PROFILES_STORAGE_KEY], (result) => {
       setProfiles(migrateProfiles(result[PROFILES_STORAGE_KEY]));
     });
 
     const handleProfileChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
-      if (areaName !== 'local') return;
+      if (areaName !== 'sync') return;
       if (changes[PROFILES_STORAGE_KEY]) {
         setProfiles(migrateProfiles(changes[PROFILES_STORAGE_KEY].newValue));
       }
@@ -433,6 +434,79 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const updateConfig = (updates: Partial<TestConfiguration>) => {
     setConfig(prev => ({ ...prev, ...updates }));
   };
+
+  // Storage management functions
+  const refreshStorageUsage = useCallback(async () => {
+    try {
+      // Get total bytes used
+      const bytesInUse = await new Promise<number>((resolve) => {
+        chrome.storage.local.getBytesInUse(null, resolve);
+      });
+
+      // Count screenshot keys
+      const allKeys = await new Promise<Record<string, unknown>>((resolve) => {
+        chrome.storage.local.get(null, resolve);
+      });
+      const screenshotKeys = Object.keys(allKeys).filter(key => key.startsWith('screenshot_'));
+
+      // Quota is 5MB (5,242,880 bytes) for local storage without unlimitedStorage permission
+      const quota = 5 * 1024 * 1024;
+
+      setStorageUsage({
+        used: bytesInUse,
+        quota,
+        screenshotCount: screenshotKeys.length
+      });
+    } catch (error) {
+      console.error('Failed to get storage usage:', error);
+    }
+  }, []);
+
+  const clearScreenshots = useCallback(async () => {
+    try {
+      // Get all keys and filter for screenshots
+      const allKeys = await new Promise<Record<string, unknown>>((resolve) => {
+        chrome.storage.local.get(null, resolve);
+      });
+      const screenshotKeys = Object.keys(allKeys).filter(key => key.startsWith('screenshot_'));
+
+      if (screenshotKeys.length === 0) {
+        toast.info('No screenshots to clear');
+        return;
+      }
+
+      // Remove all screenshot keys
+      await new Promise<void>((resolve, reject) => {
+        chrome.storage.local.remove(screenshotKeys, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      // Clear previews
+      setScreenshotPreviews({});
+
+      toast.success(`Cleared ${screenshotKeys.length} screenshots`);
+
+      // Refresh storage usage
+      await refreshStorageUsage();
+    } catch (error) {
+      console.error('Failed to clear screenshots:', error);
+      toast.error('Failed to clear screenshots', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }, [refreshStorageUsage]);
+
+  // Refresh storage usage when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      refreshStorageUsage();
+    }
+  }, [isOpen, refreshStorageUsage]);
 
   const addPrompt = () => {
     if (!promptText.trim()) return;
@@ -618,6 +692,14 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   };
 
   const saveScreenshot = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
+    const attemptLocalSave = async (): Promise<string> => {
+      const screenshotId = `screenshot-${testId}-${Date.now()}`;
+      await chromeServices.storage.set({
+        [`screenshot_${screenshotId}`]: screenshotData
+      });
+      return screenshotId;
+    };
+
     switch (config.screenshotStorage) {
       case 'downloads':
         return await saveScreenshotDownloads(screenshotData, testId, promptText);
@@ -627,12 +709,22 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
       case 'local':
       default:
-        // Keep existing local storage for small-scale testing
-        const screenshotId = `screenshot-${testId}-${Date.now()}`;
-        await chromeServices.storage.set({
-          [`screenshot_${screenshotId}`]: screenshotData
-        });
-        return screenshotId;
+        try {
+          return await attemptLocalSave();
+        } catch (error) {
+          // Check for quota exceeded error
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          if (errorMsg.includes('QUOTA_BYTES') || errorMsg.includes('quota')) {
+            console.warn('[AgentTest] Local storage quota exceeded, falling back to downloads');
+            toast.warning('Local storage full', {
+              description: 'Saving remaining screenshots to Downloads folder'
+            });
+            // Auto-fallback to downloads storage for this and future screenshots
+            updateConfig({ screenshotStorage: 'downloads' });
+            return await saveScreenshotDownloads(screenshotData, testId, promptText);
+          }
+          throw error;
+        }
     }
   };
 
@@ -1479,10 +1571,40 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         </SelectContent>
                       </Select>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {config.screenshotStorage === 'local' && '⚠️ Limited to ~20 screenshots due to browser storage limits'}
+                        {config.screenshotStorage === 'local' && '⚠️ Very limited (~3-5 screenshots). Auto-falls back to Downloads when full.'}
                         {config.screenshotStorage === 'downloads' && '✅ Unlimited storage - saves to Downloads/earth-agent-screenshots/'}
                         {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires OAuth2 setup below'}
                       </p>
+
+                      {/* Storage Usage Indicator */}
+                      {storageUsage && (
+                        <div className="mt-3 p-3 bg-muted/30 rounded-md space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Local Storage Usage</span>
+                            <span className="font-mono text-xs">
+                              {(storageUsage.used / 1024 / 1024).toFixed(2)} MB / {(storageUsage.quota / 1024 / 1024).toFixed(0)} MB
+                            </span>
+                          </div>
+                          <Progress
+                            value={(storageUsage.used / storageUsage.quota) * 100}
+                            className={`h-2 ${storageUsage.used / storageUsage.quota > 0.8 ? '[&>div]:bg-destructive' : ''}`}
+                          />
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">
+                              {storageUsage.screenshotCount} screenshot{storageUsage.screenshotCount !== 1 ? 's' : ''} stored locally
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={clearScreenshots}
+                              disabled={storageUsage.screenshotCount === 0}
+                              className="h-7 text-xs"
+                            >
+                              Clear Screenshots
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {config.screenshotStorage === 'google-drive' && (
