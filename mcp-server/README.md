@@ -55,75 +55,89 @@ MCP (Model Context Protocol) server that exposes Google Earth Engine tools to AI
 
 ---
 
-## Setup
+## Running the Server
 
-### 1. Build the MCP Server
+### Option 1: Auto-Run with Cursor (Recommended)
 
-```bash
-cd mcp-server
-npm install
-npm run build
-```
+This is the simplest method. Cursor will automatically manage the MCP server.
 
-### 2. Configure Claude Code
+1.  **Build the Server**:
+    ```bash
+    cd mcp-server
+    npm install
+    npm run build
+    ```
 
-Add to your Claude Code settings (`~/.claude/settings.json`):
-
-```json
-{
-  "mcpServers": {
-    "earth-agent": {
-      "command": "node",
-      "args": ["/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"]
-    }
-  }
-}
-```
-
-Or for Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
-```json
-{
-  "mcpServers": {
-    "earth-agent": {
-      "command": "node",
-      "args": ["/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"]
-    }
-  }
-}
-```
-
-### 3. Configure Zed Editor
-
-Add to your Zed settings:
-
-```json
-{
-  "language_models": {
-    "mcp_servers": {
-      "earth-agent": {
-        "command": "node",
-        "args": ["/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"]
+2.  **Configure Cursor**:
+    Edit `~/.cursor/mcp.json` and add:
+    ```json
+    {
+      "mcpServers": {
+        "earth-agent": {
+          "command": "node",
+          "args": [
+            "/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"
+          ]
+        }
       }
     }
-  }
-}
-```
+    ```
+    *Note: Replace `/path/to/...` with your actual absolute path.*
 
-### 4. Load the Chrome Extension
+3.  **Restart Cursor**: The server will start automatically.
 
-Make sure the Earth Agent Chrome extension is loaded and active. **No additional configuration needed** - the extension will automatically connect to the MCP server.
+### Option 2: Manual Run (For Testing/Debugging)
 
-### 5. Open Google Earth Engine
+1.  **Start the Server**:
+    ```bash
+    cd mcp-server
+    npm start
+    # OR
+    node dist/index.js
+    ```
 
-Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrome. This tab is needed for GEE-related tools to work.
+    You should see:
+    ```
+    [MCP] Starting Earth Agent MCP Server...
+    [MCP] WebSocket server listening on port 3847
+    [MCP] MCP Server running. Waiting for connections...
+    ```
+
+2.  **Configure Claude Code**:
+    Add to `~/.claude/settings.json`:
+    ```json
+    {
+      "mcpServers": {
+        "earth-agent": {
+          "command": "node",
+          "args": ["/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"]
+        }
+      }
+    }
+    ```
+
+### Option 3: Development Mode
+
+For trying out changes to the MCP server code:
+
+1.  **Watch Mode**:
+    ```bash
+    cd mcp-server
+    npm run dev
+    ```
+    This recompiles automatically on file changes.
+
+2.  **Run Server**:
+    In a separate terminal:
+    ```bash
+    npm start
+    ```
 
 ---
 
 ## Available Tools (17 Total)
 
 ### Utility Tools (3)
-
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `weather` | Get current weather for a location | `location` (required) |
@@ -131,7 +145,6 @@ Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrom
 | `wait` | Wait for specified seconds (0.5-60) | `seconds` (required) |
 
 ### Code Manipulation Tools (5)
-
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `read_gee_code` | Read current code from GEE editor | none |
@@ -141,7 +154,6 @@ Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrom
 | `run_gee_code` | Execute code (click Run button) | none |
 
 ### Browser Interaction Tools (4)
-
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `gee_screenshot` | Take screenshot of GEE interface | none |
@@ -150,7 +162,6 @@ Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrom
 | `click_position` | Click at screen coordinates | `x`, `y` |
 
 ### Earth Engine State Tools (4)
-
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `gee_console` | Read console output | none |
@@ -159,7 +170,6 @@ Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrom
 | `clear_gee` | Clear map layers, console, and inspector | none |
 
 ### Documentation Tools (1)
-
 | Tool | Description | Parameters |
 |------|-------------|------------|
 | `gee_docs` | Search GEE documentation and datasets | `query` (required), `type` (optional: datasets/community/api) |
@@ -169,7 +179,6 @@ Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrom
 ## Usage Examples
 
 ### Read and Edit Code
-
 ```
 User: Read the current GEE code and add NDVI calculation
 
@@ -186,18 +195,7 @@ Claude Code: Now I'll add NDVI calculation.
 Done! I've added NDVI calculation to your code.
 ```
 
-### Take Screenshot
-
-```
-User: Show me what the map looks like
-
-Claude Code: [Calls gee_screenshot]
-
-Here's a screenshot of your Earth Engine interface showing the current map view.
-```
-
 ### Search Documentation
-
 ```
 User: Find information about Sentinel-2 imagery
 
@@ -206,89 +204,24 @@ Claude Code: [Calls gee_docs with query: "Sentinel-2"]
 Here's the documentation for Sentinel-2 data in Google Earth Engine...
 ```
 
-### Check Weather for Study Area
-
-```
-User: What's the weather like in San Francisco?
-
-Claude Code: [Calls weather with location: "San Francisco"]
-
-Current weather in San Francisco:
-- Temperature: 15°C
-- Humidity: 72%
-- Wind: 12 km/h
-```
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `EARTH_AGENT_WS_PORT` | `3847` | WebSocket server port |
-
 ---
 
 ## Troubleshooting
 
-### "Chrome extension not connected"
+### Server Fails to Start
+- Ensure `npm run build` has been run.
+- Check Node.js version (18+ required).
+- Check if port 3847 is in use: `lsof -i :3847`.
 
-Make sure:
-1. The Earth Agent Chrome extension is installed and enabled
-2. You have refreshed/reloaded the extension after MCP server started
-3. Check extension console for connection logs: `[MCP-WS] Connected to MCP server`
+### "Chrome extension not connected"
+1. Ensure the Earth Agent extension is **installed and enabled**.
+2. **Reload** the extension (toggle off/on or click reload) *after* starting the MCP server.
+3. Check extension background console (right-click extension > "Service Worker") for `[MCP-WS] Connected`.
 
 ### "No Google Earth Engine tab found"
+You must have [code.earthengine.google.com](https://code.earthengine.google.com) open in a tab for GEE tools to function.
 
-Open [code.earthengine.google.com](https://code.earthengine.google.com) in Chrome before using GEE-related tools.
-
-### Connection issues
-
-The MCP server and Chrome extension communicate via WebSocket on port 3847. Make sure:
-- Port 3847 is not blocked or used by another process
-- If you changed the port via `EARTH_AGENT_WS_PORT`, the extension still uses 3847 (hardcoded)
-
-### Extension not connecting
-
-Check the extension's background script console:
-1. Go to `chrome://extensions/`
-2. Find Earth Agent and click "Service Worker" link
-3. Look for `[MCP-WS]` log messages
-
----
-
-## Chrome Web Store Compatibility
-
-This MCP integration **does not affect** Chrome Web Store submission:
-- WebSocket connections to `localhost` are standard browser functionality
-- No special permissions required
-- If MCP Server is not running, extension works normally
-- Connection attempts are silent and non-blocking
-
----
-
-## Development
-
-### Build MCP Server
-
-```bash
-cd mcp-server
-npm install
-npm run build
-```
-
-### Watch Mode
-
-```bash
-npm run dev  # Rebuilds on file changes
-```
-
-### Testing
-
-Start the MCP server manually to test:
-
-```bash
-node dist/index.js
-```
-
-Then check that the extension connects (look for WebSocket logs in extension console).
+## Environment Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EARTH_AGENT_WS_PORT` | `3847` | WebSocket server port |
