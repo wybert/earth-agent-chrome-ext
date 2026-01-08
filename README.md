@@ -16,6 +16,17 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 - Planning and reasoning
 - Environment management tools (reset map/console, clear code)
 - Comprehensive agent testing framework with automated testing capabilities
+- **MCP Server Support**: Use Earth Agent tools directly from [Claude Code](https://claude.ai/code), [Cursor](https://cursor.sh), or [Zed](https://zed.dev) via the Model Context Protocol.
+
+## MCP Server Support (New!)
+
+Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code editor.
+
+- **Seamless Integration**: Connects Claude Code, Cursor, or Zed to your browser session.
+- **Full Tool Access**: Read/write code, inspect maps, take screenshots, and search docs from your terminal or editor.
+- **No Extra Config**: works automatically with the Chrome extension.
+
+👉 **[Get Started with the MCP Server](./mcp-server/README.md)**
 
 ## Installation
 
