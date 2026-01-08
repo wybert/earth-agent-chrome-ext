@@ -20,13 +20,71 @@ Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome e
 
 ## MCP Server Support (New!)
 
+[![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
+
 Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code editor.
 
 - **Seamless Integration**: Connects Claude Code, Cursor, or Zed to your browser session.
 - **Full Tool Access**: Read/write code, inspect maps, take screenshots, and search docs from your terminal or editor.
 - **No Extra Config**: works automatically with the Chrome extension.
 
-👉 **[Get Started with the MCP Server](./mcp-server/README.md)**
+### Quick Setup (No Build Required!)
+
+Just add the configuration to your editor:
+
+<details open>
+<summary><b>Claude Code</b> (~/.claude/settings.json)</summary>
+
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Cursor</b> (~/.cursor/mcp.json)</summary>
+
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Zed</b> (~/.config/zed/settings.json)</summary>
+
+```json
+{
+  "context_servers": {
+    "earth-agent": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "earth-agent-mcp"]
+      }
+    }
+  }
+}
+```
+</details>
+
+Then:
+1. **Open Chrome** with Earth Agent extension
+2. **Navigate to** [code.earthengine.google.com](https://code.earthengine.google.com)
+3. **Restart your editor** - the MCP tools will be available automatically!
+
+👉 **[Full MCP Server Documentation](./mcp-server/README.md)** (troubleshooting, all 17 tools, usage examples)
 
 ## Installation
 

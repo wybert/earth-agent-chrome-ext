@@ -445,5 +445,98 @@ git tag v1.0.0
 git push origin v1.0.0
 # GitHub Actions will build, test, and create release
 ```
+
+## MCP Server
+
+The project includes an MCP (Model Context Protocol) server that exposes Earth Engine tools to external AI assistants like Claude Code, Cursor, and Zed.
+
+### npm Package
+
+The MCP server is published to npm as [`earth-agent-mcp`](https://www.npmjs.com/package/earth-agent-mcp).
+
+### Configuration
+
+Users can configure their editors to use the MCP server with npx (no build required):
+
+**Claude Code** (`~/.claude/settings.json`):
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+
+**Cursor** (`~/.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+
+**Zed** (`~/.config/zed/settings.json`):
+```json
+{
+  "context_servers": {
+    "earth-agent": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "earth-agent-mcp"]
+      }
+    }
+  }
+}
+```
+
+### MCP Server Architecture
+
+```
+AI Editor (Claude Code/Cursor/Zed)
+    ↓ stdio (MCP Protocol)
+MCP Server (earth-agent-mcp)
+    ↓ WebSocket (port 3847)
+Chrome Extension (Background Script)
+    ↓ Chrome APIs
+Google Earth Engine Code Editor
+```
+
+### MCP Server Files
+
+- `mcp-server/src/index.ts`: Main entry point, WebSocket server, MCP protocol handler
+- `mcp-server/src/tools.ts`: Tool definitions (17 tools)
+- `mcp-server/package.json`: npm package configuration
+
+### Publishing Updates to npm
+
+```bash
+cd mcp-server
+# Update version in package.json
+npm publish
+```
+
+### Troubleshooting: "Chrome extension not connected"
+
+This error occurs when multiple MCP server instances compete for port 3847. Solution:
+
+```bash
+# Kill all instances
+pkill -f "earth-agent.*index.js"
+
+# Verify port is free
+lsof -i :3847
+
+# Restart your editor - it will spawn a fresh MCP server
+```
+
+See `mcp-server/README.md` for detailed troubleshooting guide.
+
 - remeber to use chrome devtools mcp when you need interact with gee, and when you need run code in gee console
 - you don't do any git commit and any other git commands that change could change the git history

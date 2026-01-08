@@ -1,6 +1,16 @@
 # Earth Agent MCP Server
 
+[![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
+
 MCP (Model Context Protocol) server that exposes Google Earth Engine tools to AI assistants like Claude Code, Zed Editor, and Cursor.
+
+## Installation
+
+```bash
+# No installation needed! Just use npx in your editor config.
+# Or install globally:
+npm install -g earth-agent-mcp
+```
 
 ## Architecture
 
@@ -53,8 +63,6 @@ MCP (Model Context Protocol) server that exposes Google Earth Engine tools to AI
 - If MCP Server is not running, silently retries a few times then stops
 - Normal extension functionality is not affected
 
-- Normal extension functionality is not affected
-
 ### Configuration
 
 - **Enabled by Default**: The MCP connection is enabled automatically when you install the extension.
@@ -65,9 +73,75 @@ MCP (Model Context Protocol) server that exposes Google Earth Engine tools to AI
 
 ## Running the Server
 
-### Option 1: Auto-Run with Cursor (Recommended)
+### Option 1: Using npx (Easiest - No Build Required)
 
-This is the simplest method. Cursor will automatically manage the MCP server.
+Just add the configuration to your editor - no cloning or building needed!
+
+<details>
+<summary><b>Claude Code</b> (~/.claude/settings.json)</summary>
+
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Cursor</b> (~/.cursor/mcp.json)</summary>
+
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><b>Zed</b> (~/.config/zed/settings.json)</summary>
+
+```json
+{
+  "context_servers": {
+    "earth-agent": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "earth-agent-mcp"]
+      }
+    }
+  }
+}
+```
+</details>
+
+Then restart your editor and you're ready to go!
+
+---
+
+### Option 2: Using Antigravity
+
+1.  **Ensure Config Exists**: The `antigravity.json` file in the root directory contains the configuration.
+2.  **Load Configuration**:
+    ```bash
+    # Load configuration into Antigravity
+    antigravity load-config ./antigravity.json
+    ```
+
+---
+
+### Option 3: Build from Source
+
+If you want to modify the server or run a local version:
 
 1.  **Build the Server**:
     ```bash
@@ -76,43 +150,7 @@ This is the simplest method. Cursor will automatically manage the MCP server.
     npm run build
     ```
 
-2.  **Configure Cursor**:
-    Edit `~/.cursor/mcp.json` and add:
-    ```json
-    {
-      "mcpServers": {
-        "earth-agent": {
-          "command": "node",
-          "args": [
-            "/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"
-          ]
-        }
-      }
-    }
-    ```
-    *Note: Replace `/path/to/...` with your actual absolute path.*
-
-3.  **Restart Cursor**: The server will start automatically.
-
-### Option 2: Manual Run (For Testing/Debugging)
-
-1.  **Start the Server**:
-    ```bash
-    cd mcp-server
-    npm start
-    # OR
-    node dist/index.js
-    ```
-
-    You should see:
-    ```
-    [MCP] Starting Earth Agent MCP Server...
-    [MCP] WebSocket server listening on port 3847
-    [MCP] MCP Server running. Waiting for connections...
-    ```
-
-2.  **Configure Claude Code**:
-    Add to `~/.claude/settings.json`:
+2.  **Configure your editor** (example for Claude Code):
     ```json
     {
       "mcpServers": {
@@ -123,8 +161,32 @@ This is the simplest method. Cursor will automatically manage the MCP server.
       }
     }
     ```
+    *Note: Replace `/path/to/...` with your actual absolute path.*
 
-### Option 3: Development Mode
+3.  **Restart your editor**: The server will start automatically.
+
+---
+
+### Option 4: Manual Run (For Testing/Debugging)
+
+1.  **Start the Server**:
+    ```bash
+    cd mcp-server
+    npm start
+    # OR
+    npx earth-agent-mcp
+    ```
+
+    You should see:
+    ```
+    [MCP] Starting Earth Agent MCP Server...
+    [MCP] WebSocket server listening on port 3847
+    [MCP] MCP Server running. Waiting for connections...
+    ```
+
+---
+
+### Option 5: Development Mode
 
 For trying out changes to the MCP server code:
 
@@ -221,9 +283,61 @@ Here's the documentation for Sentinel-2 data in Google Earth Engine...
 - Check Node.js version (18+ required).
 - Check if port 3847 is in use: `lsof -i :3847`.
 
-### "Chrome extension not connected"
+### "Chrome extension not connected" (Most Common Issue)
+
+This error occurs when the MCP server can't communicate with the Chrome extension. The most common cause is **multiple MCP server instances** competing for the same WebSocket port.
+
+#### What Happens
+
+When you have multiple Claude Code sessions (or Cursor/Zed instances), each may spawn its own MCP server process. However, **only one can bind to port 3847**:
+
+```
+┌─────────────────┐     stdio      ┌─────────────────┐
+│  Claude Code    │◄──────────────►│  MCP Server A   │ ← Claude Code talks to this
+└─────────────────┘                │  (no WS port!)  │   but it failed to bind 3847
+                                   └─────────────────┘
+
+┌─────────────────┐                ┌─────────────────┐
+│ Chrome Extension│◄──────────────►│  MCP Server B   │ ← Extension connects here
+└─────────────────┘   WebSocket    │  (port 3847)    │   but Claude Code isn't using it
+                                   └─────────────────┘
+```
+
+#### Solution: Kill All Instances and Restart
+
+1. **Find and kill all MCP server processes**:
+   ```bash
+   # Find processes
+   ps aux | grep "earth-agent.*index.js" | grep -v grep
+
+   # Kill all instances
+   pkill -f "earth-agent.*index.js"
+   ```
+
+2. **Verify port 3847 is free**:
+   ```bash
+   lsof -i :3847
+   # Should return nothing
+   ```
+
+3. **Restart your AI assistant** (Claude Code, Cursor, or Zed) - it will spawn a fresh MCP server that can properly bind to port 3847.
+
+4. **Reload the Chrome extension** (optional but recommended):
+   - Go to `chrome://extensions/`
+   - Click the refresh icon on Earth Agent
+   - Or toggle the extension off and on
+
+5. **Verify connection**:
+   ```bash
+   # Check that the server is listening AND has a connection
+   lsof -i :3847
+   # Should show both LISTEN and ESTABLISHED connections
+   ```
+
+#### Additional Checks
+
 1. Ensure the Earth Agent extension is **installed and enabled**.
-2. **Reload** the extension (toggle off/on or click reload) *after* starting the MCP server.
+2. **Keep the Earth Agent side panel open** - Chrome may put background connections to sleep.
 3. Check extension background console (right-click extension > "Service Worker") for `[MCP-WS] Connected`.
 
 ### "No Google Earth Engine tab found"
