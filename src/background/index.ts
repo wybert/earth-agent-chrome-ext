@@ -5,7 +5,7 @@ import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
 import { shadowWorkspaceSingleton } from './shadow-workspace';
 import { getEditorContent, setEditorContent } from './editor-helpers';
-import { connectToMCPServer } from './mcp-ws-client';
+import { connectToMCPServer, initMCPFromStorage } from './mcp-ws-client';
 
 // Types for messages between components
 interface MessageBase {
@@ -78,7 +78,7 @@ const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model
 // Initialize MCP WebSocket connection for external AI tool integration
 // This allows Claude Code, Zed, and other tools to use Earth Agent's functionality
 console.log('[Background] Initializing MCP WebSocket client...');
-connectToMCPServer();
+initMCPFromStorage();
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -144,13 +144,13 @@ async function validateServerIdentity(host: string, port: number): Promise<boole
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-    
+
     const response = await fetch(`http://${host}:${port}/.identity`, {
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (!response.ok) {
       console.error(`Invalid server response: ${response.status}`);
       return false;
@@ -168,7 +168,7 @@ async function validateServerIdentity(host: string, port: number): Promise<boole
   } catch (error) {
     // Handle network errors more gracefully
     console.error("Error validating server identity:", error);
-    
+
     // Don't throw an error, just return false if we can't connect
     return false;
   }
@@ -183,13 +183,13 @@ export async function sendMessageToEarthEngineTab(
   const maxRetries = options?.retries || MAX_TAB_ACTION_RETRIES;
   const allowReload = options?.allowReload ?? message?.payload?.skipReload !== true;
   let retryCount = 0;
-  
+
   console.log('Forwarding message to Earth Engine tab:', message);
-  
+
   async function attemptSend(): Promise<any> {
     // Find Earth Engine tab
     const tabs = await chrome.tabs.query({ url: "*://code.earthengine.google.com/*" });
-    
+
     if (!tabs || tabs.length === 0) {
       console.error('No Earth Engine tab found');
       return {
@@ -197,7 +197,7 @@ export async function sendMessageToEarthEngineTab(
         error: 'No Earth Engine tab found. Please open Google Earth Engine at https://code.earthengine.google.com/ in a tab and try again.'
       };
     }
-    
+
     const tabId = tabs[0].id;
     if (!tabId) {
       console.error('Invalid Earth Engine tab');
@@ -210,7 +210,7 @@ export async function sendMessageToEarthEngineTab(
     // Check if we know the content script is loaded
     if (!contentScriptTabs.has(tabId)) {
       console.log(`Content script not registered for tab ${tabId}, checking with PING...`);
-      
+
       // Try to ping the content script first
       try {
         await pingContentScript(tabId, timeout);
@@ -218,7 +218,7 @@ export async function sendMessageToEarthEngineTab(
         contentScriptTabs.set(tabId, true);
       } catch (error) {
         console.error(`Content script did not respond to PING in tab ${tabId}:`, error);
-        
+
         // If we've already retried too many times, give up
         if (retryCount >= maxRetries) {
           return {
@@ -226,7 +226,7 @@ export async function sendMessageToEarthEngineTab(
             error: `Content script did not respond after ${maxRetries} attempts. Please ensure you have the Google Earth Engine tab open and fully loaded at https://code.earthengine.google.com/`
           };
         }
-        
+
         if (!allowReload) {
           retryCount++;
           console.log(`Skipping tab reload; retrying ping (attempt ${retryCount}/${maxRetries})...`);
@@ -238,10 +238,10 @@ export async function sendMessageToEarthEngineTab(
         try {
           console.log(`Attempting to reload content script in tab ${tabId}...`);
           await chrome.tabs.reload(tabId);
-          
+
           // Wait for the page to reload and content script to initialize
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           // Increment retry count and try again
           retryCount++;
           console.log(`Retrying after tab reload (attempt ${retryCount}/${maxRetries})...`);
@@ -254,11 +254,11 @@ export async function sendMessageToEarthEngineTab(
         }
       }
     }
-    
+
     // Send message to the content script in the Earth Engine tab
     try {
       console.log(`Sending message to tab ${tabId}`);
-      
+
       // Use a timeout promise to handle cases where chrome.tabs.sendMessage doesn't reject
       const messagePromise = new Promise<any>((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -266,28 +266,28 @@ export async function sendMessageToEarthEngineTab(
           contentScriptTabs.delete(tabId);
           reject(new Error(`Message to tab ${tabId} timed out after ${timeout}ms`));
         }, timeout);
-        
+
         chrome.tabs.sendMessage(tabId, message, (response) => {
           clearTimeout(timeoutId);
-          
+
           if (chrome.runtime.lastError) {
             reject(chrome.runtime.lastError);
             return;
           }
-          
+
           resolve(response);
         });
       });
-      
+
       const response = await messagePromise;
       console.log('Received response from Earth Engine tab:', response);
       return response;
     } catch (error) {
       console.error('Error communicating with Earth Engine tab:', error);
-      
+
       // If communication fails, remove tab from tracked tabs so we'll try to ping again next time
       contentScriptTabs.delete(tabId);
-      
+
       // If we have retries left, try again
       if (retryCount < maxRetries) {
         retryCount++;
@@ -295,7 +295,7 @@ export async function sendMessageToEarthEngineTab(
         await new Promise(resolve => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
         return attemptSend();
       }
-      
+
       return {
         success: false,
         error: `Error communicating with Earth Engine tab: ${error instanceof Error ? error.message : String(error)}.
@@ -303,7 +303,7 @@ export async function sendMessageToEarthEngineTab(
       };
     }
   }
-  
+
   return attemptSend();
 }
 
@@ -313,15 +313,15 @@ function pingContentScript(tabId: number, timeout = CONTENT_SCRIPT_PING_TIMEOUT)
     const timeoutId = setTimeout(() => {
       reject(new Error('Content script ping timed out'));
     }, timeout);
-    
+
     chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
       clearTimeout(timeoutId);
-      
+
       if (chrome.runtime.lastError) {
         reject(chrome.runtime.lastError);
         return;
       }
-      
+
       if (response && response.success) {
         resolve(true);
       } else {
@@ -340,7 +340,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       // Handle initialization
       sendResponse({ status: 'initialized' });
       return false; // Synchronous response
-    
+
     case 'CONTENT_SCRIPT_LOADED':
       // Mark content script as loaded for the specific tab
       if (sender.tab && sender.tab.id) {
@@ -407,7 +407,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         sendResponse({ success: false, error: 'Missing tab or content' });
       }
       return false;
-    
+
     case 'VALIDATE_SERVER':
       if (message.payload && message.payload.host && message.payload.port) {
         validateServerIdentity(message.payload.host, message.payload.port)
@@ -421,7 +421,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       }
       sendResponse({ isValid: false, error: 'Invalid payload for VALIDATE_SERVER' });
       return false; // Synchronous response
-      
+
     case 'API_REQUEST':
       // Handle API requests directly (e.g., proxied chat requests if needed)
       if (message.payload && message.payload.endpoint === '/api/chat') {
@@ -446,7 +446,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               undefined, // No tool event callback
               'ask'
             );
-            
+
             // Stream the response back? Requires careful handling
             // For simplicity, let's assume non-streaming for direct API calls for now
             const responseData = await response.json(); // Or handle stream appropriately
@@ -479,24 +479,24 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-    
+
     case 'CHAT_MESSAGE':
       // Handle chat messages from the sidepanel
       (async () => {
         try {
           console.log('Processing chat message');
-          
+
           // Get API key/provider from storage using unified utility
           const { loadProviderConfig } = await import('@/lib/config-utils');
           const providerConfig = await loadProviderConfig();
           const { provider, apiKey, model } = providerConfig;
-          
+
           console.log(`🔧 [Background] API key validation for ${provider}:`, {
             hasApiKey: !!apiKey,
             provider: provider,
             apiKeyLength: apiKey ? apiKey.length : 0
           });
-          
+
           if (!apiKey) {
             console.error(`❌ [Background] API key not configured for ${provider}`);
             sendResponse({
@@ -505,13 +505,13 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           // Create a unique request ID for tracking
           const requestId = Date.now().toString();
-          
+
           // Process the chat messages
           const chatMessages = message.messages || [];
-          
+
           // Handle image attachments if present
           if (message.attachments && message.attachments.length > 0) {
             // Find the last user message and ensure it has parts
@@ -523,16 +523,16 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   { type: 'text', text: chatMessages[lastUserMessageIndex].content || '' }
                 ];
               }
-              
+
               // Add image parts
-              message.attachments.forEach((attachment: {type: string, data: string}) => {
+              message.attachments.forEach((attachment: { type: string, data: string }) => {
                 if (attachment.type === 'image' && chatMessages[lastUserMessageIndex].parts) {
                   chatMessages[lastUserMessageIndex].parts.push(attachment);
                 }
               });
             }
           }
-          
+
           try {
             console.log(`🔧 [Background] Calling handleChatRequest with:`, {
               provider: provider,
@@ -540,7 +540,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               hasApiKey: !!apiKey,
               messageCount: chatMessages.length
             });
-            
+
             // Handle the chat request through the appropriate handler
             const response = await handleChatRequest(
               chatMessages,
@@ -556,25 +556,25 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 tools: (message as any).profileTools
               }
             );
-            
+
             // Get response body as a readable stream
             const reader = response.body?.getReader();
             if (!reader) {
               throw new Error('No readable stream available from response');
             }
-            
+
             // Stream the response back to the sender
             let accumulatedResponse = '';
-            
+
             // Use a loop to read all chunks from the stream
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
-              
+
               // Convert the chunk to text with proper streaming handling
               const chunkText = new TextDecoder('utf-8', { fatal: false }).decode(value, { stream: true });
               accumulatedResponse += chunkText;
-              
+
               // Forward the chunk to the sender - using proper API
               if (sender.tab && sender.tab.id) {
                 chrome.tabs.sendMessage(sender.tab.id, {
@@ -591,7 +591,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 });
               }
             }
-            
+
             // Send the end of stream notification
             if (sender.tab && sender.tab.id) {
               chrome.tabs.sendMessage(sender.tab.id, {
@@ -607,11 +607,11 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 fullText: accumulatedResponse
               });
             }
-            
+
           } catch (error: unknown) {
             console.error('Error processing chat request:', error);
             const errorMessage = error instanceof Error ? error.message : String(error);
-            
+
             // Send error response using proper API
             if (sender.tab && sender.tab.id) {
               chrome.tabs.sendMessage(sender.tab.id, {
@@ -631,7 +631,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         } catch (error: unknown) {
           console.error('Error handling chat message:', error);
           const errorMessage = error instanceof Error ? error.message : String(error);
-          
+
           // Send error response
           sendResponse({
             type: 'ERROR',
@@ -640,7 +640,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-    
+
     // Handle Context7 API requests
     case 'CONTEXT7_RESOLVE_LIBRARY_ID':
       (async () => {
@@ -659,7 +659,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-      
+
     case 'CONTEXT7_GET_DOCUMENTATION':
       (async () => {
         try {
@@ -680,15 +680,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-    
+
     case 'CONTEXT7_DATASET_INFO':
       (async () => {
         try {
           console.log('Getting dataset info for:', message.topic);
-          
+
           // First, search for the dataset
           const searchResult = await resolveLibraryId(`Earth Engine ${message.topic}`);
-          
+
           if (!searchResult.success || !searchResult.libraryId) {
             sendResponse({
               success: false,
@@ -697,13 +697,13 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           // Then get documentation
           const docResult = await getDocumentation(
             searchResult.libraryId,
             message.topic
           );
-          
+
           if (!docResult.success || !docResult.content) {
             sendResponse({
               success: false,
@@ -711,7 +711,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           sendResponse({
             success: true,
             content: docResult.content,
@@ -726,13 +726,13 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-    
+
     // Browser Automation Tools
     case 'SCREENSHOT':
       (async () => {
         try {
           console.log('Taking screenshot of active tab');
-          
+
           // Get the active tab
           const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
 
@@ -787,15 +787,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-      
+
     case 'SNAPSHOT':
       (async () => {
         try {
           console.log('Taking accessibility snapshot of active tab');
-          
+
           // Get the active tab
           const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          
+
           if (!tabs || tabs.length === 0 || !tabs[0].id) {
             sendResponse({
               success: false,
@@ -803,9 +803,9 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           const tabId = tabs[0].id;
-          
+
           // Execute the snapshot script in the tab using the same logic as our snapshot tool
           const results = await chrome.scripting.executeScript({
             target: { tabId },
@@ -824,38 +824,38 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
 
               function shouldIncludeElement(element: Element): boolean {
                 const tagName = element.tagName.toLowerCase();
-                
+
                 // Always include interactive elements
                 const interactiveElements = [
                   'a', 'button', 'input', 'textarea', 'select', 'option',
                   'details', 'summary', 'label', 'fieldset', 'legend'
                 ];
-                
+
                 if (interactiveElements.includes(tagName)) {
                   return true;
                 }
-                
+
                 // Include elements with explicit roles
                 if (element.hasAttribute('role')) {
                   return true;
                 }
-                
+
                 // Include elements with click handlers
                 if (element.hasAttribute('onclick') || element.hasAttribute('ng-click')) {
                   return true;
                 }
-                
+
                 // Include headings
                 if (/^h[1-6]$/.test(tagName)) {
                   return true;
                 }
-                
+
                 // Include structural elements with meaningful content
                 const structuralElements = ['main', 'nav', 'aside', 'section', 'article', 'header', 'footer'];
                 if (structuralElements.includes(tagName)) {
                   return true;
                 }
-                
+
                 // Include generic containers that might be clickable
                 if (['div', 'span'].includes(tagName)) {
                   const style = window.getComputedStyle(element);
@@ -863,12 +863,12 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     return true;
                   }
                 }
-                
+
                 // Include images with alt text
                 if (tagName === 'img' && element.hasAttribute('alt')) {
                   return true;
                 }
-                
+
                 return false;
               }
 
@@ -878,7 +878,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 if (explicitRole) {
                   return explicitRole;
                 }
-                
+
                 // Determine implicit role based on tag
                 const tagName = element.tagName.toLowerCase();
                 const roleMap: Record<string, string> = {
@@ -890,7 +890,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   'option': 'option',
                   'img': 'img',
                   'h1': 'heading',
-                  'h2': 'heading', 
+                  'h2': 'heading',
                   'h3': 'heading',
                   'h4': 'heading',
                   'h5': 'heading',
@@ -906,7 +906,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   'legend': 'legend',
                   'label': 'label'
                 };
-                
+
                 return roleMap[tagName] || 'generic';
               }
 
@@ -928,7 +928,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   'reset': 'button',
                   'file': 'button'
                 };
-                
+
                 return inputRoleMap[type] || 'textbox';
               }
 
@@ -938,7 +938,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 if (ariaLabel) {
                   return ariaLabel.trim();
                 }
-                
+
                 // Check aria-labelledby
                 const labelledBy = element.getAttribute('aria-labelledby');
                 if (labelledBy) {
@@ -947,37 +947,37 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     return getTextContent(referencedElement).trim();
                   }
                 }
-                
+
                 // For form controls, check associated label
-                if (element instanceof HTMLInputElement || 
-                    element instanceof HTMLTextAreaElement || 
-                    element instanceof HTMLSelectElement) {
-                  
+                if (element instanceof HTMLInputElement ||
+                  element instanceof HTMLTextAreaElement ||
+                  element instanceof HTMLSelectElement) {
+
                   // Check for label element
                   const labels = document.querySelectorAll(`label[for="${element.id}"]`);
                   if (labels.length > 0) {
                     return getTextContent(labels[0]).trim();
                   }
-                  
+
                   // Check for wrapping label
                   const wrappingLabel = element.closest('label');
                   if (wrappingLabel) {
                     return getTextContent(wrappingLabel).trim();
                   }
-                  
+
                   // Check placeholder
                   const placeholder = element.getAttribute('placeholder');
                   if (placeholder) {
                     return placeholder.trim();
                   }
                 }
-                
+
                 // Check title attribute
                 const title = element.getAttribute('title');
                 if (title) {
                   return title.trim();
                 }
-                
+
                 // For images, check alt attribute
                 if (element instanceof HTMLImageElement) {
                   const alt = element.getAttribute('alt');
@@ -985,124 +985,124 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     return alt.trim();
                   }
                 }
-                
+
                 // Get text content for other elements
                 const textContent = getTextContent(element).trim();
                 if (textContent && textContent.length < 100) { // Reasonable length limit
                   return textContent;
                 }
-                
+
                 return '';
               }
 
               function getTextContent(element: Element): string {
                 const clone = element.cloneNode(true) as Element;
-                
+
                 // Remove child interactive elements to avoid nested labels
                 const interactiveSelectors = [
-                  'button', 'a', 'input', 'textarea', 'select', 
+                  'button', 'a', 'input', 'textarea', 'select',
                   '[role="button"]', '[role="link"]', '[role="textbox"]'
                 ];
-                
+
                 for (const selector of interactiveSelectors) {
                   const interactiveElements = clone.querySelectorAll(selector);
                   interactiveElements.forEach(el => el.remove());
                 }
-                
+
                 return clone.textContent || '';
               }
 
               function createAccessibilityNode(element: Element): AccessibilityNode | null {
                 const computedStyle = window.getComputedStyle(element);
-                
+
                 // Skip hidden elements
-                if (computedStyle.display === 'none' || 
-                    computedStyle.visibility === 'hidden' || 
-                    computedStyle.opacity === '0') {
+                if (computedStyle.display === 'none' ||
+                  computedStyle.visibility === 'hidden' ||
+                  computedStyle.opacity === '0') {
                   return null;
                 }
-                
+
                 // Skip very small elements (likely not interactive)
                 const rect = element.getBoundingClientRect();
                 if (rect.width < 1 || rect.height < 1) {
                   return null;
                 }
-                
+
                 // Determine if this element should be included
                 if (!shouldIncludeElement(element)) {
                   return null;
                 }
-                
+
                 // Get role (explicit or implicit)
                 const role = getElementRole(element);
-                
+
                 // Get accessible name
                 const name = getAccessibleName(element);
-                
+
                 // Create ref and assign to element (matching playwright-mcp format)
                 const ref = `e${refCounter.value++}`;
                 element.setAttribute('aria-ref', ref);
-                
+
                 // Get cursor style
                 const cursor = computedStyle.cursor;
-                
+
                 const node: AccessibilityNode = {
                   role
                 };
-                
+
                 if (name) {
                   node.name = name;
                 }
-                
+
                 node.ref = ref;
-                
+
                 if (cursor && cursor !== 'auto' && cursor !== 'default') {
                   node.cursor = cursor;
                 }
-                
+
                 return node;
               }
 
               function shouldProcessChildren(element: Element): boolean {
                 const tagName = element.tagName.toLowerCase();
-                
+
                 // Don't process children of leaf elements
                 const leafElements = ['input', 'textarea', 'img', 'br', 'hr'];
                 if (leafElements.includes(tagName)) {
                   return false;
                 }
-                
+
                 // Process children of structural elements
                 return true;
               }
 
               function buildAccessibilityTree(
-                element: Element, 
+                element: Element,
                 maxDepth: number = 10,
                 currentDepth: number = 0
               ): AccessibilityNode[] {
                 if (currentDepth > maxDepth || processedElements.has(element)) {
                   return [];
                 }
-                
+
                 processedElements.add(element);
                 const nodes: AccessibilityNode[] = [];
-                
+
                 // Process current element if it's meaningful
                 const node = createAccessibilityNode(element);
                 if (node) {
                   nodes.push(node);
-                  
+
                   // Process children for interactive/structural elements
                   if (shouldProcessChildren(element)) {
                     const children: AccessibilityNode[] = [];
-                    
+
                     // Process regular DOM children
                     for (const child of Array.from(element.children)) {
                       const childNodes = buildAccessibilityTree(child, maxDepth, currentDepth + 1);
                       children.push(...childNodes);
                     }
-                    
+
                     // Process shadow DOM children if element has open shadow root
                     if (element.shadowRoot && element.shadowRoot.mode === 'open') {
                       for (const shadowChild of Array.from(element.shadowRoot.children)) {
@@ -1110,7 +1110,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                         children.push(...shadowNodes);
                       }
                     }
-                    
+
                     if (children.length > 0) {
                       node.children = children;
                     }
@@ -1121,7 +1121,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     const childNodes = buildAccessibilityTree(child, maxDepth, currentDepth);
                     nodes.push(...childNodes);
                   }
-                  
+
                   // Also process shadow DOM children if element has open shadow root
                   if (element.shadowRoot && element.shadowRoot.mode === 'open') {
                     for (const shadowChild of Array.from(element.shadowRoot.children)) {
@@ -1130,36 +1130,36 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     }
                   }
                 }
-                
+
                 return nodes;
               }
 
               function formatAsYaml(nodes: AccessibilityNode[], indent: string = ''): string {
                 const lines: string[] = [];
-                
+
                 for (const node of nodes) {
                   let line = `${indent}- ${node.role}`;
-                  
+
                   if (node.name) {
                     line += ` "${node.name}"`;
                   }
-                  
+
                   if (node.ref) {
                     line += ` [ref=${node.ref}]`;
                   }
-                  
+
                   if (node.cursor) {
                     line += ` [cursor=${node.cursor}]`;
                   }
-                  
+
                   lines.push(line + ':');
-                  
+
                   if (node.children && node.children.length > 0) {
                     const childYaml = formatAsYaml(node.children, indent + '  ');
                     lines.push(childYaml);
                   }
                 }
-                
+
                 return lines.join('\n');
               }
 
@@ -1167,18 +1167,18 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 // Get page information
                 const pageUrl = window.location.href;
                 const pageTitle = document.title;
-                
+
                 // Generate the accessibility tree
                 const rootElement = document.body || document.documentElement;
                 if (!rootElement) {
                   throw new Error('No root element found');
                 }
-                
+
                 const accessibilityTree = buildAccessibilityTree(rootElement);
-                
+
                 // Format as YAML similar to playwright-mcp
                 const yamlContent = formatAsYaml(accessibilityTree);
-                
+
                 // Create the complete markdown response matching playwright-mcp format exactly
                 const snapshot = [
                   '- Ran Playwright code:',
@@ -1193,7 +1193,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   yamlContent,
                   '```'
                 ].join('\n');
-                
+
                 return {
                   success: true,
                   snapshot
@@ -1206,7 +1206,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               }
             }
           });
-          
+
           if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
@@ -1227,7 +1227,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-      
+
     case 'CLICK':
       (async () => {
         try {
@@ -1263,15 +1263,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-      
+
     case 'TYPE':
       (async () => {
         try {
           console.log('Type request for selector:', message.payload?.selector);
-          
+
           // Get the active tab
           const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          
+
           if (!tabs || tabs.length === 0 || !tabs[0].id) {
             sendResponse({
               success: false,
@@ -1279,12 +1279,12 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           // Execute script in the tab to type text
           const tabId = tabs[0].id;
           const selector = message.payload?.selector;
           const text = message.payload?.text;
-          
+
           if (!selector) {
             sendResponse({
               success: false,
@@ -1292,7 +1292,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           if (text === undefined || text === null) {
             sendResponse({
               success: false,
@@ -1300,7 +1300,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           const results = await chrome.scripting.executeScript({
             target: { tabId },
             func: (selector: string, text: string) => {
@@ -1309,38 +1309,38 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 if (!element) {
                   return { success: false, error: `Element not found with selector: ${selector}` };
                 }
-                
+
                 // Scroll element into view
                 element.scrollIntoView({ behavior: 'auto', block: 'center' });
-                
+
                 // Focus the element
                 (element as HTMLElement).focus();
-                
+
                 // Handle different types of elements
                 if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
                   // For standard form elements
                   element.value = text;
-                  
+
                   // Trigger input and change events
                   element.dispatchEvent(new Event('input', { bubbles: true }));
                   element.dispatchEvent(new Event('change', { bubbles: true }));
                 } else if ((element as HTMLElement).isContentEditable) {
                   // For contentEditable elements
                   element.textContent = text;
-                  
+
                   // Trigger input event for React and other frameworks
                   element.dispatchEvent(new InputEvent('input', { bubbles: true }));
                 } else {
-                  return { 
-                    success: false, 
-                    error: 'Element is not an input, textarea, or contentEditable element' 
+                  return {
+                    success: false,
+                    error: 'Element is not an input, textarea, or contentEditable element'
                   };
                 }
-                
+
                 return { success: true, message: 'Text typed successfully' };
               } catch (error) {
-                return { 
-                  success: false, 
+                return {
+                  success: false,
                   error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`
                 };
               }
@@ -1367,15 +1367,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-      
+
     case 'GET_ELEMENT':
       (async () => {
         try {
           console.log('GetElement request for selector:', message.payload?.selector);
-          
+
           // Get the active tab
           const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-          
+
           if (!tabs || tabs.length === 0 || !tabs[0].id) {
             sendResponse({
               success: false,
@@ -1383,12 +1383,12 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             });
             return;
           }
-          
+
           // Execute script in the tab to get element information
           const tabId = tabs[0].id;
           const selector = message.payload?.selector;
           const limit = message.payload?.limit || 10;
-          
+
           if (!selector) {
             sendResponse({
               success: false,
@@ -1403,37 +1403,37 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               try {
                 const elements = Array.from(document.querySelectorAll(selector));
                 if (!elements || elements.length === 0) {
-                  return { 
-                    success: false, 
-                    error: `No elements found with selector: ${selector}` 
+                  return {
+                    success: false,
+                    error: `No elements found with selector: ${selector}`
                   };
                 }
-                
+
                 const limitedElements = elements.slice(0, limit);
-                
+
                 const elementInfos = limitedElements.map(element => {
                   // Get all attributes as key-value pairs
                   const attributesObj: Record<string, string> = {};
                   for (const attr of element.attributes) {
                     attributesObj[attr.name] = attr.value;
                   }
-                  
+
                   // Check if element is visible
                   const style = window.getComputedStyle(element);
-                  const isVisible = style.display !== 'none' && 
-                                   style.visibility !== 'hidden' && 
-                                   style.opacity !== '0';
-                  
+                  const isVisible = style.display !== 'none' &&
+                    style.visibility !== 'hidden' &&
+                    style.opacity !== '0';
+
                   // Check if element is enabled (for form controls)
                   let isEnabled = true;
-                  if (element instanceof HTMLButtonElement || 
-                      element instanceof HTMLInputElement || 
-                      element instanceof HTMLSelectElement || 
-                      element instanceof HTMLTextAreaElement || 
-                      element instanceof HTMLOptionElement) {
+                  if (element instanceof HTMLButtonElement ||
+                    element instanceof HTMLInputElement ||
+                    element instanceof HTMLSelectElement ||
+                    element instanceof HTMLTextAreaElement ||
+                    element instanceof HTMLOptionElement) {
                     isEnabled = !element.disabled;
                   }
-                  
+
                   // Get bounding client rect
                   const rect = element.getBoundingClientRect();
                   const boundingRect = {
@@ -1444,15 +1444,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     width: rect.width,
                     height: rect.height
                   };
-                  
+
                   // Get element value if applicable
                   let value = undefined;
-                  if (element instanceof HTMLInputElement || 
-                      element instanceof HTMLTextAreaElement || 
-                      element instanceof HTMLSelectElement) {
+                  if (element instanceof HTMLInputElement ||
+                    element instanceof HTMLTextAreaElement ||
+                    element instanceof HTMLSelectElement) {
                     value = element.value;
                   }
-                  
+
                   return {
                     tagName: element.tagName.toLowerCase(),
                     id: element.id || undefined,
@@ -1465,15 +1465,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     boundingRect
                   };
                 });
-                
-                return { 
-                  success: true, 
+
+                return {
+                  success: true,
                   elements: elementInfos,
                   count: elements.length
                 };
               } catch (error) {
-                return { 
-                  success: false, 
+                return {
+                  success: false,
                   error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
                 };
               }
@@ -1500,7 +1500,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         }
       })();
       return true; // Will respond asynchronously
-      
+
     case 'GET_ELEMENT_BY_REF_ID':
       // Forward to content script, similar to GET_ELEMENT
       (async () => {
@@ -1649,23 +1649,23 @@ chrome.runtime.onConnect.addListener((newPort) => {
     console.log('Side panel connected');
     // Store the port globally so it can be used by other message handlers
     port = newPort;
-    
+
     newPort.onMessage.addListener(async (message: any) => {
       console.log('Received message from side panel:', message);
       console.log(`🐛 [Debug] Message type: ${message.type}, Provider: ${message.provider}, Model: ${message.model}`);
-      
+
       // Handle side panel specific messages
       switch (message.type) {
         case 'INIT':
           postToPort(newPort, { type: 'INIT_RESPONSE', status: 'initialized' });
           break;
-          
+
         case 'CHAT_MESSAGE':
           // Handle chat messages from side panel
           console.log(`🚀 [Debug] Calling handleChatMessage for side panel`);
           handleChatMessage(message, newPort);
           break;
-          
+
         case 'PING':
           // Handle ping messages from side panel
           console.log('Received PING from side panel, responding with PONG');
@@ -1901,10 +1901,10 @@ chrome.runtime.onConnect.addListener((newPort) => {
     });
   } else if (newPort.name === 'clear-code') {
     console.log('Clear code connection established');
-    
+
     newPort.onMessage.addListener(async (message: any) => {
       console.log('Received clear code message:', message);
-      
+
       if (message.type === 'CLEAR_CODE') {
         try {
           // Use CSP-safe setEditorContent to clear the Earth Engine code editor
@@ -1957,7 +1957,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
   console.log(`[${requestId}] Handling chat message...`);
   console.log(`[${requestId}] Message type: ${message.type}`);
-  
+
   // Debug log provider/model information from message if available
   if (message.provider) {
     console.log(`[${requestId}] Requested provider: ${message.provider}`);
@@ -1965,37 +1965,37 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   if (message.model) {
     console.log(`[${requestId}] Requested model: ${message.model}`);
   }
-  
+
   // Log attachment information
   if (message.attachments && message.attachments.length > 0) {
     console.log(`[${requestId}] Message contains ${message.attachments.length} attachment(s)`);
-    message.attachments.forEach((att: {type: string, mimeType?: string, data: string}, index: number) => {
+    message.attachments.forEach((att: { type: string, mimeType?: string, data: string }, index: number) => {
       console.log(`[${requestId}] Attachment ${index + 1}: type=${att.type}, data length=${att.data ? att.data.length : 'undefined'}`);
     });
   } else {
     console.log(`[${requestId}] Message contains no attachments`);
   }
-    
+
   try {
     let conversationMessages;
-    
+
     // If there are attachments, create a message with parts array
     if (message.attachments && message.attachments.length > 0) {
       const lastMessage = message.messages ? message.messages[message.messages.length - 1] : null;
-      
+
       // If we're adding to existing messages, replace the last user message with one that has parts
       if (message.messages && message.messages.length > 0) {
         // Copy all except the last message if it's a user message
-        conversationMessages = lastMessage && lastMessage.role === 'user' 
-          ? message.messages.slice(0, -1) 
+        conversationMessages = lastMessage && lastMessage.role === 'user'
+          ? message.messages.slice(0, -1)
           : [...message.messages];
-          
+
         // Add a new user message with parts array
         conversationMessages.push({
           role: 'user',
           parts: [
             { type: 'text', text: message.message || "Here's an image:" },
-            ...message.attachments.map((img: {type: string, mimeType?: string, data: string}) => ({
+            ...message.attachments.map((img: { type: string, mimeType?: string, data: string }) => ({
               type: 'file',
               mimeType: img.mimeType || 'image/png',
               name: 'image.png',
@@ -2010,7 +2010,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
           role: 'user',
           parts: [
             { type: 'text', text: message.message || "Here's an image:" },
-            ...message.attachments.map((img: {type: string, mimeType?: string, data: string}) => ({
+            ...message.attachments.map((img: { type: string, mimeType?: string, data: string }) => ({
               type: 'file',
               mimeType: img.mimeType || 'image/png',
               name: 'image.png',
@@ -2028,139 +2028,139 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         content: message.message
       }];
     }
-    
+
     console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
-    
-            // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
-    
-            const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
-    
-              (resolve, reject) => {
-    
-                chrome.storage.sync.get(
 
-                  [OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, Z_AI_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY],
+    // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
 
-                  (result) => {
+    const apiConfig = await new Promise<{ apiKey: string, provider: string, model: string }>(
 
-                    if (chrome.runtime.lastError) {
+      (resolve, reject) => {
 
-                      reject(new Error(chrome.runtime.lastError.message));
+        chrome.storage.sync.get(
 
-                      return;
+          [OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, Z_AI_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY],
 
-                    }
+          (result) => {
 
+            if (chrome.runtime.lastError) {
 
+              reject(new Error(chrome.runtime.lastError.message));
 
-                    // Use provider and model from test message if provided, otherwise use stored settings
+              return;
 
-                    const provider = message.provider || result[API_PROVIDER_STORAGE_KEY] || 'openai';
-
-                    const model = message.model || result[MODEL_STORAGE_KEY] || '';
+            }
 
 
 
-                    let apiKey = '';
+            // Use provider and model from test message if provided, otherwise use stored settings
 
-                    if (provider === 'openai') {
+            const provider = message.provider || result[API_PROVIDER_STORAGE_KEY] || 'openai';
 
-                      apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || '';
+            const model = message.model || result[MODEL_STORAGE_KEY] || '';
 
-                    } else if (provider === 'anthropic') {
 
-                      apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
 
-                    } else if (provider === 'google') {
+            let apiKey = '';
 
-                      apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || '';
+            if (provider === 'openai') {
 
-                      console.log(`🐛 [Debug] Google API key retrieval:`, {
+              apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || '';
 
-                        googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
+            } else if (provider === 'anthropic') {
 
-                        finalKey: apiKey ? 'present' : 'missing',
+              apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
 
-                        keyLength: apiKey ? apiKey.length : 0,
+            } else if (provider === 'google') {
 
-                        keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
+              apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || '';
 
-                      });
+              console.log(`🐛 [Debug] Google API key retrieval:`, {
 
-                    } else if (provider === 'z-ai') {
+                googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
 
-                      apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
+                finalKey: apiKey ? 'present' : 'missing',
 
-                    }
-    
-                
-    
-                console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
-    
-                console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
-    
-                
-    
-                resolve({
-    
-                  apiKey,
-    
-                  provider,
-    
-                  model: model
-    
-                });
-    
-              }
-    
-            );
-    
+                keyLength: apiKey ? apiKey.length : 0,
+
+                keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
+
+              });
+
+            } else if (provider === 'z-ai') {
+
+              apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
+
+            }
+
+
+
+            console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
+
+            console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
+
+
+
+            resolve({
+
+              apiKey,
+
+              provider,
+
+              model: model
+
+            });
+
           }
-    
+
         );
-    
-        
-    
-                if (!apiConfig.apiKey && !apiConfig.provider.startsWith('custom:')) {
-    
-        
-    
-                  console.error(`[${requestId}] API key not configured`);
-    
-        
-    
-                  safePostMessage({ 
-    
-        
-    
-                    type: 'ERROR',
-    
-        
-    
-                    requestId,
-    
-        
-    
-                    error: 'API key not configured. Please configure it in the extension settings.'
-    
-        
-    
-                  });
-    
-        
-    
-                  return;
-    
-        
-    
-                }
-    
+
+      }
+
+    );
+
+
+
+    if (!apiConfig.apiKey && !apiConfig.provider.startsWith('custom:')) {
+
+
+
+      console.error(`[${requestId}] API key not configured`);
+
+
+
+      safePostMessage({
+
+
+
+        type: 'ERROR',
+
+
+
+        requestId,
+
+
+
+        error: 'API key not configured. Please configure it in the extension settings.'
+
+
+
+      });
+
+
+
+      return;
+
+
+
+    }
+
     // Check if any messages have parts or attachments
     const hasMultiModalContent = conversationMessages.some((msg: any) => msg.parts && Array.isArray(msg.parts));
     if (hasMultiModalContent) {
       console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
     }
-    
+
     // Create callback for tool events
     const onToolEvent = (event: {
       type: 'tool_start' | 'tool_finish';
@@ -2197,19 +2197,19 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         tools: (message as any).profileTools
       }
     );
-      
+
     console.log(`[${requestId}] Response status from chat handler: ${response.status}`);
 
     if (!response.ok) {
       // Handle potential errors from the handler
       let errorPayload;
       try {
-          errorPayload = await response.json();
+        errorPayload = await response.json();
       } catch (e) {
-          errorPayload = { error: `API Error: ${response.statusText}` };
+        errorPayload = { error: `API Error: ${response.statusText}` };
       }
       console.error(`[${requestId}] Error from chat handler:`, errorPayload);
-      safePostMessage({ 
+      safePostMessage({
         type: 'ERROR',
         requestId,
         error: errorPayload.error || errorPayload.message || 'Unknown API error'
@@ -2219,15 +2219,15 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
     // Check if the response body exists
     if (!response.body) {
-        console.error(`[${requestId}] Response body is null.`);
-        safePostMessage({ 
-          type: 'ERROR',
-          requestId,
-          error: 'Received empty response from API handler'
-        });
-        return; // Stop processing if no body
+      console.error(`[${requestId}] Response body is null.`);
+      safePostMessage({
+        type: 'ERROR',
+        requestId,
+        error: 'Received empty response from API handler'
+      });
+      return; // Stop processing if no body
     }
-      
+
     // Process the simple text stream from response
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: false });
@@ -2363,14 +2363,14 @@ function generateFallbackResponse(query: string): string {
     'classify': 'For classification, use ee.Classifier methods like randomForest() or smileCart()',
     'reducer': 'Reducers like mean(), sum(), or min() can aggregate data spatially or temporally'
   };
-  
+
   // Check if any keywords are in the query
   for (const [key, response] of Object.entries(keywords)) {
     if (query.toLowerCase().includes(key)) {
       return response;
     }
   }
-  
+
   // Default response
   return "I can help with Earth Engine tasks like image processing, classification, and data export. Could you provide more details about what you're trying to do?";
 }

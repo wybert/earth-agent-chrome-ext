@@ -53,6 +53,14 @@ MCP (Model Context Protocol) server that exposes Google Earth Engine tools to AI
 - If MCP Server is not running, silently retries a few times then stops
 - Normal extension functionality is not affected
 
+- Normal extension functionality is not affected
+
+### Configuration
+
+- **Enabled by Default**: The MCP connection is enabled automatically when you install the extension.
+- **Settings Toggle**: You can turn the MCP server connection on/off in the extension Settings > External Integrations.
+- **Keep Side Panel Open**: For the most reliable connection, we recommend keeping the Earth Agent side panel open while using MCP tools. This prevents Chrome from putting the background connection to sleep.
+
 ---
 
 ## Running the Server

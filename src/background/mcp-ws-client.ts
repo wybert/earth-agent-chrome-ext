@@ -506,12 +506,30 @@ export async function disableMCP(): Promise<void> {
 export async function initMCPFromStorage(): Promise<void> {
   try {
     const result = await chrome.storage.local.get([MCP_ENABLED_STORAGE_KEY]);
-    mcpEnabled = result[MCP_ENABLED_STORAGE_KEY] === true;
+    // Default to true if not set
+    mcpEnabled = result[MCP_ENABLED_STORAGE_KEY] !== false;
     console.log(`[MCP-WS] Initialized from storage: enabled=${mcpEnabled}`);
 
     if (mcpEnabled) {
       connectToMCPServer();
     }
+
+    // Listen for storage changes to toggle MCP at runtime
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes[MCP_ENABLED_STORAGE_KEY]) {
+        const newValue = changes[MCP_ENABLED_STORAGE_KEY].newValue;
+        console.log(`[MCP-WS] Storage changed: mcpEnabled from ${mcpEnabled} to ${newValue}`);
+
+        mcpEnabled = newValue === true;
+
+        if (mcpEnabled) {
+          connectToMCPServer();
+        } else {
+          disconnectFromMCPServer();
+          notifyStatusChange();
+        }
+      }
+    });
   } catch (error) {
     console.error('[MCP-WS] Failed to initialize from storage:', error);
   }
