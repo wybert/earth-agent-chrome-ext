@@ -1,0 +1,33 @@
+{
+  "name": "earth-agent-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Earth Agent - exposes Google Earth Engine tools to AI assistants",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "earth-agent-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "earth-engine",
+    "gee",
+    "google-earth-engine",
+    "ai-assistant"
+  ],
+  "license": "MIT"
+}

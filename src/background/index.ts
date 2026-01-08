@@ -5,6 +5,7 @@ import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
 import { shadowWorkspaceSingleton } from './shadow-workspace';
 import { getEditorContent, setEditorContent } from './editor-helpers';
+import { connectToMCPServer } from './mcp-ws-client';
 
 // Types for messages between components
 interface MessageBase {
@@ -73,6 +74,11 @@ const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
+
+// Initialize MCP WebSocket connection for external AI tool integration
+// This allows Claude Code, Zed, and other tools to use Earth Agent's functionality
+console.log('[Background] Initializing MCP WebSocket client...');
+connectToMCPServer();
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
