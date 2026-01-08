@@ -8,9 +8,13 @@
  * MCP Server (localhost:3847) <--WebSocket--> This Client <--> Extension Tools
  */
 
-import { selectBestEarthEngineTab, ensureContentScript } from '../lib/utils';
-import { getEditorContent, setEditorContent } from './editor-helpers';
-import { shadowWorkspaceSingleton } from './shadow-workspace';
+import { selectBestEarthEngineTab } from '../lib/utils';
+import * as WeatherService from '../lib/tools/services/weather-service';
+import * as TimeService from '../lib/tools/services/time-service';
+import * as EditorService from '../lib/tools/services/editor-service';
+import * as GeeService from '../lib/tools/services/gee-service';
+import * as BrowserService from '../lib/tools/services/browser-service';
+import * as DocsService from '../lib/tools/services/docs-service';
 
 // Configuration
 const WS_PORT = 3847;
@@ -65,7 +69,7 @@ function sendResponse(response: MCPResponse): void {
  * Get the best Earth Engine tab
  */
 async function getEarthEngineTab(): Promise<chrome.tabs.Tab> {
-  const tabs = await chrome.tabs.query({ url: 'https://code.earthengine.google.com/*' });
+  const tabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
   if (tabs.length === 0) {
     throw new Error('No Google Earth Engine tab found. Please open code.earthengine.google.com');
   }
@@ -74,27 +78,6 @@ async function getEarthEngineTab(): Promise<chrome.tabs.Tab> {
     throw new Error('Could not select an Earth Engine tab');
   }
   return bestTab;
-}
-
-/**
- * Execute a message in the content script
- */
-async function executeInContentScript(tabId: number, message: Record<string, unknown>): Promise<unknown> {
-  // Ensure content script is loaded
-  const contentReady = await ensureContentScript(tabId);
-  if (!contentReady.success) {
-    throw new Error(contentReady.error || 'Content script not ready');
-  }
-
-  return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(response);
-      }
-    });
-  });
 }
 
 /**
@@ -107,59 +90,22 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
   switch (name) {
     case 'weather': {
       const { location } = args as { location: string };
-      // Use Open-Meteo geocoding API to get coordinates
-      const geoResponse = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`
-      );
-      const geoData = await geoResponse.json();
-      if (!geoData.results || geoData.results.length === 0) {
-        throw new Error(`Location not found: ${location}`);
+      const result = await WeatherService.getWeather(location);
+      if ('error' in result) {
+        throw new Error(result.error);
       }
-      const { latitude, longitude, name: locationName, country } = geoData.results[0];
-
-      // Get weather data
-      const weatherResponse = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`
-      );
-      const weatherData = await weatherResponse.json();
-      const current = weatherData.current;
-
-      return {
-        location: `${locationName}, ${country}`,
-        coordinates: { latitude, longitude },
-        temperature: `${current.temperature_2m}°C`,
-        humidity: `${current.relative_humidity_2m}%`,
-        windSpeed: `${current.wind_speed_10m} km/h`,
-        weatherCode: current.weather_code,
-      };
+      return result;
     }
 
     case 'date_time': {
       const { timezone } = args as { timezone?: string };
-      const now = new Date();
-      const options: Intl.DateTimeFormatOptions = {
-        timeZone: timezone || 'UTC',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      };
-      return {
-        datetime: now.toLocaleString('en-US', options),
-        timezone: timezone || 'UTC',
-        timestamp: now.toISOString(),
-        unix: Math.floor(now.getTime() / 1000),
-      };
+      return TimeService.getCurrentTime(timezone);
     }
 
     case 'wait': {
       const { seconds } = args as { seconds: number };
-      const waitTime = Math.max(0.5, Math.min(60, seconds)); // Clamp between 0.5 and 60
-      await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
-      return { waited: waitTime, message: `Waited ${waitTime} seconds` };
+      const _result = await TimeService.waitSeconds(seconds);
+      return { waited: seconds, message: `Waited ${seconds} seconds` };
     }
   }
 
@@ -170,7 +116,7 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
 
   switch (name) {
     case 'read_gee_code': {
-      const result = await getEditorContent(tabId);
+      const result = await EditorService.readCode(tabId);
       if (!result.success || result.content === undefined) {
         throw new Error(result.error || 'Failed to read editor content');
       }
@@ -180,108 +126,128 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
     case 'edit_gee_code': {
       const { old_string, new_string } = args as { old_string: string; new_string: string };
 
-      // Get current code from editor
-      const result = await getEditorContent(tabId);
-      if (!result.success || result.content === undefined) {
-        throw new Error(result.error || 'Failed to read editor content');
-      }
-      const currentCode = result.content;
-
-      // Check if old_string exists
-      if (!currentCode.includes(old_string)) {
-        throw new Error(`Could not find the text to replace. Make sure old_string exactly matches the code in the editor.`);
+      const result = await EditorService.editCode(tabId, old_string, new_string, false);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to edit code');
       }
 
-      // Perform the replacement
-      const newCode = currentCode.replace(old_string, new_string);
-
-      // Sync to shadow workspace and write back to editor
-      shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, currentCode, 'sync before edit');
-      shadowWorkspaceSingleton.commit(tabId, scriptId, newCode, 'MCP edit', 'agent');
-      await setEditorContent(newCode, tabId);
-
-      return { success: true, message: 'Code edited successfully' };
+      return {
+        success: true,
+        message: 'Code edited successfully',
+        replacements: result.replacements
+      };
     }
 
     case 'write_gee_code': {
       const { code } = args as { code: string };
-      shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, code, 'MCP write');
-      await setEditorContent(code, tabId);
-      return { success: true, message: 'Code written successfully' };
+      const result = await EditorService.writeCode(tabId, code);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to write code');
+      }
+      return { success: true, message: 'Code written successfully', lineCount: result.lineCount };
     }
 
     case 'undo_gee_edit': {
-      const state = shadowWorkspaceSingleton.undo(tabId, scriptId);
-      if (state.head > 0) {
-        await setEditorContent(state.content, tabId);
-        return { success: true, message: 'Edit undone' };
+      const result = await EditorService.undoEdit(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to undo edit');
       }
-      return { success: false, message: 'Nothing to undo' };
+      return { success: true, message: 'Edit undone' };
     }
 
     case 'run_gee_code': {
-      const response = await executeInContentScript(tabId, { type: 'RUN_CODE' });
-      return response;
+      const result = await GeeService.runCode(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to run code');
+      }
+      return { success: true, message: 'Code execution started' };
     }
 
     case 'gee_screenshot': {
-      // Capture visible tab
-      const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId!, { format: 'jpeg', quality: 80 });
-      // Extract base64 data
-      const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      // Use BrowserService for screenshot
+      if (!tab.windowId) throw new Error('Tab has no window ID');
+      const result = await BrowserService.captureScreenshot(tabId, tab.windowId);
+      if (!result.success || !result.data?.screenshotDataUrl) {
+        throw new Error(result.error || 'Failed to capture screenshot');
+      }
+
+      // Extract base64 (remove prefix)
+      const base64Data = result.data.screenshotDataUrl.replace(/^data:image\/\w+;base64,/, '');
       return { data: base64Data, mimeType: 'image/jpeg' };
     }
 
     case 'gee_snapshot': {
-      const response = await executeInContentScript(tabId, { type: 'SNAPSHOT' });
-      return response;
+      const result = await BrowserService.captureSnapshot(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to capture snapshot');
+      }
+      return { snapshot: result.data?.snapshot };
     }
 
     case 'gee_console': {
-      const response = await executeInContentScript(tabId, { type: 'GET_CONSOLE_OUTPUT' });
-      return response;
+      const result = await GeeService.getConsoleOutput(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get console output');
+      }
+      return result.data; // Return full data object (outputs, count)
     }
 
     case 'gee_map_position': {
-      const response = await executeInContentScript(tabId, { type: 'GET_MAP_POSITION' });
-      return response;
+      const result = await GeeService.getMapInfo(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get map info');
+      }
+      return result.data;
     }
 
     case 'gee_inspector': {
-      const response = await executeInContentScript(tabId, { type: 'GET_INSPECTOR_OUTPUT' });
-      return response;
+      const result = await GeeService.getInspectorOutput(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get inspector output');
+      }
+      return result.data;
     }
 
     case 'clear_gee': {
-      const response = await executeInContentScript(tabId, { type: 'RESET_MAP_CONSOLE' });
-      return response;
+      const result = await GeeService.clearAll(tabId);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to clear environment');
+      }
+      return { success: true, message: 'Environment cleared' };
     }
 
     case 'gee_docs': {
-      const { query, type = 'datasets' } = args as { query: string; type?: string };
-      // Import and use context7 tools
-      const { resolveLibraryId, getDocumentation } = await import('../lib/tools/context7');
+      const { query, type = 'datasets' } = args as { query: string; type?: 'datasets' | 'api' };
 
-      // Resolve library ID for GEE
-      const resolveResult = await resolveLibraryId('google-earth-engine');
-      if (!resolveResult.success || !resolveResult.libraryId) {
-        throw new Error('Could not resolve GEE documentation library');
+      // Map 'type' to valid source for DocsService
+      let source: 'geeDatasets' | 'apiDocs' = 'geeDatasets';
+      if (type === 'api') source = 'apiDocs';
+
+      const result = await DocsService.getDocumentation(query, source);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to find documentation');
       }
 
-      const docs = await getDocumentation(resolveResult.libraryId, query);
-      return { documentation: docs };
+      return { documentation: result.documentation };
     }
 
     case 'click_element': {
       const { ref_id } = args as { ref_id: string };
-      const response = await executeInContentScript(tabId, { type: 'CLICK_BY_REF_ID', refId: ref_id });
-      return response;
+      const result = await BrowserService.clickByRefId(tabId, ref_id);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to click element');
+      }
+      return { success: true, message: 'Element clicked' };
     }
 
     case 'click_position': {
       const { x, y } = args as { x: number; y: number };
-      const response = await executeInContentScript(tabId, { type: 'CLICK_AT_POSITION', x, y });
-      return response;
+      const result = await BrowserService.clickAtPosition(tabId, x, y);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to click position');
+      }
+      return { success: true, message: 'Position clicked' };
     }
 
     default:
