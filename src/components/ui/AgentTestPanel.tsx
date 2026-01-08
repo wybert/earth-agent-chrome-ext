@@ -8,10 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { X, Upload, Download, Play, Pause, RotateCcw, FileText, HelpCircle, Eye, EyeOff } from 'lucide-react';
+import { X, Upload, Play, Pause, RotateCcw, FileText, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import JSZip from 'jszip';
 
 import { screenshot } from '@/lib/tools/browser/screenshot';
 import { chromeServices } from '@/lib/services/chrome-storage-service';
@@ -70,8 +69,6 @@ interface TestConfiguration {
   intervalMs: number;
   timeoutMs: number;
   sessionId: string;
-  screenshotStorage: 'local' | 'downloads' | 'google-drive';
-  driveFolderId?: string;
 }
 
 interface AgentTestPanelProps {
@@ -114,9 +111,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     heliconeApiKey: '',
     intervalMs: 5000,
     timeoutMs: 60000,
-    sessionId: `test-session-${Date.now()}`,
-    screenshotStorage: 'downloads',
-    driveFolderId: ''
+    sessionId: `test-session-${Date.now()}`
   });
   
   const [isRunning, setIsRunning] = useState(false);
@@ -129,14 +124,21 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
   const [profiles, setProfiles] = useState<AgentProfile[]>([]);
   const [downloadFormat, setDownloadFormat] = useState<string>('');
-  const [resultsDownloadFormat, setResultsDownloadFormat] = useState<string>('');
   const [promptsPage, setPromptsPage] = useState(1);
   const [resultsPage, setResultsPage] = useState(1);
   const [screenshotPreviews, setScreenshotPreviews] = useState<Record<string, string>>({});
   const [isLoadingConfig, setIsLoadingConfig] = useState(true);
   const [currentTestStartTime, setCurrentTestStartTime] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [storageUsage, setStorageUsage] = useState<{ used: number; quota: number; screenshotCount: number } | null>(null);
+
+  // FileSystem API directory handle for the working folder (user selected)
+  const [fileSystemHandle, setFileSystemHandle] = useState<FileSystemDirectoryHandle | null>(null);
+
+  // Session folder handle (created for each test run)
+  const sessionFolderRef = useRef<FileSystemDirectoryHandle | null>(null);
+
+  // Track the current test result index for filename generation
+  const testResultIndexRef = useRef(0);
 
   const getModelDisplayName = (modelId: string) => MODEL_DISPLAY_NAMES[modelId] || modelId;
 
@@ -402,9 +404,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           modeSelection: config.modeSelection,
           heliconeApiKey: config.heliconeApiKey,
           intervalMs: config.intervalMs,
-          timeoutMs: config.timeoutMs,
-          screenshotStorage: config.screenshotStorage,
-          driveFolderId: config.driveFolderId
+          timeoutMs: config.timeoutMs
         };
         chromeServices.storage.set({ agentTestConfig: configToSave })
           .catch((error) => {
@@ -425,78 +425,6 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     setConfig(prev => ({ ...prev, ...updates }));
   };
 
-  // Storage management functions
-  const refreshStorageUsage = useCallback(async () => {
-    try {
-      // Get total bytes used
-      const bytesInUse = await new Promise<number>((resolve) => {
-        chrome.storage.local.getBytesInUse(null, resolve);
-      });
-
-      // Count screenshot keys
-      const allKeys = await new Promise<Record<string, unknown>>((resolve) => {
-        chrome.storage.local.get(null, resolve);
-      });
-      const screenshotKeys = Object.keys(allKeys).filter(key => key.startsWith('screenshot_'));
-
-      // Quota is 5MB (5,242,880 bytes) for local storage without unlimitedStorage permission
-      const quota = 5 * 1024 * 1024;
-
-      setStorageUsage({
-        used: bytesInUse,
-        quota,
-        screenshotCount: screenshotKeys.length
-      });
-    } catch (error) {
-      console.error('Failed to get storage usage:', error);
-    }
-  }, []);
-
-  const clearScreenshots = useCallback(async () => {
-    try {
-      // Get all keys and filter for screenshots
-      const allKeys = await new Promise<Record<string, unknown>>((resolve) => {
-        chrome.storage.local.get(null, resolve);
-      });
-      const screenshotKeys = Object.keys(allKeys).filter(key => key.startsWith('screenshot_'));
-
-      if (screenshotKeys.length === 0) {
-        toast.info('No screenshots to clear');
-        return;
-      }
-
-      // Remove all screenshot keys
-      await new Promise<void>((resolve, reject) => {
-        chrome.storage.local.remove(screenshotKeys, () => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message));
-          } else {
-            resolve();
-          }
-        });
-      });
-
-      // Clear previews
-      setScreenshotPreviews({});
-
-      toast.success(`Cleared ${screenshotKeys.length} screenshots`);
-
-      // Refresh storage usage
-      await refreshStorageUsage();
-    } catch (error) {
-      console.error('Failed to clear screenshots:', error);
-      toast.error('Failed to clear screenshots', {
-        description: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }, [refreshStorageUsage]);
-
-  // Refresh storage usage when panel opens
-  useEffect(() => {
-    if (isOpen) {
-      refreshStorageUsage();
-    }
-  }, [isOpen, refreshStorageUsage]);
 
   const addPrompt = () => {
     if (!promptText.trim()) return;
@@ -599,122 +527,55 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     setUploadedFile(null);
   };
 
-  // Add new storage functions
-  const saveScreenshotDownloads = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
-    // Convert data URL to blob
+  // Save screenshot to session folder and store data URL for preview
+  const saveScreenshot = async (screenshotData: string, resultIndex: number, modelName: string): Promise<string> => {
+    if (!sessionFolderRef.current) {
+      throw new Error('Session folder not created. Please run tests first.');
+    }
+
     const response = await fetch(screenshotData);
     const blob = await response.blob();
 
-    // Create safe filename
-    const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `earth-agent-test-${testId}-${safePromptText}-${timestamp}.png`;
+    // Use result index in filename to match CSV rows (1-based for human readability)
+    const safeModelName = modelName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
+    const filename = `${String(resultIndex + 1).padStart(4, '0')}_${safeModelName}.png`;
 
-    // Create ObjectURL and ensure it gets revoked
-    const url = URL.createObjectURL(blob);
     try {
-      const downloadId = await chromeServices.downloads.download({
-        url,
-        filename: `earth-agent-screenshots/${config.sessionId}/${filename}`,
-        saveAs: false
-      });
-      return `download-${downloadId}`;
-    } finally {
-      // Always revoke to prevent memory leak
-      URL.revokeObjectURL(url);
-    }
-  };
+      const fileHandle = await sessionFolderRef.current.getFileHandle(filename, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      console.log('Screenshot saved to session folder:', filename);
 
-  const authenticateGoogleDrive = async (): Promise<string> => {
-    // Uses chromeServices which has a 60-second timeout built in
-    return chromeServices.identity.getAuthToken({
-      interactive: true,
-      scopes: ['https://www.googleapis.com/auth/drive.file']
-    });
-  };
+      // Store data URL for preview
+      setScreenshotPreviews(prev => ({
+        ...prev,
+        [filename]: screenshotData
+      }));
 
-  const saveScreenshotGoogleDrive = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
-    try {
-      // Get OAuth2 access token
-      const accessToken = await authenticateGoogleDrive();
-      
-      // Convert data URL to blob
-      const response = await fetch(screenshotData);
-      const blob = await response.blob();
-      
-      // Create safe filename
-      const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `earth-agent-test-${testId}-${safePromptText}-${timestamp}.png`;
-      
-      // Prepare metadata
-      const metadata = {
-        name: filename,
-        parents: config.driveFolderId ? [config.driveFolderId] : undefined
-      };
-      
-      // Create form data for multipart upload
-      const formData = new FormData();
-      formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      formData.append('file', blob);
-      
-      // Upload to Google Drive
-      const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: formData
-      });
-      
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        throw new Error(`Google Drive upload failed: ${uploadResponse.statusText} - ${errorText}`);
-      }
-      
-      const result = await uploadResponse.json();
-      console.log('Google Drive upload successful:', result);
-      return `drive-${result.id}`;
+      return filename;
     } catch (error) {
-      console.error('Error saving screenshot to Google Drive:', error);
+      console.error('Error saving screenshot to filesystem:', error);
       throw error;
     }
   };
 
-  const saveScreenshot = async (screenshotData: string, testId: string, promptText: string): Promise<string> => {
-    const attemptLocalSave = async (): Promise<string> => {
-      const screenshotId = `screenshot-${testId}-${Date.now()}`;
-      await chromeServices.storage.set({
-        [`screenshot_${screenshotId}`]: screenshotData
-      });
-      return screenshotId;
-    };
+  // Save CSV results to session folder
+  const saveResultsCsv = async (csvContent: string): Promise<void> => {
+    if (!sessionFolderRef.current) {
+      throw new Error('Session folder not created');
+    }
 
-    switch (config.screenshotStorage) {
-      case 'downloads':
-        return await saveScreenshotDownloads(screenshotData, testId, promptText);
-
-      case 'google-drive':
-        return await saveScreenshotGoogleDrive(screenshotData, testId, promptText);
-
-      case 'local':
-      default:
-        try {
-          return await attemptLocalSave();
-        } catch (error) {
-          // Check for quota exceeded error
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          if (errorMsg.includes('QUOTA_BYTES') || errorMsg.includes('quota')) {
-            console.warn('[AgentTest] Local storage quota exceeded, falling back to downloads');
-            toast.warning('Local storage full', {
-              description: 'Saving remaining screenshots to Downloads folder'
-            });
-            // Auto-fallback to downloads storage for this and future screenshots
-            updateConfig({ screenshotStorage: 'downloads' });
-            return await saveScreenshotDownloads(screenshotData, testId, promptText);
-          }
-          throw error;
-        }
+    const filename = `results.csv`;
+    try {
+      const fileHandle = await sessionFolderRef.current.getFileHandle(filename, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(csvContent);
+      await writable.close();
+      console.log('Results CSV saved to session folder:', filename);
+    } catch (error) {
+      console.error('Error saving results CSV:', error);
+      throw error;
     }
   };
 
@@ -863,9 +724,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         console.log('Taking screenshot after agent completion...');
         const screenshotResult = await screenshot();
         if (screenshotResult.success && screenshotResult.screenshotData) {
-          // Use new storage system
-          screenshotId = await saveScreenshot(screenshotResult.screenshotData, prompt.id, prompt.text);
-          console.log('Screenshot saved with ID:', screenshotId);
+          // Save screenshot with result index for CSV matching
+          const currentIndex = testResultIndexRef.current;
+          screenshotId = await saveScreenshot(screenshotResult.screenshotData, currentIndex, modelEntry.model);
+          console.log('Screenshot saved:', screenshotId);
         }
       } catch (error) {
         console.error('Screenshot failed:', error);
@@ -921,15 +783,38 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       return;
     }
 
+    // Check output folder is selected
+    if (!fileSystemHandle) {
+      toast.error('Please select an output folder first');
+      return;
+    }
+
+    // Create session subfolder
+    try {
+      const sessionFolder = await fileSystemHandle.getDirectoryHandle(config.sessionId, { create: true });
+      sessionFolderRef.current = sessionFolder;
+      console.log('Created session folder:', config.sessionId);
+    } catch (error) {
+      console.error('Failed to create session folder:', error);
+      toast.error('Failed to create session folder', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return;
+    }
+
     console.log('Starting tests...');
     setIsRunningWithRef(true);
     setCurrentTestIndex(0);
     setResults([]);
     setTestProgress(0);
+    setScreenshotPreviews({}); // Clear previous previews
+    testResultIndexRef.current = 0; // Reset result index
 
     const testQueue = config.prompts.flatMap(prompt =>
       resolvedSelectedModels.map(modelEntry => ({ prompt, modelEntry }))
     );
+
+    const allResults: TestResult[] = [];
 
     for (let i = 0; i < testQueue.length; i++) {
       // Use the current state instead of stale closure
@@ -941,10 +826,12 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       console.log(`Running test ${i + 1}/${testQueue.length}`);
       setCurrentTestIndex(i);
       setCurrentTestStartTime(Date.now());
+      testResultIndexRef.current = i; // Update result index before each test
       const { prompt, modelEntry } = testQueue[i];
 
       const result = await executeTest(prompt, modelEntry);
       console.log('Test result:', result);
+      allResults.push(result);
       setResults(prev => [...prev, result]);
 
       const progress = ((i + 1) / testQueue.length) * 100;
@@ -963,7 +850,23 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     console.log('Tests completed');
     setIsRunningWithRef(false);
     setCurrentTestStartTime(null);
-    toast.success(`Tests completed: ${testQueue.length} tests run`);
+
+    // Save results CSV to output folder
+    if (allResults.length > 0) {
+      try {
+        const csvContent = buildResultsCsvFromResults(allResults);
+        await saveResultsCsv(csvContent);
+        toast.success(`Tests completed: ${allResults.length} tests run. Results saved to output folder.`);
+      } catch (error) {
+        console.error('Failed to save results CSV:', error);
+        toast.success(`Tests completed: ${allResults.length} tests run`);
+        toast.warning('Failed to save results CSV', {
+          description: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    } else {
+      toast.success(`Tests completed: ${testQueue.length} tests run`);
+    }
   };
 
   const stopTests = useCallback(() => {
@@ -991,10 +894,12 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     updateConfig({ sessionId: `test-session-${Date.now()}` });
   };
 
-  const buildResultsCsv = () => {
+  // Build CSV from provided results array (for saving to filesystem)
+  const buildResultsCsvFromResults = (resultsArray: TestResult[]) => {
     return [
-      ['Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error', 'Screenshot ID'],
-      ...results.map(result => [
+      ['Index', 'Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error', 'Screenshot'],
+      ...resultsArray.map((result, index) => [
+        (index + 1).toString(),
         result.timestamp.toISOString(),
         `"${result.prompt.replace(/"/g, '""')}"`,
         `"${result.response.replace(/"/g, '""')}"`,
@@ -1046,248 +951,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     URL.revokeObjectURL(url);
   };
 
-  const downloadResultsBundle = async () => {
-    if (results.length === 0) {
-      toast.warning('No results to download');
-      return;
-    }
+  // Toggle preview visibility state
+  const [showPreviews, setShowPreviews] = useState(true);
 
-    try {
-      const zip = new JSZip();
-      const csvContent = buildResultsCsv();
-      zip.file(`agent-test-results-${config.sessionId}.csv`, csvContent);
-
-      const manifestLines: string[] = [];
-
-      for (const result of results) {
-        if (!result.screenshotId) continue;
-
-        if (result.screenshotId.startsWith('screenshot-')) {
-          const storageKey = `screenshot_${result.screenshotId}`;
-          const stored = await chromeServices.storage.get<string>([storageKey]);
-          const screenshotData = stored[storageKey];
-          if (screenshotData) {
-            const base64Marker = 'base64,';
-            const base64Index = screenshotData.indexOf(base64Marker);
-            if (base64Index !== -1) {
-              const base64Data = screenshotData.slice(base64Index + base64Marker.length);
-              zip.file(`screenshots/${result.screenshotId}.png`, base64Data, { base64: true });
-            } else {
-              manifestLines.push(`${result.id} | missing base64 data for local screenshot`);
-            }
-          } else {
-            manifestLines.push(`${result.id} | missing local screenshot data`);
-          }
-          continue;
-        }
-
-        if (result.screenshotId.startsWith('download-')) {
-          const downloadId = Number(result.screenshotId.replace('download-', ''));
-          const downloadItems = await new Promise<chrome.downloads.DownloadItem[]>((resolve) => {
-            chrome.downloads.search({ id: downloadId }, resolve);
-          });
-          const filename = downloadItems[0]?.filename;
-          const promptSnippet = result.prompt.replace(/\s+/g, ' ').slice(0, 120);
-          manifestLines.push(`${result.id} | ${promptSnippet} | downloads: ${filename || result.screenshotId}`);
-          continue;
-        }
-
-        if (result.screenshotId.startsWith('drive-')) {
-          const fileId = result.screenshotId.replace('drive-', '');
-          const promptSnippet = result.prompt.replace(/\s+/g, ' ').slice(0, 120);
-          manifestLines.push(`${result.id} | ${promptSnippet} | drive: https://drive.google.com/file/d/${fileId}/view`);
-          continue;
-        }
-
-        manifestLines.push(`${result.id} | unknown screenshot reference: ${result.screenshotId}`);
-      }
-
-      if (manifestLines.length > 0) {
-        zip.file('screenshots-manifest.txt', manifestLines.join('\n'));
-      }
-
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(zipBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `agent-test-results-${config.sessionId}.zip`;
-      link.click();
-      URL.revokeObjectURL(url);
-
-      if (manifestLines.length > 0) {
-        toast.info('Some screenshots are stored externally and listed in screenshots-manifest.txt');
-      }
-    } catch (error) {
-      console.error('Failed to download results bundle:', error);
-      toast.error('Failed to download results bundle', {
-        description: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  };
-
-  const exportResults = () => {
-    const csvContent = buildResultsCsv();
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `agent-test-results-${config.sessionId}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadScreenshot = async (screenshotId: string, promptText: string) => {
-    try {
-      // Handle different storage types
-      if (screenshotId.startsWith('download-')) {
-        // Already downloaded to filesystem
-        toast.info('Screenshot already saved to Downloads folder');
-        return;
-      } else if (screenshotId.startsWith('drive-')) {
-        // Open Google Drive file
-        const driveFileId = screenshotId.replace('drive-', '');
-        window.open(`https://drive.google.com/file/d/${driveFileId}/view`, '_blank');
-        return;
-      } else {
-        // Local storage
-        const storageKey = `screenshot_${screenshotId}`;
-        const result = await chromeServices.storage.get<string>([storageKey]);
-        const screenshotData = result[storageKey];
-
-        if (!screenshotData) {
-          console.error('Screenshot not found in storage');
-          toast.error('Screenshot not found', { description: 'It may have been deleted from storage' });
-          return;
-        }
-
-        // Convert data URL to blob and download
-        const link = document.createElement('a');
-        link.href = screenshotData;
-        // Create a safe filename from the prompt text
-        const safePromptText = promptText.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
-        link.download = `screenshot_${safePromptText}_${screenshotId}.png`;
-        link.click();
-        toast.success('Screenshot downloaded');
-      }
-    } catch (error) {
-      console.error('Error downloading screenshot:', error);
-      toast.error('Failed to download screenshot', {
-        description: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  };
-
-  const downloadAllScreenshots = async () => {
-    const screenshotResults = results.filter(r => r.screenshotId);
-    if (screenshotResults.length === 0) {
-      console.log('No screenshots to download');
-      return;
-    }
-
-    for (const result of screenshotResults) {
-      if (result.screenshotId) {
-        await downloadScreenshot(result.screenshotId, result.prompt);
-        // Small delay between downloads to avoid overwhelming the browser
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-  };
-
-  const toggleAllScreenshotPreviews = async () => {
-    if (Object.keys(screenshotPreviews).length > 0) {
-      setScreenshotPreviews({});
-      return;
-    }
-
-    const localResults = results.filter(result =>
-      result.screenshotId &&
-      !result.screenshotId.startsWith('download-') &&
-      !result.screenshotId.startsWith('drive-')
-    );
-
-    if (localResults.length === 0) {
-      toast.info('No local screenshots available for preview');
-      return;
-    }
-
-    const nextPreviews: Record<string, string> = {};
-    let missingCount = 0;
-    let externalCount = 0;
-
-    for (const result of results) {
-      if (!result.screenshotId) continue;
-      if (result.screenshotId.startsWith('download-') || result.screenshotId.startsWith('drive-')) {
-        externalCount += 1;
-        continue;
-      }
-
-      const storageKey = `screenshot_${result.screenshotId}`;
-      const stored = await chromeServices.storage.get<string>([storageKey]);
-      const screenshotData = stored[storageKey];
-      if (screenshotData) {
-        nextPreviews[result.screenshotId] = screenshotData;
-      } else {
-        missingCount += 1;
-      }
-    }
-
-    setScreenshotPreviews(nextPreviews);
-
-    if (externalCount > 0 || missingCount > 0) {
-      const details = [];
-      if (externalCount > 0) details.push(`${externalCount} external`);
-      if (missingCount > 0) details.push(`${missingCount} missing`);
-      toast.info('Some previews are not available', {
-        description: details.join(', ')
-      });
-    }
-  };
-
-  const toggleScreenshotPreview = async (screenshotId: string) => {
-    if (screenshotPreviews[screenshotId]) {
-      // Remove from previews
-      const newPreviews = { ...screenshotPreviews };
-      delete newPreviews[screenshotId];
-      setScreenshotPreviews(newPreviews);
-    } else {
-      // Check preview limit before loading
-      const currentCount = Object.keys(screenshotPreviews).length;
-      if (currentCount >= VALIDATION.MAX_PREVIEW_COUNT) {
-        toast.warning(`Maximum ${VALIDATION.MAX_PREVIEW_COUNT} previews shown`, {
-          description: 'Close some previews to view more'
-        });
-        return;
-      }
-
-      // Load and show preview
-      try {
-        if (screenshotId.startsWith('download-') || screenshotId.startsWith('drive-')) {
-          // Can't preview files from downloads or drive directly
-          toast.info('Preview not available for external storage', {
-            description: 'Use download/view button instead'
-          });
-          return;
-        }
-
-        // Local storage
-        const storageKey = `screenshot_${screenshotId}`;
-        const result = await chromeServices.storage.get<string>([storageKey]);
-        const screenshotData = result[storageKey];
-
-        if (screenshotData) {
-          setScreenshotPreviews(prev => ({
-            ...prev,
-            [screenshotId]: screenshotData
-          }));
-        } else {
-          toast.error('Screenshot not found');
-        }
-      } catch (error) {
-        console.error('Error loading screenshot preview:', error);
-        toast.error('Failed to load preview');
-      }
-    }
+  const toggleAllScreenshotPreviews = () => {
+    setShowPreviews(prev => !prev);
   };
 
   // Close handler with confirmation when tests are running
@@ -1357,11 +1025,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         
         <CardContent className="flex-1 overflow-hidden">
           <Tabs defaultValue="setup" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="setup">Setup</TabsTrigger>
               <TabsTrigger value="prompts">Prompts</TabsTrigger>
               <TabsTrigger value="run">Run Tests</TabsTrigger>
-              <TabsTrigger value="results">Results</TabsTrigger>
             </TabsList>
             
             {/* Setup Tab */}
@@ -1545,106 +1212,45 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="overflow-visible">
-                      <Label htmlFor="screenshotStorage" className="mb-2 block">
-                        Screenshot Storage
-                      </Label>
-                      <Select value={config.screenshotStorage} onValueChange={(value) => updateConfig({ screenshotStorage: value as 'local' | 'downloads' | 'google-drive' })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="local">Local Storage (Limited)</SelectItem>
-                          <SelectItem value="downloads">Downloads Folder (Recommended)</SelectItem>
-                          <SelectItem value="google-drive">Google Drive (Cloud)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {config.screenshotStorage === 'local' && '⚠️ Very limited (~3-5 screenshots). Auto-falls back to Downloads when full.'}
-                        {config.screenshotStorage === 'downloads' && '✅ Unlimited storage - saves to Downloads/earth-agent-screenshots/'}
-                        {config.screenshotStorage === 'google-drive' && '☁️ Uploads to Google Drive - requires OAuth2 setup below'}
-                      </p>
-
-                      {/* Storage Usage Indicator */}
-                      {storageUsage && (
-                        <div className="mt-3 p-3 bg-muted/30 rounded-md space-y-2">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Local Storage Usage</span>
-                            <span className="font-mono text-xs">
-                              {(storageUsage.used / 1024 / 1024).toFixed(2)} MB / {(storageUsage.quota / 1024 / 1024).toFixed(0)} MB
-                            </span>
-                          </div>
-                          <Progress
-                            value={(storageUsage.used / storageUsage.quota) * 100}
-                            className={`h-2 ${storageUsage.used / storageUsage.quota > 0.8 ? '[&>div]:bg-destructive' : ''}`}
-                          />
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {storageUsage.screenshotCount} screenshot{storageUsage.screenshotCount !== 1 ? 's' : ''} stored locally
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={clearScreenshots}
-                              disabled={storageUsage.screenshotCount === 0}
-                              className="h-7 text-xs"
-                            >
-                              Clear Screenshots
-                            </Button>
-                          </div>
-                        </div>
-                      )}
+                  {/* Output Folder Selection */}
+                  <div className="p-4 bg-muted/50 border border-border rounded-md space-y-3">
+                    <Label className="font-medium text-foreground">Output Folder</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Select a folder where test results (screenshots and CSV) will be saved.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const handle = await window.showDirectoryPicker();
+                            setFileSystemHandle(handle);
+                            toast.success(`Folder selected: ${handle.name}`);
+                          } catch (error) {
+                            // User cancelled the picker
+                            if ((error as Error).name !== 'AbortError') {
+                              toast.error('Failed to select folder', {
+                                description: error instanceof Error ? error.message : 'Unknown error'
+                              });
+                            }
+                          }
+                        }}
+                      >
+                        {fileSystemHandle ? 'Change Folder' : 'Select Output Folder'}
+                      </Button>
                     </div>
-
-                    {config.screenshotStorage === 'google-drive' && (
-                      <>
-                        <div className="p-4 bg-muted/50 border border-border rounded-md">
-                          <h4 className="font-medium text-foreground mb-2">Google Drive Setup Required</h4>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            To use Google Drive storage, you need to configure OAuth2 authentication:
-                          </p>
-                          <ol className="text-sm text-muted-foreground space-y-1 ml-4">
-                            <li>1. Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline text-primary">Google Cloud Console</a></li>
-                            <li>2. Create OAuth2 credentials for Chrome Extension</li>
-                            <li>3. Enable Google Drive API</li>
-                            <li>4. Update manifest.json with your client_id</li>
-                            <li>5. The extension will prompt for authentication when first used</li>
-                          </ol>
-                        </div>
-                        <div>
-                          <Label htmlFor="drive-folder-id" className="mb-2 block">
-                            Drive Folder ID <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
-                          </Label>
-                          <Input
-                            id="drive-folder-id"
-                            value={config.driveFolderId || ''}
-                            onChange={(e) => updateConfig({ driveFolderId: e.target.value })}
-                            placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-                          />
-                          <p className="text-sm text-gray-500 mt-1">
-                            Leave empty to save to Drive root folder. Get folder ID from Drive URL.
-                          </p>
-                        </div>
-                        <div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              try {
-                                await authenticateGoogleDrive();
-                                toast.success('Google Drive authentication successful!');
-                              } catch (error) {
-                                toast.error('Authentication failed', {
-                                  description: error instanceof Error ? error.message : 'Unknown error'
-                                });
-                              }
-                            }}
-                          >
-                            Test Google Drive Authentication
-                          </Button>
-                        </div>
-                      </>
+                    {fileSystemHandle ? (
+                      <div className="text-sm text-green-600 dark:text-green-400">
+                        <p>✓ Working folder: <span className="font-mono">{fileSystemHandle.name}/</span></p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Each test run creates: <span className="font-mono">{fileSystemHandle.name}/{config.sessionId}/</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        ⚠️ You must select an output folder before running tests
+                      </p>
                     )}
                   </div>
 
@@ -1708,11 +1314,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   <div className="flex items-start gap-2">
                     <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <div>
-                      <strong>Screenshots:</strong> Automatically captures screenshots after each agent response. Choose storage method:
+                      <strong>Output Folder:</strong> Select a folder where test results will be saved. Each test run saves:
                       <ul className="ml-4 mt-1 text-xs space-y-1">
-                        <li>• <strong>Local Storage:</strong> Browser storage, limited to ~20 screenshots</li>
-                        <li>• <strong>Downloads Folder:</strong> Unlimited storage, best for 1000+ tests</li>
-                        <li>• <strong>Google Drive:</strong> Cloud storage with API access required</li>
+                        <li>• Screenshots named with index (e.g., 0001_gpt-4.png)</li>
+                        <li>• CSV file with all results (results_session-id.csv)</li>
                       </ul>
                     </div>
                   </div>
@@ -1926,177 +1531,112 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 )}
               </div>
               
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">Recent Results</h3>
-                <div className="max-h-96 overflow-auto space-y-2">
-                  {results.slice(-5).reverse().map((result, index) => (
-                    <Card key={result.id} className={`p-3 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant={result.success ? "default" : "destructive"}>
-                              {result.success ? 'Success' : 'Failed'}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {result.duration}ms
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {result.model}
-                            </span>
-                          </div>
-                          <p className="text-sm font-medium mb-1">{result.prompt}</p>
-                          {result.success ? (
-                            <p className="text-sm text-muted-foreground line-clamp-2">{result.response}</p>
-                          ) : (
-                            <p className="text-sm text-destructive">{result.error}</p>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* Results Tab */}
-            <TabsContent value="results" className="flex-1 overflow-hidden flex flex-col space-y-4 px-1">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
-                <div className="flex flex-wrap gap-2 items-center overflow-visible">
-                  <Button onClick={toggleAllScreenshotPreviews} variant="outline" size="sm" disabled={results.length === 0}>
-                    <FileText className="h-4 w-4 mr-1.5" />
-                    {Object.keys(screenshotPreviews).length > 0 ? 'Hide Previews' : 'Show Previews'}
-                  </Button>
-                  <Select
-                    value={resultsDownloadFormat}
-                    onValueChange={(value) => {
-                      setResultsDownloadFormat(value);
-                      if (value === 'bundle') {
-                        downloadResultsBundle();
-                        setResultsDownloadFormat('');
-                      } else if (value === 'screenshots') {
-                        downloadAllScreenshots();
-                        setResultsDownloadFormat('');
-                      } else if (value === 'csv') {
-                        exportResults();
-                        setResultsDownloadFormat('');
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-[130px] text-sm" disabled={results.length === 0}>
-                      <Download className="h-4 w-4 mr-1.5" />
-                      <SelectValue placeholder="Download" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bundle">Results (ZIP)</SelectItem>
-                      {results.some(r => r.screenshotId) && (
-                        <SelectItem value="screenshots">Screenshots</SelectItem>
-                      )}
-                      <SelectItem value="csv">Export CSV</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-auto">
-                <div className="space-y-2">
-                  {pagedResults.map((result, index) => (
-                    <Card key={result.id} className={`p-4 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={result.success ? "default" : "destructive"}>
-                              #{resultsPageStart + index + 1} - {result.success ? 'Success' : 'Failed'}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {result.timestamp.toLocaleString()}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {result.duration}ms
-                            </span>
-                            <Badge variant="outline">{result.provider} {result.model}</Badge>
-                          </div>
-                          {result.screenshotId && (
-                            <button
-                              onClick={() => toggleScreenshotPreview(result.screenshotId!)}
-                              className="inline-flex items-center"
-                            >
-                              <Badge variant="outline" className="cursor-pointer hover:bg-muted transition-colors">
-                                <FileText className="h-3 w-3 mr-1" />
-                                {screenshotPreviews[result.screenshotId!] ? 'Hide Preview' : 'Show Preview'}
-                              </Badge>
-                            </button>
-                          )}
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium text-sm mb-1">Prompt:</h4>
-                          <p className="text-sm bg-muted/50 p-2 rounded">{result.prompt}</p>
-                        </div>
-
-                        {result.success ? (
-                          <div>
-                            <h4 className="font-medium text-sm mb-1">Response:</h4>
-                            <p className="text-sm bg-primary/5 p-2 rounded">{result.response}</p>
-                          </div>
-                        ) : (
-                          <div>
-                            <h4 className="font-medium text-sm mb-1">Error:</h4>
-                            <p className="text-sm bg-destructive/10 p-2 rounded text-destructive">{result.error}</p>
-                          </div>
-                        )}
-
-                        {result.screenshotId && screenshotPreviews[result.screenshotId] && (
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-medium text-sm">Screenshot:</h4>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => downloadScreenshot(result.screenshotId!, result.prompt)}
-                              >
-                                <Download className="h-3 w-3 mr-1" />
-                                Download
-                              </Button>
-                            </div>
-                            <div className="bg-muted/50 p-2 rounded">
-                              <img
-                                src={screenshotPreviews[result.screenshotId]}
-                                alt={`Screenshot for test ${index + 1}`}
-                                className="max-w-full h-auto rounded border"
-                                style={{ maxHeight: '300px' }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-                  {results.length > LIST_PAGE_SIZE && (
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-muted-foreground">
-                        Showing {resultsPageStart + 1}-{resultsPageEnd} of {results.length}
-                      </span>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setResultsPage((prev) => Math.max(1, prev - 1))}
-                          disabled={resultsPage === 1}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setResultsPage((prev) => Math.min(resultsPageCount, prev + 1))}
-                          disabled={resultsPage === resultsPageCount}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
+              {/* Test Results */}
+              <div className="flex-1 overflow-hidden flex flex-col space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
+                    {fileSystemHandle && results.length > 0 && sessionFolderRef.current && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        📁 Results saved to: <span className="font-mono">{fileSystemHandle.name}/{sessionFolderRef.current.name}/</span>
+                      </p>
+                    )}
+                  </div>
+                  {results.length > 0 && Object.keys(screenshotPreviews).length > 0 && (
+                    <Button onClick={toggleAllScreenshotPreviews} variant="outline" size="sm">
+                      {showPreviews ? <EyeOff className="h-4 w-4 mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
+                      {showPreviews ? 'Hide Previews' : 'Show Previews'}
+                    </Button>
                   )}
+                </div>
+
+                <div className="flex-1 overflow-auto">
+                  <div className="space-y-2">
+                    {pagedResults.map((result, index) => (
+                      <Card key={result.id} className={`p-4 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant={result.success ? "default" : "destructive"}>
+                                #{resultsPageStart + index + 1} - {result.success ? 'Success' : 'Failed'}
+                              </Badge>
+                              <span className="text-sm text-muted-foreground">
+                                {result.timestamp.toLocaleString()}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {result.duration}ms
+                              </span>
+                              <Badge variant="outline">{result.provider} {result.model}</Badge>
+                            </div>
+                            {result.screenshotId && (
+                              <Badge variant="outline">
+                                <FileText className="h-3 w-3 mr-1" />
+                                {result.screenshotId}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4 className="font-medium text-sm mb-1">Prompt:</h4>
+                            <p className="text-sm bg-muted/50 p-2 rounded">{result.prompt}</p>
+                          </div>
+
+                          {result.success ? (
+                            <div>
+                              <h4 className="font-medium text-sm mb-1">Response:</h4>
+                              <p className="text-sm bg-primary/5 p-2 rounded">{result.response}</p>
+                            </div>
+                          ) : (
+                            <div>
+                              <h4 className="font-medium text-sm mb-1">Error:</h4>
+                              <p className="text-sm bg-destructive/10 p-2 rounded text-destructive">{result.error}</p>
+                            </div>
+                          )}
+
+                          {result.screenshotId && (
+                            <div>
+                              <h4 className="font-medium text-sm mb-1">Screenshot: <span className="font-mono text-xs text-muted-foreground">{result.screenshotId}</span></h4>
+                              {showPreviews && screenshotPreviews[result.screenshotId] && (
+                                <div className="bg-muted/50 p-2 rounded">
+                                  <img
+                                    src={screenshotPreviews[result.screenshotId]}
+                                    alt={`Screenshot for test ${index + 1}`}
+                                    className="max-w-full h-auto rounded border"
+                                    style={{ maxHeight: '300px' }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                    {results.length > LIST_PAGE_SIZE && (
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="text-xs text-muted-foreground">
+                          Showing {resultsPageStart + 1}-{resultsPageEnd} of {results.length}
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setResultsPage((prev) => Math.max(1, prev - 1))}
+                            disabled={resultsPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setResultsPage((prev) => Math.min(resultsPageCount, prev + 1))}
+                            disabled={resultsPage === resultsPageCount}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
