@@ -548,7 +548,7 @@ export function Settings({ onClose }: SettingsProps) {
           <h3 className="text-sm font-semibold mb-1">Project Context</h3>
           <div className="text-xs text-gray-500 mb-3">
             <p>ℹ️ These instructions will be applied to every chat message.</p>
-            <p className="mt-1">Stored locally on this device (not synced across devices).</p>
+            <p className="mt-1">Synced across your Chrome devices.</p>
           </div>
 
           <div className="space-y-4">
@@ -628,7 +628,7 @@ Examples:
           </div>
           <div className="text-xs text-gray-500 mb-3">
             <p>Profiles customize prompts and tool access for the AI.</p>
-            <p className="mt-1">Stored locally on this device (not synced across devices).</p>
+            <p className="mt-1">Synced across your Chrome devices.</p>
           </div>
 
           <div className="space-y-3">
