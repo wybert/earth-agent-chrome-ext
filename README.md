@@ -4,7 +4,7 @@
   <img src="src/assets/mydesign/Robot-earth-transparent-cut-edge.png" alt="Earth Agent Robot" width="200"/>
 </div>
 
-**Earth Agent** is a Cursor/Claude Code like AI-agent for Google Earth Engine. It can be used right in your browser as a Chrome extension or through MCP server support. It helps you do anything related to Google Earth Engine automatically through chatting (write code, run analysis, debug errors, explain maps, and manage your environment). Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
+**Earth Agent** is a Cursor-like AI agent for Google Earth Engine. It can be used right in your browser as a Chrome extension or through MCP server support. It helps you do anything related to Google Earth Engine automatically through chatting (write code, run analysis, debug errors, explain maps, and manage your environment). Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
 
 [![Watch the Demo](https://img.youtube.com/vi/RkSconBroyY/0.jpg)](https://youtu.be/RkSconBroyY?si=otXuZP6L8sp48K_1)
 
@@ -174,7 +174,7 @@ Think of it as giving the agent a "Standard Operating Procedure" for your resear
 
 ### 🎭 Agent Profiles
 
-This allow you to create your own agent with specific system prompt and tool access for specific workflows or use case. Each agent profile can have its own:
+This allows you to create your own agent with specific system prompts and tool access for specific workflows or use cases. Each agent profile can have its own:
 - **Custom System Prompt**: Define exactly how the agent should behave
 - **Tool Access**: Enable or disable specific tools for focused tasks
 
@@ -191,45 +191,15 @@ This allow you to create your own agent with specific system prompt and tool acc
 
 ## How to Use the Extension
 
-You can use this extension in two ways. Through MCP Server or use inside Earth Agent side panel. Mcp servers expose the same tools as the Earth Agent assistant. Check [MCP Server Support](#mcp-server-support-new) for more details for use it as MCP server. The following section will show you how to use it inside Earth Agent side panel.
-
-### AI Agent Capabilities
-
-#### **Multi-Step Workflows**
-- **Plan and Execute**: Break down complex tasks into manageable steps
-- **Error Recovery**: Automatically retry and fix failed operations
-- **Progress Tracking**: Monitor long-running processes and operations
-- **Adaptive Learning**: Adjust approach based on results and feedback
-
-#### **Code Generation**
-- **Custom Scripts**: Generate Earth Engine scripts for specific tasks
-- **Function Creation**: Create reusable functions and modules
-- **Workflow Automation**: Build complete analysis pipelines
-- **Batch Processing**: Set up automated processing for multiple datasets
-
-#### **Analysis and Insights**
-- **Data Interpretation**: Explain results and findings from your analysis
-- **Trend Detection**: Identify patterns and trends in your data
-- **Anomaly Detection**: Find unusual patterns or outliers
-- **Comparative Analysis**: Compare different datasets or time periods
+You can use this extension in two ways: through the MCP Server or inside the Earth Agent side panel. MCP servers expose the same tools as the Earth Agent assistant. Check [MCP Server Support](#mcp-server-support-new) for details on using it as an MCP server. The following section will show you how to use it inside the Earth Agent side panel.
 
 ### Getting Started
 
- After the configuration, 
+After configuration:
 
 1. **Open Google Earth Engine Code Editor** in a Chrome tab: https://code.earthengine.google.com/
 2. **Click the Earth Agent extension icon** in your Chrome toolbar
 3. **Start chatting!** The agent can see your Earth Engine environment and help with any GEE-related tasks
-
-### Basic Usage Flow
-
-The Earth Agent works as your intelligent assistant for Google Earth Engine development:
-
-- **Ask questions** about Earth Engine concepts, datasets, or code
-- **Request code generation** for specific Earth Engine tasks
-- **Get help debugging** existing code in your editor
-- **Analyze and explain** maps, data, and results
-- **Manage your workspace** with automatic cleanup tools
 
 ### Ask Mode vs Do Mode
 
@@ -276,7 +246,7 @@ Find and display the latest Sentinel-2 image over New York City with less than 1
 Calculate zonal statistics for land use categories within protected areas and export the results to Drive
 ```
 
-### � Complex Workflow (⚡ Requires Do Mode)
+### 🚀 Complex Workflow (⚡ Requires Do Mode)
 ```
 I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023. 
 Please create a complete workflow that:
