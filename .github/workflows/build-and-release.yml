@@ -117,10 +117,16 @@ jobs:
         TAG_NAME=${GITHUB_REF#refs/tags/}
         echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
 
-        # Check if release notes file exists for this version
+        # Check if release notes file exists for this version (check docs/ first, then root)
         RELEASE_NOTES_FILE="RELEASE_NOTES_${TAG_NAME}.md"
-        if [ -f "$RELEASE_NOTES_FILE" ]; then
-          echo "Found release notes file: $RELEASE_NOTES_FILE"
+        RELEASE_NOTES_DOCS="docs/RELEASE_NOTES_${TAG_NAME}.md"
+        
+        if [ -f "$RELEASE_NOTES_DOCS" ]; then
+          echo "Found release notes file in docs: $RELEASE_NOTES_DOCS"
+          echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
+          echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_DOCS" >> $GITHUB_OUTPUT
+        elif [ -f "$RELEASE_NOTES_FILE" ]; then
+          echo "Found release notes file in root: $RELEASE_NOTES_FILE"
           echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
           echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
         else

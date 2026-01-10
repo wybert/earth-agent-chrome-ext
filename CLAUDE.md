@@ -45,6 +45,7 @@ The extension consists of three main components:
    - Message routing between components
    - CORS proxy for Anthropic API
    - Background processing
+   - **Service Layer**: Shared logic for tools (`src/lib/tools/services/`)
 
 2. **Content Script** (`src/content/index.ts`): Injected into Earth Engine pages to:
    - Manipulate the Earth Engine Code Editor DOM
@@ -110,38 +111,34 @@ Mode-specific prompts ensure the AI understands its current capabilities and lim
 
 ### Tool Implementation Pattern
 
-Tools are organized in three categories under `src/lib/tools/`:
+The project uses a **Service Layer Architecture** to unify tool logic between the Chrome Extension (Agent) and the MCP Server.
 
-1. **Earth Engine Tools** (`earth-engine/`):
-   - `editScript.ts`: Insert/modify code in the EE editor
-   - `runCode.ts`: Execute code and capture results
-   - `checkConsole.ts`: Read console errors/output
-   - `inspectMap.ts`: Inspect map at coordinates
-   - `getMapLayers.ts`: Get current map layers
-   - `getTasks.ts`: Check EE task status
-   - `agentTools.ts`: Simplified wrappers for AI agents
+1.  **Shared Service Layer** (`src/lib/tools/services/`):
+    *   Contains the core business logic for all tools.
+    *   **Modules**:
+        *   `weather-service.ts`: Open-Meteo integration.
+        *   `time-service.ts`: Date/time and wait logic.
+        *   `editor-service.ts`: Earth Engine code editor manipulation (read, write, edit, undo).
+        *   `gee-service.ts`: GEE execution, console, inspector, and clearing logic.
+        *   `browser-service.ts`: Browser automation (screenshots, snapshots, clicks).
+        *   `docs-service.ts`: Documentation search.
 
-2. **Browser Tools** (`browser/`):
-   - `screenshot.ts`: Capture page screenshots
-   - `snapshot.ts`: Get DOM structure snapshot
-   - `click.ts`, `type.ts`, `hover.ts`: Basic interactions
-   - `getElement.ts`: Query DOM elements
+2.  **Tool Consumers**:
+    *   **Agent Tools** (`src/lib/tools/ai-tools.ts`):
+        *   Defines Vercel AI SDK tools.
+        *   Delegates execution to the shared services.
+    *   **MCP Client** (`src/background/mcp-ws-client.ts`):
+        *   Handles JSON-RPC requests from external editors (Claude Code, Cursor).
+        *   Delegates execution to the *same* shared services.
 
-3. **Context7 Tools** (`context7/`):
-   - `getDocumentation.ts`: Fetch Earth Engine docs
-   - `resolveLibraryId.ts`: Resolve Context7 library IDs
-   - `agentTools.ts`: AI-friendly wrappers
+3.  **Legacy/Supporting Files** (`src/lib/tools/`):
+    *   `earth-engine/`, `browser/`, `context7/`: Contain low-level implementation details used by the services.
+    *   `ai-tools.ts`: The main entry point for the Agent's tool definitions.
 
-4. **AI Tools** (`ai-tools.ts`):
-   - Centralized location for all Vercel AI SDK tool definitions
-   - Uses factory pattern: `createAITools(onToolEvent)` returns all 10 AI tools
-   - Includes tools for: weather, datasets, script editing, code execution, screenshots, snapshots, clicking, and environment reset
-   - Leverages helper functions from `src/lib/utils.ts` for tab selection, content script injection, and API validation
-
-Each tool typically has:
-- A base implementation that works from UI/content contexts
-- An AI tool wrapper defined in `src/lib/tools/ai-tools.ts` using Vercel AI SDK's `tool()` function
-- Environment detection via `detectEnvironment()` to handle different execution contexts
+Each service function typically:
+- Accepts a `tabId` and necessary arguments.
+- Orchestrates lower-level helpers (e.g., `executeInContentScript`, `editor-helpers`).
+- Returns a standardized result object.
 
 ## Project Structure
 
@@ -178,11 +175,12 @@ earth-agent-ai-sdk/
 │   ├── assets/           # Icons and images
 │   └── manifest.json     # Chrome extension manifest
 │
-├── docs/                   # Documentation (keep organized!)
-│   ├── debugging/         # Debug notes and snapshots
-│   ├── development/       # Development guides and plans
-│   ├── implementation/    # Implementation records and analysis
-│   └── testing/           # Test documentation
+├── docs/                   # Documentation
+│   ├── developers/        # Developer documentation
+│   │   ├── development/   # Development guides and plans
+│   │   ├── implementation/# Implementation records and analysis
+│   │   └── testing/       # Test documentation
+│   └── users/             # User documentation
 │
 ├── scripts/               # Utility scripts
 │   └── debug/            # Debug and testing scripts
@@ -216,10 +214,11 @@ This approach reduces file fragmentation while maintaining clear separation of c
 ### 📁 Where to Create New Files
 
 **Documentation Files** → `docs/`
-- Development plans, guides → `docs/development/`
-- Implementation notes, analysis → `docs/implementation/`
-- Test documentation → `docs/testing/`
-- Debug notes, snapshots → `docs/debugging/`
+- Landing Page → `docs/index.md` (Start here)
+- User guides → `docs/users/`
+- Development plans, guides → `docs/developers/development/`
+- Implementation notes, analysis → `docs/developers/implementation/`
+- Test documentation → `docs/developers/testing/`
 
 **Scripts** → `scripts/`
 - Debug/test scripts → `scripts/debug/`
@@ -228,6 +227,7 @@ This approach reduces file fragmentation while maintaining clear separation of c
 **Reference Materials** → `reference/`
 - API schemas, model definitions → `reference/api-models/`
 - Code examples → `reference/examples/`
+- High-level Guides & Architecture -> `reference/` (For user consumption)
 
 **Source Code** → `src/`
 - All application code must go in `src/` subdirectories
@@ -253,7 +253,7 @@ touch openai-models.json
 ```bash
 # Creating files in appropriate directories
 touch scripts/debug/test-new-feature.js
-touch docs/implementation/FEATURE-ANALYSIS.md
+touch docs/developers/implementation/FEATURE-ANALYSIS.md
 touch reference/api-models/openai-models.json
 ```
 
@@ -448,5 +448,98 @@ git tag v1.0.0
 git push origin v1.0.0
 # GitHub Actions will build, test, and create release
 ```
+
+## MCP Server
+
+The project includes an MCP (Model Context Protocol) server that exposes Earth Engine tools to external AI assistants like Claude Code, Cursor, and Zed.
+
+### npm Package
+
+The MCP server is published to npm as [`earth-agent-mcp`](https://www.npmjs.com/package/earth-agent-mcp).
+
+### Configuration
+
+Users can configure their editors to use the MCP server with npx (no build required):
+
+**Claude Code** (`~/.claude/settings.json`):
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+
+**Cursor** (`~/.cursor/mcp.json`):
+```json
+{
+  "mcpServers": {
+    "earth-agent": {
+      "command": "npx",
+      "args": ["-y", "earth-agent-mcp"]
+    }
+  }
+}
+```
+
+**Zed** (`~/.config/zed/settings.json`):
+```json
+{
+  "context_servers": {
+    "earth-agent": {
+      "command": {
+        "path": "npx",
+        "args": ["-y", "earth-agent-mcp"]
+      }
+    }
+  }
+}
+```
+
+### MCP Server Architecture
+
+```
+AI Editor (Claude Code/Cursor/Zed)
+    ↓ stdio (MCP Protocol)
+MCP Server (earth-agent-mcp)
+    ↓ WebSocket (port 3847)
+Chrome Extension (Background Script)
+    ↓ Chrome APIs
+Google Earth Engine Code Editor
+```
+
+### MCP Server Files
+
+- `mcp-server/src/index.ts`: Main entry point, WebSocket server, MCP protocol handler
+- `mcp-server/src/tools.ts`: Tool definitions (17 tools)
+- `mcp-server/package.json`: npm package configuration
+
+### Publishing Updates to npm
+
+```bash
+cd mcp-server
+# Update version in package.json
+npm publish
+```
+
+### Troubleshooting: "Chrome extension not connected"
+
+This error occurs when multiple MCP server instances compete for port 3847. Solution:
+
+```bash
+# Kill all instances
+pkill -f "earth-agent.*index.js"
+
+# Verify port is free
+lsof -i :3847
+
+# Restart your editor - it will spawn a fresh MCP server
+```
+
+See `mcp-server/README.md` for detailed troubleshooting guide.
+
 - remeber to use chrome devtools mcp when you need interact with gee, and when you need run code in gee console
 - you don't do any git commit and any other git commands that change could change the git history
