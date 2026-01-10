@@ -49,6 +49,9 @@ Earth Agent now includes an **MCP Server** that lets you use all its Earth Engin
 
 ### Quick Setup (No Build Required!)
 
+> [!IMPORTANT]
+> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine.
+
 Just add the configuration to your editor:
 
 <details open>
@@ -105,7 +108,7 @@ Then:
 
 👉 **[Full MCP Server Documentation](./mcp-server/README.md)** (troubleshooting, all 17 tools, usage examples)
 
-## Extension Installation
+## Installation
 
 ### Option 1: Install from Chrome Web Store (Easiest & Recommended)
 
@@ -113,7 +116,8 @@ Then:
 2.  Click "Add to Chrome".
 3.  The extension will be added to your browser and will appear in your Chrome toolbar.
 
-### Option 2: Download from GitHub Releases
+<details>
+<summary><b>Option 2: Download from GitHub Releases</b></summary>
 
 1. Go to the [Releases page](https://github.com/wybert/earth-agent-chrome-ext/releases)
 2. Download the latest `earth-agent-extension.zip`
@@ -123,33 +127,46 @@ Then:
 6. Click "Load unpacked" and select the extracted folder
 7. The extension will appear in your Chrome toolbar
 
-### Option 3: Install from Source
+</details>
+
+<details>
+<summary><b>Option 3: Install from Source</b></summary>
 
 1. Clone the repository
 2. Install dependencies with `npm install`
 3. Build the extension with `npm run build`
 4. Load the unpacked extension from the `dist` directory in Chrome
 
+</details>
+
 ## Configuration
 
-After installation, you'll need to configure your AI provider:
+### API Keys
+
+After installation, you'll need to configure your AI provider, you don't have to do it if only use it as MCP server:
 
 1. Click the Earth Agent extension icon in Chrome
 2. Go to Settings
-3. Choose your AI provider:
+3. Configure your AI providers we support:
    - **OpenAI**: Add your OpenAI API key (supports GPT-5.2, GPT-5.2 Pro, GPT-5.1)
    - **Anthropic**: Add your Anthropic API key (supports Claude Opus 4.5, Sonnet 4.5, Haiku 4.5)
    - **Google**: Add your Google API key (supports Gemini 2.5 Pro, Gemini 3 Flash Preview)
    - **Z.AI**: Add your Z.AI API key (supports GLM-4.7)
    - **Custom OpenAI-Compatible Providers**: Add your custom OpenAI-compatible API key
-4. Select your preferred model
+4. Go back to the chat page, select your preferred model
 5. Start chatting with Earth Engine!
 
+### 📝 Custom Instructions
 
-## Customization
+You can provide global custom instructions that apply to all interactions like what AGENTS.md/CLAUDE.md/GEMINI.md does. This is useful 
+
+**To configure:**
+1. Open Extension Settings
+2. Use **Custom Instructions** to set global preferences
 
 ### 🎭 Agent Profiles
-Profiles allow you to save different agent configurations for specific workflows. Each profile can have its own:
+
+This allow you to create your own agent with specific system prompt and tool access for specific workflows or use case. Each agent profile can have its own:
 - **Custom System Prompt**: Define exactly how the agent should behave
 - **Tool Access**: Enable or disable specific tools for focused tasks
 
@@ -158,16 +175,9 @@ Profiles allow you to save different agent configurations for specific workflows
 - **"Tutor"**: Explains every step in detail for learning.
 - **"Analyst"**: Specialized in statistical analysis and visualization.
 
-### 📝 Custom Instructions
-You can provide global custom instructions that apply to all interactions. This is useful for:
-- Enforcing specific coding styles (e.g., "Always use `var` instead of `const`")
-- Setting preferred output formats (e.g., "Always add comments to every line")
-- Defining role-playing behaviors
-
 **To configure:**
 1. Open Extension Settings
 2. Scroll to **Profiles** to create new agent personas
-3. Use **Custom Instructions** to set global preferences
 
 ## AI Model Tool Support
 
