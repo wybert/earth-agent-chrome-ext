@@ -29,9 +29,11 @@
     const prop = mapElement[key];
     if (prop && typeof prop === 'object') {
       // 检查是否有地图方法
-      if (typeof prop.getProjection === 'function' &&
-          typeof prop.getCenter === 'function' &&
-          typeof prop.getZoom === 'function') {
+      if (
+        typeof prop.getProjection === 'function' &&
+        typeof prop.getCenter === 'function' &&
+        typeof prop.getZoom === 'function'
+      ) {
         console.log(`✅ Found map instance in: mapElement.${key}`);
         mapInstance = prop;
         break;
@@ -61,7 +63,7 @@
       view: window,
       clientX: centerX,
       clientY: centerY,
-      button: 0
+      button: 0,
     });
 
     mapElement.dispatchEvent(clickEvent);
@@ -107,7 +109,7 @@
   const scale = Math.pow(2, zoom);
   const targetPixel = {
     x: targetWorld.x * scale,
-    y: targetWorld.y * scale
+    y: targetWorld.y * scale,
   };
   console.log(`   Pixel (world): (${targetPixel.x}, ${targetPixel.y})`);
 
@@ -115,14 +117,14 @@
   const centerWorld = projection.fromLatLngToPoint(center);
   const centerPixel = {
     x: centerWorld.x * scale,
-    y: centerWorld.y * scale
+    y: centerWorld.y * scale,
   };
   console.log(`   Center pixel: (${centerPixel.x}, ${centerPixel.y})`);
 
   // 计算偏移量
   const offset = {
     x: targetPixel.x - centerPixel.x,
-    y: targetPixel.y - centerPixel.y
+    y: targetPixel.y - centerPixel.y,
   };
   console.log(`   Offset from center: (${offset.x}, ${offset.y})`);
 
@@ -130,22 +132,28 @@
   const mapBounds = mapElement.getBoundingClientRect();
   const mapCenterScreen = {
     x: mapBounds.left + mapBounds.width / 2,
-    y: mapBounds.top + mapBounds.height / 2
+    y: mapBounds.top + mapBounds.height / 2,
   };
   console.log(`   Map center (screen): (${mapCenterScreen.x}, ${mapCenterScreen.y})`);
 
   const screenCoords = {
     x: Math.round(mapCenterScreen.x + offset.x),
-    y: Math.round(mapCenterScreen.y + offset.y)
+    y: Math.round(mapCenterScreen.y + offset.y),
   };
 
   console.log(`\n✅ Final screen coordinates: (${screenCoords.x}, ${screenCoords.y})\n`);
 
   // 检查是否在地图范围内
-  if (screenCoords.x < mapBounds.left || screenCoords.x > mapBounds.right ||
-      screenCoords.y < mapBounds.top || screenCoords.y > mapBounds.bottom) {
+  if (
+    screenCoords.x < mapBounds.left ||
+    screenCoords.x > mapBounds.right ||
+    screenCoords.y < mapBounds.top ||
+    screenCoords.y > mapBounds.bottom
+  ) {
     console.warn('⚠️  WARNING: Calculated position is outside map viewport!');
-    console.log(`   Map bounds: left=${mapBounds.left}, right=${mapBounds.right}, top=${mapBounds.top}, bottom=${mapBounds.bottom}`);
+    console.log(
+      `   Map bounds: left=${mapBounds.left}, right=${mapBounds.right}, top=${mapBounds.top}, bottom=${mapBounds.bottom}`
+    );
     console.log('   The target location may not be visible on current map view\n');
   }
 
@@ -160,7 +168,7 @@
     view: window,
     clientX: screenCoords.x,
     clientY: screenCoords.y,
-    button: 0
+    button: 0,
   });
 
   const dispatched = mapElement.dispatchEvent(clickEvent);
@@ -172,7 +180,7 @@
   // ============================================
   console.log('Step 5: Waiting for Inspector to update...');
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   const inspectPanel = document.querySelector('.inspect-panel');
   if (!inspectPanel) {
@@ -221,7 +229,7 @@
   // ============================================
   console.log('\n📦 Creating reusable function...\n');
 
-  window.clickAtLatLng = function(lat, lng) {
+  window.clickAtLatLng = function (lat, lng) {
     console.log(`\n🎯 Clicking at (${lat}, ${lng})...`);
 
     const targetLatLng = new google.maps.LatLng(lat, lng);
@@ -236,12 +244,12 @@
     const mapBounds = mapElement.getBoundingClientRect();
     const mapCenterScreen = {
       x: mapBounds.left + mapBounds.width / 2,
-      y: mapBounds.top + mapBounds.height / 2
+      y: mapBounds.top + mapBounds.height / 2,
     };
 
     const screenCoords = {
       x: Math.round(mapCenterScreen.x + (targetPixel.x - centerPixel.x)),
-      y: Math.round(mapCenterScreen.y + (targetPixel.y - centerPixel.y))
+      y: Math.round(mapCenterScreen.y + (targetPixel.y - centerPixel.y)),
     };
 
     console.log(`   Screen coordinates: (${screenCoords.x}, ${screenCoords.y})`);
@@ -252,7 +260,7 @@
       view: window,
       clientX: screenCoords.x,
       clientY: screenCoords.y,
-      button: 0
+      button: 0,
     });
 
     mapElement.dispatchEvent(clickEvent);

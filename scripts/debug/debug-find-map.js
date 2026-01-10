@@ -26,39 +26,42 @@
 
   // 按类型分组
   const groups = {
-    react: allKeys.filter(k => k.includes('react') || k.includes('React')),
-    angular: allKeys.filter(k => k.includes('ng') || k.includes('angular')),
-    data: allKeys.filter(k => k.startsWith('data-') || k.startsWith('__data')),
-    underscore: allKeys.filter(k => k.startsWith('_') && !k.startsWith('__')),
-    doubleUnderscore: allKeys.filter(k => k.startsWith('__')),
-    map: allKeys.filter(k => k.toLowerCase().includes('map')),
-    other: []
+    react: allKeys.filter((k) => k.includes('react') || k.includes('React')),
+    angular: allKeys.filter((k) => k.includes('ng') || k.includes('angular')),
+    data: allKeys.filter((k) => k.startsWith('data-') || k.startsWith('__data')),
+    underscore: allKeys.filter((k) => k.startsWith('_') && !k.startsWith('__')),
+    doubleUnderscore: allKeys.filter((k) => k.startsWith('__')),
+    map: allKeys.filter((k) => k.toLowerCase().includes('map')),
+    other: [],
   };
 
   // 找出不在任何组的
-  groups.other = allKeys.filter(k =>
-    !groups.react.includes(k) &&
-    !groups.angular.includes(k) &&
-    !groups.data.includes(k) &&
-    !groups.underscore.includes(k) &&
-    !groups.doubleUnderscore.includes(k) &&
-    !groups.map.includes(k)
+  groups.other = allKeys.filter(
+    (k) =>
+      !groups.react.includes(k) &&
+      !groups.angular.includes(k) &&
+      !groups.data.includes(k) &&
+      !groups.underscore.includes(k) &&
+      !groups.doubleUnderscore.includes(k) &&
+      !groups.map.includes(k)
   );
 
   Object.entries(groups).forEach(([name, keys]) => {
     if (keys.length > 0) {
       console.log(`\n${name} (${keys.length}):`);
-      keys.forEach(key => {
+      keys.forEach((key) => {
         const value = mapElement[key];
         const type = typeof value;
         const constructor = value?.constructor?.name;
 
-        console.log(`  ${key}: ${type}${constructor && constructor !== 'Object' ? ` (${constructor})` : ''}`);
+        console.log(
+          `  ${key}: ${type}${constructor && constructor !== 'Object' ? ` (${constructor})` : ''}`
+        );
 
         // 检查是否是地图实例
         if (value && type === 'object') {
           const methods = ['getProjection', 'getCenter', 'getZoom', 'getBounds'];
-          const hasMethods = methods.filter(m => typeof value[m] === 'function');
+          const hasMethods = methods.filter((m) => typeof value[m] === 'function');
           if (hasMethods.length > 0) {
             console.log(`    🎯 HAS MAP METHODS: ${hasMethods.join(', ')}`);
           }
@@ -87,7 +90,7 @@
       const value = child[key];
       if (value && typeof value === 'object') {
         const methods = ['getProjection', 'getCenter', 'getZoom'];
-        const hasMethods = methods.filter(m => typeof value[m] === 'function');
+        const hasMethods = methods.filter((m) => typeof value[m] === 'function');
         if (hasMethods.length > 0) {
           console.log(`  🎯 FOUND in child.${key}: ${hasMethods.join(', ')}`);
         }
@@ -100,21 +103,22 @@
   // ============================================
   console.log('\n\n📋 Step 3: Checking window object\n');
 
-  const windowKeys = Object.keys(window).filter(k =>
-    k.toLowerCase().includes('map') ||
-    k.toLowerCase().includes('gee') ||
-    k.toLowerCase().includes('earth')
+  const windowKeys = Object.keys(window).filter(
+    (k) =>
+      k.toLowerCase().includes('map') ||
+      k.toLowerCase().includes('gee') ||
+      k.toLowerCase().includes('earth')
   );
 
   console.log('Map/GEE/Earth related window properties:');
-  windowKeys.forEach(key => {
+  windowKeys.forEach((key) => {
     const value = window[key];
     const type = typeof value;
     console.log(`  window.${key}: ${type}`);
 
     if (value && type === 'object') {
       const methods = ['getProjection', 'getCenter', 'getZoom'];
-      const hasMethods = methods.filter(m => typeof value[m] === 'function');
+      const hasMethods = methods.filter((m) => typeof value[m] === 'function');
       if (hasMethods.length > 0) {
         console.log(`    🎯 HAS MAP METHODS: ${hasMethods.join(', ')}`);
       }
@@ -137,7 +141,7 @@
     'window.earthEngineMap',
   ];
 
-  testPaths.forEach(path => {
+  testPaths.forEach((path) => {
     try {
       const parts = path.split('.');
       let obj = parts[0] === 'window' ? window : mapElement;
@@ -155,14 +159,14 @@
 
         if (typeof obj === 'object') {
           const methods = ['getProjection', 'getCenter', 'getZoom', 'getBounds'];
-          const hasMethods = methods.filter(m => typeof obj[m] === 'function');
+          const hasMethods = methods.filter((m) => typeof obj[m] === 'function');
           if (hasMethods.length > 0) {
             console.log(`   🎯 HAS: ${hasMethods.join(', ')}`);
           }
 
           // 列出所有方法
           const allMethods = Object.getOwnPropertyNames(obj)
-            .filter(k => typeof obj[k] === 'function')
+            .filter((k) => typeof obj[k] === 'function')
             .slice(0, 10);
           if (allMethods.length > 0) {
             console.log(`   Methods: ${allMethods.join(', ')}`);
@@ -213,7 +217,6 @@
     console.log('\n💡 Suggestion: Manually click on the map now');
     console.log('   Then check Inspector to see what coordinates appear');
     console.log('   This will help us verify the map is working\n');
-
   } else {
     console.error('❌ Google Maps API not available');
   }
@@ -227,7 +230,7 @@
   console.log('\nNext actions:');
   console.log('1. Review the output above for any 🎯 markers');
   console.log('2. If found, tell me the path (e.g., "mapElement.__someProperty")');
-  console.log('3. If not found, we\'ll use an alternative approach\n');
+  console.log("3. If not found, we'll use an alternative approach\n");
 
   console.log('Alternative approaches if map instance not found:');
   console.log('- Inject code into page context (bypasses isolated world)');
@@ -237,6 +240,6 @@
   return {
     mapElement,
     allKeys,
-    groups
+    groups,
   };
 })();

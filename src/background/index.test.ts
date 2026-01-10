@@ -90,7 +90,9 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
   const loadHandler = async () => {
     jest.resetModules();
     await import('./index');
-    const handler = (chrome.runtime.onMessage.addListener as unknown as jest.Mock).mock.calls.at(-1)?.[0] as any;
+    const handler = (chrome.runtime.onMessage.addListener as unknown as jest.Mock).mock.calls.at(
+      -1
+    )?.[0] as any;
     if (typeof handler !== 'function') throw new Error('onMessage handler not registered');
     return handler as any;
   };
@@ -215,13 +217,20 @@ describe('onMessage handler (CHAT_MESSAGE & API_REQUEST)', () => {
     const handler = await loadHandler();
     const sendResponse = jest.fn();
 
-    const ret = (handler as any)({ type: 'CHAT_MESSAGE', messages: [] } as any, {} as any, sendResponse);
+    const ret = (handler as any)(
+      { type: 'CHAT_MESSAGE', messages: [] } as any,
+      {} as any,
+      sendResponse
+    );
     expect(ret).toBe(true);
 
     await new Promise(setImmediate);
 
     expect(sendResponse).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'ERROR', error: expect.stringMatching(/API key not configured/i) })
+      expect.objectContaining({
+        type: 'ERROR',
+        error: expect.stringMatching(/API key not configured/i),
+      })
     );
   });
 });

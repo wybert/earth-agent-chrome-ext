@@ -5,11 +5,13 @@ Thank you for your interest in contributing to **Earth Engine Agent**! We welcom
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - **Node.js**: (Latest LTS recommended)
 - **npm**: (Included with Node.js)
 - **Google Earth Engine Account**: Access to the [Code Editor](https://code.earthengine.google.com/).
 
 ### Installation
+
 1. **Fork and Clone** the repository.
    ```bash
    git clone https://github.com/YOUR-USERNAME/earth-agent-ai-sdk.git
@@ -23,12 +25,15 @@ Thank you for your interest in contributing to **Earth Engine Agent**! We welcom
 ## 🛠️ Development Workflow
 
 ### Building the Extension
+
 To build the extension for production (outputs to `dist/`):
+
 ```bash
 npm run build
 ```
 
 For active development with auto-rebuilds:
+
 ```bash
 npm run watch
 # or
@@ -36,6 +41,7 @@ npm run dev
 ```
 
 ### Loading in Chrome
+
 1. Navigate to `chrome://extensions/`.
 2. Enable **Developer mode** (top right toggle).
 3. Click **Load unpacked**.
@@ -43,7 +49,9 @@ npm run dev
 5. Go to the [Earth Engine Code Editor](https://code.earthengine.google.com/) to see the extension in action.
 
 ### Running Tests
+
 We use Jest for testing.
+
 ```bash
 npm test          # Run all tests
 npm run type-check # Check TypeScript types
@@ -64,12 +72,20 @@ npm run type-check # Check TypeScript types
 ## 📐 Architecture & Standards
 
 ### Service Layer Pattern
+
 We use a **Service Layer Architecture** to share logic between the Chrome Extension and our MCP Server.
+
 - Tool logic resides in `src/lib/tools/services/`.
 - Do not call low-level library functions directly in AI tools; use the service layer.
 
 ### Code Style
+
 - We use **TypeScript** for all logic.
+- We use **Prettier** for code formatting. Please format your code before submitting a PR.
+  ```bash
+  npm run format       # Format all files
+  npm run format:check # Verify formatting
+  ```
 - Follow the existing project structure (`src/components`, `src/lib`, etc.).
 - Keep components small and focused.
 
@@ -83,13 +99,14 @@ We use a **Service Layer Architecture** to share logic between the Chrome Extens
 3. Push to your fork and submit a Pull Request.
 4. Provide a clear description of your changes and any relevant screenshots.
 
-
 ## 🔌 MCP Server Development
 
 The `mcp-server/` directory contains the Model Context Protocol implementation that connects AI editors (Claude Code, Cursor) to the Chrome Extension.
 
 ### Setup and Build
+
 The MCP server is a separate Node.js package.
+
 ```bash
 cd mcp-server
 npm install
@@ -97,11 +114,13 @@ npm run build
 ```
 
 ### Architecture
+
 - **WebSocket Server**: Runs on port 3847 to communicate with the Chrome Extension.
 - **MCP Protocol**: Communicates via stdio with the AI editor.
 - **Shared Logic**: Uses the same Service Layer as the extension to ensure consistent behavior.
 
 ### Testing Changes
+
 1. Build the server: `npm run build`
 2. Run it manually to test connection: `npm start`
 3. Configure your editor to use the local build (see `mcp-server/README.md` for details).
@@ -136,7 +155,7 @@ The extension handles Cross-Origin Resource Sharing (CORS) issues by proxying AP
    - Proxy requests via the background script when running in a content script or sidepanel
 
 If you encounter CORS issues:
+
 - Check that `https://context7.com/*` is included in the `host_permissions` in `manifest.json`
 - Verify that the background script is properly handling the message types
 - Check the background script console for detailed error messages
-

@@ -93,14 +93,15 @@ chrome-webstore-upload-cli get-refresh-token \
 2. Navigate to `Settings` > `Secrets and variables` > `Actions`
 3. Click "New repository secret" and add these 4 secrets:
 
-| Secret Name | Value | Description |
-|------------|-------|-------------|
-| `CHROME_EXTENSION_ID` | Your extension ID | From Chrome Web Store Developer Dashboard |
-| `CHROME_CLIENT_ID` | OAuth client ID | From Google Cloud Console |
-| `CHROME_CLIENT_SECRET` | OAuth client secret | From Google Cloud Console |
-| `CHROME_REFRESH_TOKEN` | OAuth refresh token | From OAuth Playground or CLI tool |
+| Secret Name            | Value               | Description                               |
+| ---------------------- | ------------------- | ----------------------------------------- |
+| `CHROME_EXTENSION_ID`  | Your extension ID   | From Chrome Web Store Developer Dashboard |
+| `CHROME_CLIENT_ID`     | OAuth client ID     | From Google Cloud Console                 |
+| `CHROME_CLIENT_SECRET` | OAuth client secret | From Google Cloud Console                 |
+| `CHROME_REFRESH_TOKEN` | OAuth refresh token | From OAuth Playground or CLI tool         |
 
 **Important Notes**:
+
 - These secrets are sensitive - never share them
 - Never commit them to your repository
 - If leaked, revoke and regenerate them immediately in Google Cloud Console
@@ -151,7 +152,7 @@ In `.github/workflows/build-and-release.yml`:
     client-id: ${{ secrets.CHROME_CLIENT_ID }}
     client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
     refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-    publish: true  # Set to false to upload without auto-publishing
+    publish: true # Set to false to upload without auto-publishing
 ```
 
 ### `publish` Parameter
@@ -178,6 +179,7 @@ In `.github/workflows/build-and-release.yml`:
 ### Q3: What if publishing fails?
 
 **A**: Check GitHub Actions logs. Common causes:
+
 - Incorrect secrets configuration
 - Extension violates Chrome Web Store policies
 - Version number conflicts with published version
@@ -186,6 +188,7 @@ In `.github/workflows/build-and-release.yml`:
 ### Q4: How to check publishing status?
 
 **A**:
+
 1. Check GitHub Actions run logs
 2. Visit Chrome Web Store Developer Dashboard
 3. You'll receive Google email notifications about review status
@@ -193,6 +196,7 @@ In `.github/workflows/build-and-release.yml`:
 ### Q5: Can I skip certain steps?
 
 **A**: Yes. If you only want GitHub releases without Chrome Web Store publishing:
+
 1. Don't configure Chrome-related secrets
 2. Or comment out the "Publish to Chrome Web Store" step in the workflow
 

@@ -8,22 +8,15 @@ export const AVAILABLE_MODELS: Record<ApiProvider, string[]> = {
     'gpt-5.2-chat-latest',
     'gpt-5.1',
     'gpt-5.1-codex',
-    'gpt-5.1-chat-latest'
+    'gpt-5.1-chat-latest',
   ],
   anthropic: [
     'claude-opus-4-5-20251101',
     'claude-sonnet-4-5-20250929',
-    'claude-haiku-4-5-20251001'
+    'claude-haiku-4-5-20251001',
   ],
-  google: [
-    'gemini-2.5-pro',
-    'gemini-2.5-flash',
-    'gemini-3-pro-preview',
-    'gemini-3-flash-preview'
-  ],
-  'z-ai': [
-    'glm-4.7'
-  ]
+  google: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-3-pro-preview', 'gemini-3-flash-preview'],
+  'z-ai': ['glm-4.7'],
 };
 
 // Human-readable model names
@@ -45,7 +38,7 @@ export const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'gemini-3-pro-preview': 'Gemini 3 Pro Preview',
   'gemini-3-flash-preview': 'Gemini 3 Flash Preview',
   // Z.AI Models
-  'glm-4.7': 'GLM-4.7'
+  'glm-4.7': 'GLM-4.7',
 };
 
 // Default models for each provider
@@ -53,7 +46,7 @@ export const DEFAULT_MODELS: Record<ApiProvider, string> = {
   openai: 'gpt-5.2',
   anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.5-pro',
-  'z-ai': 'glm-4.7'
+  'z-ai': 'glm-4.7',
 };
 
 // Storage keys for API configuration

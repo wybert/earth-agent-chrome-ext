@@ -24,8 +24,8 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   // Google Models
   'gemini-3-pro-preview': 2000000, // 2M context window
   'gemini-3-flash-preview': 1000000,
-  'gemini-2.5-pro': 2000000,      // 2M context window
-  'gemini-2.5-flash': 1000000,    // 1M context window
+  'gemini-2.5-pro': 2000000, // 2M context window
+  'gemini-2.5-flash': 1000000, // 1M context window
 
   // Z.AI / GLM Models
   'glm-4.7': 128000,

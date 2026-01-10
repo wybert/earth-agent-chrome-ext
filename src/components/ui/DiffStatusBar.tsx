@@ -31,13 +31,7 @@ export interface DiffStatusBarProps {
   className?: string;
 }
 
-export function DiffStatusBar({
-  summary,
-  hunks,
-  onUndo,
-  onClose,
-  className,
-}: DiffStatusBarProps) {
+export function DiffStatusBar({ summary, hunks, onUndo, onClose, className }: DiffStatusBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasChanges = summary.added > 0 || summary.removed > 0;
@@ -57,9 +51,7 @@ export function DiffStatusBar({
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
           <span className="flex items-center gap-1.5">
-            <span className="text-green-600 dark:text-green-400 font-medium">
-              Edit Applied
-            </span>
+            <span className="text-green-600 dark:text-green-400 font-medium">Edit Applied</span>
             <span className="text-muted-foreground">•</span>
             <span className="text-green-600 dark:text-green-400">+{summary.added}</span>
             <span className="text-red-600 dark:text-red-400">-{summary.removed}</span>
@@ -105,20 +97,21 @@ export function DiffStatusBar({
                 {/* Hunk lines */}
                 <div className="text-xs font-mono">
                   {hunk.lines.map((line, lineIndex) => {
-                    const prefix = line.type === 'insert' ? '+' : line.type === 'delete' ? '-' : ' ';
+                    const prefix =
+                      line.type === 'insert' ? '+' : line.type === 'delete' ? '-' : ' ';
                     return (
                       <div
                         key={lineIndex}
                         className={cn(
                           'px-3 py-0.5 whitespace-pre-wrap break-all',
-                          line.type === 'insert' && 'bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300',
-                          line.type === 'delete' && 'bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300',
+                          line.type === 'insert' &&
+                            'bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300',
+                          line.type === 'delete' &&
+                            'bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300',
                           line.type === 'context' && 'text-muted-foreground'
                         )}
                       >
-                        <span className="select-none mr-2 text-muted-foreground">
-                          {prefix}
-                        </span>
+                        <span className="select-none mr-2 text-muted-foreground">{prefix}</span>
                         {line.text}
                       </div>
                     );

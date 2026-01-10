@@ -3,27 +3,34 @@
 ## Version X.Y.Z
 
 ### 🎉 New Features
+
 - Feature 1 description
 - Feature 2 description
 
 ### 🔧 Improvements
+
 - Improvement 1
 - Improvement 2
 
 ### 🐛 Bug Fixes
+
 - Bug fix 1
 - Bug fix 2
 
 ### 📚 Documentation
+
 - Documentation updates
 
 ### 🔒 Security
+
 - Security improvements (if any)
 
 ### ⚠️ Breaking Changes
+
 - Breaking change 1 (if any)
 
 ### 📦 Dependencies
+
 - Updated dependencies
 
 ---
@@ -31,9 +38,11 @@
 ## Installation
 
 **Chrome Web Store (Recommended):**
+
 - Install from [Chrome Web Store Link]
 
 **Manual Installation:**
+
 1. Download `earth-agent-extension.zip` from the release assets
 2. Extract the zip file
 3. Open `chrome://extensions/`
@@ -43,6 +52,7 @@
 ## Configuration
 
 After installation:
+
 1. Click the Earth Agent extension icon
 2. Go to Settings
 3. Add your AI provider API key (OpenAI, Anthropic, Google, etc.)

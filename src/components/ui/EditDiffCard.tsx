@@ -3,7 +3,12 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Undo2, Check } from 'lucide-react';
 
-type DiffLine = { type: 'context' | 'delete' | 'insert'; text: string; oldLine?: number; newLine?: number };
+type DiffLine = {
+  type: 'context' | 'delete' | 'insert';
+  text: string;
+  oldLine?: number;
+  newLine?: number;
+};
 type DiffHunk = { oldStart: number; newStart: number; lines: DiffLine[] };
 
 export interface EditDiffData {
@@ -35,7 +40,9 @@ export function EditDiffCard({
           <span className="text-sm text-gray-500">
             <span className="text-green-600">+{summary.added}</span>{' '}
             <span className="text-red-600">-{summary.removed}</span>{' '}
-            <span className="text-gray-400">({summary.hunks} {summary.hunks === 1 ? 'change' : 'changes'})</span>
+            <span className="text-gray-400">
+              ({summary.hunks} {summary.hunks === 1 ? 'change' : 'changes'})
+            </span>
           </span>
         </div>
         <div className="flex gap-1">

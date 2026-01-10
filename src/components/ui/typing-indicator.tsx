@@ -1,6 +1,6 @@
 import React from 'react';
-import { Dot } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Dot } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function TypingIndicator() {
   return (
@@ -13,5 +13,5 @@ export function TypingIndicator() {
         </div>
       </div>
     </div>
-  )
+  );
 }

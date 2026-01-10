@@ -27,7 +27,7 @@
     console.log('   Inspect views found:', inspectViews.length);
 
     inspectViews.forEach((view, i) => {
-      console.log(`\n   View ${i+1}:`);
+      console.log(`\n   View ${i + 1}:`);
       const labelEl = view.querySelector('.header .label');
       const messageEl = view.querySelector('.header .message');
       console.log('     Label:', labelEl ? labelEl.textContent : 'NOT FOUND');
@@ -36,7 +36,7 @@
       const trivials = view.querySelectorAll('.trivial');
       console.log('     Trivial elements:', trivials.length);
       trivials.forEach((t, j) => {
-        console.log(`       Trivial ${j+1}:`, t.textContent.substring(0, 100));
+        console.log(`       Trivial ${j + 1}:`, t.textContent.substring(0, 100));
       });
     });
   } else {
@@ -50,7 +50,7 @@
   // 4. Check Inspector tab status
   console.log('\n4. Looking for Inspector tab...');
   const allTabs = document.querySelectorAll('[role="tab"], .tab, button');
-  const inspectorTab = Array.from(allTabs).find(el =>
+  const inspectorTab = Array.from(allTabs).find((el) =>
     el.textContent?.toLowerCase().includes('inspector')
   );
   console.log('   Inspector tab:', inspectorTab ? 'FOUND' : 'NOT FOUND');
@@ -67,6 +67,6 @@
   return {
     inspectPanelExists: !!inspectPanel,
     inspectorTabExists: !!inspectorTab,
-    mapExists: !!mapElement
+    mapExists: !!mapElement,
   };
 })();

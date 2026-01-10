@@ -9,21 +9,21 @@
   const allElements = document.querySelectorAll('*');
   const inspectorElements = [];
 
-  allElements.forEach(el => {
+  allElements.forEach((el) => {
     const text = el.textContent;
     if (text && text.includes('Inspector') && text.length < 50) {
       inspectorElements.push({
         el,
         tag: el.tagName,
         class: el.className,
-        text: text.trim()
+        text: text.trim(),
       });
     }
   });
 
   console.log('   Found', inspectorElements.length, 'elements');
   inspectorElements.slice(0, 10).forEach((info, i) => {
-    console.log(`   ${i+1}. <${info.tag}> class="${info.class}"`);
+    console.log(`   ${i + 1}. <${info.tag}> class="${info.class}"`);
     console.log(`      Text: "${info.text}"`);
     console.log('      Element:', info.el);
   });
@@ -42,7 +42,7 @@
   // In your screenshot, I see tabs at the top: Inspector, Console, Tasks
   // Let's find those
   const topBarElements = [];
-  allElements.forEach(el => {
+  allElements.forEach((el) => {
     const rect = el.getBoundingClientRect();
     // Check if element is near the top and has "Inspector" text
     if (rect.top < 200 && rect.top > 50 && el.textContent?.includes('Inspector')) {
@@ -51,14 +51,14 @@
         tag: el.tagName,
         class: el.className,
         top: rect.top,
-        text: el.textContent.trim().substring(0, 100)
+        text: el.textContent.trim().substring(0, 100),
       });
     }
   });
 
   console.log('   Elements near top with "Inspector":', topBarElements.length);
   topBarElements.forEach((info, i) => {
-    console.log(`   ${i+1}. <${info.tag}> at y=${info.top}px`);
+    console.log(`   ${i + 1}. <${info.tag}> at y=${info.top}px`);
     console.log(`      Class: "${info.class}"`);
     console.log(`      Text: "${info.text}"`);
   });
@@ -89,6 +89,6 @@
   return {
     inspectorElements: inspectorElements.length,
     topBarElements: topBarElements.length,
-    firstElement: topBarElements[0]?.el
+    firstElement: topBarElements[0]?.el,
   };
 })();

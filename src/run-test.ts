@@ -5,7 +5,7 @@ async function main() {
   console.log('Test result:', result);
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error('Fatal error during test:', error);
   process.exit(1);
 });

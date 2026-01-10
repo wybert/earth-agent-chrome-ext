@@ -93,14 +93,15 @@ chrome-webstore-upload-cli get-refresh-token \
 2. 前往 `Settings` > `Secrets and variables` > `Actions`
 3. 点击"New repository secret"，添加以下4个secrets：
 
-| Secret名称 | 值 | 说明 |
-|-----------|-----|------|
-| `CHROME_EXTENSION_ID` | 你的扩展ID | 从Chrome Web Store Developer Dashboard获取 |
-| `CHROME_CLIENT_ID` | OAuth客户端ID | 从Google Cloud Console获取 |
-| `CHROME_CLIENT_SECRET` | OAuth客户端密钥 | 从Google Cloud Console获取 |
-| `CHROME_REFRESH_TOKEN` | OAuth刷新令牌 | 从OAuth Playground或CLI工具获取 |
+| Secret名称             | 值              | 说明                                       |
+| ---------------------- | --------------- | ------------------------------------------ |
+| `CHROME_EXTENSION_ID`  | 你的扩展ID      | 从Chrome Web Store Developer Dashboard获取 |
+| `CHROME_CLIENT_ID`     | OAuth客户端ID   | 从Google Cloud Console获取                 |
+| `CHROME_CLIENT_SECRET` | OAuth客户端密钥 | 从Google Cloud Console获取                 |
+| `CHROME_REFRESH_TOKEN` | OAuth刷新令牌   | 从OAuth Playground或CLI工具获取            |
 
 **重要提示**：
+
 - 这些secrets是敏感信息，请勿与任何人分享
 - 请勿将它们提交到代码仓库中
 - 如果泄露，请立即在Google Cloud Console中撤销并重新生成
@@ -151,7 +152,7 @@ git push origin v1.0.1
     client-id: ${{ secrets.CHROME_CLIENT_ID }}
     client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
     refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-    publish: true  # 设置为false则上传但不自动发布
+    publish: true # 设置为false则上传但不自动发布
 ```
 
 ### `publish` 参数说明
@@ -178,6 +179,7 @@ git push origin v1.0.1
 ### Q3: 如果发布失败怎么办？
 
 **A**: 检查GitHub Actions日志，常见原因：
+
 - Secrets配置错误
 - 扩展包不符合Chrome Web Store政策
 - 版本号与已发布版本冲突
@@ -186,6 +188,7 @@ git push origin v1.0.1
 ### Q4: 如何查看发布状态？
 
 **A**:
+
 1. 查看GitHub Actions运行日志
 2. 访问Chrome Web Store Developer Dashboard
 3. 你会收到Google发送的审核邮件通知
@@ -193,6 +196,7 @@ git push origin v1.0.1
 ### Q5: 能否跳过某些步骤？
 
 **A**: 可以。如果你只想创建GitHub Release而不发布到Chrome Web Store，可以：
+
 1. 不配置Chrome相关的secrets
 2. 或者在workflow中注释掉"Publish to Chrome Web Store"步骤
 

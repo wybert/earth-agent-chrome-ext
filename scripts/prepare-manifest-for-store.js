@@ -31,7 +31,7 @@ if (!manifest.host_permissions || !Array.isArray(manifest.host_permissions)) {
 
 // Filter out localhost and 127.0.0.1 URLs
 const originalPermissions = [...manifest.host_permissions];
-const filteredPermissions = manifest.host_permissions.filter(permission => {
+const filteredPermissions = manifest.host_permissions.filter((permission) => {
   const isLocalhost = permission.includes('localhost') || permission.includes('127.0.0.1');
   if (isLocalhost) {
     console.log('🗑️  Removing:', permission);
@@ -53,5 +53,7 @@ console.log('Cleaned host_permissions count:', filteredPermissions.length);
 console.log('Removed:', originalPermissions.length - filteredPermissions.length, 'localhost URLs');
 console.log('');
 console.log('⚠️  Note: Ollama (localhost) functionality will not work in this build.');
-console.log('   Users will need to use cloud-based AI providers (OpenAI, Anthropic, Google, Qwen).');
+console.log(
+  '   Users will need to use cloud-based AI providers (OpenAI, Anthropic, Google, Qwen).'
+);
 console.log('');

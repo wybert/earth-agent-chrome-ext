@@ -45,10 +45,7 @@ function generateRequestId(): string {
 /**
  * Send a request to the Chrome extension via WebSocket and wait for response
  */
-async function sendToExtension(
-  name: string,
-  args: Record<string, unknown>
-): Promise<unknown> {
+async function sendToExtension(name: string, args: Record<string, unknown>): Promise<unknown> {
   if (!extensionSocket || extensionSocket.readyState !== WebSocket.OPEN) {
     throw new Error(
       'Chrome extension not connected. Please ensure the Earth Agent extension is running and connected.'

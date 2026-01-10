@@ -9,10 +9,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { getDocumentation } from './context7';
 import { snapshot as browserSnapshot, SnapshotResponse } from './browser/snapshot';
-import {
-  selectBestEarthEngineTab,
-  validateChromeAPIs
-} from '../utils';
+import { selectBestEarthEngineTab, validateChromeAPIs } from '../utils';
 import * as WeatherService from './services/weather-service';
 import * as TimeService from './services/time-service';
 import * as EditorService from './services/editor-service';
@@ -47,7 +44,7 @@ const NON_MULTIMODAL_PROVIDERS: string[] = ['z-ai'];
 async function getActiveEarthEngineTabId(): Promise<number | null> {
   if (typeof chrome === 'undefined' || !chrome.tabs) return null;
   const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
-    chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => resolve(tabs || []));
+    chrome.tabs.query({ url: '*://code.earthengine.google.com/*' }, (tabs) => resolve(tabs || []));
   });
   const bestTab = selectBestEarthEngineTab(tabs);
   return bestTab?.id || null;
@@ -76,7 +73,6 @@ export function createAITools(onToolEvent?: ToolEventCallback, options?: CreateA
   })();
   const currentProvider = options?.provider || 'unknown';
 
-
   const weatherTool = tool({
     description: 'Get the current weather for a location (uses Open-Meteo, no API key required)',
     inputSchema: z.object({
@@ -95,9 +91,15 @@ export function createAITools(onToolEvent?: ToolEventCallback, options?: CreateA
   });
 
   const dateTimeTool = tool({
-    description: 'Get the current date and time, optionally for a specific IANA time zone. Returns the current time formatted in the requested timezone.',
+    description:
+      'Get the current date and time, optionally for a specific IANA time zone. Returns the current time formatted in the requested timezone.',
     inputSchema: z.object({
-      timeZone: z.string().optional().describe('IANA time zone, e.g., "Asia/Shanghai" for Beijing, "America/New_York", or "UTC". If not specified, uses system timezone.'),
+      timeZone: z
+        .string()
+        .optional()
+        .describe(
+          'IANA time zone, e.g., "Asia/Shanghai" for Beijing, "America/New_York", or "UTC". If not specified, uses system timezone.'
+        ),
     }),
     execute: async ({ timeZone }) => {
       const toolName = 'dateTime';
@@ -118,15 +120,14 @@ After waiting, use getConsoleOutput or screenshot to check if execution is done.
 - Console shows "Computing" or spinning gear icon = still running
 - Map shows gray progress bar in Layers button = still loading`,
     inputSchema: z.object({
-      seconds: z.number().min(0.5).max(60)
-        .describe('Number of seconds to wait (0.5 to 60)'),
+      seconds: z.number().min(0.5).max(60).describe('Number of seconds to wait (0.5 to 60)'),
     }),
     execute: async ({ seconds }) => {
       onToolEvent?.({
         type: 'tool_start',
         toolName: 'wait',
         args: { seconds },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       const result = await TimeService.waitSeconds(seconds);
@@ -134,7 +135,7 @@ After waiting, use getConsoleOutput or screenshot to check if execution is done.
       return {
         success: true,
         message: result.message,
-        suggestion: 'Use getConsoleOutput or screenshot to check execution status'
+        suggestion: 'Use getConsoleOutput or screenshot to check execution status',
       };
     },
   });
@@ -148,23 +149,35 @@ After waiting, use getConsoleOutput or screenshot to check if execution is done.
     return selected?.id ?? null;
   };
 
-  const ensureShadowSyncedFromEditor = async (tabId: number, scriptId: string): Promise<boolean> => {
+  const ensureShadowSyncedFromEditor = async (
+    tabId: number,
+    scriptId: string
+  ): Promise<boolean> => {
     const state = shadowWorkspaceSingleton.getOrCreate(tabId, scriptId);
     // If we already have content, trust the existing sync mechanism.
     if (state.content && state.content.trim().length > 0) return true;
 
     try {
       const response: any = await new Promise((resolve) => {
-        const timeout = setTimeout(() => resolve({ success: false, error: 'GET_SCRIPT timeout' }), 1500);
+        const timeout = setTimeout(
+          () => resolve({ success: false, error: 'GET_SCRIPT timeout' }),
+          1500
+        );
         chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (res) => {
           clearTimeout(timeout);
-          if (chrome.runtime.lastError) resolve({ success: false, error: chrome.runtime.lastError.message });
+          if (chrome.runtime.lastError)
+            resolve({ success: false, error: chrome.runtime.lastError.message });
           else resolve(res || { success: false, error: 'No response from content script' });
         });
       });
       if (!response?.success || typeof response.content !== 'string') return false;
 
-      const next = shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, response.content, 'auto refresh from editor');
+      const next = shadowWorkspaceSingleton.setFromEditor(
+        tabId,
+        scriptId,
+        response.content,
+        'auto refresh from editor'
+      );
       shadowWorkspaceSingleton.markSynced(tabId, next.scriptId);
       return true;
     } catch {
@@ -192,7 +205,11 @@ Returns the full code content with line count.`,
       onToolEvent?.({ type: 'tool_start', toolName: 'readCode', args: {}, timestamp: Date.now() });
 
       const tabId = await getActiveEarthEngineTabId();
-      if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+      if (!tabId)
+        return {
+          success: false,
+          error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.',
+        };
 
       return await EditorService.readCode(tabId);
     },
@@ -237,15 +254,32 @@ WRONG - Don't duplicate:
   new_string: "print('hello')// Comment\\nprint('hello')"  ← WRONG! Creates duplicate`,
     inputSchema: z.object({
       old_string: z.string().describe('The exact text to find. Will be REPLACED by new_string.'),
-      new_string: z.string().describe('The replacement text. This is the FINAL result, not an addition.'),
-      replace_all: z.boolean().optional().describe('If true, replace ALL occurrences. Default: false'),
+      new_string: z
+        .string()
+        .describe('The replacement text. This is the FINAL result, not an addition.'),
+      replace_all: z
+        .boolean()
+        .optional()
+        .describe('If true, replace ALL occurrences. Default: false'),
     }),
     execute: async ({ old_string, new_string, replace_all }) => {
       // Send tool_start event
-      onToolEvent?.({ type: 'tool_start', toolName: 'editCode', args: { old_string: old_string.substring(0, 50) + '...', new_string: new_string.substring(0, 50) + '...' }, timestamp: Date.now() });
+      onToolEvent?.({
+        type: 'tool_start',
+        toolName: 'editCode',
+        args: {
+          old_string: old_string.substring(0, 50) + '...',
+          new_string: new_string.substring(0, 50) + '...',
+        },
+        timestamp: Date.now(),
+      });
 
       const tabId = await getActiveEarthEngineTabId();
-      if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+      if (!tabId)
+        return {
+          success: false,
+          error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.',
+        };
 
       const scriptId = 'current_editor';
 
@@ -253,11 +287,19 @@ WRONG - Don't duplicate:
       const fetchResponse = await getEditorContent(tabId);
 
       if (!fetchResponse.success || fetchResponse.content === undefined) {
-        return { success: false, error: `Failed to read code from editor: ${fetchResponse?.error || 'Unknown error'}. Make sure the Earth Engine Code Editor is open.` };
+        return {
+          success: false,
+          error: `Failed to read code from editor: ${fetchResponse?.error || 'Unknown error'}. Make sure the Earth Engine Code Editor is open.`,
+        };
       }
 
       // Update shadow with current editor content
-      const syncedState = shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, fetchResponse.content, 'pre-edit sync');
+      const syncedState = shadowWorkspaceSingleton.setFromEditor(
+        tabId,
+        scriptId,
+        fetchResponse.content,
+        'pre-edit sync'
+      );
       shadowWorkspaceSingleton.markSynced(tabId, syncedState.scriptId);
 
       // Step 2: Apply the edit to shadow
@@ -275,10 +317,12 @@ WRONG - Don't duplicate:
           return {
             success: false,
             error: 'old_string not found in the code',
-            suggestion: 'Use readCode to see the current code and copy the exact text you want to replace.',
-            currentCode: syncedState.content.length > 2000
-              ? syncedState.content.substring(0, 2000) + '\n... (truncated)'
-              : syncedState.content
+            suggestion:
+              'Use readCode to see the current code and copy the exact text you want to replace.',
+            currentCode:
+              syncedState.content.length > 2000
+                ? syncedState.content.substring(0, 2000) + '\n... (truncated)'
+                : syncedState.content,
           };
         }
         if (editResult.error === 'not_unique') {
@@ -286,13 +330,14 @@ WRONG - Don't duplicate:
             success: false,
             error: `old_string appears ${editResult.count} times in the code`,
             count: editResult.count,
-            suggestion: 'Include more surrounding context in old_string to make it unique, or set replace_all: true'
+            suggestion:
+              'Include more surrounding context in old_string to make it unique, or set replace_all: true',
           };
         }
         if (editResult.error === 'no_change') {
           return {
             success: false,
-            error: 'old_string and new_string are identical - no change needed'
+            error: 'old_string and new_string are identical - no change needed',
           };
         }
         return { success: false, error: editResult.error };
@@ -311,7 +356,7 @@ WRONG - Don't duplicate:
         return {
           success: false,
           error: `Edit was prepared but failed to apply to editor: ${syncResult.error}`,
-          suggestion: 'The editor may not be ready. Try again.'
+          suggestion: 'The editor may not be ready. Try again.',
         };
       }
 
@@ -325,12 +370,12 @@ WRONG - Don't duplicate:
           summary: {
             added: diff.summary.added,
             removed: diff.summary.removed,
-            hunks: diff.hunks.length
+            hunks: diff.hunks.length,
           },
-          hunks: diff.hunks  // Full hunks for UI rendering
+          hunks: diff.hunks, // Full hunks for UI rendering
         },
         message: `Successfully edited code: +${diff.summary.added} -${diff.summary.removed} lines`,
-        hint: 'Use earthEngineRunCode to execute the updated code'
+        hint: 'Use earthEngineRunCode to execute the updated code',
       };
     },
   });
@@ -349,14 +394,25 @@ Use this tool when:
 
 For partial edits (modifying specific lines), use editCode instead.`,
     inputSchema: z.object({
-      content: z.string().describe('The complete code to write to the editor. This will REPLACE all existing code.'),
+      content: z
+        .string()
+        .describe('The complete code to write to the editor. This will REPLACE all existing code.'),
     }),
     execute: async ({ content }) => {
       // Send tool_start event
-      onToolEvent?.({ type: 'tool_start', toolName: 'writeCode', args: { contentLength: content.length }, timestamp: Date.now() });
+      onToolEvent?.({
+        type: 'tool_start',
+        toolName: 'writeCode',
+        args: { contentLength: content.length },
+        timestamp: Date.now(),
+      });
 
       const tabId = await getActiveEarthEngineTabId();
-      if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+      if (!tabId)
+        return {
+          success: false,
+          error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.',
+        };
 
       const scriptId = 'current_editor';
 
@@ -375,7 +431,7 @@ For partial edits (modifying specific lines), use editCode instead.`,
         return {
           success: false,
           error: `Failed to write to editor: ${syncResult.error}`,
-          suggestion: 'The editor may not be ready. Try again.'
+          suggestion: 'The editor may not be ready. Try again.',
         };
       }
 
@@ -389,7 +445,7 @@ For partial edits (modifying specific lines), use editCode instead.`,
         lineCount: newLineCount,
         previousLineCount: previousLineCount,
         message: `Wrote ${newLineCount} lines to editor (replaced ${previousLineCount} lines)`,
-        hint: 'Use runCurrentCode to execute the code'
+        hint: 'Use runCurrentCode to execute the code',
       };
     },
   });
@@ -406,7 +462,11 @@ For partial edits (modifying specific lines), use editCode instead.`,
       onToolEvent?.({ type: 'tool_start', toolName: 'undoEdit', args: {}, timestamp: Date.now() });
 
       const tabId = await getActiveEarthEngineTabId();
-      if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+      if (!tabId)
+        return {
+          success: false,
+          error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.',
+        };
 
       const scriptId = 'current_editor';
       const beforeState = shadowWorkspaceSingleton.getOrCreate(tabId, scriptId);
@@ -424,7 +484,10 @@ For partial edits (modifying specific lines), use editCode instead.`,
       if (!syncResult.success) {
         // Redo to restore state
         shadowWorkspaceSingleton.redo(tabId, scriptId);
-        return { success: false, error: `Undo prepared but failed to apply to editor: ${syncResult.error}` };
+        return {
+          success: false,
+          error: `Undo prepared but failed to apply to editor: ${syncResult.error}`,
+        };
       }
 
       shadowWorkspaceSingleton.markSynced(tabId, scriptId);
@@ -433,7 +496,7 @@ For partial edits (modifying specific lines), use editCode instead.`,
         success: true,
         message: 'Undo successful - reverted to previous version',
         version: afterState.version,
-        lineCount: afterState.content.split('\n').length
+        lineCount: afterState.content.split('\n').length,
       };
     },
   });
@@ -468,15 +531,27 @@ WHEN TO USE:
 
 After inserting, the code is automatically applied to the editor.`,
     inputSchema: z.object({
-      line: z.number().int().describe('Line number to insert BEFORE (1-based). Use 1 to insert at the beginning.'),
+      line: z
+        .number()
+        .int()
+        .describe('Line number to insert BEFORE (1-based). Use 1 to insert at the beginning.'),
       text: z.string().describe('The text to insert. Use \\n for multiple lines.'),
     }),
     execute: async ({ line, text }) => {
       // Send tool_start event
-      onToolEvent?.({ type: 'tool_start', toolName: 'insertAtLine', args: { line, text: text.substring(0, 50) + '...' }, timestamp: Date.now() });
+      onToolEvent?.({
+        type: 'tool_start',
+        toolName: 'insertAtLine',
+        args: { line, text: text.substring(0, 50) + '...' },
+        timestamp: Date.now(),
+      });
 
       const tabId = await getActiveEarthEngineTabId();
-      if (!tabId) return { success: false, error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.' };
+      if (!tabId)
+        return {
+          success: false,
+          error: 'No Earth Engine tab found. Please open Google Earth Engine Code Editor.',
+        };
 
       const scriptId = 'current_editor';
 
@@ -484,11 +559,19 @@ After inserting, the code is automatically applied to the editor.`,
       const fetchResponse = await getEditorContent(tabId);
 
       if (!fetchResponse.success || fetchResponse.content === undefined) {
-        return { success: false, error: `Failed to read code from editor: ${fetchResponse?.error || 'Unknown error'}. Make sure the Earth Engine Code Editor is open.` };
+        return {
+          success: false,
+          error: `Failed to read code from editor: ${fetchResponse?.error || 'Unknown error'}. Make sure the Earth Engine Code Editor is open.`,
+        };
       }
 
       // Update shadow with current editor content
-      const syncedState = shadowWorkspaceSingleton.setFromEditor(tabId, scriptId, fetchResponse.content, 'pre-insert sync');
+      const syncedState = shadowWorkspaceSingleton.setFromEditor(
+        tabId,
+        scriptId,
+        fetchResponse.content,
+        'pre-insert sync'
+      );
       shadowWorkspaceSingleton.markSynced(tabId, syncedState.scriptId);
 
       // Step 2: Insert at line
@@ -517,7 +600,7 @@ After inserting, the code is automatically applied to the editor.`,
         return {
           success: false,
           error: `Insert was prepared but failed to apply to editor: ${syncResult.error}`,
-          suggestion: 'The editor may not be ready. Try again.'
+          suggestion: 'The editor may not be ready. Try again.',
         };
       }
 
@@ -533,11 +616,11 @@ After inserting, the code is automatically applied to the editor.`,
           summary: {
             added: diff.summary.added,
             removed: diff.summary.removed,
-            hunks: diff.hunks.length
+            hunks: diff.hunks.length,
           },
-          hunks: diff.hunks
+          hunks: diff.hunks,
         },
-        message: `Inserted text at line ${line}: +${diff.summary.added} lines`
+        message: `Inserted text at line ${line}: +${diff.summary.added} lines`,
       };
     },
   });
@@ -580,13 +663,19 @@ After inserting, the code is automatically applied to the editor.`,
       if (!tabId) return { success: false, error: 'No Earth Engine tab found' };
       const resolvedScriptId = scriptId || 'current_editor';
       await ensureShadowSyncedFromEditor(tabId, resolvedScriptId);
-      const matches = shadowWorkspaceSingleton.search(tabId, resolvedScriptId, query, maxResults || 20);
+      const matches = shadowWorkspaceSingleton.search(
+        tabId,
+        resolvedScriptId,
+        query,
+        maxResults || 20
+      );
       return { success: true, matches };
     },
   });
 
   const shadowPatchTool = tool({
-    description: 'Apply a range-based patch to the agent shadow script (line/col) without directly modifying the editor.',
+    description:
+      'Apply a range-based patch to the agent shadow script (line/col) without directly modifying the editor.',
     inputSchema: z.object({
       scriptId: z.string().optional(),
       startLine: z.number().int().min(1),
@@ -637,7 +726,8 @@ After inserting, the code is automatically applied to the editor.`,
   });
 
   const shadowPatchByMatchIndexTool = tool({
-    description: 'Replace only the Nth occurrence (1-based) of a string within the agent shadow script.',
+    description:
+      'Replace only the Nth occurrence (1-based) of a string within the agent shadow script.',
     inputSchema: z.object({
       scriptId: z.string().optional(),
       query: z.string().describe('Substring to match (non-empty)'),
@@ -689,9 +779,18 @@ EXAMPLE - Modifying existing code:
 old_string: "Map.addLayer(image, {}, 'Original');"
 new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Color');"`,
     inputSchema: z.object({
-      old_string: z.string().describe('The exact text to find and replace. Must be unique in the file unless replace_all is true. Include surrounding context if needed.'),
-      new_string: z.string().describe('The replacement text. Can be empty to delete the old_string.'),
-      replace_all: z.boolean().optional().describe('If true, replace ALL occurrences. Default is false (requires unique match).'),
+      old_string: z
+        .string()
+        .describe(
+          'The exact text to find and replace. Must be unique in the file unless replace_all is true. Include surrounding context if needed.'
+        ),
+      new_string: z
+        .string()
+        .describe('The replacement text. Can be empty to delete the old_string.'),
+      replace_all: z
+        .boolean()
+        .optional()
+        .describe('If true, replace ALL occurrences. Default is false (requires unique match).'),
       scriptId: z.string().optional().describe('Script ID, defaults to current_editor'),
     }),
     execute: async ({ old_string, new_string, replace_all, scriptId }) => {
@@ -715,7 +814,7 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           return {
             success: false,
             error: 'old_string not found in the code',
-            suggestion: 'Use shadowGet to see the current code and find the exact text to match.'
+            suggestion: 'Use shadowGet to see the current code and find the exact text to match.',
           };
         }
         if (result.error === 'not_unique') {
@@ -723,14 +822,14 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
             success: false,
             error: `old_string appears ${result.count} times. Include more context to make it unique, or set replace_all: true.`,
             count: result.count,
-            suggestion: 'Add surrounding lines or context to old_string to make it unique.'
+            suggestion: 'Add surrounding lines or context to old_string to make it unique.',
           };
         }
         if (result.error === 'no_change') {
           return {
             success: false,
             error: 'old_string and new_string are identical',
-            suggestion: 'Provide different text for new_string.'
+            suggestion: 'Provide different text for new_string.',
           };
         }
         return { success: false, error: result.error };
@@ -740,13 +839,14 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
         success: true,
         version: result.state?.version,
         replacements: result.count,
-        message: `Successfully replaced ${result.count} occurrence(s). Use shadowDiffSinceSynced to review, then shadowSyncToEditor to apply.`
+        message: `Successfully replaced ${result.count} occurrence(s). Use shadowDiffSinceSynced to review, then shadowSyncToEditor to apply.`,
       };
     },
   });
 
   const shadowDiffSinceSyncedTool = tool({
-    description: 'Show a line-based diff of changes in the shadow script since the last sync to the editor.',
+    description:
+      'Show a line-based diff of changes in the shadow script since the last sync to the editor.',
     inputSchema: z.object({
       scriptId: z.string().optional(),
     }),
@@ -795,11 +895,16 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
           resolve({ success: false, error: 'Content script timed out while syncing to editor.' });
         }, 10000); // 10 second timeout
 
-        chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: state.scriptId, content: state.content }, (response) => {
-          clearTimeout(timeout);
-          if (chrome.runtime.lastError) resolve({ success: false, error: chrome.runtime.lastError.message });
-          else resolve(response || { success: false, error: 'No response from content script' });
-        });
+        chrome.tabs.sendMessage(
+          tabId,
+          { type: 'EDIT_SCRIPT', scriptId: state.scriptId, content: state.content },
+          (response) => {
+            clearTimeout(timeout);
+            if (chrome.runtime.lastError)
+              resolve({ success: false, error: chrome.runtime.lastError.message });
+            else resolve(response || { success: false, error: 'No response from content script' });
+          }
+        );
       });
       if (result?.success) shadowWorkspaceSingleton.markSynced(tabId, state.scriptId);
       return { ...result, shadowVersion: state.version };
@@ -814,12 +919,18 @@ new_string: "Map.addLayer(image, {bands: ['B4', 'B3', 'B2'], max: 0.3}, 'True Co
       if (!tabId) return { success: false, error: 'No Earth Engine tab found' };
       const response: any = await new Promise((resolve) => {
         chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (res) => {
-          if (chrome.runtime.lastError) resolve({ success: false, error: chrome.runtime.lastError.message });
+          if (chrome.runtime.lastError)
+            resolve({ success: false, error: chrome.runtime.lastError.message });
           else resolve(res || { success: false, error: 'No response from content script' });
         });
       });
       if (!response?.success) return response;
-      const next = shadowWorkspaceSingleton.setFromEditor(tabId, scriptId || 'current_editor', response.content || '', 'refresh from editor');
+      const next = shadowWorkspaceSingleton.setFromEditor(
+        tabId,
+        scriptId || 'current_editor',
+        response.content || '',
+        'refresh from editor'
+      );
       shadowWorkspaceSingleton.markSynced(tabId, next.scriptId);
       return { success: true, version: next.version, contentLength: next.content.length };
     },
@@ -839,9 +950,16 @@ Sources:
 - communityDatasets: Awesome GEE community datasets contributed by users
 - apiDocs: GEE API documentation (functions, usage, best practices)`,
     inputSchema: z.object({
-      query: z.string().describe('Natural language question describing what you need (e.g., "How to calculate NDVI from Sentinel-2?", "What datasets have global building footprints?")'),
-      source: z.enum(['geeDatasets', 'communityDatasets', 'apiDocs'])
-        .describe('geeDatasets: Official catalog | communityDatasets: User datasets | apiDocs: API docs')
+      query: z
+        .string()
+        .describe(
+          'Natural language question describing what you need (e.g., "How to calculate NDVI from Sentinel-2?", "What datasets have global building footprints?")'
+        ),
+      source: z
+        .enum(['geeDatasets', 'communityDatasets', 'apiDocs'])
+        .describe(
+          'geeDatasets: Official catalog | communityDatasets: User datasets | apiDocs: API docs'
+        ),
     }),
     execute: async ({ query, source }) => {
       // Manually send tool_start event since onStepStart is not reliable
@@ -850,7 +968,7 @@ Sources:
           type: 'tool_start',
           toolName: 'geeDocs',
           args: { query, source },
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -858,7 +976,7 @@ Sources:
       const libraryMap: Record<string, string> = {
         geeDatasets: 'wybert/earthengine-dataset-catalog-md',
         communityDatasets: 'samapriya/awesome-gee-community-datasets',
-        apiDocs: 'wybert/earthengine-doc-md'
+        apiDocs: 'wybert/earthengine-doc-md',
       };
       const libraryId = libraryMap[source];
 
@@ -867,32 +985,32 @@ Sources:
         console.log(`🌍 [GeeDocsTool] Using library: ${libraryId}`);
         console.time('GeeDocsTool execution');
 
-        const result = await getDocumentation(
-          libraryId,
-          query,
-          { tokens: 15000 }
-        );
+        const result = await getDocumentation(libraryId, query, { tokens: 15000 });
 
         console.timeEnd('GeeDocsTool execution');
 
         if (!result.success || !result.content) {
-          console.warn(`❌ [GeeDocsTool] No results found for "${query}" in ${source}. Error: ${result.message}`);
+          console.warn(
+            `❌ [GeeDocsTool] No results found for "${query}" in ${source}. Error: ${result.message}`
+          );
           return {
             found: false,
             source,
             message: result.message || `Could not find documentation for "${query}" in ${source}`,
-            suggestion: "Try a different search term or check another source."
+            suggestion: 'Try a different search term or check another source.',
           };
         }
 
-        console.log(`✅ [GeeDocsTool] Found documentation for "${query}" in ${source}. Content length: ${result.content.length} chars`);
+        console.log(
+          `✅ [GeeDocsTool] Found documentation for "${query}" in ${source}. Content length: ${result.content.length} chars`
+        );
 
         return {
           found: true,
           query,
           source,
           documentation: result.content,
-          message: `Documentation found for "${query}" in ${source}`
+          message: `Documentation found for "${query}" in ${source}`,
         };
       } catch (error) {
         console.error(`❌ [GeeDocsTool] Error fetching documentation:`, error);
@@ -900,7 +1018,7 @@ Sources:
           found: false,
           source,
           message: `Error retrieving documentation: ${error instanceof Error ? error.message : String(error)}`,
-          suggestion: "Try again with a different query or source."
+          suggestion: 'Try again with a different query or source.',
         };
       }
     },
@@ -908,18 +1026,31 @@ Sources:
 
   // Define Earth Engine script editor tool
   const earthEngineScriptTool = tool({
-    description: 'Insert JavaScript code into the Google Earth Engine code editor. WORKFLOW TIP: After editing code, ALWAYS use earthEngineRunCode to execute it, then check getConsoleOutput for errors.',
+    description:
+      'Insert JavaScript code into the Google Earth Engine code editor. WORKFLOW TIP: After editing code, ALWAYS use earthEngineRunCode to execute it, then check getConsoleOutput for errors.',
     inputSchema: z.object({
-      scriptId: z.string().describe('The ID of the script to edit (use "current" for the currently open script)'),
-      code: z.string().describe('The Google Earth Engine JavaScript code to insert into the editor')
+      scriptId: z
+        .string()
+        .describe('The ID of the script to edit (use "current" for the currently open script)'),
+      code: z
+        .string()
+        .describe('The Google Earth Engine JavaScript code to insert into the editor'),
     }),
     execute: async ({ scriptId, code }) => {
       const executionId = `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log(`🔧 [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION START ==========`);
+      console.log(
+        `🔧 [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION START ==========`
+      );
       console.log(`🔧 [EarthEngineScriptTool][${executionId}] scriptId: "${scriptId}"`);
-      console.log(`🔧 [EarthEngineScriptTool][${executionId}] code length: ${code.length} characters`);
-      console.log(`🔧 [EarthEngineScriptTool][${executionId}] code preview: ${code.substring(0, 150)}...`);
-      console.log(`🔧 [EarthEngineScriptTool][${executionId}] timestamp: ${new Date().toISOString()}`);
+      console.log(
+        `🔧 [EarthEngineScriptTool][${executionId}] code length: ${code.length} characters`
+      );
+      console.log(
+        `🔧 [EarthEngineScriptTool][${executionId}] code preview: ${code.substring(0, 150)}...`
+      );
+      console.log(
+        `🔧 [EarthEngineScriptTool][${executionId}] timestamp: ${new Date().toISOString()}`
+      );
 
       // Manually send tool_start event
       if (onToolEvent) {
@@ -928,7 +1059,7 @@ Sources:
           type: 'tool_start',
           toolName: 'earthEngineScript',
           args: { scriptId, code: code.substring(0, 100) + '...' },
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       } else {
         console.log(`⚠️ [EarthEngineScriptTool][${executionId}] No onToolEvent callback provided`);
@@ -946,13 +1077,13 @@ Sources:
           return {
             success: false,
             error: 'Cannot edit Earth Engine scripts: Extension context not available',
-            suggestion: "This operation requires running in a Chrome extension environment"
+            suggestion: 'This operation requires running in a Chrome extension environment',
           };
         }
 
         // Find the Earth Engine tab
         const earthEngineTabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
-          chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+          chrome.tabs.query({ url: '*://code.earthengine.google.com/*' }, (tabs) => {
             resolve(tabs || []);
           });
         });
@@ -962,7 +1093,7 @@ Sources:
           return {
             success: false,
             error: 'No Earth Engine tab found',
-            suggestion: "Please open Google Earth Engine in a browser tab first"
+            suggestion: 'Please open Google Earth Engine in a browser tab first',
           };
         }
 
@@ -974,7 +1105,7 @@ Sources:
           return {
             success: false,
             error: 'Invalid Earth Engine tab',
-            suggestion: "Please reload your Earth Engine tab and try again"
+            suggestion: 'Please reload your Earth Engine tab and try again',
           };
         }
 
@@ -983,11 +1114,16 @@ Sources:
         // Check/inject content script
         try {
           await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Content script ping timed out')), 300);
+            const timeout = setTimeout(
+              () => reject(new Error('Content script ping timed out')),
+              300
+            );
             chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
               clearTimeout(timeout);
               if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message || 'Error pinging content script'));
+                reject(
+                  new Error(chrome.runtime.lastError.message || 'Error pinging content script')
+                );
               } else {
                 resolve();
               }
@@ -996,28 +1132,41 @@ Sources:
           console.log(`🔧 [EarthEngineScriptTool] Content script ready`);
         } catch (pingError: unknown) {
           const errorMessage = pingError instanceof Error ? pingError.message : String(pingError);
-          console.log(`🔧 [EarthEngineScriptTool] Content script not ready: ${errorMessage}, injecting...`);
+          console.log(
+            `🔧 [EarthEngineScriptTool] Content script not ready: ${errorMessage}, injecting...`
+          );
           try {
             await new Promise<void>((resolve, reject) => {
-              chrome.scripting.executeScript({
-                target: { tabId },
-                files: ['content.js']
-              }, (results) => {
-                if (chrome.runtime.lastError) {
-                  reject(new Error(chrome.runtime.lastError.message || 'Failed to inject content script'));
-                } else {
-                  setTimeout(resolve, 500); // Wait for script init
+              chrome.scripting.executeScript(
+                {
+                  target: { tabId },
+                  files: ['content.js'],
+                },
+                (results) => {
+                  if (chrome.runtime.lastError) {
+                    reject(
+                      new Error(
+                        chrome.runtime.lastError.message || 'Failed to inject content script'
+                      )
+                    );
+                  } else {
+                    setTimeout(resolve, 500); // Wait for script init
+                  }
                 }
-              });
+              );
             });
             console.log(`🔧 [EarthEngineScriptTool] Content script injected successfully`);
           } catch (injectError: unknown) {
-            const injectErrorMessage = injectError instanceof Error ? injectError.message : String(injectError);
-            console.warn(`❌ [EarthEngineScriptTool] Failed to inject content script: ${injectErrorMessage}`);
+            const injectErrorMessage =
+              injectError instanceof Error ? injectError.message : String(injectError);
+            console.warn(
+              `❌ [EarthEngineScriptTool] Failed to inject content script: ${injectErrorMessage}`
+            );
             return {
               success: false,
               error: `Content script not available: ${injectErrorMessage}`,
-              suggestion: "Try refreshing the Earth Engine tab and ensure the extension has permission"
+              suggestion:
+                'Try refreshing the Earth Engine tab and ensure the extension has permission',
             };
           }
         }
@@ -1025,52 +1174,80 @@ Sources:
         // Send message to content script with timeout to prevent hanging
         const result: any = await new Promise((resolve) => {
           const timeout = setTimeout(() => {
-            console.warn(`⚠️ [EarthEngineScriptTool][${executionId}] EDIT_SCRIPT message timed out after 10s`);
-            resolve({ success: false, error: 'Content script timed out while editing code. The tab may be unresponsive.' });
+            console.warn(
+              `⚠️ [EarthEngineScriptTool][${executionId}] EDIT_SCRIPT message timed out after 10s`
+            );
+            resolve({
+              success: false,
+              error: 'Content script timed out while editing code. The tab may be unresponsive.',
+            });
           }, 10000); // 10 second timeout
 
-          chrome.tabs.sendMessage(tabId, { type: 'EDIT_SCRIPT', scriptId: targetScriptId, content: code }, (response) => {
-            clearTimeout(timeout);
-            if (chrome.runtime.lastError) {
-              resolve({ success: false, error: chrome.runtime.lastError.message || 'Error communicating with content script' });
-            } else {
-              resolve(response || { success: false, error: 'No response from content script' });
+          chrome.tabs.sendMessage(
+            tabId,
+            { type: 'EDIT_SCRIPT', scriptId: targetScriptId, content: code },
+            (response) => {
+              clearTimeout(timeout);
+              if (chrome.runtime.lastError) {
+                resolve({
+                  success: false,
+                  error:
+                    chrome.runtime.lastError.message || 'Error communicating with content script',
+                });
+              } else {
+                resolve(response || { success: false, error: 'No response from content script' });
+              }
             }
-          });
+          );
         });
 
         console.timeEnd(`EarthEngineScriptTool-${executionId}`);
 
         if (!result.success) {
-          console.warn(`❌ [EarthEngineScriptTool][${executionId}] Failed to edit script via content script: ${result.error}`);
-          console.log(`❌ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION FAILED ==========`);
+          console.warn(
+            `❌ [EarthEngineScriptTool][${executionId}] Failed to edit script via content script: ${result.error}`
+          );
+          console.log(
+            `❌ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION FAILED ==========`
+          );
           return {
             success: false,
             error: result.error || 'Unknown error editing script',
-            suggestion: "Check content script logs or ensure EE tab is active.",
-            executionId
+            suggestion: 'Check content script logs or ensure EE tab is active.',
+            executionId,
           };
         }
 
-        console.log(`✅ [EarthEngineScriptTool][${executionId}] Successfully edited script "${targetScriptId}"`);
-        console.log(`✅ [EarthEngineScriptTool][${executionId}] Result:`, JSON.stringify(result, null, 2));
-        console.log(`✅ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION SUCCESS ==========`);
+        console.log(
+          `✅ [EarthEngineScriptTool][${executionId}] Successfully edited script "${targetScriptId}"`
+        );
+        console.log(
+          `✅ [EarthEngineScriptTool][${executionId}] Result:`,
+          JSON.stringify(result, null, 2)
+        );
+        console.log(
+          `✅ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION SUCCESS ==========`
+        );
         return {
           success: true,
           scriptId: targetScriptId,
-          message: result.message || `Successfully inserted code into Earth Engine script "${targetScriptId}"`,
+          message:
+            result.message ||
+            `Successfully inserted code into Earth Engine script "${targetScriptId}"`,
           nextSteps: "You can now run the script in Earth Engine by clicking the 'Run' button",
-          executionId
+          executionId,
         };
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ [EarthEngineScriptTool][${executionId}] Unexpected error:`, error);
-        console.log(`❌ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION ERROR ==========`);
+        console.log(
+          `❌ [EarthEngineScriptTool][${executionId}] ========== TOOL EXECUTION ERROR ==========`
+        );
         return {
           success: false,
           error: `Unexpected error in EarthEngineScriptTool: ${errorMessage}`,
-          suggestion: "Check background script logs for more details",
-          executionId
+          suggestion: 'Check background script logs for more details',
+          executionId,
         };
       }
     },
@@ -1089,7 +1266,9 @@ WORKFLOW:
     inputSchema: z.object({}) as any, // No parameters - cast to any for SDK 6 compatibility
     execute: async () => {
       const executionId = `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log(`▶️ [RunCurrentCodeTool][${executionId}] ========== TOOL EXECUTION START ==========`);
+      console.log(
+        `▶️ [RunCurrentCodeTool][${executionId}] ========== TOOL EXECUTION START ==========`
+      );
 
       // Manually send tool_start event
       if (onToolEvent) {
@@ -1097,7 +1276,7 @@ WORKFLOW:
           type: 'tool_start',
           toolName: 'runCurrentCode',
           args: {},
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -1107,7 +1286,7 @@ WORKFLOW:
           return {
             success: false,
             error: 'No Earth Engine tab found',
-            suggestion: "Please open Google Earth Engine in a browser tab first"
+            suggestion: 'Please open Google Earth Engine in a browser tab first',
           };
         }
 
@@ -1118,22 +1297,21 @@ WORKFLOW:
             success: true,
             result: 'Code executed successfully',
             message: 'Clicked Run button - Earth Engine code is now executing',
-            nextSteps: "Use getConsoleOutput to check for errors or output"
+            nextSteps: 'Use getConsoleOutput to check for errors or output',
           };
         }
         return {
           success: false,
           error: result.error,
-          suggestion: "Please click Run manually or refresh the Earth Engine tab"
+          suggestion: 'Please click Run manually or refresh the Earth Engine tab',
         };
-
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ [RunCurrentCodeTool][${executionId}] Unexpected error:`, error);
         return {
           success: false,
           error: `Unexpected error: ${errorMessage}`,
-          suggestion: "Check background script logs for more details"
+          suggestion: 'Check background script logs for more details',
         };
       }
     },
@@ -1142,7 +1320,8 @@ WORKFLOW:
   // Define Screenshot tool
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const screenshotTool = tool({
-    description: 'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
+    description:
+      'Capture a screenshot of the current active browser tab. Useful for seeing map visualizations, console errors, or task status in Google Earth Engine.',
     inputSchema: z.object({}) as any, // No parameters needed - cast to any for SDK 6 compatibility
     execute: async () => {
       // Manually send tool_start event
@@ -1151,7 +1330,7 @@ WORKFLOW:
           type: 'tool_start',
           toolName: 'screenshot',
           args: {},
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -1186,12 +1365,11 @@ WORKFLOW:
           return {
             success: true,
             message: 'Screenshot captured successfully.',
-            screenshotDataUrl: result.data.screenshotDataUrl
+            screenshotDataUrl: result.data.screenshotDataUrl,
           };
         }
 
         return { success: false, error: result.error || 'Failed to capture screenshot' };
-
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ [ScreenshotTool] Error capturing screenshot:`, error);
@@ -1203,30 +1381,32 @@ WORKFLOW:
       }
     },
 
-    toModelOutput: (
-      {
-        output
-      }
-    ) => {
+    toModelOutput: ({ output }) => {
       console.log('📸 [ScreenshotTool] Converting result to model output');
 
       if (!output.success) {
         // Return error as text
         return {
           type: 'content',
-          value: [{ type: 'text', text: `Error taking screenshot: ${output.error || 'Unknown error'}` }]
+          value: [
+            { type: 'text', text: `Error taking screenshot: ${output.error || 'Unknown error'}` },
+          ],
         };
       }
 
       // Check if provider supports multimodal inputs
       if (!supportsMultimodal) {
-        console.log(`📸 [ScreenshotTool] Provider ${currentProvider} does not support multimodal - returning text-only response`);
+        console.log(
+          `📸 [ScreenshotTool] Provider ${currentProvider} does not support multimodal - returning text-only response`
+        );
         return {
           type: 'content',
-          value: [{
-            type: 'text',
-            text: `Screenshot captured successfully, but the current model (${currentProvider}) does not support image analysis. The screenshot shows the current browser state but cannot be analyzed visually. To use screenshot analysis, please switch to a multimodal-capable provider (OpenAI, Anthropic, or Google).`
-          }]
+          value: [
+            {
+              type: 'text',
+              text: `Screenshot captured successfully, but the current model (${currentProvider}) does not support image analysis. The screenshot shows the current browser state but cannot be analyzed visually. To use screenshot analysis, please switch to a multimodal-capable provider (OpenAI, Anthropic, or Google).`,
+            },
+          ],
         };
       }
 
@@ -1243,15 +1423,16 @@ WORKFLOW:
         type: 'content',
         value: [
           { type: 'text', text: 'Here is the screenshot of the current browser tab:' },
-          { type: 'media', mediaType: 'image/jpeg', data: base64Data }
-        ]
+          { type: 'media', mediaType: 'image/jpeg', data: base64Data },
+        ],
       };
     },
   });
 
   // Define Browser Snapshot tool
   const snapshotTool = tool({
-    description: 'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
+    description:
+      'Capture an accessibility snapshot of the current active browser tab. Provides DOM structure and element references.',
     inputSchema: z.object({}), // No parameters needed
     execute: async () => {
       // Manually send tool_start event
@@ -1260,7 +1441,7 @@ WORKFLOW:
           type: 'tool_start',
           toolName: 'snapshot',
           args: {},
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -1291,7 +1472,6 @@ WORKFLOW:
           return { success: true, snapshot: result.data.snapshot };
         }
         return { success: false, error: result.error || 'Failed to capture snapshot' };
-
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ [SnapshotTool] Error in execute block:`, error);
@@ -1302,18 +1482,19 @@ WORKFLOW:
         };
       }
     },
-    toModelOutput: (
-      {
-        output
-      }
-    ) => {
+    toModelOutput: ({ output }) => {
       console.log('🔎 [SnapshotTool] Converting result to model output');
 
       if (!output.success) {
-        console.error('❌ [SnapshotTool] Error in toModelOutput - result not successful:', output.error);
+        console.error(
+          '❌ [SnapshotTool] Error in toModelOutput - result not successful:',
+          output.error
+        );
         return {
           type: 'content',
-          value: [{ type: 'text', text: `Error taking snapshot: ${output.error || 'Unknown error'}` }]
+          value: [
+            { type: 'text', text: `Error taking snapshot: ${output.error || 'Unknown error'}` },
+          ],
         };
       }
 
@@ -1321,10 +1502,14 @@ WORKFLOW:
         console.log('🔎 [SnapshotTool] Full snapshot data for model output (copy from here):');
         console.log(output.snapshot);
       } else {
-        console.warn('⚠️ [SnapshotTool] No snapshot data found in result for model output, though success was true.');
+        console.warn(
+          '⚠️ [SnapshotTool] No snapshot data found in result for model output, though success was true.'
+        );
         return {
           type: 'content',
-          value: [{ type: 'text', text: 'Snapshot tool succeeded but no snapshot data was returned.' }]
+          value: [
+            { type: 'text', text: 'Snapshot tool succeeded but no snapshot data was returned.' },
+          ],
         };
       }
 
@@ -1332,8 +1517,12 @@ WORKFLOW:
       return {
         type: 'content',
         value: [
-          { type: 'text', text: 'Here is the accessibility snapshot of the current browser tab:\n' + output.snapshot }
-        ]
+          {
+            type: 'text',
+            text:
+              'Here is the accessibility snapshot of the current browser tab:\n' + output.snapshot,
+          },
+        ],
       };
     },
   });
@@ -1351,7 +1540,7 @@ WORKFLOW:
           type: 'tool_start',
           toolName: 'clickByRefId',
           args: { refId },
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -1373,28 +1562,31 @@ WORKFLOW:
 
         const result = await BrowserService.clickByRefId(tabId, refId);
         return result;
-
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ [ClickByRefIdTool] Error:`, error);
         return { success: false, error: `Error clicking by refId: ${errorMessage}` };
       }
     },
-    toModelOutput: (
-      {
-        output
-      }
-    ) => {
+    toModelOutput: ({ output }) => {
       return {
         type: 'content',
-        value: [{ type: 'text', text: output.success ? (output.message || 'Successfully clicked element.') : `Error clicking element: ${output.error}` }]
+        value: [
+          {
+            type: 'text',
+            text: output.success
+              ? output.message || 'Successfully clicked element.'
+              : `Error clicking element: ${output.error}`,
+          },
+        ],
       };
     },
   });
 
   // Define Clear Map, Inspector, and Console tool
   const clearMapInspectorAndConsoleTool = tool({
-    description: 'Clear the Google Earth Engine map, inspector, and console to return to a clean environment. Use this to start fresh before writing new code.',
+    description:
+      'Clear the Google Earth Engine map, inspector, and console to return to a clean environment. Use this to start fresh before writing new code.',
     inputSchema: z.object({}), // No parameters needed
     execute: async () => {
       // Manually send tool_start event
@@ -1403,7 +1595,7 @@ WORKFLOW:
           type: 'tool_start',
           toolName: 'clearMapInspectorAndConsole',
           args: {},
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -1416,7 +1608,8 @@ WORKFLOW:
           return {
             success: false,
             error: 'No Google Earth Engine tab found',
-            suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
+            suggestion:
+              'Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first',
           };
         }
 
@@ -1426,15 +1619,16 @@ WORKFLOW:
         if (result.success) {
           return {
             success: true,
-            message: 'Google Earth Engine map, inspector, and console have been reset successfully. The environment is now in a clean state.',
-            action: 'reset_completed'
+            message:
+              'Google Earth Engine map, inspector, and console have been reset successfully. The environment is now in a clean state.',
+            action: 'reset_completed',
           };
         }
 
         return {
           success: false,
           error: result.error || 'Failed to clear',
-          suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
+          suggestion: 'Try refreshing the Google Earth Engine page and running the tool again',
         };
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1443,29 +1637,28 @@ WORKFLOW:
         return {
           success: false,
           error: `Error resetting GEE environment: ${errorMessage}`,
-          suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
+          suggestion: 'Try refreshing the Google Earth Engine page and running the tool again',
         };
       }
     },
-    toModelOutput: (
-      {
-        output
-      }
-    ) => {
+    toModelOutput: ({ output }) => {
       return {
         type: 'content',
-        value: [{
-          type: 'text',
-          text: output.success
-            ? '✅ Google Earth Engine environment has been reset successfully. The map, inspector, and console are now cleared.'
-            : `❌ Failed to reset GEE environment: ${output.error}${output.suggestion ? ' Suggestion: ' + output.suggestion : ''}`
-        }]
+        value: [
+          {
+            type: 'text',
+            text: output.success
+              ? '✅ Google Earth Engine environment has been reset successfully. The map, inspector, and console are now cleared.'
+              : `❌ Failed to reset GEE environment: ${output.error}${output.suggestion ? ' Suggestion: ' + output.suggestion : ''}`,
+          },
+        ],
       };
     },
   });
   // Define Click at Screen Position tool
   const clickAtScreenPositionTool = tool({
-    description: 'Clicks at the specified screen (x, y) pixel position. Use getMapScreenPosition to get map coordinates first.',
+    description:
+      'Clicks at the specified screen (x, y) pixel position. Use getMapScreenPosition to get map coordinates first.',
     inputSchema: z.object({
       x: z.number().describe('The x screen pixel position to click.'),
       y: z.number().describe('The y screen pixel position to click.'),
@@ -1477,7 +1670,7 @@ WORKFLOW:
           type: 'tool_start',
           toolName: 'clickAtScreenPosition',
           args: { x, y },
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
       }
 
@@ -1503,13 +1696,17 @@ WORKFLOW:
         // Ensure content script is ready (simplified check for brevity)
         try {
           await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Content script ping timed out for ClickByCoordinatesTool')), 500);
+            const timeout = setTimeout(
+              () => reject(new Error('Content script ping timed out for ClickByCoordinatesTool')),
+              500
+            );
             chrome.tabs.sendMessage(tabId, { type: 'PING' }, (response) => {
               clearTimeout(timeout);
               if (chrome.runtime.lastError || !(response && response.type === 'PONG')) {
-                chrome.scripting.executeScript(
-                  { target: { tabId }, files: ['content.js'] },
-                  () => chrome.runtime.lastError ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`)) : setTimeout(resolve, 500)
+                chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] }, () =>
+                  chrome.runtime.lastError
+                    ? reject(new Error(`Injection failed: ${chrome.runtime.lastError.message}`))
+                    : setTimeout(resolve, 500)
                 );
               } else {
                 resolve();
@@ -1518,19 +1715,33 @@ WORKFLOW:
           });
         } catch (err) {
           console.error('❌ [ClickByCoordinatesTool] Content script check/injection failed:', err);
-          return { success: false, error: err instanceof Error ? err.message : 'Content script not available' };
+          return {
+            success: false,
+            error: err instanceof Error ? err.message : 'Content script not available',
+          };
         }
 
-        const resultFromContentScript: { success: boolean; message?: string; error?: string } = await new Promise((resolve) => {
-          chrome.tabs.sendMessage(tabId, { type: 'CLICK_BY_COORDINATES', payload: { x, y } }, (response) => {
-            resolve(response || { success: false, error: 'No response from content script for click by coordinates' });
+        const resultFromContentScript: { success: boolean; message?: string; error?: string } =
+          await new Promise((resolve) => {
+            chrome.tabs.sendMessage(
+              tabId,
+              { type: 'CLICK_BY_COORDINATES', payload: { x, y } },
+              (response) => {
+                resolve(
+                  response || {
+                    success: false,
+                    error: 'No response from content script for click by coordinates',
+                  }
+                );
+              }
+            );
           });
-        });
 
         console.timeEnd('ClickByCoordinatesTool execution - background part');
-        console.log(`✅ [ClickByCoordinatesTool] Result for coords (${x},${y}): ${JSON.stringify(resultFromContentScript)}`);
+        console.log(
+          `✅ [ClickByCoordinatesTool] Result for coords (${x},${y}): ${JSON.stringify(resultFromContentScript)}`
+        );
         return resultFromContentScript;
-
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`❌ [ClickByCoordinatesTool] Error:`, error);
@@ -1538,264 +1749,288 @@ WORKFLOW:
         return { success: false, error: `Error clicking by coordinates: ${errorMessage}` };
       }
     },
-    toModelOutput: (
-      {
-        output
-      }
-    ) => {
+    toModelOutput: ({ output }) => {
       return {
         type: 'content',
-        value: [{ type: 'text', text: output.success ? (output.message || 'Successfully clicked at coordinates.') : `Error clicking by coordinates: ${output.error}` }]
+        value: [
+          {
+            type: 'text',
+            text: output.success
+              ? output.message || 'Successfully clicked at coordinates.'
+              : `Error clicking by coordinates: ${output.error}`,
+          },
+        ],
       };
     },
   });
 
-// Define Get Console Output tool
-const getConsoleOutputTool = tool({
-    description: 'Read all output from the Google Earth Engine console, including print() statements, data, and error messages. WORKFLOW TIP: Use this immediately after earthEngineRunCode to check for errors.',
+  // Define Get Console Output tool
+  const getConsoleOutputTool = tool({
+    description:
+      'Read all output from the Google Earth Engine console, including print() statements, data, and error messages. WORKFLOW TIP: Use this immediately after earthEngineRunCode to check for errors.',
     inputSchema: z.object({}), // No parameters needed
     execute: async () => {
-        // Manually send tool_start event
-        if (onToolEvent) {
-            onToolEvent({
-                type: 'tool_start',
-                toolName: 'getConsoleOutput',
-                args: {},
-                timestamp: Date.now()
-            });
+      // Manually send tool_start event
+      if (onToolEvent) {
+        onToolEvent({
+          type: 'tool_start',
+          toolName: 'getConsoleOutput',
+          args: {},
+          timestamp: Date.now(),
+        });
+      }
+
+      try {
+        console.log(`📋 [GetConsoleOutputTool] Tool called to read GEE console`);
+        console.time('GetConsoleOutputTool execution');
+
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) {
+          return { success: false, error: 'No Earth Engine tab found' };
         }
 
-        try {
-            console.log(`📋 [GetConsoleOutputTool] Tool called to read GEE console`);
-            console.time('GetConsoleOutputTool execution');
+        const result = await GeeService.getConsoleOutput(tabId);
+        console.timeEnd('GetConsoleOutputTool execution');
 
-            const tabId = await getActiveEarthEngineTabId();
-            if (!tabId) {
-                return { success: false, error: 'No Earth Engine tab found' };
-            }
-
-            const result = await GeeService.getConsoleOutput(tabId);
-            console.timeEnd('GetConsoleOutputTool execution');
-
-            if (!result.success) {
-                console.warn(`❌ [GetConsoleOutputTool] Failed to get console output:`, result.error);
-                return {
-                    success: false,
-                    error: result.error || 'Failed to read console output',
-                    suggestion: 'Make sure the Earth Engine editor is loaded and you have run some code'
-                };
-            }
-
-            console.log(`✅ [GetConsoleOutputTool] Successfully read ${result.data?.count || 0} console entries`);
-            return {
-                success: true,
-                outputs: result.data?.outputs || [],
-                count: result.data?.count || 0,
-                message: result.message || `Read ${result.data?.count || 0} console entries`
-            };
-
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`❌ [GetConsoleOutputTool] Error:`, error);
-            console.timeEnd('GetConsoleOutputTool execution');
-            return {
-                success: false,
-                error: `Error reading GEE console: ${errorMessage}`,
-                suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
-            };
+        if (!result.success) {
+          console.warn(`❌ [GetConsoleOutputTool] Failed to get console output:`, result.error);
+          return {
+            success: false,
+            error: result.error || 'Failed to read console output',
+            suggestion: 'Make sure the Earth Engine editor is loaded and you have run some code',
+          };
         }
+
+        console.log(
+          `✅ [GetConsoleOutputTool] Successfully read ${result.data?.count || 0} console entries`
+        );
+        return {
+          success: true,
+          outputs: result.data?.outputs || [],
+          count: result.data?.count || 0,
+          message: result.message || `Read ${result.data?.count || 0} console entries`,
+        };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [GetConsoleOutputTool] Error:`, error);
+        console.timeEnd('GetConsoleOutputTool execution');
+        return {
+          success: false,
+          error: `Error reading GEE console: ${errorMessage}`,
+          suggestion: 'Try refreshing the Google Earth Engine page and running the tool again',
+        };
+      }
     },
     toModelOutput: ({ output }) => {
-        if (!output.success) {
-            return {
-                type: 'content',
-                value: [{
-                    type: 'text',
-                    text: `❌ Failed to read console: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`
-                }]
-            };
-        }
-
-        if (output.count === 0) {
-            return {
-                type: 'content',
-                value: [{
-                    type: 'text',
-                    text: '📋 Console is empty. No output to display. Run some code first (e.g., print("Hello World")).'
-                }]
-            };
-        }
-
-        // Format console outputs with chart detection
-        const formattedOutputs = output.outputs.map((output: any, i: number) => {
-            let icon = 'ℹ️';
-            if (output.type === 'error') {
-                icon = '❌';
-            } else if (output.type === 'warning') {
-                icon = '⚠️';
-            } else if (output.type === 'chart') {
-                icon = '📊';
-            }
-
-            let formattedLine = `${i + 1}. ${icon} ${output.message}`;
-
-            // Add extra info for charts
-            if (output.hasVisualContent) {
-                if (output.visualElementType) {
-                    formattedLine += `\n   Type: ${output.visualElementType}`;
-                }
-                if (output.chartDescription) {
-                    formattedLine += `\n   Description: ${output.chartDescription}`;
-                }
-            }
-
-            return formattedLine;
-        }).join('\n');
-
-        // Check if any charts were detected
-        const chartCount = output.outputs.filter((o: any) => o.type === 'chart').length;
-        const chartNote = chartCount > 0
-            ? `\n\n💡 Tip: ${chartCount} chart(s) detected. Use the screenshot tool to capture and view the visualizations.`
-            : '';
-
+      if (!output.success) {
         return {
-            type: 'content',
-            value: [{
-                type: 'text',
-                text: `📋 Console Output (${output.count} entries):\n\n${formattedOutputs}${chartNote}`
-            }]
+          type: 'content',
+          value: [
+            {
+              type: 'text',
+              text: `❌ Failed to read console: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`,
+            },
+          ],
         };
-    },
-});
+      }
 
-// Define Get Script tool
-const getScriptTool = tool({
-    description: 'Read the current JavaScript code from the Google Earth Engine code editor. WORKFLOW TIP: Use this before earthEngineScript when debugging or modifying existing code.',
+      if (output.count === 0) {
+        return {
+          type: 'content',
+          value: [
+            {
+              type: 'text',
+              text: '📋 Console is empty. No output to display. Run some code first (e.g., print("Hello World")).',
+            },
+          ],
+        };
+      }
+
+      // Format console outputs with chart detection
+      const formattedOutputs = output.outputs
+        .map((output: any, i: number) => {
+          let icon = 'ℹ️';
+          if (output.type === 'error') {
+            icon = '❌';
+          } else if (output.type === 'warning') {
+            icon = '⚠️';
+          } else if (output.type === 'chart') {
+            icon = '📊';
+          }
+
+          let formattedLine = `${i + 1}. ${icon} ${output.message}`;
+
+          // Add extra info for charts
+          if (output.hasVisualContent) {
+            if (output.visualElementType) {
+              formattedLine += `\n   Type: ${output.visualElementType}`;
+            }
+            if (output.chartDescription) {
+              formattedLine += `\n   Description: ${output.chartDescription}`;
+            }
+          }
+
+          return formattedLine;
+        })
+        .join('\n');
+
+      // Check if any charts were detected
+      const chartCount = output.outputs.filter((o: any) => o.type === 'chart').length;
+      const chartNote =
+        chartCount > 0
+          ? `\n\n💡 Tip: ${chartCount} chart(s) detected. Use the screenshot tool to capture and view the visualizations.`
+          : '';
+
+      return {
+        type: 'content',
+        value: [
+          {
+            type: 'text',
+            text: `📋 Console Output (${output.count} entries):\n\n${formattedOutputs}${chartNote}`,
+          },
+        ],
+      };
+    },
+  });
+
+  // Define Get Script tool
+  const getScriptTool = tool({
+    description:
+      'Read the current JavaScript code from the Google Earth Engine code editor. WORKFLOW TIP: Use this before earthEngineScript when debugging or modifying existing code.',
     inputSchema: z.object({}), // No parameters needed
     execute: async () => {
-        // Manually send tool_start event
-        if (onToolEvent) {
-            onToolEvent({
-                type: 'tool_start',
-                toolName: 'getScript',
-                args: {},
-                timestamp: Date.now()
-            });
+      // Manually send tool_start event
+      if (onToolEvent) {
+        onToolEvent({
+          type: 'tool_start',
+          toolName: 'getScript',
+          args: {},
+          timestamp: Date.now(),
+        });
+      }
+
+      try {
+        console.log(`📖 [GetScriptTool] Tool called to read GEE code editor`);
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) {
+          return {
+            success: false,
+            error: 'No Earth Engine tab found',
+            suggestion:
+              'Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first',
+          };
         }
 
-        try {
-            console.log(`📖 [GetScriptTool] Tool called to read GEE code editor`);
-            const tabId = await getActiveEarthEngineTabId();
-            if (!tabId) {
-                return {
-                    success: false,
-                    error: 'No Earth Engine tab found',
-                    suggestion: "Please open Google Earth Engine (https://code.earthengine.google.com) in a browser tab first"
-                };
-            }
+        // Use EditorService
+        const result = await EditorService.readCode(tabId);
 
-            // Use EditorService
-            const result = await EditorService.readCode(tabId);
-
-            if (!result.success || result.content === undefined) {
-                console.warn(`❌ [GetScriptTool] Failed to get script:`, result.error);
-                return {
-                    success: false,
-                    error: result.error || 'Failed to read script from editor',
-                    suggestion: 'Make sure the Earth Engine editor is loaded and the code editor is visible'
-                };
-            }
-
-            console.log(`✅ [GetScriptTool] Successfully read script: ${result.lineCount} lines`);
-            return {
-                success: true,
-                content: result.content,
-                lineCount: result.lineCount,
-                message: result.message || `Successfully read ${result.lineCount} lines of code from the Earth Engine editor`
-            };
-
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`❌ [GetScriptTool] Error:`, error);
-            return {
-                success: false,
-                error: `Error reading GEE code editor: ${errorMessage}`,
-                suggestion: 'Try refreshing the Google Earth Engine page and running the tool again'
-            };
+        if (!result.success || result.content === undefined) {
+          console.warn(`❌ [GetScriptTool] Failed to get script:`, result.error);
+          return {
+            success: false,
+            error: result.error || 'Failed to read script from editor',
+            suggestion:
+              'Make sure the Earth Engine editor is loaded and the code editor is visible',
+          };
         }
+
+        console.log(`✅ [GetScriptTool] Successfully read script: ${result.lineCount} lines`);
+        return {
+          success: true,
+          content: result.content,
+          lineCount: result.lineCount,
+          message:
+            result.message ||
+            `Successfully read ${result.lineCount} lines of code from the Earth Engine editor`,
+        };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [GetScriptTool] Error:`, error);
+        return {
+          success: false,
+          error: `Error reading GEE code editor: ${errorMessage}`,
+          suggestion: 'Try refreshing the Google Earth Engine page and running the tool again',
+        };
+      }
     },
     toModelOutput: ({ output }) => {
-        return {
-            type: 'content',
-            value: [{
-                type: 'text',
-                text: output.success
-                    ? `✅ Current script content (${output.lineCount} lines):\n\n\`\`\`javascript\n${output.content}\n\`\`\``
-                    : `❌ Failed to read script: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`
-            }]
-        };
+      return {
+        type: 'content',
+        value: [
+          {
+            type: 'text',
+            text: output.success
+              ? `✅ Current script content (${output.lineCount} lines):\n\n\`\`\`javascript\n${output.content}\n\`\`\``
+              : `❌ Failed to read script: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`,
+          },
+        ],
+      };
     },
-});
+  });
 
-// Define Get Map Screen Position tool
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getMapScreenPositionTool = tool({
-    description: 'Get the screen position and bounds of the Google Earth Engine map element. Returns pixel coordinates for use with clickAtScreenPosition.',
+  // Define Get Map Screen Position tool
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getMapScreenPositionTool = tool({
+    description:
+      'Get the screen position and bounds of the Google Earth Engine map element. Returns pixel coordinates for use with clickAtScreenPosition.',
     inputSchema: z.object({}) as any, // Cast to any for SDK 6 toModelOutput compatibility
     execute: async () => {
-        // Manually send tool_start event
-        if (onToolEvent) {
-            onToolEvent({
-                type: 'tool_start',
-                toolName: 'getMapScreenPosition',
-                args: {},
-                timestamp: Date.now()
-            });
+      // Manually send tool_start event
+      if (onToolEvent) {
+        onToolEvent({
+          type: 'tool_start',
+          toolName: 'getMapScreenPosition',
+          args: {},
+          timestamp: Date.now(),
+        });
+      }
+
+      try {
+        console.log(`🗺️ [GetMapInfoTool] Getting map information...`);
+        console.time('GetMapInfoTool execution');
+
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) {
+          return { success: false, error: 'No Earth Engine tab found' };
         }
 
-        try {
-            console.log(`🗺️ [GetMapInfoTool] Getting map information...`);
-            console.time('GetMapInfoTool execution');
+        const result = await GeeService.getMapInfo(tabId);
+        console.timeEnd('GetMapInfoTool execution');
 
-            const tabId = await getActiveEarthEngineTabId();
-            if (!tabId) {
-                return { success: false, error: 'No Earth Engine tab found' };
-            }
-
-            const result = await GeeService.getMapInfo(tabId);
-            console.timeEnd('GetMapInfoTool execution');
-
-            if (!result.success) {
-                console.warn(`❌ [GetMapInfoTool] Failed:`, result.error);
-                return result;
-            }
-
-            console.log(`✅ [GetMapInfoTool] Map center: (${result.data.centerPoint.x}, ${result.data.centerPoint.y}), size: ${result.data.mapBounds.width}x${result.data.mapBounds.height}`);
-            return result;
-
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`❌ [GetMapInfoTool] Error:`, error);
-            console.timeEnd('GetMapInfoTool execution');
-            return {
-                success: false,
-                error: `Error getting map info: ${errorMessage}`
-            };
+        if (!result.success) {
+          console.warn(`❌ [GetMapInfoTool] Failed:`, result.error);
+          return result;
         }
+
+        console.log(
+          `✅ [GetMapInfoTool] Map center: (${result.data.centerPoint.x}, ${result.data.centerPoint.y}), size: ${result.data.mapBounds.width}x${result.data.mapBounds.height}`
+        );
+        return result;
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [GetMapInfoTool] Error:`, error);
+        console.timeEnd('GetMapInfoTool execution');
+        return {
+          success: false,
+          error: `Error getting map info: ${errorMessage}`,
+        };
+      }
     },
     toModelOutput: ({ output }) => {
-        if (!output.success) {
-            return {
-                type: 'content',
-                value: [{
-                    type: 'text',
-                    text: `❌ Failed to get map info: ${output.error}`
-                }]
-            };
-        }
+      if (!output.success) {
+        return {
+          type: 'content',
+          value: [
+            {
+              type: 'text',
+              text: `❌ Failed to get map info: ${output.error}`,
+            },
+          ],
+        };
+      }
 
-        const data = output.data;
-        const outputText = `✅ Map Information:
+      const data = output.data;
+      const outputText = `✅ Map Information:
 
 **Map Bounds:**
 - Position: (${data.mapBounds.x}, ${data.mapBounds.y})
@@ -1811,16 +2046,16 @@ const getMapScreenPositionTool = tool({
 
 To click on the map center, use: clickByCoordinates(${data.centerPoint.x}, ${data.centerPoint.y})`;
 
-        return {
-            type: 'content',
-            value: [{ type: 'text', text: outputText }]
-        };
+      return {
+        type: 'content',
+        value: [{ type: 'text', text: outputText }],
+      };
     },
-});
+  });
 
-// Define Get Inspector Output tool
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getInspectorOutputTool = tool({
+  // Define Get Inspector Output tool
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getInspectorOutputTool = tool({
     description: `Read data from the Google Earth Engine Inspector panel.
 
 Returns Point coordinates, Pixel values, and Object metadata (CRS/EPSG, transform, dimensions, etc.) from whatever location was last clicked on the map.
@@ -1836,151 +2071,154 @@ NOTE: For Object details (CRS/EPSG), user may need to expand the Objects section
 Returns the coordinates of the inspected location along with all available data.`,
     inputSchema: z.object({}) as any, // No parameters - just reads current Inspector state
     execute: async () => {
-        // Manually send tool_start event
-        if (onToolEvent) {
-            onToolEvent({
-                type: 'tool_start',
-                toolName: 'getInspectorOutput',
-                args: {},
-                timestamp: Date.now()
-            });
+      // Manually send tool_start event
+      if (onToolEvent) {
+        onToolEvent({
+          type: 'tool_start',
+          toolName: 'getInspectorOutput',
+          args: {},
+          timestamp: Date.now(),
+        });
+      }
+
+      try {
+        console.log(`🔍 [InspectMapTool] Reading Inspector panel data`);
+        console.time('InspectMapTool execution');
+
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) {
+          return { success: false, error: 'No Earth Engine tab found' };
         }
 
-        try {
-            console.log(`🔍 [InspectMapTool] Reading Inspector panel data`);
-            console.time('InspectMapTool execution');
+        const result = await GeeService.getInspectorOutput(tabId);
+        console.timeEnd('InspectMapTool execution');
 
-            const tabId = await getActiveEarthEngineTabId();
-            if (!tabId) {
-                return { success: false, error: 'No Earth Engine tab found' };
-            }
-
-            const result = await GeeService.getInspectorOutput(tabId);
-            console.timeEnd('InspectMapTool execution');
-
-            if (!result.success) {
-                console.warn(`❌ [InspectMapTool] Failed to inspect map:`, result.error);
-                return {
-                    success: false,
-                    error: result.error || 'Failed to read Inspector data',
-                    suggestion: result.error?.includes('Inspector is empty')
-                        ? 'Click on the map first to populate the Inspector panel'
-                        : 'Ensure the Inspector tab is open and you have clicked on the map',
-                    data: result.data
-                };
-            }
-
-            console.log(`✅ [InspectMapTool] Successfully read Inspector data: ${result.data?.layerCount || 0} layers`);
-            return {
-                success: true,
-                data: result.data,
-                message: `Successfully read ${result.data?.layerCount || 0} layers from Inspector`
-            };
-
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error(`❌ [InspectMapTool] Error:`, error);
-            console.timeEnd('InspectMapTool execution');
-            return {
-                success: false,
-                error: `Error reading Inspector: ${errorMessage}`,
-                suggestion: 'Try clicking on the map manually and running the tool again'
-            };
+        if (!result.success) {
+          console.warn(`❌ [InspectMapTool] Failed to inspect map:`, result.error);
+          return {
+            success: false,
+            error: result.error || 'Failed to read Inspector data',
+            suggestion: result.error?.includes('Inspector is empty')
+              ? 'Click on the map first to populate the Inspector panel'
+              : 'Ensure the Inspector tab is open and you have clicked on the map',
+            data: result.data,
+          };
         }
+
+        console.log(
+          `✅ [InspectMapTool] Successfully read Inspector data: ${result.data?.layerCount || 0} layers`
+        );
+        return {
+          success: true,
+          data: result.data,
+          message: `Successfully read ${result.data?.layerCount || 0} layers from Inspector`,
+        };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ [InspectMapTool] Error:`, error);
+        console.timeEnd('InspectMapTool execution');
+        return {
+          success: false,
+          error: `Error reading Inspector: ${errorMessage}`,
+          suggestion: 'Try clicking on the map manually and running the tool again',
+        };
+      }
     },
     toModelOutput: ({ output }) => {
-        if (!output.success) {
-            return {
-                type: 'content',
-                value: [{
-                    type: 'text',
-                    text: `❌ Failed to inspect map: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`
-                }]
-            };
-        }
-
-        const data = output.data;
-        let outputText = `✅ Inspector Data at (${data.inspectedCoordinates.lng}, ${data.inspectedCoordinates.lat}):\n\n`;
-
-        // Include Point information
-        if (data.point) {
-            outputText += `**Point Information:**\n`;
-            Object.entries(data.point).forEach(([key, value]) => {
-                outputText += `  - ${key}: ${value}\n`;
-            });
-            outputText += '\n';
-        }
-
-        // Include Pixels section
-        if (data.pixels && data.pixels.length > 0) {
-            outputText += `**Pixel Values:**\n`;
-            data.pixels.forEach((pixel: any, i: number) => {
-                outputText += `  Layer ${i + 1}: ${pixel.layerName}\n`;
-                if (pixel.data !== null && pixel.data !== undefined) {
-                    if (typeof pixel.data === 'object') {
-                        outputText += `    ${JSON.stringify(pixel.data, null, 2).split('\n').join('\n    ')}\n`;
-                    } else {
-                        outputText += `    Value: ${pixel.data}\n`;
-                    }
-                }
-            });
-            outputText += '\n';
-        }
-
-        // Include Objects section (with EPSG data)
-        if (data.objects && data.objects.length > 0) {
-            outputText += `**Object Metadata (includes CRS/EPSG):**\n`;
-            data.objects.forEach((obj: any, i: number) => {
-                outputText += `  Layer ${i + 1}: ${obj.layerName}\n`;
-                if (obj.data) {
-                    const jsonStr = JSON.stringify(obj.data, null, 2);
-                    outputText += `    ${jsonStr.split('\n').join('\n    ')}\n`;
-                }
-            });
-            outputText += '\n';
-        }
-
-        // Add suggestion if available
-        if (output.suggestion) {
-            outputText += `\n⚠️ **Note:** ${output.suggestion}\n`;
-        }
-
+      if (!output.success) {
         return {
-            type: 'content',
-            value: [{ type: 'text', text: outputText }]
+          type: 'content',
+          value: [
+            {
+              type: 'text',
+              text: `❌ Failed to inspect map: ${output.error}${output.suggestion ? '\n\nSuggestion: ' + output.suggestion : ''}`,
+            },
+          ],
         };
+      }
+
+      const data = output.data;
+      let outputText = `✅ Inspector Data at (${data.inspectedCoordinates.lng}, ${data.inspectedCoordinates.lat}):\n\n`;
+
+      // Include Point information
+      if (data.point) {
+        outputText += `**Point Information:**\n`;
+        Object.entries(data.point).forEach(([key, value]) => {
+          outputText += `  - ${key}: ${value}\n`;
+        });
+        outputText += '\n';
+      }
+
+      // Include Pixels section
+      if (data.pixels && data.pixels.length > 0) {
+        outputText += `**Pixel Values:**\n`;
+        data.pixels.forEach((pixel: any, i: number) => {
+          outputText += `  Layer ${i + 1}: ${pixel.layerName}\n`;
+          if (pixel.data !== null && pixel.data !== undefined) {
+            if (typeof pixel.data === 'object') {
+              outputText += `    ${JSON.stringify(pixel.data, null, 2).split('\n').join('\n    ')}\n`;
+            } else {
+              outputText += `    Value: ${pixel.data}\n`;
+            }
+          }
+        });
+        outputText += '\n';
+      }
+
+      // Include Objects section (with EPSG data)
+      if (data.objects && data.objects.length > 0) {
+        outputText += `**Object Metadata (includes CRS/EPSG):**\n`;
+        data.objects.forEach((obj: any, i: number) => {
+          outputText += `  Layer ${i + 1}: ${obj.layerName}\n`;
+          if (obj.data) {
+            const jsonStr = JSON.stringify(obj.data, null, 2);
+            outputText += `    ${jsonStr.split('\n').join('\n    ')}\n`;
+          }
+        });
+        outputText += '\n';
+      }
+
+      // Add suggestion if available
+      if (output.suggestion) {
+        outputText += `\n⚠️ **Note:** ${output.suggestion}\n`;
+      }
+
+      return {
+        type: 'content',
+        value: [{ type: 'text', text: outputText }],
+      };
     },
-});
+  });
 
-// Return all tools
-// Note: Shadow tools are kept internally but NOT exposed to LLM
-// The simplified readCode/editCode/undoEdit tools wrap the shadow workspace
-return {
-  // Utility tools
-  weatherTool,
-  dateTimeTool,
-  waitTool,
+  // Return all tools
+  // Note: Shadow tools are kept internally but NOT exposed to LLM
+  // The simplified readCode/editCode/undoEdit tools wrap the shadow workspace
+  return {
+    // Utility tools
+    weatherTool,
+    dateTimeTool,
+    waitTool,
 
-  // Simplified code editing tools (Claude Code-style) - PRIMARY
-  readCodeTool,
-  editCodeTool,
-  writeCodeTool,
-  undoEditTool,
+    // Simplified code editing tools (Claude Code-style) - PRIMARY
+    readCodeTool,
+    editCodeTool,
+    writeCodeTool,
+    undoEditTool,
 
-  // Earth Engine tools
-  geeDocsTool,
-  runCurrentCodeTool,
+    // Earth Engine tools
+    geeDocsTool,
+    runCurrentCodeTool,
 
-  // Browser interaction tools
-  screenshotTool,
-  snapshotTool,
-  clickByRefIdTool,
-  clickAtScreenPositionTool,
+    // Browser interaction tools
+    screenshotTool,
+    snapshotTool,
+    clickByRefIdTool,
+    clickAtScreenPositionTool,
 
-  // Earth Engine state tools
-  clearMapInspectorAndConsoleTool,
-  getConsoleOutputTool,
-  getMapScreenPositionTool,
-  getInspectorOutputTool
-};
+    // Earth Engine state tools
+    clearMapInspectorAndConsoleTool,
+    getConsoleOutputTool,
+    getMapScreenPositionTool,
+    getInspectorOutputTool,
+  };
 }

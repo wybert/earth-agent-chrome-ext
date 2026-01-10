@@ -40,9 +40,19 @@
     }
 
     // Check for other common classes
-    const classes = ['.value', '.key', '.object', '.string', '.number', '.boolean',
-                    '.expandable', '.json', 'ee-console-value', 'ee-value'];
-    classes.forEach(cls => {
+    const classes = [
+      '.value',
+      '.key',
+      '.object',
+      '.string',
+      '.number',
+      '.boolean',
+      '.expandable',
+      '.json',
+      'ee-console-value',
+      'ee-value',
+    ];
+    classes.forEach((cls) => {
       const el = logElement.querySelector(cls);
       if (el) {
         console.log('Found ' + cls + ':', (el.textContent || '').substring(0, 50));
@@ -64,15 +74,11 @@
     console.log('Method 3 - innerHTML:', entry2.innerHTML.substring(0, 200));
 
     // Try to find all text nodes
-    const walker = document.createTreeWalker(
-      entry2,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
+    const walker = document.createTreeWalker(entry2, NodeFilter.SHOW_TEXT, null);
 
     const textNodes = [];
     let node;
-    while (node = walker.nextNode()) {
+    while ((node = walker.nextNode())) {
       if (node.textContent.trim()) {
         textNodes.push(node.textContent.trim());
       }

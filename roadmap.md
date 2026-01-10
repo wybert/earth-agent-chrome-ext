@@ -1,68 +1,74 @@
 # 🗺️ Product Roadmap
 
 ## 1. Core Agentic Intelligence (Stability & Reasoning)
+
 **Goal:** Make the agent a reliable, autonomous coding partner.
 
 - [ ] **Diff Preview**
-    - Show visual diffs for large code changes before insertion.
-    - User confirmation workflow for destructive edits.
+  - Show visual diffs for large code changes before insertion.
+  - User confirmation workflow for destructive edits.
 - [ ] **Planner / Reflection Loop (High Priority)**
-    - Implement a lightweight "Plan-Execute-Reflect" cycle (max X steps).
-    - Track sub-goals, tools used, and successful/failed outcomes.
-    - Self-correction: dynamic decision making based on execution results.
+  - Implement a lightweight "Plan-Execute-Reflect" cycle (max X steps).
+  - Track sub-goals, tools used, and successful/failed outcomes.
+  - Self-correction: dynamic decision making based on execution results.
 - [ ] **Automated Verification**
-    - `auto-verify`: After `run_code`, automatically check `getConsoleOutput` vs expected results.
-    - Feed execution logs/errors back into the prompt to prevent hallucinated success.
+  - `auto-verify`: After `run_code`, automatically check `getConsoleOutput` vs expected results.
+  - Feed execution logs/errors back into the prompt to prevent hallucinated success.
 - [ ] **State Memory Management**
-    - Context retention: Remember current code, selected entries, and recent outputs to reduce API calls.
-    - Caching: Cache expensive operations like dataset queries (`geeDocs` results).
+  - Context retention: Remember current code, selected entries, and recent outputs to reduce API calls.
+  - Caching: Cache expensive operations like dataset queries (`geeDocs` results).
 - [ ] **Web Search Agent**
-    - Integrate Perplexity-style web search for real-time GEE examples and debugging.
+  - Integrate Perplexity-style web search for real-time GEE examples and debugging.
 
 ## 2. User Experience (UX)
+
 **Goal:** Seamless workflow integration.
 
 - [ ] **Session Management**
-    - Local storage for chat history.
-    - [ ] Export/Import sessions (JSON/Markdown).
+  - Local storage for chat history.
+  - [ ] Export/Import sessions (JSON/Markdown).
 - [ ] **Code Versioning**
-    - Full history tracking (beyond simple undo).
-    - Ability to revert to any previous script version in the session.
+  - Full history tracking (beyond simple undo).
+  - Ability to revert to any previous script version in the session.
 - [ ] **Workflow Templates**
-    - Save commonly used prompts or "recipes" (e.g., "Sentinel-2 Cloud Masking").
-    - Keyboard shortcuts for common actions.
+  - Save commonly used prompts or "recipes" (e.g., "Sentinel-2 Cloud Masking").
+  - Keyboard shortcuts for common actions.
 - [ ] **UI Polish**
-    - Better loading states during long agent actions.
-    - Clearer error messages when tools fail.
+  - Better loading states during long agent actions.
+  - Clearer error messages when tools fail.
 
 ## 3. Feature Extensions
+
 **Goal:** Expand capabilities beyond basic coding.
 
 - [ ] **Smart Map Interactions**
-    - `inspectMapLocation` (High-Level Tool): Combine `getMapScreenPosition` → `click` → `wait` → `getInspectorOutput` into one robust action.
+  - `inspectMapLocation` (High-Level Tool): Combine `getMapScreenPosition` → `click` → `wait` → `getInspectorOutput` into one robust action.
 - [ ] **Code Analysis & Linting**
-    - **Style Check**: Auto-format code to GEE best practices.
-    - **Perf Check**: Warning for computationally expensive patterns (e.g., `.getInfo()` inside loops).
+  - **Style Check**: Auto-format code to GEE best practices.
+  - **Perf Check**: Warning for computationally expensive patterns (e.g., `.getInfo()` inside loops).
 - [ ] **Local Ecology (Low Priority)**
-    - Upload user data (Shapefiles/GeoJSON) to GEE assets.
-    - Save analysis results (CSV/GeoTIFF) to local disk.
+  - Upload user data (Shapefiles/GeoJSON) to GEE assets.
+  - Save analysis results (CSV/GeoTIFF) to local disk.
 
 ## 5. Evaluation & Data
+
 **Goal:** Data-driven improvements.
 
 - [ ] **Benchmarking**
-    - Create a standard dataset of GEE tasks (simple queries to complex analyses).
-    - Define metrics: Pass rate, Code efficiency, Number of turns to solve.
+  - Create a standard dataset of GEE tasks (simple queries to complex analyses).
+  - Define metrics: Pass rate, Code efficiency, Number of turns to solve.
 - [ ] **Fine-Tuning**
-    - Curate high-quality GEE script-explanation pairs.
-    - Fine-tune a specialized model (e.g., Llama-3-GEE or similar) for better syntax accuracy.
+  - Curate high-quality GEE script-explanation pairs.
+  - Fine-tune a specialized model (e.g., Llama-3-GEE or similar) for better syntax accuracy.
 
 ---
 
 ## 💡 Strategic Suggestions
 
 ### A. Community & Sharing ("Earth Snippets")
+
 **Suggestion**: Build a feature to one-click share a conversation or a generated script as a Gist or a publicly accessible URL.
+
 - **Why?** GEE is community-heavy. Making your tool the easiest way to share working solutions will drive growth.
 
 ## Others

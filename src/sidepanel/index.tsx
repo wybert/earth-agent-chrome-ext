@@ -4,8 +4,11 @@ import { ChatUI } from '../components/Chat';
 import '../assets/styles/globals.css';
 
 // Simple error boundary component
-class ChatErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
-  constructor(props: {children: React.ReactNode}) {
+class ChatErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
     super(props);
     this.state = { hasError: false };
   }
@@ -25,8 +28,10 @@ class ChatErrorBoundary extends React.Component<{children: React.ReactNode}, {ha
       return (
         <div className="p-4 border rounded-md bg-destructive/10 text-destructive">
           <h3 className="font-bold mb-2 text-base">Something went wrong with the chat component</h3>
-          <p className="text-base">Please try reloading the extension or check the console for more details.</p>
-          <button 
+          <p className="text-base">
+            Please try reloading the extension or check the console for more details.
+          </p>
+          <button
             className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 text-base"
             onClick={() => this.setState({ hasError: false })}
           >
@@ -47,14 +52,14 @@ const App = () => {
     const styleCheck = document.createElement('div');
     styleCheck.className = 'text-primary';
     document.body.appendChild(styleCheck);
-    
+
     const styles = window.getComputedStyle(styleCheck);
     const hasStyles = styles.color !== 'rgb(0, 0, 0)';
-    
+
     if (!hasStyles) {
       console.warn('CSS may not be properly loaded. Check the imports and paths.');
     }
-    
+
     document.body.removeChild(styleCheck);
   }, []);
 
@@ -80,4 +85,4 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     console.error('Root element not found. Make sure the HTML has an element with id="root"');
   }
-}); 
+});

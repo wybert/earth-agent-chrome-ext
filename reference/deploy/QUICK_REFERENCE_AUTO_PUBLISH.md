@@ -12,12 +12,12 @@
 
 ## 🔑 Required GitHub Secrets
 
-| Secret | Where to Get |
-|--------|-------------|
-| `CHROME_EXTENSION_ID` | Chrome Web Store Developer Dashboard URL |
-| `CHROME_CLIENT_ID` | Google Cloud Console > Credentials |
-| `CHROME_CLIENT_SECRET` | Google Cloud Console > Credentials |
-| `CHROME_REFRESH_TOKEN` | OAuth 2.0 Playground |
+| Secret                 | Where to Get                             |
+| ---------------------- | ---------------------------------------- |
+| `CHROME_EXTENSION_ID`  | Chrome Web Store Developer Dashboard URL |
+| `CHROME_CLIENT_ID`     | Google Cloud Console > Credentials       |
+| `CHROME_CLIENT_SECRET` | Google Cloud Console > Credentials       |
+| `CHROME_REFRESH_TOKEN` | OAuth 2.0 Playground                     |
 
 ## 🚀 How to Publish New Version
 
@@ -70,18 +70,18 @@ Location: `.github/workflows/build-and-release.yml`
     client-id: ${{ secrets.CHROME_CLIENT_ID }}
     client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
     refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-    publish: true  # false = upload only, no auto-submit
+    publish: true # false = upload only, no auto-submit
 ```
 
 ## 🐛 Common Issues
 
-| Problem | Solution |
-|---------|----------|
-| "Invalid credentials" | Regenerate OAuth credentials in Cloud Console |
-| "Extension ID not found" | Verify ID matches published extension |
-| "API not enabled" | Enable Chrome Web Store API in Cloud Console |
-| "Quota exceeded" | Wait or request quota increase |
-| "Version already exists" | Use a different version number |
+| Problem                  | Solution                                      |
+| ------------------------ | --------------------------------------------- |
+| "Invalid credentials"    | Regenerate OAuth credentials in Cloud Console |
+| "Extension ID not found" | Verify ID matches published extension         |
+| "API not enabled"        | Enable Chrome Web Store API in Cloud Console  |
+| "Quota exceeded"         | Wait or request quota increase                |
+| "Version already exists" | Use a different version number                |
 
 ## ⏱️ Timeline
 

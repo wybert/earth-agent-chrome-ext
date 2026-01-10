@@ -6,13 +6,14 @@
 
 // Example 1: Simple chart
 var chart = ui.Chart.image.series({
-  imageCollection: ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')
+  imageCollection: ee
+    .ImageCollection('LANDSAT/LC08/C02/T1_TOA')
     .filterBounds(ee.Geometry.Point([-122.262, 37.8719]))
     .filterDate('2014-01-01', '2014-12-31')
     .select(['B4', 'B3', 'B2']),
   region: ee.Geometry.Point([-122.262, 37.8719]),
   reducer: ee.Reducer.mean(),
-  scale: 200
+  scale: 200,
 });
 print('Chart Example:', chart);
 
@@ -21,7 +22,7 @@ var histogram = ui.Chart.image.histogram({
   image: ee.Image('LANDSAT/LC08/C02/T1_TOA/LC08_044034_20140318').select(['B4']),
   region: ee.Geometry.Rectangle([-122.45, 37.74, -122.38, 37.84]),
   scale: 30,
-  maxBuckets: 100
+  maxBuckets: 100,
 });
 print('Histogram:', histogram);
 

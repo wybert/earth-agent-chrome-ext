@@ -1,12 +1,36 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings as SettingsIcon, RefreshCw, Plus, FlaskConical, Menu, Edit2, X, HelpCircle } from 'lucide-react';
+import {
+  Settings as SettingsIcon,
+  RefreshCw,
+  Plus,
+  FlaskConical,
+  Menu,
+  Edit2,
+  X,
+  HelpCircle,
+} from 'lucide-react';
 // Project uses custom Message type for Chrome extension communication
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
-import { Message, ExtensionMessage, Provider, type OpenAICompatibleConfig } from '../types/extension';
-import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview, type ChatSessions, type StoredChatSession, type ChatSessionMeta } from './chat-helpers';
+import {
+  Message,
+  ExtensionMessage,
+  Provider,
+  type OpenAICompatibleConfig,
+} from '../types/extension';
+import {
+  createSessionRecord,
+  getSuggestedSessionTitle,
+  migrateSessions,
+  truncateText,
+  createWelcomeMessage,
+  getLastMessagePreview,
+  type ChatSessions,
+  type StoredChatSession,
+  type ChatSessionMeta,
+} from './chat-helpers';
 import {
   exportSessionToJSON,
   exportSessionToMarkdown,
@@ -17,13 +41,19 @@ import {
   triggerFileImport,
 } from './session-export-import';
 import type { AgentProfile } from '@/types/extension';
-import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, MODE_SELECTION_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
+import {
+  ACTIVE_PROFILE_ID_STORAGE_KEY,
+  PROFILES_STORAGE_KEY,
+  MODE_SELECTION_STORAGE_KEY,
+  inferBaseModeFromTools,
+  migrateProfiles as migrateProfilesList,
+} from '@/lib/profiles';
 import AgentTestPanel from './ui/AgentTestPanel';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { z } from 'zod'; // Restore Zod
-import { Chat } from "@/components/ui/chat"; // Keep the UI component
-import { SessionSidebar, type SidebarSession } from "@/components/ui/session-sidebar";
-import { TokenUsageDisplay } from "@/components/ui/TokenUsageDisplay";
+import { Chat } from '@/components/ui/chat'; // Keep the UI component
+import { SessionSidebar, type SidebarSession } from '@/components/ui/session-sidebar';
+import { TokenUsageDisplay } from '@/components/ui/TokenUsageDisplay';
 import {
   DEFAULT_MODELS,
   OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
@@ -32,7 +62,7 @@ import {
   GOOGLE_API_KEY_STORAGE_KEY,
   Z_AI_API_KEY_STORAGE_KEY,
   API_PROVIDER_STORAGE_KEY,
-  MODEL_STORAGE_KEY
+  MODEL_STORAGE_KEY,
 } from '@/constants/models';
 import { loadProviderConfig, hasApiKeyConfigured } from '@/lib/config-utils';
 import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
@@ -45,26 +75,28 @@ const MessageContentSchema = z.string().min(1);
 
 const OpenAIChoiceSchema = z.object({
   message: z.object({
-    content: MessageContentSchema
-  })
+    content: MessageContentSchema,
+  }),
 });
 
 const OpenAIResponseSchema = z.object({
-  choices: z.array(OpenAIChoiceSchema).min(1)
+  choices: z.array(OpenAIChoiceSchema).min(1),
 });
 
 // More flexible response schema that handles multiple formats (Restore)
-const ChatResponseSchema = z.object({
-  type: z.string(),
-  requestId: z.string().optional(),
-}).and(
-  z.union([
-    z.object({ response: MessageContentSchema }),
-    z.object({ fullText: MessageContentSchema }),
-    z.object({ data: OpenAIResponseSchema }),
-    z.object({ data: z.object({ content: MessageContentSchema }) })
-  ])
-);
+const ChatResponseSchema = z
+  .object({
+    type: z.string(),
+    requestId: z.string().optional(),
+  })
+  .and(
+    z.union([
+      z.object({ response: MessageContentSchema }),
+      z.object({ fullText: MessageContentSchema }),
+      z.object({ data: OpenAIResponseSchema }),
+      z.object({ data: z.object({ content: MessageContentSchema }) }),
+    ])
+  );
 
 // Chrome storage keys (Keep)
 const CHAT_SESSIONS_KEY = 'earth_engine_chat_sessions';
@@ -80,7 +112,9 @@ const processImageFile = (file: File): Promise<string> => {
     reader.onload = (e) => {
       if (e.target?.result) {
         const dataUrl = e.target.result.toString();
-        console.log(`Processed image: ${file.type}, size: ${file.size}, data URL length: ${dataUrl.length}`);
+        console.log(
+          `Processed image: ${file.type}, size: ${file.size}, data URL length: ${dataUrl.length}`
+        );
         // Ensure data URL is properly formatted with correct MIME type
         if (!dataUrl.startsWith('data:')) {
           const formattedUrl = `data:${file.type || 'image/png'};base64,${dataUrl}`;
@@ -106,16 +140,8 @@ export function ChatUI() {
   const [showSettings, setShowSettings] = useState(false);
 
   // Onboarding
-  const {
-    showWelcome,
-    showTour,
-    currentStep,
-    steps,
-    startTour,
-    nextStep,
-    skipTour,
-    completeTour,
-  } = useOnboarding();
+  const { showWelcome, showTour, currentStep, steps, startTour, nextStep, skipTour, completeTour } =
+    useOnboarding();
 
   // Debug onboarding state
   useEffect(() => {
@@ -159,8 +185,26 @@ export function ChatUI() {
   const MAX_CONNECTION_ATTEMPTS = 3;
 
   // Tool events state for debugging panel
-  const [toolEvents, setToolEvents] = useState<Array<{type: string, toolName?: string, args?: any, result?: any, duration?: number, timestamp: number}>>([]);
-  const toolEventsRef = useRef<Array<{type: string, toolName?: string, args?: any, result?: any, duration?: number, timestamp: number}>>([]);
+  const [toolEvents, setToolEvents] = useState<
+    Array<{
+      type: string;
+      toolName?: string;
+      args?: any;
+      result?: any;
+      duration?: number;
+      timestamp: number;
+    }>
+  >([]);
+  const toolEventsRef = useRef<
+    Array<{
+      type: string;
+      toolName?: string;
+      args?: any;
+      result?: any;
+      duration?: number;
+      timestamp: number;
+    }>
+  >([]);
   const toolStartTimesRef = useRef<Map<string, number>>(new Map());
 
   // Title editing state
@@ -192,7 +236,9 @@ export function ChatUI() {
       return sessions;
     }
 
-    console.log(`Session limit exceeded: ${sessionArray.length}/${MAX_SESSIONS}. Cleaning up old sessions...`);
+    console.log(
+      `Session limit exceeded: ${sessionArray.length}/${MAX_SESSIONS}. Cleaning up old sessions...`
+    );
 
     // Sort sessions: pinned first, then by updatedAt (newest first)
     const sortedSessions = sessionArray.sort((a, b) => {
@@ -211,36 +257,39 @@ export function ChatUI() {
 
     // Convert back to Record format
     const cleanedSessions: ChatSessions = {};
-    sessionsToKeep.forEach(session => {
+    sessionsToKeep.forEach((session) => {
       cleanedSessions[session.id] = session;
     });
 
     return cleanedSessions;
   }, []);
 
-  const persistSessionsState = useCallback((nextSessions: ChatSessions, nextActiveId?: string | null) => {
-    // Clean up old sessions before persisting
-    const cleanedSessions = cleanupOldSessions(nextSessions);
+  const persistSessionsState = useCallback(
+    (nextSessions: ChatSessions, nextActiveId?: string | null) => {
+      // Clean up old sessions before persisting
+      const cleanedSessions = cleanupOldSessions(nextSessions);
 
-    const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: cleanedSessions };
-    if (typeof nextActiveId !== 'undefined') {
-      payload[ACTIVE_SESSION_ID_KEY] = nextActiveId;
-    }
-    chrome.storage.local.set(payload);
-  }, [cleanupOldSessions]);
+      const payload: Record<string, any> = { [CHAT_SESSIONS_KEY]: cleanedSessions };
+      if (typeof nextActiveId !== 'undefined') {
+        payload[ACTIVE_SESSION_ID_KEY] = nextActiveId;
+      }
+      chrome.storage.local.set(payload);
+    },
+    [cleanupOldSessions]
+  );
 
   const sessionList = useMemo<SidebarSession[]>(() => {
     return Object.values(sessions)
       .map((session) => {
         // Extract all messages content for search
         const messagesContent = session.messages
-          .filter(m => !m.id.startsWith('welcome')) // Exclude welcome messages
-          .map(m => {
+          .filter((m) => !m.id.startsWith('welcome')) // Exclude welcome messages
+          .map((m) => {
             // For messages with parts (like images), only extract text content
             if (m.parts) {
               return m.parts
-                .filter(p => p.type === 'text' && p.text)
-                .map(p => p.text)
+                .filter((p) => p.type === 'text' && p.text)
+                .map((p) => p.text)
                 .join(' ');
             }
             return m.content || '';
@@ -321,19 +370,27 @@ export function ChatUI() {
         [ACTIVE_SESSION_ID_KEY]: currentActiveId,
       });
 
-      console.log("Loaded sessions (v2), active ID:", currentActiveId, "Total sessions:", Object.keys(loadedSessions).length);
+      console.log(
+        'Loaded sessions (v2), active ID:',
+        currentActiveId,
+        'Total sessions:',
+        Object.keys(loadedSessions).length
+      );
     });
   }, [cleanupOldSessions]);
 
   // Load profiles + mode selection + listen for updates (stored in sync)
   useEffect(() => {
-    chrome.storage.sync.get([PROFILES_STORAGE_KEY, ACTIVE_PROFILE_ID_STORAGE_KEY, MODE_SELECTION_STORAGE_KEY], (result) => {
-      setProfiles(migrateProfilesList(result[PROFILES_STORAGE_KEY]));
-      setActiveProfileId(result[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
-      if (result[MODE_SELECTION_STORAGE_KEY]) {
-        setModeSelection(result[MODE_SELECTION_STORAGE_KEY]);
+    chrome.storage.sync.get(
+      [PROFILES_STORAGE_KEY, ACTIVE_PROFILE_ID_STORAGE_KEY, MODE_SELECTION_STORAGE_KEY],
+      (result) => {
+        setProfiles(migrateProfilesList(result[PROFILES_STORAGE_KEY]));
+        setActiveProfileId(result[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
+        if (result[MODE_SELECTION_STORAGE_KEY]) {
+          setModeSelection(result[MODE_SELECTION_STORAGE_KEY]);
+        }
       }
-    });
+    );
 
     const onStorageChange = (
       changes: { [key: string]: chrome.storage.StorageChange },
@@ -358,21 +415,21 @@ export function ChatUI() {
   // Restore session saving useEffect
   useEffect(() => {
     if (!activeSessionId) return;
-    setSessions(prev => {
-      const existing = prev[activeSessionId] || createSessionRecord(activeSessionId, messages)
+    setSessions((prev) => {
+      const existing = prev[activeSessionId] || createSessionRecord(activeSessionId, messages);
       const updatedMeta: ChatSessionMeta = {
         ...existing.meta,
         updatedAt: Date.now(),
         lastMessagePreview: getLastMessagePreview(messages),
-      }
+      };
       const updatedSessions: ChatSessions = {
         ...prev,
         [activeSessionId]: { ...existing, meta: updatedMeta, messages },
-      }
-      persistSessionsState(updatedSessions)
-      return updatedSessions
-    })
-  }, [messages, activeSessionId, persistSessionsState])
+      };
+      persistSessionsState(updatedSessions);
+      return updatedSessions;
+    });
+  }, [messages, activeSessionId, persistSessionsState]);
 
   // Restore port connection useEffect
   useEffect(() => {
@@ -385,7 +442,11 @@ export function ChatUI() {
 
     const connectToBackground = () => {
       if (!isActive || isConnecting) {
-        console.log('Skipping connection attempt: isActive=%s, isConnecting=%s', isActive, isConnecting);
+        console.log(
+          'Skipping connection attempt: isActive=%s, isConnecting=%s',
+          isActive,
+          isConnecting
+        );
         return;
       }
 
@@ -436,7 +497,10 @@ export function ChatUI() {
 
         // Create and store disconnect listener reference
         disconnectListener = () => {
-          console.log('Disconnected from background script, error:', chrome.runtime.lastError?.message);
+          console.log(
+            'Disconnected from background script, error:',
+            chrome.runtime.lastError?.message
+          );
           portRef.current = null;
 
           // Clean up this connection's listener
@@ -448,24 +512,36 @@ export function ChatUI() {
             }
           }
 
-          setPort(prevPort => (prevPort === currentPort ? null : prevPort));
+          setPort((prevPort) => (prevPort === currentPort ? null : prevPort));
           isConnecting = false; // Release lock on disconnect
 
           if (isActive && !isConnecting) {
             if (chrome.runtime.lastError) {
               console.error('Disconnect error:', chrome.runtime.lastError.message);
-              setError(new Error(`Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`));
-              setConnectionAttempts(prev => {
+              setError(
+                new Error(
+                  `Connection lost: ${chrome.runtime.lastError.message}. Attempting reconnect...`
+                )
+              );
+              setConnectionAttempts((prev) => {
                 const nextAttempts = prev + 1;
                 if (nextAttempts <= MAX_CONNECTION_ATTEMPTS) {
-                  console.log(`Attempting to reconnect (${nextAttempts}/${MAX_CONNECTION_ATTEMPTS})...`);
+                  console.log(
+                    `Attempting to reconnect (${nextAttempts}/${MAX_CONNECTION_ATTEMPTS})...`
+                  );
                   reconnectTimer = setTimeout(connectToBackground, 1000 * nextAttempts);
                   return nextAttempts;
                 }
 
                 setFallbackMode(true);
-                setError(new Error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switched to Fallback Mode.`));
-                console.error(`Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switching to fallback mode.`);
+                setError(
+                  new Error(
+                    `Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switched to Fallback Mode.`
+                  )
+                );
+                console.error(
+                  `Failed to connect after ${MAX_CONNECTION_ATTEMPTS} attempts. Switching to fallback mode.`
+                );
                 return nextAttempts;
               });
             } else {
@@ -526,7 +602,9 @@ export function ChatUI() {
   }, [connectionAttempts]); // Restore dependency
 
   // Restore response extraction helper
-  const extractResponseContent = (validatedResponse: z.infer<typeof ChatResponseSchema>): string => {
+  const extractResponseContent = (
+    validatedResponse: z.infer<typeof ChatResponseSchema>
+  ): string => {
     if ('response' in validatedResponse) return validatedResponse.response;
     if ('fullText' in validatedResponse) return validatedResponse.fullText;
     if ('data' in validatedResponse) {
@@ -548,11 +626,13 @@ export function ChatUI() {
     // Only log non-stream chunks for debugging
     if (response.type !== 'CHAT_STREAM_CHUNK') {
       console.log('Received message from background:', response);
-    try {
-      console.log('Full response object:', JSON.stringify(response, null, 2));
-      } catch (e) { /* ignore */ }
+      try {
+        console.log('Full response object:', JSON.stringify(response, null, 2));
+      } catch (e) {
+        /* ignore */
+      }
     }
-    
+
     switch (response.type) {
       case 'CHAT_RESPONSE':
         try {
@@ -564,27 +644,31 @@ export function ChatUI() {
             console.warn('Response validation failed:', validationResult.error);
             // Restore fallback extraction logic
             if (response.response) responseContent = response.response;
-            else if (response.data?.choices?.[0]?.message?.content) responseContent = response.data.choices[0].message.content;
+            else if (response.data?.choices?.[0]?.message?.content)
+              responseContent = response.data.choices[0].message.content;
             else if (response.data?.content) responseContent = response.data.content;
             else if (typeof response.data === 'string') responseContent = response.data;
             else if (response.fullText) responseContent = response.fullText;
             // Add deep search if necessary
-            if (!responseContent.trim()) responseContent = 'Sorry, I could not process the response.';
+            if (!responseContent.trim())
+              responseContent = 'Sorry, I could not process the response.';
           }
           const assistantMessage: Message = {
             id: response.requestId || (Date.now() + 1).toString(),
             role: 'assistant',
-            content: responseContent
+            content: responseContent,
           };
-          setMessages(prev => {
-              const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
-              if (placeholderIndex !== -1) {
-                  const newMessages = [...prev];
-                  newMessages[placeholderIndex] = assistantMessage;
-                  return newMessages;
-              } else {
-                  return [...prev, assistantMessage];
-              }
+          setMessages((prev) => {
+            const placeholderIndex = prev.findIndex((m) =>
+              m.id.startsWith('assistant-placeholder-')
+            );
+            if (placeholderIndex !== -1) {
+              const newMessages = [...prev];
+              newMessages[placeholderIndex] = assistantMessage;
+              return newMessages;
+            } else {
+              return [...prev, assistantMessage];
+            }
           });
         } catch (error: any) {
           console.error('Error processing response:', error);
@@ -592,25 +676,30 @@ export function ChatUI() {
           const errorAssistantMessage: Message = {
             id: response.requestId || (Date.now() + 1).toString(),
             role: 'assistant',
-            content: "Sorry, I encountered an error processing the response."
+            content: 'Sorry, I encountered an error processing the response.',
           };
-          setMessages(prev => {
-              const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
-              if (placeholderIndex !== -1) {
-                  const newMessages = [...prev];
-                  newMessages[placeholderIndex] = errorAssistantMessage;
-                  return newMessages;
-              } else {
-                  return [...prev, errorAssistantMessage];
-        }
+          setMessages((prev) => {
+            const placeholderIndex = prev.findIndex((m) =>
+              m.id.startsWith('assistant-placeholder-')
+            );
+            if (placeholderIndex !== -1) {
+              const newMessages = [...prev];
+              newMessages[placeholderIndex] = errorAssistantMessage;
+              return newMessages;
+            } else {
+              return [...prev, errorAssistantMessage];
+            }
           });
         }
         break;
       case 'CHAT_STREAM_CHUNK':
         if (response.chunk) {
-          setMessages(prevMessages => {
-             const lastMessageIndex = prevMessages.length - 1;
-             if (lastMessageIndex < 0 || !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
+          setMessages((prevMessages) => {
+            const lastMessageIndex = prevMessages.length - 1;
+            if (
+              lastMessageIndex < 0 ||
+              !prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')
+            ) {
               return prevMessages;
             }
 
@@ -626,7 +715,10 @@ export function ChatUI() {
             if (startIndex >= 0) {
               const endIndex = currentContent.indexOf(endMarker, startIndex);
               if (endIndex >= 0) {
-                toolCallsSection = currentContent.substring(startIndex, endIndex + endMarker.length);
+                toolCallsSection = currentContent.substring(
+                  startIndex,
+                  endIndex + endMarker.length
+                );
                 textContent = currentContent.substring(endIndex + endMarker.length);
               }
             }
@@ -636,7 +728,7 @@ export function ChatUI() {
             const newMessages = prevMessages.slice(); // Shallow copy
             newMessages[lastMessageIndex] = {
               ...prevMessages[lastMessageIndex],
-              content: toolCallsSection + textContent + response.chunk
+              content: toolCallsSection + textContent + response.chunk,
             };
             return newMessages;
           });
@@ -644,15 +736,24 @@ export function ChatUI() {
         break;
       case 'CHAT_STREAM_END':
         setIsLocalLoading(false);
-        setMessages(prevMessages => {
-            const lastMessageIndex = prevMessages.length - 1;
-          if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
-            const finalId = response.requestId || prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
+        setMessages((prevMessages) => {
+          const lastMessageIndex = prevMessages.length - 1;
+          if (
+            lastMessageIndex >= 0 &&
+            prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')
+          ) {
+            const finalId =
+              response.requestId ||
+              prevMessages[lastMessageIndex].id.replace('assistant-placeholder-', 'final-');
             // Keep the tool call information in final message
             const content = prevMessages[lastMessageIndex].content || '';
             // Performance optimization: Use slice() + direct assignment instead of spread operator
             const newMessages = prevMessages.slice();
-            newMessages[lastMessageIndex] = { ...prevMessages[lastMessageIndex], id: finalId, content };
+            newMessages[lastMessageIndex] = {
+              ...prevMessages[lastMessageIndex],
+              id: finalId,
+              content,
+            };
             return newMessages;
           }
           return prevMessages;
@@ -666,16 +767,16 @@ export function ChatUI() {
         // Handle token estimate before API call
         console.log('📊 [Chat] Received token estimate:', response.estimate);
         if (response.estimate) {
-          setSessionTokenUsage(prev => {
+          setSessionTokenUsage((prev) => {
             const updated = {
               totalPromptTokens: prev.totalPromptTokens + (response.estimate.promptTokens || 0),
               totalCompletionTokens: prev.totalCompletionTokens, // Don't add completion tokens yet
-              totalTokens: prev.totalTokens + (response.estimate.promptTokens || 0)
+              totalTokens: prev.totalTokens + (response.estimate.promptTokens || 0),
             };
             console.log('📊 [Chat] Token estimate added:', {
               previous: prev,
               estimate: response.estimate,
-              updated: updated
+              updated: updated,
             });
             return updated;
           });
@@ -686,24 +787,25 @@ export function ChatUI() {
         // Note: This includes both prompt and completion tokens, so we need to adjust
         console.log('📊 [Chat] Received actual token usage:', response.usage);
         if (response.usage) {
-          setSessionTokenUsage(prev => {
+          setSessionTokenUsage((prev) => {
             // The actual usage includes prompt tokens which we already added via estimate
             // So we only add the completion tokens here
             const updated = {
               totalPromptTokens: prev.totalPromptTokens, // Already counted in estimate
-              totalCompletionTokens: prev.totalCompletionTokens + (response.usage.completionTokens || 0),
-              totalTokens: prev.totalTokens + (response.usage.completionTokens || 0)
+              totalCompletionTokens:
+                prev.totalCompletionTokens + (response.usage.completionTokens || 0),
+              totalTokens: prev.totalTokens + (response.usage.completionTokens || 0),
             };
             console.log('📊 [Chat] Actual token usage added:', {
               previous: prev,
               incoming: response.usage,
-              updated: updated
+              updated: updated,
             });
             return updated;
           });
 
           // Also attach token usage to the last assistant message
-          setMessages(prevMessages => {
+          setMessages((prevMessages) => {
             const lastMessageIndex = prevMessages.length - 1;
             if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].role === 'assistant') {
               const newMessages = prevMessages.slice();
@@ -712,8 +814,8 @@ export function ChatUI() {
                 tokenUsage: {
                   promptTokens: response.usage.promptTokens,
                   completionTokens: response.usage.completionTokens,
-                  totalTokens: response.usage.totalTokens
-                }
+                  totalTokens: response.usage.totalTokens,
+                },
               };
               return newMessages;
             }
@@ -745,9 +847,12 @@ export function ChatUI() {
           console.log('🔧 [Chat] Current tool events:', toolEventsRef.current);
 
           // Then update message
-          setMessages(prevMessages => {
+          setMessages((prevMessages) => {
             const lastMessageIndex = prevMessages.length - 1;
-            if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')) {
+            if (
+              lastMessageIndex >= 0 &&
+              prevMessages[lastMessageIndex].id.startsWith('assistant-placeholder-')
+            ) {
               const currentMessage = prevMessages[lastMessageIndex];
               const content = currentMessage.content || '';
 
@@ -766,11 +871,13 @@ export function ChatUI() {
 
               // Build tool status section from all events in ref
               const toolStatusLines: string[] = [];
-              toolEventsRef.current.forEach(event => {
+              toolEventsRef.current.forEach((event) => {
                 if (event.type === 'tool_start') {
                   toolStatusLines.push(`⏳ ${event.toolName}...`);
                 } else if (event.type === 'tool_finish') {
-                  const duration = event.duration ? ` (${(event.duration / 1000).toFixed(1)}s)` : '';
+                  const duration = event.duration
+                    ? ` (${(event.duration / 1000).toFixed(1)}s)`
+                    : '';
                   if (event.result?.success === false) {
                     const errorMsg = event.result.error || 'failed';
                     toolStatusLines.push(`❌ ${event.toolName} - ${errorMsg}`);
@@ -780,9 +887,10 @@ export function ChatUI() {
                 }
               });
 
-              const toolStatus = toolStatusLines.length > 0
-                ? startMarker + toolStatusLines.join('  \n') + endMarker
-                : '';
+              const toolStatus =
+                toolStatusLines.length > 0
+                  ? startMarker + toolStatusLines.join('  \n') + endMarker
+                  : '';
 
               console.log('🔧 [Chat] Tool status to add:', toolStatus);
               console.log('🔧 [Chat] Text content:', textContent.substring(0, 100));
@@ -791,7 +899,7 @@ export function ChatUI() {
               const newMessages = prevMessages.slice();
               newMessages[lastMessageIndex] = {
                 ...currentMessage,
-                content: toolStatus + textContent
+                content: toolStatus + textContent,
               };
               return newMessages;
             }
@@ -806,12 +914,13 @@ export function ChatUI() {
               hasResult: !!response.event.result,
               resultType: typeof response.event.result,
               resultKeys: response.event.result ? Object.keys(response.event.result) : [],
-              resultJSON: JSON.stringify(response.event.result, null, 2)?.substring(0, 1000)
+              resultJSON: JSON.stringify(response.event.result, null, 2)?.substring(0, 1000),
             });
 
             if (
               response.event.type === 'tool_finish' &&
-              (response.event.toolName === 'editCode' || response.event.toolName === 'insertAtLine') &&
+              (response.event.toolName === 'editCode' ||
+                response.event.toolName === 'insertAtLine') &&
               response.event.result?.success &&
               response.event.result?.diff
             ) {
@@ -820,7 +929,7 @@ export function ChatUI() {
               if (diff?.hunks && diff?.summary) {
                 console.log('🎨 [Chat] Setting edit diff card with:', {
                   summary: diff.summary,
-                  hunkCount: diff.hunks?.length
+                  hunkCount: diff.hunks?.length,
                 });
                 setEditDiff(diff as EditDiffData);
                 // Don't auto-show the card - user can click the diff button to see it
@@ -849,7 +958,11 @@ export function ChatUI() {
         console.error('Background script error:', response.error);
 
         // Ignore "Unknown message type" errors - these are likely from CANCEL_STREAM race conditions
-        if (response.error && typeof response.error === 'string' && response.error.includes('Unknown message type')) {
+        if (
+          response.error &&
+          typeof response.error === 'string' &&
+          response.error.includes('Unknown message type')
+        ) {
           console.log('Ignoring "Unknown message type" error (likely from cancelled stream)');
           break;
         }
@@ -867,28 +980,50 @@ export function ChatUI() {
               userFriendlyMessage = `🚨 **Ollama CORS Issue**\n\n${errorData.message}\n\n**💡 Solution:**\n${errorData.solution}\n\n**🔧 Alternative:**\n${errorData.alternativeSolution}`;
             }
             // Model not found errors
-            else if (errorMessage.toLowerCase().includes('model') && (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('does not exist') || errorMessage.toLowerCase().includes('invalid model'))) {
+            else if (
+              errorMessage.toLowerCase().includes('model') &&
+              (errorMessage.toLowerCase().includes('not found') ||
+                errorMessage.toLowerCase().includes('does not exist') ||
+                errorMessage.toLowerCase().includes('invalid model'))
+            ) {
               userFriendlyMessage = `❌ **Model Error**\n\nThe selected model is not available or doesn't exist.\n\n**Possible causes:**\n• Model name is incorrect\n• Your API key doesn't have access to this model\n• Model has been deprecated or renamed\n\n**What to do:**\n1. Check the model name in the dropdown menu\n2. Verify your API key has access to this model\n3. Try selecting a different model\n\n**Error details:** ${errorMessage}`;
             }
             // Context/Token limit errors (must check before rate limit)
-            else if (errorMessage.toLowerCase().includes('context length') ||
-                     errorMessage.toLowerCase().includes('maximum context') ||
-                     errorMessage.toLowerCase().includes('context_length_exceeded') ||
-                     errorMessage.toLowerCase().includes('token limit') ||
-                     errorMessage.toLowerCase().includes('too many tokens') ||
-                     errorMessage.toLowerCase().includes('exceeds') && errorMessage.toLowerCase().includes('token')) {
+            else if (
+              errorMessage.toLowerCase().includes('context length') ||
+              errorMessage.toLowerCase().includes('maximum context') ||
+              errorMessage.toLowerCase().includes('context_length_exceeded') ||
+              errorMessage.toLowerCase().includes('token limit') ||
+              errorMessage.toLowerCase().includes('too many tokens') ||
+              (errorMessage.toLowerCase().includes('exceeds') &&
+                errorMessage.toLowerCase().includes('token'))
+            ) {
               userFriendlyMessage = `📏 **Context Length Exceeded**\n\nYour conversation has exceeded the model's maximum context window.\n\n**What happened:**\nThe total tokens (messages + system prompt + tools) exceeded the model's limit.\n\n**What to do:**\n1. Start a new chat session (New Chat button)\n2. Delete some earlier messages to reduce context\n3. Switch to a model with larger context window:\n   • Gemini 2.5 Pro: 2M tokens\n   • Claude Sonnet 4.5: 200k tokens\n   • GPT-4o: 128k tokens\n\n**Error details:** ${errorMessage}`;
             }
             // Rate limit errors
-            else if (errorMessage.toLowerCase().includes('rate limit') || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('429')) {
+            else if (
+              errorMessage.toLowerCase().includes('rate limit') ||
+              errorMessage.toLowerCase().includes('quota') ||
+              errorMessage.toLowerCase().includes('429')
+            ) {
               userFriendlyMessage = `⏱️ **Rate Limit Exceeded**\n\nYou've exceeded the API rate limit or quota.\n\n**What to do:**\n• Wait a few minutes and try again\n• Check your API usage dashboard\n• Consider upgrading your API plan\n\n**Error details:** ${errorMessage}`;
             }
             // Authentication errors
-            else if (errorMessage.toLowerCase().includes('unauthorized') || errorMessage.toLowerCase().includes('invalid api key') || errorMessage.toLowerCase().includes('authentication') || errorMessage.toLowerCase().includes('401')) {
+            else if (
+              errorMessage.toLowerCase().includes('unauthorized') ||
+              errorMessage.toLowerCase().includes('invalid api key') ||
+              errorMessage.toLowerCase().includes('authentication') ||
+              errorMessage.toLowerCase().includes('401')
+            ) {
               userFriendlyMessage = `🔑 **Authentication Error**\n\nYour API key is invalid or has expired.\n\n**What to do:**\n1. Go to Settings (⚙️ icon)\n2. Check your API key is correct\n3. Generate a new API key if needed\n\n**Error details:** ${errorMessage}`;
             }
             // Permission errors
-            else if (errorMessage.toLowerCase().includes('permission') || errorMessage.toLowerCase().includes('access denied') || errorMessage.toLowerCase().includes('forbidden') || errorMessage.toLowerCase().includes('403')) {
+            else if (
+              errorMessage.toLowerCase().includes('permission') ||
+              errorMessage.toLowerCase().includes('access denied') ||
+              errorMessage.toLowerCase().includes('forbidden') ||
+              errorMessage.toLowerCase().includes('403')
+            ) {
               userFriendlyMessage = `🚫 **Permission Error**\n\nYour API key doesn't have permission for this operation.\n\n**What to do:**\n• Verify your API key has the required permissions\n• Check if your account has access to this feature/model\n• Contact your API provider if issues persist\n\n**Error details:** ${errorMessage}`;
             }
             // Generic API errors
@@ -906,20 +1041,21 @@ export function ChatUI() {
         const errorAssistantMessage: Message = {
           id: response.requestId || (Date.now() + 1).toString(),
           role: 'assistant',
-          content: userFriendlyMessage
+          content: userFriendlyMessage,
         };
-        setMessages(prev => {
-            const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
-            if (placeholderIndex !== -1) {
-                const newMessages = [...prev];
-                newMessages[placeholderIndex] = errorAssistantMessage;
-                return newMessages;
-            } else {
-                return [...prev, errorAssistantMessage];
-            }
+        setMessages((prev) => {
+          const placeholderIndex = prev.findIndex((m) => m.id.startsWith('assistant-placeholder-'));
+          if (placeholderIndex !== -1) {
+            const newMessages = [...prev];
+            newMessages[placeholderIndex] = errorAssistantMessage;
+            return newMessages;
+          } else {
+            return [...prev, errorAssistantMessage];
+          }
         });
         break;
-      default: break;
+      default:
+        break;
     }
   };
 
@@ -951,150 +1087,179 @@ export function ChatUI() {
   }, [modeSelection, profiles]);
 
   // Restore original submit handler using port
-  const handleChatSubmit = useCallback(async (e?: React.FormEvent, options?: { experimental_attachments?: FileList }) => {
-    e?.preventDefault();
-    if ((!input.trim() && !options?.experimental_attachments?.length) || isLocalLoading || !port || !activeSessionId) {
-       if(!port) setError(new Error("Connection connection error: Cannot reach background service."));
-       return;
-    }
-    
-    if (options?.experimental_attachments?.length) {
-      console.log(`Received ${options.experimental_attachments.length} attachments in handleChatSubmit`);
-      Array.from(options.experimental_attachments).forEach((file, i) => {
-        console.log(`Attachment ${i+1}: ${file.name}, ${file.type}, ${file.size} bytes`);
-      });
-    }
+  const handleChatSubmit = useCallback(
+    async (e?: React.FormEvent, options?: { experimental_attachments?: FileList }) => {
+      e?.preventDefault();
+      if (
+        (!input.trim() && !options?.experimental_attachments?.length) ||
+        isLocalLoading ||
+        !port ||
+        !activeSessionId
+      ) {
+        if (!port)
+          setError(new Error('Connection connection error: Cannot reach background service.'));
+        return;
+      }
 
-    // Process any attached files
-    let messageParts = [];
-    let imageAttachments = [];
-    
-    // Handle file attachments if present
-    if (options?.experimental_attachments && options.experimental_attachments.length > 0) {
-      try {
-        const files = Array.from(options.experimental_attachments);
-        
-        // Process each file
-        for (const file of files) {
-          // Check if it's an image
-          if (file.type.startsWith('image/')) {
-            try {
-              const dataUrl = await processImageFile(file);
-              const mimeType = file.type || 'image/png';
-              console.log(`Adding image attachment: ${mimeType}, data URL prefix: ${dataUrl.substring(0, 30)}...`);
-              
-              // Add to both structures for compatibility
-              messageParts.push({
-                type: 'file' as const,
-                mimeType: mimeType,
-                name: file.name || 'image.png',
-                data: dataUrl,
-                size: file.size
-              });
-              
-              imageAttachments.push({
-                type: 'image',
-                mimeType: mimeType,
-                data: dataUrl
-              });
-              console.log(`Successfully added image attachment (${dataUrl.length} bytes)`);
-            } catch (error) {
-              console.error('Failed to process image file:', error);
-              setError(new Error(`Failed to process image: ${error instanceof Error ? error.message : String(error)}`));
+      if (options?.experimental_attachments?.length) {
+        console.log(
+          `Received ${options.experimental_attachments.length} attachments in handleChatSubmit`
+        );
+        Array.from(options.experimental_attachments).forEach((file, i) => {
+          console.log(`Attachment ${i + 1}: ${file.name}, ${file.type}, ${file.size} bytes`);
+        });
+      }
+
+      // Process any attached files
+      let messageParts = [];
+      let imageAttachments = [];
+
+      // Handle file attachments if present
+      if (options?.experimental_attachments && options.experimental_attachments.length > 0) {
+        try {
+          const files = Array.from(options.experimental_attachments);
+
+          // Process each file
+          for (const file of files) {
+            // Check if it's an image
+            if (file.type.startsWith('image/')) {
+              try {
+                const dataUrl = await processImageFile(file);
+                const mimeType = file.type || 'image/png';
+                console.log(
+                  `Adding image attachment: ${mimeType}, data URL prefix: ${dataUrl.substring(0, 30)}...`
+                );
+
+                // Add to both structures for compatibility
+                messageParts.push({
+                  type: 'file' as const,
+                  mimeType: mimeType,
+                  name: file.name || 'image.png',
+                  data: dataUrl,
+                  size: file.size,
+                });
+
+                imageAttachments.push({
+                  type: 'image',
+                  mimeType: mimeType,
+                  data: dataUrl,
+                });
+                console.log(`Successfully added image attachment (${dataUrl.length} bytes)`);
+              } catch (error) {
+                console.error('Failed to process image file:', error);
+                setError(
+                  new Error(
+                    `Failed to process image: ${error instanceof Error ? error.message : String(error)}`
+                  )
+                );
+              }
+            } else {
+              console.log(`Unsupported file type: ${file.type}`);
             }
-          } else {
-            console.log(`Unsupported file type: ${file.type}`);
           }
+        } catch (e) {
+          console.error('Error processing file attachments:', e);
         }
-      } catch (e) {
-        console.error("Error processing file attachments:", e);
       }
-    }
 
-    // Create appropriate message structures
-    const userMessageId = 'user-' + Date.now();
-    
-    let newUserMessage: Message;
-    if (imageAttachments.length > 0) {
-      // If there are image attachments, create a message with parts
-      newUserMessage = {
-        id: userMessageId,
-        role: 'user',
-        content: input.trim() || "Here's an image:",
-        parts: [
-          { type: 'text', text: input.trim() || "Here's an image:" },
-          ...imageAttachments.map(img => ({
-            type: 'file' as const,
-            mimeType: 'image/png',
-            name: 'image.png',
-            data: img.data,
-            size: img.data.length
-          }))
-        ]
-      };
-    } else {
-      // Text-only message
-      newUserMessage = { 
-        id: userMessageId, 
-        role: 'user', 
-        content: input.trim() 
-      };
-    }
-    
-    const assistantPlaceholder: Message = { id: 'assistant-placeholder-' + Date.now(), role: 'assistant', content: '' };
-    setMessages(prev => [...prev, newUserMessage, assistantPlaceholder]);
-    setInput('');
-    setIsLocalLoading(true);
-    setError(null);
-    toolEventsRef.current = []; // Clear previous tool events
-    toolStartTimesRef.current.clear();
-    setToolEvents([]);
-    
-    const messagesForApi = sessions[activeSessionId]?.messages
-      ?.filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
-      .concat(newUserMessage) || [newUserMessage];
-    
-    // Get provider and model from storage before sending the message
-    loadProviderConfig().then((config) => {
-      console.log(`🐛 [Debug] Chat sending message with provider: ${config.provider}, model: ${config.model}`);
+      // Create appropriate message structures
+      const userMessageId = 'user-' + Date.now();
 
-      const messagePayload: ExtensionMessage = {
-        type: 'CHAT_MESSAGE',
-        message: input.trim(),
-        messages: messagesForApi,
-        attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
-        provider: config.provider,
-        model: config.model,
-        ...(() => {
-          const cfg = resolveModeAndProfile();
-          return {
-            mode: cfg.baseMode,
-            profileId: cfg.profileId,
-            profilePrompt: cfg.profilePrompt,
-            profileTools: cfg.profileTools,
-          };
-        })()
-      };
-
-      console.log(`🔧 [Chat] Full message payload being sent:`, {
-        type: messagePayload.type,
-        provider: messagePayload.provider,
-        model: messagePayload.model,
-        mode: messagePayload.mode,
-        messageLength: messagePayload.message?.length || 0,
-        messagesCount: messagePayload.messages?.length || 0,
-        hasAttachments: !!messagePayload.attachments
-      });
-
+      let newUserMessage: Message;
       if (imageAttachments.length > 0) {
-        console.log(`Sending message with ${imageAttachments.length} image attachments`);
-        console.log(`Image attachments: ${imageAttachments.map(img =>
-          `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`).join(', ')}`);
+        // If there are image attachments, create a message with parts
+        newUserMessage = {
+          id: userMessageId,
+          role: 'user',
+          content: input.trim() || "Here's an image:",
+          parts: [
+            { type: 'text', text: input.trim() || "Here's an image:" },
+            ...imageAttachments.map((img) => ({
+              type: 'file' as const,
+              mimeType: 'image/png',
+              name: 'image.png',
+              data: img.data,
+              size: img.data.length,
+            })),
+          ],
+        };
+      } else {
+        // Text-only message
+        newUserMessage = {
+          id: userMessageId,
+          role: 'user',
+          content: input.trim(),
+        };
       }
 
-      port.postMessage(messagePayload);
-    });
-  }, [input, isLocalLoading, port, activeSessionId, sessions, resolveModeAndProfile]);
+      const assistantPlaceholder: Message = {
+        id: 'assistant-placeholder-' + Date.now(),
+        role: 'assistant',
+        content: '',
+      };
+      setMessages((prev) => [...prev, newUserMessage, assistantPlaceholder]);
+      setInput('');
+      setIsLocalLoading(true);
+      setError(null);
+      toolEventsRef.current = []; // Clear previous tool events
+      toolStartTimesRef.current.clear();
+      setToolEvents([]);
+
+      const messagesForApi = sessions[activeSessionId]?.messages
+        ?.filter((m) => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'))
+        .concat(newUserMessage) || [newUserMessage];
+
+      // Get provider and model from storage before sending the message
+      loadProviderConfig().then((config) => {
+        console.log(
+          `🐛 [Debug] Chat sending message with provider: ${config.provider}, model: ${config.model}`
+        );
+
+        const messagePayload: ExtensionMessage = {
+          type: 'CHAT_MESSAGE',
+          message: input.trim(),
+          messages: messagesForApi,
+          attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
+          provider: config.provider,
+          model: config.model,
+          ...(() => {
+            const cfg = resolveModeAndProfile();
+            return {
+              mode: cfg.baseMode,
+              profileId: cfg.profileId,
+              profilePrompt: cfg.profilePrompt,
+              profileTools: cfg.profileTools,
+            };
+          })(),
+        };
+
+        console.log(`🔧 [Chat] Full message payload being sent:`, {
+          type: messagePayload.type,
+          provider: messagePayload.provider,
+          model: messagePayload.model,
+          mode: messagePayload.mode,
+          messageLength: messagePayload.message?.length || 0,
+          messagesCount: messagePayload.messages?.length || 0,
+          hasAttachments: !!messagePayload.attachments,
+        });
+
+        if (imageAttachments.length > 0) {
+          console.log(`Sending message with ${imageAttachments.length} image attachments`);
+          console.log(
+            `Image attachments: ${imageAttachments
+              .map(
+                (img) =>
+                  `${img.mimeType} (${img.data.length} bytes, starts with ${img.data.substring(0, 30)}...)`
+              )
+              .join(', ')}`
+          );
+        }
+
+        port.postMessage(messagePayload);
+      });
+    },
+    [input, isLocalLoading, port, activeSessionId, sessions, resolveModeAndProfile]
+  );
 
   // Restore regenerate handler
   const handleRegenerate = useCallback(() => {
@@ -1102,22 +1267,33 @@ export function ChatUI() {
     let lastUserMessage: Message | null = null;
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'user') {
-        lastUserMessage = messages[i]; break;
+        lastUserMessage = messages[i];
+        break;
       }
     }
     if (lastUserMessage) {
       setIsLocalLoading(true);
       setError(null);
-      const historyUpToUser = messages.slice(0, messages.findIndex(m => m.id === lastUserMessage!.id) + 1);
-      const assistantPlaceholder: Message = { id: 'assistant-placeholder-' + Date.now(), role: 'assistant', content: '' };
+      const historyUpToUser = messages.slice(
+        0,
+        messages.findIndex((m) => m.id === lastUserMessage!.id) + 1
+      );
+      const assistantPlaceholder: Message = {
+        id: 'assistant-placeholder-' + Date.now(),
+        role: 'assistant',
+        content: '',
+      };
       setMessages([...historyUpToUser, assistantPlaceholder]);
-      const messagesForApi = historyUpToUser
-          .filter(m => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-'));
-      
+      const messagesForApi = historyUpToUser.filter(
+        (m) => !m.id.startsWith('welcome') && !m.id.startsWith('assistant-placeholder-')
+      );
+
       // Get provider and model from storage before sending the regenerate message
       loadProviderConfig().then((config) => {
         const cfg = resolveModeAndProfile();
-        console.log(`🐛 [Debug] Chat regenerating with provider: ${config.provider}, model: ${config.model}, mode: ${cfg.baseMode}`);
+        console.log(
+          `🐛 [Debug] Chat regenerating with provider: ${config.provider}, model: ${config.model}, mode: ${cfg.baseMode}`
+        );
 
         const messagePayload: ExtensionMessage = {
           type: 'CHAT_MESSAGE',
@@ -1133,7 +1309,7 @@ export function ChatUI() {
               profilePrompt: cfg.profilePrompt,
               profileTools: cfg.profileTools,
             };
-          })()
+          })(),
         };
         port.postMessage(messagePayload);
       });
@@ -1142,35 +1318,39 @@ export function ChatUI() {
 
   // Restore stop handler
   const stop = useCallback(() => {
-      if (!port) return;
-      port.postMessage({ type: 'CANCEL_STREAM' });
-      setIsLocalLoading(false);
+    if (!port) return;
+    port.postMessage({ type: 'CANCEL_STREAM' });
+    setIsLocalLoading(false);
 
-      // Keep the partial message that was generated, but finalize it
-      setMessages(prev => {
-        const placeholderIndex = prev.findIndex(m => m.id.startsWith('assistant-placeholder-'));
-        if (placeholderIndex !== -1) {
-          const placeholder = prev[placeholderIndex];
-          // Only keep the message if it has content
-          if (placeholder.content && placeholder.content.trim()) {
-            // Convert placeholder to final message (keep the content as-is)
-            const finalMessage = {
-              ...placeholder,
-              id: `cancelled-${Date.now()}`
-            };
-            return [...prev.slice(0, placeholderIndex), finalMessage, ...prev.slice(placeholderIndex + 1)];
-          } else {
-            // If no content was generated, remove the placeholder
-            return prev.filter((m) => !m.id.startsWith('assistant-placeholder-'));
-          }
+    // Keep the partial message that was generated, but finalize it
+    setMessages((prev) => {
+      const placeholderIndex = prev.findIndex((m) => m.id.startsWith('assistant-placeholder-'));
+      if (placeholderIndex !== -1) {
+        const placeholder = prev[placeholderIndex];
+        // Only keep the message if it has content
+        if (placeholder.content && placeholder.content.trim()) {
+          // Convert placeholder to final message (keep the content as-is)
+          const finalMessage = {
+            ...placeholder,
+            id: `cancelled-${Date.now()}`,
+          };
+          return [
+            ...prev.slice(0, placeholderIndex),
+            finalMessage,
+            ...prev.slice(placeholderIndex + 1),
+          ];
+        } else {
+          // If no content was generated, remove the placeholder
+          return prev.filter((m) => !m.id.startsWith('assistant-placeholder-'));
         }
-        return prev;
-      });
+      }
+      return prev;
+    });
   }, [port]);
 
   // Restore append (if needed, though likely unused with port logic)
   const append = useCallback((message: Message) => {
-     setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
   }, []);
 
   // Restore retry handler
@@ -1178,9 +1358,9 @@ export function ChatUI() {
     setError(null);
     setFallbackMode(false);
     if (!port) {
-        setConnectionAttempts(prev => prev + 1);
+      setConnectionAttempts((prev) => prev + 1);
     } else {
-        port.postMessage({ type: 'PING' });
+      port.postMessage({ type: 'PING' });
     }
   }, [port]);
 
@@ -1199,43 +1379,49 @@ export function ChatUI() {
     port.postMessage({ type: 'SHADOW_SYNC_TO_EDITOR' });
   }, [port]);
 
-  const handleSelectSession = useCallback((sessionId: string) => {
-    if (sessionId === activeSessionId) {
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      if (sessionId === activeSessionId) {
+        setIsMobileSidebarOpen(false);
+        return;
+      }
+      const session = sessions[sessionId];
+      if (!session) return;
+      setActiveSessionId(sessionId);
+      setMessages(session.messages);
+      setInput('');
+      setError(null);
+      setIsLocalLoading(false);
+      // Reset token usage when switching sessions
+      setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
+      chrome.storage.local.set({ [ACTIVE_SESSION_ID_KEY]: sessionId });
       setIsMobileSidebarOpen(false);
-      return;
-    }
-    const session = sessions[sessionId];
-    if (!session) return;
-    setActiveSessionId(sessionId);
-    setMessages(session.messages);
-    setInput('');
-    setError(null);
-    setIsLocalLoading(false);
-    // Reset token usage when switching sessions
-    setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
-    chrome.storage.local.set({ [ACTIVE_SESSION_ID_KEY]: sessionId });
-    setIsMobileSidebarOpen(false);
-  }, [sessions, activeSessionId]);
+    },
+    [sessions, activeSessionId]
+  );
 
-  const handleRenameSession = useCallback((sessionId: string, newTitle: string) => {
-    const session = sessions[sessionId];
-    if (!session) return;
-    const normalized = newTitle.trim();
-    if (!normalized || normalized === session.meta.title) return;
-    setSessions(prev => {
-      const current = prev[sessionId];
-      if (!current) return prev;
-      const updatedSessions: ChatSessions = {
-        ...prev,
-        [sessionId]: {
-          ...current,
-          meta: { ...current.meta, title: normalized, updatedAt: Date.now() },
-        },
-      };
-      persistSessionsState(updatedSessions);
-      return updatedSessions;
-    });
-  }, [sessions, persistSessionsState]);
+  const handleRenameSession = useCallback(
+    (sessionId: string, newTitle: string) => {
+      const session = sessions[sessionId];
+      if (!session) return;
+      const normalized = newTitle.trim();
+      if (!normalized || normalized === session.meta.title) return;
+      setSessions((prev) => {
+        const current = prev[sessionId];
+        if (!current) return prev;
+        const updatedSessions: ChatSessions = {
+          ...prev,
+          [sessionId]: {
+            ...current,
+            meta: { ...current.meta, title: normalized, updatedAt: Date.now() },
+          },
+        };
+        persistSessionsState(updatedSessions);
+        return updatedSessions;
+      });
+    },
+    [sessions, persistSessionsState]
+  );
 
   const startEditingTitle = useCallback(() => {
     if (!activeSessionId) return;
@@ -1259,76 +1445,85 @@ export function ChatUI() {
     setEditingTitleText('');
   }, []);
 
-  const handleDeleteSession = useCallback((sessionId: string) => {
-    const session = sessions[sessionId];
-    if (!session) return;
-    if (!window.confirm(`Delete "${session.meta.title}"? This cannot be undone.`)) return;
-    setSessions(prev => {
-      if (!prev[sessionId]) return prev;
-      const nextSessions: ChatSessions = { ...prev };
-      delete nextSessions[sessionId];
-      let nextActiveId = activeSessionId;
-      if (!nextActiveId || nextActiveId === sessionId) {
-        const remainingIds = Object.keys(nextSessions);
-        if (remainingIds.length === 0) {
-          const fallbackId = `session_${Date.now()}`;
-          nextSessions[fallbackId] = createSessionRecord(fallbackId);
-          nextActiveId = fallbackId;
-        } else {
-          nextActiveId = remainingIds[0];
+  const handleDeleteSession = useCallback(
+    (sessionId: string) => {
+      const session = sessions[sessionId];
+      if (!session) return;
+      if (!window.confirm(`Delete "${session.meta.title}"? This cannot be undone.`)) return;
+      setSessions((prev) => {
+        if (!prev[sessionId]) return prev;
+        const nextSessions: ChatSessions = { ...prev };
+        delete nextSessions[sessionId];
+        let nextActiveId = activeSessionId;
+        if (!nextActiveId || nextActiveId === sessionId) {
+          const remainingIds = Object.keys(nextSessions);
+          if (remainingIds.length === 0) {
+            const fallbackId = `session_${Date.now()}`;
+            nextSessions[fallbackId] = createSessionRecord(fallbackId);
+            nextActiveId = fallbackId;
+          } else {
+            nextActiveId = remainingIds[0];
+          }
+          if (nextActiveId && nextSessions[nextActiveId]) {
+            setActiveSessionId(nextActiveId);
+            setMessages(nextSessions[nextActiveId].messages);
+          }
         }
-        if (nextActiveId && nextSessions[nextActiveId]) {
-          setActiveSessionId(nextActiveId);
-          setMessages(nextSessions[nextActiveId].messages);
-        }
-      }
-      persistSessionsState(nextSessions, nextActiveId || null);
-      return nextSessions;
-    });
-    setIsMobileSidebarOpen(false);
-  }, [sessions, activeSessionId, persistSessionsState]);
+        persistSessionsState(nextSessions, nextActiveId || null);
+        return nextSessions;
+      });
+      setIsMobileSidebarOpen(false);
+    },
+    [sessions, activeSessionId, persistSessionsState]
+  );
 
-  const handleDuplicateSession = useCallback((sessionId: string) => {
-    const session = sessions[sessionId];
-    if (!session) return;
-    const newSessionId = `session_${Date.now()}`;
-    const clonedMessages = session.messages.map((message, index) => ({
-      ...message,
-      id: `${message.id}-${Date.now()}-${index}`,
-    }));
-    const record = createSessionRecord(newSessionId, clonedMessages, {
-      title: `${session.meta.title} (Copy)`,
-    });
-    setSessions(prev => {
-      const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
-      persistSessionsState(nextSessions, newSessionId);
-      return nextSessions;
-    });
-    setActiveSessionId(newSessionId);
-    setMessages(record.messages);
-    setInput('');
-    setError(null);
-    setIsLocalLoading(false);
-    // Reset token usage for new session
-    setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
-    setIsMobileSidebarOpen(false);
-  }, [sessions, persistSessionsState]);
+  const handleDuplicateSession = useCallback(
+    (sessionId: string) => {
+      const session = sessions[sessionId];
+      if (!session) return;
+      const newSessionId = `session_${Date.now()}`;
+      const clonedMessages = session.messages.map((message, index) => ({
+        ...message,
+        id: `${message.id}-${Date.now()}-${index}`,
+      }));
+      const record = createSessionRecord(newSessionId, clonedMessages, {
+        title: `${session.meta.title} (Copy)`,
+      });
+      setSessions((prev) => {
+        const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
+        persistSessionsState(nextSessions, newSessionId);
+        return nextSessions;
+      });
+      setActiveSessionId(newSessionId);
+      setMessages(record.messages);
+      setInput('');
+      setError(null);
+      setIsLocalLoading(false);
+      // Reset token usage for new session
+      setSessionTokenUsage({ totalPromptTokens: 0, totalCompletionTokens: 0, totalTokens: 0 });
+      setIsMobileSidebarOpen(false);
+    },
+    [sessions, persistSessionsState]
+  );
 
-  const handleTogglePin = useCallback((sessionId: string) => {
-    setSessions(prev => {
-      const current = prev[sessionId];
-      if (!current) return prev;
-      const updatedSessions: ChatSessions = {
-        ...prev,
-        [sessionId]: {
-          ...current,
-          meta: { ...current.meta, pinned: !current.meta.pinned, updatedAt: Date.now() },
-        },
-      };
-      persistSessionsState(updatedSessions);
-      return updatedSessions;
-    });
-  }, [persistSessionsState]);
+  const handleTogglePin = useCallback(
+    (sessionId: string) => {
+      setSessions((prev) => {
+        const current = prev[sessionId];
+        if (!current) return prev;
+        const updatedSessions: ChatSessions = {
+          ...prev,
+          [sessionId]: {
+            ...current,
+            meta: { ...current.meta, pinned: !current.meta.pinned, updatedAt: Date.now() },
+          },
+        };
+        persistSessionsState(updatedSessions);
+        return updatedSessions;
+      });
+    },
+    [persistSessionsState]
+  );
 
   const handleClearActiveSession = useCallback(() => {
     if (!activeSessionId) return;
@@ -1343,7 +1538,7 @@ export function ChatUI() {
     const newSessionId = `session_${Date.now()}`;
     const welcomeMsg = createWelcomeMessage();
     const record = createSessionRecord(newSessionId, [welcomeMsg]);
-    setSessions(prev => {
+    setSessions((prev) => {
       const nextSessions: ChatSessions = { ...prev, [newSessionId]: record };
       persistSessionsState(nextSessions, newSessionId);
       return nextSessions;
@@ -1359,38 +1554,44 @@ export function ChatUI() {
   }, [persistSessionsState]);
 
   // Export a single session
-  const handleExportSession = useCallback((sessionId: string, format: 'json' | 'markdown') => {
-    const session = sessions[sessionId];
-    if (!session) return;
+  const handleExportSession = useCallback(
+    (sessionId: string, format: 'json' | 'markdown') => {
+      const session = sessions[sessionId];
+      if (!session) return;
 
-    const title = session.meta.title;
-    if (format === 'json') {
-      const content = exportSessionToJSON(session);
-      const filename = generateFilename(title, 'json');
-      downloadFile(content, filename, 'application/json');
-    } else {
-      const content = exportSessionToMarkdown(session);
-      const filename = generateFilename(title, 'md');
-      downloadFile(content, filename, 'text/markdown');
-    }
-  }, [sessions]);
+      const title = session.meta.title;
+      if (format === 'json') {
+        const content = exportSessionToJSON(session);
+        const filename = generateFilename(title, 'json');
+        downloadFile(content, filename, 'application/json');
+      } else {
+        const content = exportSessionToMarkdown(session);
+        const filename = generateFilename(title, 'md');
+        downloadFile(content, filename, 'text/markdown');
+      }
+    },
+    [sessions]
+  );
 
   // Export all sessions
-  const handleExportAllSessions = useCallback((format: 'json' | 'markdown') => {
-    if (format === 'json') {
-      const content = exportAllSessionsToJSON(sessions);
-      const filename = `earth-agent-all-sessions-${new Date().toISOString().split('T')[0]}.json`;
-      downloadFile(content, filename, 'application/json');
-    } else {
-      // For markdown, export each session to a separate file would be complex
-      // Instead, combine all into one markdown file
-      const allContent = Object.values(sessions)
-        .map(session => exportSessionToMarkdown(session))
-        .join('\n\n---\n\n');
-      const filename = `earth-agent-all-sessions-${new Date().toISOString().split('T')[0]}.md`;
-      downloadFile(allContent, filename, 'text/markdown');
-    }
-  }, [sessions]);
+  const handleExportAllSessions = useCallback(
+    (format: 'json' | 'markdown') => {
+      if (format === 'json') {
+        const content = exportAllSessionsToJSON(sessions);
+        const filename = `earth-agent-all-sessions-${new Date().toISOString().split('T')[0]}.json`;
+        downloadFile(content, filename, 'application/json');
+      } else {
+        // For markdown, export each session to a separate file would be complex
+        // Instead, combine all into one markdown file
+        const allContent = Object.values(sessions)
+          .map((session) => exportSessionToMarkdown(session))
+          .join('\n\n---\n\n');
+        const filename = `earth-agent-all-sessions-${new Date().toISOString().split('T')[0]}.md`;
+        downloadFile(allContent, filename, 'text/markdown');
+      }
+    },
+    [sessions]
+  );
 
   // Import sessions from file
   const handleImportSessions = useCallback(async () => {
@@ -1403,7 +1604,7 @@ export function ChatUI() {
         return;
       }
 
-      setSessions(prev => {
+      setSessions((prev) => {
         const nextSessions: ChatSessions = { ...prev };
         for (const session of importedSessions) {
           nextSessions[session.id] = session;
@@ -1425,49 +1626,58 @@ export function ChatUI() {
     e.preventDefault();
     if (!input.trim() || isLocalLoading) return;
     const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLocalLoading(true);
     setTimeout(() => {
-      const response = "Fallback mode active.";
-      const assistantMessage: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: response };
-      setMessages(prev => [...prev, assistantMessage]);
+      const response = 'Fallback mode active.';
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
       setIsLocalLoading(false);
     }, 500);
   };
 
   // --- Render Logic ---
   if (showSettings) {
-    return <Settings onClose={() => {
-      setShowSettings(false);
-      loadProviderConfig().then((config) => {
-        const hasKey = hasApiKeyConfigured(config);
+    return (
+      <Settings
+        onClose={() => {
+          setShowSettings(false);
+          loadProviderConfig().then((config) => {
+            const hasKey = hasApiKeyConfigured(config);
 
-        setApiConfigured(hasKey);
-        setApiKey(config.apiKey);
-        setApiProvider(config.provider as any);
-        setSelectedModel(config.model);
+            setApiConfigured(hasKey);
+            setApiKey(config.apiKey);
+            setApiProvider(config.provider as any);
+            setSelectedModel(config.model);
 
-        // Save the default model to storage if none was set
-        chrome.storage.sync.get([MODEL_STORAGE_KEY], (result) => {
-          if (!result[MODEL_STORAGE_KEY]) {
-            chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: config.model });
-          }
-        });
+            // Save the default model to storage if none was set
+            chrome.storage.sync.get([MODEL_STORAGE_KEY], (result) => {
+              if (!result[MODEL_STORAGE_KEY]) {
+                chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: config.model });
+              }
+            });
 
-        if (hasKey && fallbackMode) {
-          handleRetryAPI();
-        } else if (!hasKey) {
-          setError(new Error("API Key not configured."));
-          setFallbackMode(true);
-        }
-      });
-    }} />;
+            if (hasKey && fallbackMode) {
+              handleRetryAPI();
+            } else if (!hasKey) {
+              setError(new Error('API Key not configured.'));
+              setFallbackMode(true);
+            }
+          });
+        }}
+      />
+    );
   }
 
   const displayMessages = messages;
   const currentLoading = isLocalLoading;
-  const canRegenerate = messages.some(m => m.role === 'user') && !currentLoading && !fallbackMode && !!port;
+  const canRegenerate =
+    messages.some((m) => m.role === 'user') && !currentLoading && !fallbackMode && !!port;
 
   return (
     <>
@@ -1548,34 +1758,44 @@ export function ChatUI() {
             >
               Clear
             </Button>
-          <TabStatusIndicator />
-          <Button variant="outline" size="icon" onClick={() => setShowAgentTest(true)} aria-label="Agent Testing" className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0" disabled={!apiConfigured} title="Agent Testing">
-            <FlaskConical className="h-4 w-4 text-gray-600" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => window.open('https://github.com/wybert/earth-agent-chrome-ext', '_blank')}
-            aria-label="Help"
-            className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
-            title="Help"
-            data-onboarding="help-button"
-          >
-            <HelpCircle className="h-4 w-4 text-gray-600" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowSettings(true)}
-            aria-label="Settings"
-            className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
-            title="Settings"
-            data-onboarding="settings-button"
-          >
-            <SettingsIcon className="h-4 w-4 text-gray-600" />
-          </Button>
+            <TabStatusIndicator />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowAgentTest(true)}
+              aria-label="Agent Testing"
+              className="hidden sm:flex aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              disabled={!apiConfigured}
+              title="Agent Testing"
+            >
+              <FlaskConical className="h-4 w-4 text-gray-600" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() =>
+                window.open('https://github.com/wybert/earth-agent-chrome-ext', '_blank')
+              }
+              aria-label="Help"
+              className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              title="Help"
+              data-onboarding="help-button"
+            >
+              <HelpCircle className="h-4 w-4 text-gray-600" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowSettings(true)}
+              aria-label="Settings"
+              className="aspect-square bg-gray-200 hover:bg-gray-300 w-8 h-8 p-0 border-0"
+              title="Settings"
+              data-onboarding="settings-button"
+            >
+              <SettingsIcon className="h-4 w-4 text-gray-600" />
+            </Button>
+          </div>
         </div>
-      </div>
 
         {/* Token Usage Display - Right below header */}
         <TokenUsageDisplay
@@ -1610,7 +1830,7 @@ export function ChatUI() {
               messages={displayMessages as any}
               input={input}
               handleInputChange={handleInputChange}
-              handleSubmit={fallbackMode ? handleLocalSubmit : handleChatSubmit as any}
+              handleSubmit={fallbackMode ? handleLocalSubmit : (handleChatSubmit as any)}
               isGenerating={currentLoading}
               stop={stop}
               setMessages={setMessages as any}
@@ -1625,7 +1845,15 @@ export function ChatUI() {
               onProviderChange={setApiProvider}
               onModelChange={setSelectedModel}
               className="flex-1 min-h-0"
-              diffSummary={editDiff?.summary ? { added: editDiff.summary.added, removed: editDiff.summary.removed, hunks: editDiff.summary.hunks } : undefined}
+              diffSummary={
+                editDiff?.summary
+                  ? {
+                      added: editDiff.summary.added,
+                      removed: editDiff.summary.removed,
+                      hunks: editDiff.summary.hunks,
+                    }
+                  : undefined
+              }
               diffHunks={editDiff?.hunks}
               onDiffUndo={handleShadowUndo}
               onDiffClose={() => setEditDiff(null)}
@@ -1654,7 +1882,10 @@ export function ChatUI() {
 
       {isMobileSidebarOpen && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setIsMobileSidebarOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
           <div className="relative h-full w-72 max-w-full border-r bg-background">
             <SessionSidebar
               sessions={sessionList}
@@ -1684,9 +1915,7 @@ export function ChatUI() {
       )}
 
       {/* Onboarding */}
-      {showWelcome && (
-        <WelcomeModal onStart={startTour} onSkip={skipTour} />
-      )}
+      {showWelcome && <WelcomeModal onStart={startTour} onSkip={skipTour} />}
       {showTour && (
         <OnboardingTour
           steps={steps}
@@ -1700,4 +1929,4 @@ export function ChatUI() {
   );
 }
 // Export helpers for testing
-export { truncateText, getSuggestedSessionTitle, migrateSessions, createSessionRecord }
+export { truncateText, getSuggestedSessionTitle, migrateSessions, createSessionRecord };

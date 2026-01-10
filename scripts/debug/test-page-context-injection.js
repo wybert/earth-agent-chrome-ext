@@ -210,26 +210,30 @@
     console.log(`Setting up event-based communication for (${lat}, ${lng})...`);
 
     // 监听来自注入代码的响应
-    window.addEventListener('gee-click-response', function(event) {
-      console.log('📨 Received response from injected code:', event.detail);
+    window.addEventListener(
+      'gee-click-response',
+      function (event) {
+        console.log('📨 Received response from injected code:', event.detail);
 
-      // 检查 Inspector
-      setTimeout(() => {
-        const inspectPanel = document.querySelector('.inspect-panel');
-        if (inspectPanel) {
-          const panelText = inspectPanel.textContent || '';
-          if (panelText.includes('Point')) {
-            console.log('✅ Inspector updated!');
-            const pointHeader = inspectPanel.querySelector('.explorer .header');
-            if (pointHeader) {
-              console.log('   ', pointHeader.textContent);
+        // 检查 Inspector
+        setTimeout(() => {
+          const inspectPanel = document.querySelector('.inspect-panel');
+          if (inspectPanel) {
+            const panelText = inspectPanel.textContent || '';
+            if (panelText.includes('Point')) {
+              console.log('✅ Inspector updated!');
+              const pointHeader = inspectPanel.querySelector('.explorer .header');
+              if (pointHeader) {
+                console.log('   ', pointHeader.textContent);
+              }
+            } else {
+              console.log('❌ Inspector still empty');
             }
-          } else {
-            console.log('❌ Inspector still empty');
           }
-        }
-      }, 500);
-    }, { once: true });
+        }, 500);
+      },
+      { once: true }
+    );
 
     // 注入代码
     const script = document.createElement('script');
@@ -282,6 +286,6 @@
 
   return {
     injectAndClick,
-    injectWithEventCommunication
+    injectWithEventCommunication,
   };
 })();

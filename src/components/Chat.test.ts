@@ -1,4 +1,9 @@
-import { getSuggestedSessionTitle, migrateSessions, truncateText, createSessionRecord } from './chat-helpers';
+import {
+  getSuggestedSessionTitle,
+  migrateSessions,
+  truncateText,
+  createSessionRecord,
+} from './chat-helpers';
 import type { Message } from '../types/extension';
 
 describe('Chat helpers', () => {

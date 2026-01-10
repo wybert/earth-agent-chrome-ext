@@ -22,10 +22,10 @@ const inputSvg = 'src/assets/icon-optimized.svg';
 
 console.log('Generating PNG icons from optimized SVG...');
 
-sizes.forEach(size => {
+sizes.forEach((size) => {
   const outputFile = `src/assets/icon${size}.png`;
   const command = `convert -background transparent -density 300 "${inputSvg}" -resize ${size}x${size} "${outputFile}"`;
-  
+
   try {
     execSync(command, { stdio: 'inherit' });
     console.log(`✓ Generated ${outputFile}`);

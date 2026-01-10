@@ -3,8 +3,8 @@ name: Build and Release Extension
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
-  workflow_dispatch:  # Allows manual triggering
+      - 'v*' # Triggers on version tags like v1.0.0, v1.2.3, etc.
+  workflow_dispatch: # Allows manual triggering
 
 # Add permissions for the workflow
 permissions:
@@ -16,227 +16,227 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci --legacy-peer-deps
-      
-    - name: Run type check
-      run: npm run type-check
-      
-    - name: Build extension for production
-      run: |
-        # Clean any existing dist folder
-        rm -rf dist
-        
-        # Build the extension
-        npm run build
-        
-        # Verify build was successful
-        if [ ! -f "dist/manifest.json" ]; then
-          echo "Build failed - manifest.json not found in dist folder"
-          exit 1
-        fi
-        
-        echo "Build completed successfully. Dist folder contents:"
-        ls -la dist/
-        
-    - name: Verify version consistency
-      run: |
-        ROOT_VERSION=$(node -p "require('./package.json').version")
-        MANIFEST_VERSION=$(node -p "require('./src/manifest.json').version")
-        MCP_VERSION=$(node -p "require('./mcp-server/package.json').version")
-        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        echo "Tag version: $TAG_VERSION"
-        echo "package.json: $ROOT_VERSION"
-        echo "src/manifest.json: $MANIFEST_VERSION"
-        echo "mcp-server/package.json: $MCP_VERSION"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
 
-        if [ "$ROOT_VERSION" != "$TAG_VERSION" ]; then
-          echo ""
-          echo "ERROR: Tag version ($TAG_VERSION) does not match package.json ($ROOT_VERSION)"
-          echo "Please run 'npm version $TAG_VERSION' before tagging"
-          exit 1
-        fi
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
-        if [ "$ROOT_VERSION" != "$MANIFEST_VERSION" ] || [ "$ROOT_VERSION" != "$MCP_VERSION" ]; then
-          echo ""
-          echo "ERROR: Version mismatch detected!"
-          echo "Run 'node scripts/version-sync.js' to synchronize versions"
-          exit 1
-        fi
+      - name: Run type check
+        run: npm run type-check
 
-        echo ""
-        echo "All versions are synchronized and match tag!"
+      - name: Build extension for production
+        run: |
+          # Clean any existing dist folder
+          rm -rf dist
 
-    - name: Clean manifest for Chrome Web Store
-      run: |
-        echo "Removing localhost permissions from manifest..."
-        node scripts/prepare-manifest-for-store.js
-        echo ""
-        echo "Verifying cleaned manifest:"
-        grep -A 10 "host_permissions" dist/manifest.json || echo "No host_permissions found"
+          # Build the extension
+          npm run build
 
-    - name: Verify extension files
-      run: |
-        echo "Verifying required extension files are present:"
-        required_files=("manifest.json" "background.js" "content.js" "sidepanel.html" "sidepanel.js")
-        
-        for file in "${required_files[@]}"; do
-          if [ -f "dist/$file" ]; then
-            echo "✓ $file exists ($(du -h dist/$file | cut -f1))"
-          else
-            echo "✗ $file missing!"
+          # Verify build was successful
+          if [ ! -f "dist/manifest.json" ]; then
+            echo "Build failed - manifest.json not found in dist folder"
             exit 1
           fi
-        done
-        
-    - name: Create extension package
-      run: |
-        # Create the extension zip from dist folder
-        cd dist
-        zip -r ../earth-agent-extension.zip . -x "*.DS_Store" "*.map"
-        cd ..
-        
-        # Verify the zip was created and show its contents
-        echo "Extension package created. Contents:"
-        unzip -l earth-agent-extension.zip | head -20
-        
-        # Show package size
-        echo "Package size: $(du -h earth-agent-extension.zip | cut -f1)"
-        
-    - name: Create source package
-      run: |
-        # Create source zip excluding build artifacts and dependencies
-        zip -r earth-agent-source.zip . \
-          -x "node_modules/*" \
-          -x "dist/*" \
-          -x ".git/*" \
-          -x "*.log" \
-          -x ".DS_Store" \
-          -x "coverage/*" \
-          -x "*.tgz" \
-          -x "*.zip"
-          
-    - name: Get tag name and prepare release notes
-      id: tag_name
-      run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
 
-        # Check if release notes file exists for this version (check docs/ first, then root)
-        RELEASE_NOTES_FILE="RELEASE_NOTES_${TAG_NAME}.md"
-        RELEASE_NOTES_DOCS="docs/RELEASE_NOTES_${TAG_NAME}.md"
-        
-        if [ -f "$RELEASE_NOTES_DOCS" ]; then
-          echo "Found release notes file in docs: $RELEASE_NOTES_DOCS"
-          echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
-          echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_DOCS" >> $GITHUB_OUTPUT
-        elif [ -f "$RELEASE_NOTES_FILE" ]; then
-          echo "Found release notes file in root: $RELEASE_NOTES_FILE"
-          echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
-          echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
-        else
-          echo "No release notes file found for $TAG_NAME"
-          echo "USE_RELEASE_NOTES=false" >> $GITHUB_OUTPUT
-        fi
+          echo "Build completed successfully. Dist folder contents:"
+          ls -la dist/
 
-    - name: Upload to Chrome Web Store
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-      continue-on-error: true  # Don't fail the workflow if Chrome Web Store upload fails
-      id: chrome_upload
-      uses: mnao305/chrome-extension-upload@v5.0.0
-      with:
-        file-path: earth-agent-extension.zip
-        extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
-        client-id: ${{ secrets.CHROME_CLIENT_ID }}
-        client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
-        refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        publish: false  # Upload only - publish manually to avoid API errors
+      - name: Verify version consistency
+        run: |
+          ROOT_VERSION=$(node -p "require('./package.json').version")
+          MANIFEST_VERSION=$(node -p "require('./src/manifest.json').version")
+          MCP_VERSION=$(node -p "require('./mcp-server/package.json').version")
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
 
-    - name: Chrome Web Store Upload Status
-      if: steps.chrome_upload.outcome == 'success'
-      run: |
-        echo "✅ Extension uploaded successfully to Chrome Web Store!"
-        echo "📝 Next step: Visit Chrome Web Store Developer Dashboard to publish manually"
-        echo "🔗 Dashboard: https://chrome.google.com/webstore/devconsole"
+          echo "Tag version: $TAG_VERSION"
+          echo "package.json: $ROOT_VERSION"
+          echo "src/manifest.json: $MANIFEST_VERSION"
+          echo "mcp-server/package.json: $MCP_VERSION"
 
-    - name: Chrome Web Store Upload Failed
-      if: steps.chrome_upload.outcome == 'failure'
-      run: |
-        echo "❌ Chrome Web Store upload failed"
-        echo "📦 You can still download the extension package from GitHub Release"
+          if [ "$ROOT_VERSION" != "$TAG_VERSION" ]; then
+            echo ""
+            echo "ERROR: Tag version ($TAG_VERSION) does not match package.json ($ROOT_VERSION)"
+            echo "Please run 'npm version $TAG_VERSION' before tagging"
+            exit 1
+          fi
 
-    - name: Create Release with custom notes
-      if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'true'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
-        name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
-        body_path: ${{ steps.tag_name.outputs.RELEASE_NOTES_FILE }}
-        files: |
-          earth-agent-extension.zip
-          earth-agent-source.zip
-        draft: false
-        prerelease: false
+          if [ "$ROOT_VERSION" != "$MANIFEST_VERSION" ] || [ "$ROOT_VERSION" != "$MCP_VERSION" ]; then
+            echo ""
+            echo "ERROR: Version mismatch detected!"
+            echo "Run 'node scripts/version-sync.js' to synchronize versions"
+            exit 1
+          fi
 
-    - name: Create Release with default notes
-      if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'false'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
-        name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
-        body: |
-          ## Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+          echo ""
+          echo "All versions are synchronized and match tag!"
 
-          ### 🎉 Published to Chrome Web Store
-          This version has been automatically submitted to the Chrome Web Store and is pending review.
+      - name: Clean manifest for Chrome Web Store
+        run: |
+          echo "Removing localhost permissions from manifest..."
+          node scripts/prepare-manifest-for-store.js
+          echo ""
+          echo "Verifying cleaned manifest:"
+          grep -A 10 "host_permissions" dist/manifest.json || echo "No host_permissions found"
 
-          ### 📦 Installation Instructions
+      - name: Verify extension files
+        run: |
+          echo "Verifying required extension files are present:"
+          required_files=("manifest.json" "background.js" "content.js" "sidepanel.html" "sidepanel.js")
 
-          **For Users (Recommended):**
-          - Install from Chrome Web Store: [Chrome Web Store Link]
+          for file in "${required_files[@]}"; do
+            if [ -f "dist/$file" ]; then
+              echo "✓ $file exists ($(du -h dist/$file | cut -f1))"
+            else
+              echo "✗ $file missing!"
+              exit 1
+            fi
+          done
 
-          **Alternative - Manual Installation:**
-          1. Download `earth-agent-extension.zip` below
-          2. Extract the zip file to a folder on your computer
-          3. Open Chrome and navigate to `chrome://extensions/`
-          4. Enable "Developer mode" (toggle in top right)
-          5. Click "Load unpacked" and select the extracted folder
-          6. The extension will appear in your Chrome toolbar
+      - name: Create extension package
+        run: |
+          # Create the extension zip from dist folder
+          cd dist
+          zip -r ../earth-agent-extension.zip . -x "*.DS_Store" "*.map"
+          cd ..
 
-          **For Developers:**
-          - Download `earth-agent-source.zip` for the source code
+          # Verify the zip was created and show its contents
+          echo "Extension package created. Contents:"
+          unzip -l earth-agent-extension.zip | head -20
 
-          ### 🔧 Configuration
-          After installation:
-          1. Click the Earth Agent extension icon
-          2. Go to Settings
-          3. Add your OpenAI or Anthropic API key
-          4. Select your preferred AI provider and model
-          5. Start chatting with Earth Engine!
+          # Show package size
+          echo "Package size: $(du -h earth-agent-extension.zip | cut -f1)"
 
-          ### 📋 What's Included
-          - `earth-agent-extension.zip` - **Ready-to-install Chrome extension** (built files)
-          - `earth-agent-source.zip` - Source code package for developers
+      - name: Create source package
+        run: |
+          # Create source zip excluding build artifacts and dependencies
+          zip -r earth-agent-source.zip . \
+            -x "node_modules/*" \
+            -x "dist/*" \
+            -x ".git/*" \
+            -x "*.log" \
+            -x ".DS_Store" \
+            -x "coverage/*" \
+            -x "*.tgz" \
+            -x "*.zip"
 
-          ### 🔒 Privacy
-          This extension stores data locally and communicates directly with AI providers. See our [Privacy Policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY_POLICY.md) for details.
+      - name: Get tag name and prepare release notes
+        id: tag_name
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
 
-          ### ⚠️ Important
-          Make sure to download `earth-agent-extension.zip` for installation, not the source code package.
-        files: |
-          earth-agent-extension.zip
-          earth-agent-source.zip
-        draft: false
-        prerelease: false
+          # Check if release notes file exists for this version (check docs/ first, then root)
+          RELEASE_NOTES_FILE="RELEASE_NOTES_${TAG_NAME}.md"
+          RELEASE_NOTES_DOCS="docs/RELEASE_NOTES_${TAG_NAME}.md"
+
+          if [ -f "$RELEASE_NOTES_DOCS" ]; then
+            echo "Found release notes file in docs: $RELEASE_NOTES_DOCS"
+            echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
+            echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_DOCS" >> $GITHUB_OUTPUT
+          elif [ -f "$RELEASE_NOTES_FILE" ]; then
+            echo "Found release notes file in root: $RELEASE_NOTES_FILE"
+            echo "USE_RELEASE_NOTES=true" >> $GITHUB_OUTPUT
+            echo "RELEASE_NOTES_FILE=$RELEASE_NOTES_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "No release notes file found for $TAG_NAME"
+            echo "USE_RELEASE_NOTES=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload to Chrome Web Store
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        continue-on-error: true # Don't fail the workflow if Chrome Web Store upload fails
+        id: chrome_upload
+        uses: mnao305/chrome-extension-upload@v5.0.0
+        with:
+          file-path: earth-agent-extension.zip
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: false # Upload only - publish manually to avoid API errors
+
+      - name: Chrome Web Store Upload Status
+        if: steps.chrome_upload.outcome == 'success'
+        run: |
+          echo "✅ Extension uploaded successfully to Chrome Web Store!"
+          echo "📝 Next step: Visit Chrome Web Store Developer Dashboard to publish manually"
+          echo "🔗 Dashboard: https://chrome.google.com/webstore/devconsole"
+
+      - name: Chrome Web Store Upload Failed
+        if: steps.chrome_upload.outcome == 'failure'
+        run: |
+          echo "❌ Chrome Web Store upload failed"
+          echo "📦 You can still download the extension package from GitHub Release"
+
+      - name: Create Release with custom notes
+        if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
+          name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+          body_path: ${{ steps.tag_name.outputs.RELEASE_NOTES_FILE }}
+          files: |
+            earth-agent-extension.zip
+            earth-agent-source.zip
+          draft: false
+          prerelease: false
+
+      - name: Create Release with default notes
+        if: steps.tag_name.outputs.USE_RELEASE_NOTES == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag_name.outputs.TAG_NAME }}
+          name: Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+          body: |
+            ## Earth Agent Extension ${{ steps.tag_name.outputs.TAG_NAME }}
+
+            ### 🎉 Published to Chrome Web Store
+            This version has been automatically submitted to the Chrome Web Store and is pending review.
+
+            ### 📦 Installation Instructions
+
+            **For Users (Recommended):**
+            - Install from Chrome Web Store: [Chrome Web Store Link]
+
+            **Alternative - Manual Installation:**
+            1. Download `earth-agent-extension.zip` below
+            2. Extract the zip file to a folder on your computer
+            3. Open Chrome and navigate to `chrome://extensions/`
+            4. Enable "Developer mode" (toggle in top right)
+            5. Click "Load unpacked" and select the extracted folder
+            6. The extension will appear in your Chrome toolbar
+
+            **For Developers:**
+            - Download `earth-agent-source.zip` for the source code
+
+            ### 🔧 Configuration
+            After installation:
+            1. Click the Earth Agent extension icon
+            2. Go to Settings
+            3. Add your OpenAI or Anthropic API key
+            4. Select your preferred AI provider and model
+            5. Start chatting with Earth Engine!
+
+            ### 📋 What's Included
+            - `earth-agent-extension.zip` - **Ready-to-install Chrome extension** (built files)
+            - `earth-agent-source.zip` - Source code package for developers
+
+            ### 🔒 Privacy
+            This extension stores data locally and communicates directly with AI providers. See our [Privacy Policy](https://github.com/${{ github.repository }}/blob/main/PRIVACY_POLICY.md) for details.
+
+            ### ⚠️ Important
+            Make sure to download `earth-agent-extension.zip` for installation, not the source code package.
+          files: |
+            earth-agent-extension.zip
+            earth-agent-source.zip
+          draft: false
+          prerelease: false

@@ -9,7 +9,10 @@
  */
 
 (function analyzeActivatedInspector() {
-  console.log('%c=== Analyzing ACTIVATED Inspector ===', 'font-size: 16px; color: blue; font-weight: bold');
+  console.log(
+    '%c=== Analyzing ACTIVATED Inspector ===',
+    'font-size: 16px; color: blue; font-weight: bold'
+  );
   console.log('');
 
   // 1. Find Inspector UI
@@ -24,11 +27,11 @@
     'ee-inspector',
     '[id*="inspector"]',
     '.inspector-tab-panel',
-    '.ui-inspector'
+    '.ui-inspector',
   ];
 
   let inspectorElement = null;
-  selectors.forEach(selector => {
+  selectors.forEach((selector) => {
     const el = document.querySelector(selector);
     if (el) {
       console.log(`   ✓ Found with selector: "${selector}"`);
@@ -52,9 +55,11 @@
   console.log('   HTML preview:', inspectorElement.outerHTML.substring(0, 300) + '...');
   console.log('   Children:', inspectorElement.children.length);
 
-  Array.from(inspectorElement.children).slice(0, 5).forEach((child, i) => {
-    console.log(`   Child ${i}:`, child.tagName, child.className || '(no class)');
-  });
+  Array.from(inspectorElement.children)
+    .slice(0, 5)
+    .forEach((child, i) => {
+      console.log(`   Child ${i}:`, child.tagName, child.className || '(no class)');
+    });
 
   // 3. Look for data display
   console.log('\n3. Looking for pixel/data values...');
@@ -66,11 +71,11 @@
 
   // Look for specific data patterns
   const dataPatterns = [
-    /Point:\s*([-\d.]+),\s*([-\d.]+)/,  // Coordinates
+    /Point:\s*([-\d.]+),\s*([-\d.]+)/, // Coordinates
     /Longitude:\s*([-\d.]+)/,
     /Latitude:\s*([-\d.]+)/,
-    /[Bb]\d+:\s*([-\d.]+)/,  // Band values like B1: 0.234
-    /\w+:\s*([-\d.]+)/  // Generic key: value pairs
+    /[Bb]\d+:\s*([-\d.]+)/, // Band values like B1: 0.234
+    /\w+:\s*([-\d.]+)/, // Generic key: value pairs
   ];
 
   console.log('\n4. Checking for data patterns...');
@@ -83,15 +88,11 @@
 
   // 5. Find all text nodes with numbers
   console.log('\n5. Looking for numeric data...');
-  const walker = document.createTreeWalker(
-    inspectorElement,
-    NodeFilter.SHOW_TEXT,
-    null
-  );
+  const walker = document.createTreeWalker(inspectorElement, NodeFilter.SHOW_TEXT, null);
 
   const numericLines = [];
   let node;
-  while (node = walker.nextNode()) {
+  while ((node = walker.nextNode())) {
     const text = node.textContent.trim();
     if (text && /[-\d.]+/.test(text)) {
       numericLines.push(text);
@@ -111,7 +112,9 @@
   const tables = inspectorElement.querySelectorAll('table');
   console.log('   Tables found:', tables.length);
 
-  const divs = inspectorElement.querySelectorAll('div[class*="row"], div[class*="item"], div[class*="entry"]');
+  const divs = inspectorElement.querySelectorAll(
+    'div[class*="row"], div[class*="item"], div[class*="entry"]'
+  );
   console.log('   Row/item divs:', divs.length);
 
   // 7. Try to extract structured data
@@ -119,7 +122,7 @@
 
   // Look for key-value pairs in the DOM
   const potentialData = {};
-  inspectorElement.querySelectorAll('*').forEach(el => {
+  inspectorElement.querySelectorAll('*').forEach((el) => {
     const text = el.textContent?.trim();
     // Match patterns like "B1: 0.234" or "Longitude: -122.4"
     const match = text?.match(/^([^:]+):\s*([-\d.]+)$/);
@@ -150,7 +153,7 @@
   // 9. Check for inspector toggle button
   console.log('\n9. Looking for Inspector toggle/button...');
   const inspectorButtons = document.querySelectorAll('button, div[role="button"], [class*="tab"]');
-  const inspectorBtn = Array.from(inspectorButtons).find(btn =>
+  const inspectorBtn = Array.from(inspectorButtons).find((btn) =>
     btn.textContent?.toLowerCase().includes('inspector')
   );
 
@@ -160,18 +163,30 @@
   }
 
   // 10. Summary and implementation hints
-  console.log('\n%c=== Implementation Hints ===', 'font-size: 14px; color: green; font-weight: bold');
+  console.log(
+    '\n%c=== Implementation Hints ===',
+    'font-size: 14px; color: green; font-weight: bold'
+  );
   console.log('');
   console.log('To implement inspectMap:');
-  console.log('1. Selector to find Inspector:', inspectorElement ? `"${inspectorElement.className.split(' ')[0]}"` : 'Not found');
-  console.log('2. Data extraction method:', Object.keys(potentialData).length > 0 ? 'Parse text content' : 'Need to investigate further');
-  console.log('3. Click simulation:', mapDiv ? 'Target .ui-map element' : 'Need to find map element');
+  console.log(
+    '1. Selector to find Inspector:',
+    inspectorElement ? `"${inspectorElement.className.split(' ')[0]}"` : 'Not found'
+  );
+  console.log(
+    '2. Data extraction method:',
+    Object.keys(potentialData).length > 0 ? 'Parse text content' : 'Need to investigate further'
+  );
+  console.log(
+    '3. Click simulation:',
+    mapDiv ? 'Target .ui-map element' : 'Need to find map element'
+  );
 
   return {
     inspectorFound: !!inspectorElement,
     inspectorSelector: inspectorElement?.className,
     dataExtracted: potentialData,
     mapFound: !!mapDiv,
-    textPreview: textContent?.substring(0, 500)
+    textPreview: textContent?.substring(0, 500),
   };
 })();

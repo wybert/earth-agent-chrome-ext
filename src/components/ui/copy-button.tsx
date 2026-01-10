@@ -1,21 +1,21 @@
 import React from 'react';
-import { Check, Copy, ThumbsDown, ThumbsUp } from "lucide-react"
+import { Check, Copy, ThumbsDown, ThumbsUp } from 'lucide-react';
 
-import { cn } from "@/lib/utils"
-import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
-import { Button, type ButtonProps } from "@/components/ui/button"
-import { toast } from "sonner"
+import { cn } from '@/lib/utils';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
+import { Button, type ButtonProps } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 type CopyButtonProps = {
-  content: string
-  copyMessage?: string
-}
+  content: string;
+  copyMessage?: string;
+};
 
 export function CopyButton({ content, copyMessage }: CopyButtonProps) {
   const { isCopied, handleCopy } = useCopyToClipboard({
     text: content,
     copyMessage,
-  })
+  });
 
   return (
     <Button
@@ -28,17 +28,17 @@ export function CopyButton({ content, copyMessage }: CopyButtonProps) {
       <div className="absolute inset-0 flex items-center justify-center">
         <Check
           className={cn(
-            "h-4 w-4 transition-transform ease-in-out",
-            isCopied ? "scale-100" : "scale-0"
+            'h-4 w-4 transition-transform ease-in-out',
+            isCopied ? 'scale-100' : 'scale-0'
           )}
         />
       </div>
       <Copy
         className={cn(
-          "h-4 w-4 transition-transform ease-in-out",
-          isCopied ? "scale-0" : "scale-100"
+          'h-4 w-4 transition-transform ease-in-out',
+          isCopied ? 'scale-0' : 'scale-100'
         )}
       />
     </Button>
-  )
+  );
 }

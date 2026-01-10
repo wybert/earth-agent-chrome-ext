@@ -13,10 +13,10 @@ import { snapshot } from '@/lib/tools/browser';
  */
 export async function clearAllCode() {
   console.log('🧹 Clearing all code from Earth Engine editor...');
-  
+
   try {
     const result = await editScript('current', '');
-    
+
     if (result.success) {
       console.log('✅ Code cleared successfully');
       return { success: true, message: 'All code cleared from editor' };
@@ -26,9 +26,9 @@ export async function clearAllCode() {
     }
   } catch (error) {
     console.error('❌ Error clearing code:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -39,13 +39,13 @@ export async function clearAllCode() {
  */
 export async function clearAndAddTemplate(template = 'basic') {
   console.log('🧹 Clearing code and adding clean template...');
-  
+
   const templates = {
     basic: `// Clean Earth Engine Script
 // Add your code here
 
 `,
-    
+
     image: `// Earth Engine Image Processing
 var image = ee.Image('LANDSAT/LC08/C02/T1_L2/LC08_044034_20140318');
 
@@ -63,14 +63,14 @@ var collection = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
 print('Collection size:', collection.size());
 `,
 
-    empty: ''
+    empty: '',
   };
 
   const code = templates[template] || templates.basic;
 
   try {
     const result = await editScript('current', code);
-    
+
     if (result.success) {
       console.log('✅ Code cleared and template added');
       return { success: true, message: `Code cleared and ${template} template added` };
@@ -79,9 +79,9 @@ print('Collection size:', collection.size());
     }
   } catch (error) {
     console.error('❌ Error clearing and adding template:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -92,20 +92,20 @@ print('Collection size:', collection.size());
  */
 export async function cleanUpCode() {
   console.log('🧹 Cleaning up messy code...');
-  
+
   try {
     // This would need to get current code first, clean it, then set it back
     // For now, this is a placeholder - you'd need to implement getCurrentCode() first
-    
+
     console.log('⚠️ cleanUpCode() needs current code extraction - use clearAllCode() for now');
-    return { 
-      success: false, 
-      error: 'cleanUpCode() requires current code extraction - use clearAllCode() instead' 
+    return {
+      success: false,
+      error: 'cleanUpCode() requires current code extraction - use clearAllCode() instead',
     };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -116,21 +116,20 @@ export async function cleanUpCode() {
  */
 export async function smartClear(backupToConsole = true) {
   console.log('🧹 Smart clearing with backup...');
-  
+
   try {
     if (backupToConsole) {
       // Log current code to console before clearing (if extraction is possible)
       console.log('📝 Current code would be backed up here...');
     }
-    
+
     // Clear the editor
     const result = await clearAllCode();
     return result;
-    
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -141,35 +140,34 @@ export async function smartClear(backupToConsole = true) {
  */
 export async function browserClear() {
   console.log('🧹 Using browser automation to clear code...');
-  
+
   try {
     // First take a snapshot to find the editor
     const snapshotResult = await snapshot();
-    
+
     if (!snapshotResult.success) {
       return { success: false, error: 'Could not take page snapshot' };
     }
-    
+
     // Look for ace editor elements in the snapshot
     // You'd need to parse the snapshot to find the right element reference
-    
+
     // For now, try the direct typing approach
     const result = await typeText({
       selector: '.ace_text-input, .ace_editor textarea, .ace_content',
-      text: ''
+      text: '',
     });
-    
+
     if (result.success) {
       console.log('✅ Code cleared using browser automation');
       return { success: true, message: 'Code cleared using browser automation' };
     } else {
       return { success: false, error: result.error };
     }
-    
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -187,4 +185,4 @@ await clearAndAddTemplate('image');
 
 // Smart clear with console backup
 await smartClear(true);
-*/ 
+*/

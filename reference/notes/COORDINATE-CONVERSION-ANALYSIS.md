@@ -7,6 +7,7 @@
 ## 当前已实现的工具
 
 ### clickByCoordinates Tool
+
 在 `src/lib/tools/ai-tools.ts` 中已经实现了基于**屏幕坐标**的点击工具：
 
 ```typescript
@@ -14,25 +15,27 @@ clickByCoordinatesTool = tool({
   description: 'Click at specific pixel coordinates on the page',
   inputSchema: z.object({
     x: z.number().describe('X pixel coordinate'),
-    y: z.number().describe('Y pixel coordinate')
+    y: z.number().describe('Y pixel coordinate'),
   }),
   execute: async ({ x, y }) => {
     // 发送消息到 content script
     chrome.tabs.sendMessage(tabId, {
       type: 'CLICK_BY_COORDINATES',
-      payload: { x, y }
+      payload: { x, y },
     });
-  }
+  },
 });
 ```
 
 这个工具接受的是 **viewport 像素坐标**：
+
 - `x`: 从浏览器窗口左边缘开始的像素数
 - `y`: 从浏览器窗口顶部开始的像素数
 
 ## 坐标系统对比
 
 ### 1. 地理坐标系统 (Geographic Coordinates)
+
 ```javascript
 {
   lat: 42.3844,  // 纬度 (-90 到 90)
@@ -41,6 +44,7 @@ clickByCoordinatesTool = tool({
 ```
 
 ### 2. 屏幕坐标系统 (Screen/Viewport Coordinates)
+
 ```javascript
 {
   x: 617.5,  // 从窗口左边缘的像素距离
@@ -49,7 +53,9 @@ clickByCoordinatesTool = tool({
 ```
 
 ### 3. 地图瓦片坐标系统 (Map Tile Coordinates)
+
 Google Maps 使用 Web Mercator 投影：
+
 ```javascript
 {
   tileX: 1234,  // 瓦片 X 索引
@@ -105,6 +111,7 @@ async function convertLatLngToPixel(lat, lng) {
 ```
 
 **问题**：
+
 1. 无法可靠地访问 GEE 的内部 Map 对象
 2. GEE 可能使用自定义的地图实现，不是标准 Google Maps
 
@@ -114,7 +121,7 @@ async function convertLatLngToPixel(lat, lng) {
 function latLngToPixel(lat, lng, zoom, mapWidth, mapHeight) {
   // Step 1: Web Mercator 投影公式
   // 将地理坐标转换为 0-1 的标准化坐标
-  const latRad = lat * Math.PI / 180;
+  const latRad = (lat * Math.PI) / 180;
   const n = Math.pow(2, zoom);
 
   const worldX = (lng + 180) / 360;
@@ -123,8 +130,13 @@ function latLngToPixel(lat, lng, zoom, mapWidth, mapHeight) {
   // Step 2: 获取当前地图中心和边界
   const mapCenter = getMapCenter(); // 需要实现
   const centerWorldX = (mapCenter.lng + 180) / 360;
-  const centerWorldY = (1 - Math.log(Math.tan(mapCenter.lat * Math.PI / 180) +
-                        1 / Math.cos(mapCenter.lat * Math.PI / 180)) / Math.PI) / 2;
+  const centerWorldY =
+    (1 -
+      Math.log(
+        Math.tan((mapCenter.lat * Math.PI) / 180) + 1 / Math.cos((mapCenter.lat * Math.PI) / 180)
+      ) /
+        Math.PI) /
+    2;
 
   // Step 3: 计算相对于地图中心的像素偏移
   const pixelX = (worldX - centerWorldX) * mapWidth * n;
@@ -137,12 +149,13 @@ function latLngToPixel(lat, lng, zoom, mapWidth, mapHeight) {
 
   return {
     x: centerScreenX + pixelX,
-    y: centerScreenY + pixelY
+    y: centerScreenY + pixelY,
   };
 }
 ```
 
 **问题**：
+
 1. 需要准确知道当前地图的中心点
 2. 需要准确知道当前缩放级别
 3. 投影公式假设标准 Web Mercator，GEE 可能有变化
@@ -173,6 +186,7 @@ function findGEECoordinateConverter() {
 ## 之前方案为什么失败
 
 ### 简化版本（已测试）
+
 之前的实现只是简单地点击地图中心：
 
 ```javascript
@@ -187,7 +201,7 @@ const clickEvent = new MouseEvent('click', {
   view: window,
   clientX: centerX,
   clientY: centerY,
-  button: 0
+  button: 0,
 });
 
 mapElement.dispatchEvent(clickEvent);
@@ -196,12 +210,14 @@ mapElement.dispatchEvent(clickEvent);
 ### 测试结果
 
 #### ✅ 在浏览器控制台直接运行
+
 ```javascript
 // 在 GEE 页面按 F12，运行上面的代码
 // 结果：Inspector 成功更新！
 ```
 
 #### ❌ 通过 Extension 消息传递运行
+
 ```javascript
 // Extension background script → content script → 运行相同代码
 // 结果：Inspector 不更新
@@ -210,13 +226,15 @@ mapElement.dispatchEvent(clickEvent);
 ### 失败原因分析
 
 1. **事件来源检查**
+
    ```javascript
    // GEE 可能检查事件的 isTrusted 属性
-   clickEvent.isTrusted // 用户真实点击：true
-                        // 程序模拟点击：false
+   clickEvent.isTrusted; // 用户真实点击：true
+   // 程序模拟点击：false
    ```
 
 2. **执行上下文隔离**
+
    ```javascript
    // 浏览器控制台：在 page context 运行
    // Content script：在 isolated world 运行
@@ -291,21 +309,21 @@ function clickInPageContext(x, y) {
 
 ```javascript
 // 从 background script 使用 CDP 模拟真实用户点击
-chrome.debugger.attach({ tabId }, "1.3", () => {
-  chrome.debugger.sendCommand({ tabId }, "Input.dispatchMouseEvent", {
-    type: "mousePressed",
+chrome.debugger.attach({ tabId }, '1.3', () => {
+  chrome.debugger.sendCommand({ tabId }, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed',
     x: x,
     y: y,
-    button: "left",
-    clickCount: 1
+    button: 'left',
+    clickCount: 1,
   });
 
-  chrome.debugger.sendCommand({ tabId }, "Input.dispatchMouseEvent", {
-    type: "mouseReleased",
+  chrome.debugger.sendCommand({ tabId }, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased',
     x: x,
     y: y,
-    button: "left",
-    clickCount: 1
+    button: 'left',
+    clickCount: 1,
   });
 });
 ```
@@ -328,7 +346,7 @@ if (Math.abs(inspectedLat - requestedLat) > tolerance) {
     success: false,
     error: `Please click closer to (${requestedLat}, ${requestedLng})`,
     current: `Current click is at (${inspectedLat}, ${inspectedLng})`,
-    suggestion: `Move your click ${direction} by approximately ${distance} km`
+    suggestion: `Move your click ${direction} by approximately ${distance} km`,
   };
 }
 ```
@@ -336,14 +354,16 @@ if (Math.abs(inspectedLat - requestedLat) > tolerance) {
 ## 未来改进方向
 
 ### 1. 找到 GEE 的坐标转换 API
+
 ```javascript
 // 可能存在的 API：
-ee.MapWidget.latLngToPixel(lat, lng)
-ee.MapWidget.pixelToLatLng(x, y)
+ee.MapWidget.latLngToPixel(lat, lng);
+ee.MapWidget.pixelToLatLng(x, y);
 // 需要深入研究 GEE 源码或反编译
 ```
 
 ### 2. 使用 AI 视觉定位
+
 ```javascript
 // 1. 截图当前地图
 // 2. 使用 AI 识别地图上的特征
@@ -352,6 +372,7 @@ ee.MapWidget.pixelToLatLng(x, y)
 ```
 
 ### 3. 创建代理服务器
+
 ```javascript
 // 拦截 GEE 的网络请求
 // 分析 Inspector 请求的参数格式
@@ -362,15 +383,18 @@ ee.MapWidget.pixelToLatLng(x, y)
 ## 结论
 
 **当前状态**：
+
 - ✅ 我们有 `clickByCoordinates(x, y)` 可以点击屏幕坐标
 - ❌ 我们无法可靠地将 `(lat, lng)` 转换为 `(x, y)`
 - ❌ 程序化点击会被 GEE 拒绝
 
 **实用方案**：
+
 - 用户手动点击 → inspectMap 读取数据 ✅
 - 提供坐标验证和指导 ✅
 
 **未来可能**：
+
 - 如果找到 GEE 内部 API → 完美解决
 - 如果使用 CDP → 需要权限权衡
 - 如果注入 page context → 可能部分解决

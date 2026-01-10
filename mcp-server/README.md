@@ -90,6 +90,7 @@ Just add the configuration to your editor - no cloning or building needed!
   }
 }
 ```
+
 </details>
 
 <details>
@@ -105,6 +106,7 @@ Just add the configuration to your editor - no cloning or building needed!
   }
 }
 ```
+
 </details>
 
 <details>
@@ -122,6 +124,7 @@ Just add the configuration to your editor - no cloning or building needed!
   }
 }
 ```
+
 </details>
 
 Then restart your editor and you're ready to go!
@@ -144,6 +147,7 @@ Then restart your editor and you're ready to go!
 If you want to modify the server or run a local version:
 
 1.  **Build the Server**:
+
     ```bash
     cd mcp-server
     npm install
@@ -151,6 +155,7 @@ If you want to modify the server or run a local version:
     ```
 
 2.  **Configure your editor** (example for Claude Code):
+
     ```json
     {
       "mcpServers": {
@@ -161,7 +166,8 @@ If you want to modify the server or run a local version:
       }
     }
     ```
-    *Note: Replace `/path/to/...` with your actual absolute path.*
+
+    _Note: Replace `/path/to/...` with your actual absolute path._
 
 3.  **Restart your editor**: The server will start automatically.
 
@@ -170,6 +176,7 @@ If you want to modify the server or run a local version:
 ### Option 4: Manual Run (For Testing/Debugging)
 
 1.  **Start the Server**:
+
     ```bash
     cd mcp-server
     npm start
@@ -178,6 +185,7 @@ If you want to modify the server or run a local version:
     ```
 
     You should see:
+
     ```
     [MCP] Starting Earth Agent MCP Server...
     [MCP] WebSocket server listening on port 3847
@@ -191,10 +199,12 @@ If you want to modify the server or run a local version:
 For trying out changes to the MCP server code:
 
 1.  **Watch Mode**:
+
     ```bash
     cd mcp-server
     npm run dev
     ```
+
     This recompiles automatically on file changes.
 
 2.  **Run Server**:
@@ -208,40 +218,45 @@ For trying out changes to the MCP server code:
 ## Available Tools (17 Total)
 
 ### Utility Tools (3)
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `weather` | Get current weather for a location | `location` (required) |
-| `date_time` | Get current date/time | `timezone` (optional) |
-| `wait` | Wait for specified seconds (0.5-60) | `seconds` (required) |
+
+| Tool        | Description                         | Parameters            |
+| ----------- | ----------------------------------- | --------------------- |
+| `weather`   | Get current weather for a location  | `location` (required) |
+| `date_time` | Get current date/time               | `timezone` (optional) |
+| `wait`      | Wait for specified seconds (0.5-60) | `seconds` (required)  |
 
 ### Code Manipulation Tools (5)
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `read_gee_code` | Read current code from GEE editor | none |
-| `edit_gee_code` | Edit code using find/replace | `old_string`, `new_string` |
-| `write_gee_code` | Overwrite entire editor content | `code` |
-| `undo_gee_edit` | Undo the last code edit | none |
-| `run_gee_code` | Execute code (click Run button) | none |
+
+| Tool             | Description                       | Parameters                 |
+| ---------------- | --------------------------------- | -------------------------- |
+| `read_gee_code`  | Read current code from GEE editor | none                       |
+| `edit_gee_code`  | Edit code using find/replace      | `old_string`, `new_string` |
+| `write_gee_code` | Overwrite entire editor content   | `code`                     |
+| `undo_gee_edit`  | Undo the last code edit           | none                       |
+| `run_gee_code`   | Execute code (click Run button)   | none                       |
 
 ### Browser Interaction Tools (4)
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `gee_screenshot` | Take screenshot of GEE interface | none |
-| `gee_snapshot` | Get accessibility tree (for finding elements) | none |
-| `click_element` | Click element by reference ID | `ref_id` |
-| `click_position` | Click at screen coordinates | `x`, `y` |
+
+| Tool             | Description                                   | Parameters |
+| ---------------- | --------------------------------------------- | ---------- |
+| `gee_screenshot` | Take screenshot of GEE interface              | none       |
+| `gee_snapshot`   | Get accessibility tree (for finding elements) | none       |
+| `click_element`  | Click element by reference ID                 | `ref_id`   |
+| `click_position` | Click at screen coordinates                   | `x`, `y`   |
 
 ### Earth Engine State Tools (4)
-| Tool | Description | Parameters |
-|------|-------------|------------|
-| `gee_console` | Read console output | none |
-| `gee_map_position` | Get map center, zoom, and bounds | none |
-| `gee_inspector` | Read inspector panel data | none |
-| `clear_gee` | Clear map layers, console, and inspector | none |
+
+| Tool               | Description                              | Parameters |
+| ------------------ | ---------------------------------------- | ---------- |
+| `gee_console`      | Read console output                      | none       |
+| `gee_map_position` | Get map center, zoom, and bounds         | none       |
+| `gee_inspector`    | Read inspector panel data                | none       |
+| `clear_gee`        | Clear map layers, console, and inspector | none       |
 
 ### Documentation Tools (1)
-| Tool | Description | Parameters |
-|------|-------------|------------|
+
+| Tool       | Description                           | Parameters                                                    |
+| ---------- | ------------------------------------- | ------------------------------------------------------------- |
 | `gee_docs` | Search GEE documentation and datasets | `query` (required), `type` (optional: datasets/community/api) |
 
 ---
@@ -249,6 +264,7 @@ For trying out changes to the MCP server code:
 ## Usage Examples
 
 ### Read and Edit Code
+
 ```
 User: Read the current GEE code and add NDVI calculation
 
@@ -266,6 +282,7 @@ Done! I've added NDVI calculation to your code.
 ```
 
 ### Search Documentation
+
 ```
 User: Find information about Sentinel-2 imagery
 
@@ -279,6 +296,7 @@ Here's the documentation for Sentinel-2 data in Google Earth Engine...
 ## Troubleshooting
 
 ### Server Fails to Start
+
 - Ensure `npm run build` has been run.
 - Check Node.js version (18+ required).
 - Check if port 3847 is in use: `lsof -i :3847`.
@@ -306,6 +324,7 @@ When you have multiple Claude Code sessions (or Cursor/Zed instances), each may 
 #### Solution: Kill All Instances and Restart
 
 1. **Find and kill all MCP server processes**:
+
    ```bash
    # Find processes
    ps aux | grep "earth-agent.*index.js" | grep -v grep
@@ -315,6 +334,7 @@ When you have multiple Claude Code sessions (or Cursor/Zed instances), each may 
    ```
 
 2. **Verify port 3847 is free**:
+
    ```bash
    lsof -i :3847
    # Should return nothing
@@ -341,9 +361,11 @@ When you have multiple Claude Code sessions (or Cursor/Zed instances), each may 
 3. Check extension background console (right-click extension > "Service Worker") for `[MCP-WS] Connected`.
 
 ### "No Google Earth Engine tab found"
+
 You must have [code.earthengine.google.com](https://code.earthengine.google.com) open in a tab for GEE tools to function.
 
 ## Environment Variables
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `EARTH_AGENT_WS_PORT` | `3847` | WebSocket server port |
+
+| Variable              | Default | Description           |
+| --------------------- | ------- | --------------------- |
+| `EARTH_AGENT_WS_PORT` | `3847`  | WebSocket server port |

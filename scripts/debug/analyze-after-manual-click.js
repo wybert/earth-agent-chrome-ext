@@ -25,7 +25,7 @@
   console.log('   Count:', inspectViews.length);
 
   inspectViews.forEach((view, i) => {
-    console.log(`\n   View ${i+1}:`);
+    console.log(`\n   View ${i + 1}:`);
     const label = view.querySelector('.header .label');
     const message = view.querySelector('.header .message');
     console.log('     Layer:', label ? label.textContent : 'N/A');
@@ -38,11 +38,11 @@
     });
   });
 
-  console.log('\n5. Now let\'s try to understand what triggered it...');
+  console.log("\n5. Now let's try to understand what triggered it...");
   console.log('   Check the Network tab or Event Listeners');
 
   return {
     hasData: inspectPanel.textContent.length > 100,
-    viewCount: inspectViews.length
+    viewCount: inspectViews.length,
   };
 })();

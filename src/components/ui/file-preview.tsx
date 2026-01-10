@@ -1,60 +1,66 @@
-"use client"
+'use client';
 
-import React, { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { FileIcon, X, ImageIcon } from "lucide-react"
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { FileIcon, X, ImageIcon } from 'lucide-react';
 
 interface FilePreviewProps {
-  file: File | {
-    type?: string;
-    name?: string;
-    data?: string;
-    mimeType?: string;
-    size?: number;
-  }
-  onRemove?: () => void
+  file:
+    | File
+    | {
+        type?: string;
+        name?: string;
+        data?: string;
+        mimeType?: string;
+        size?: number;
+      };
+  onRemove?: () => void;
 }
 
-export const FilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
-  (props, ref) => {
-    // Handle case where file is a standard File object
-    if (props.file instanceof File) {
-      if (props.file.type.startsWith("image/")) {
-        return <ImageFilePreview {...props} ref={ref} />
-      }
-
-      if (
-        props.file.type.startsWith("text/") ||
-        props.file.name.endsWith(".txt") ||
-        props.file.name.endsWith(".md")
-      ) {
-        return <TextFilePreview {...props} ref={ref} />
-      }
-
-      return <GenericFilePreview {...props} ref={ref} />
-    } 
-    
-    // Handle our custom image data format from chat messages
-    else {
-      const fileType = props.file.type || props.file.mimeType || '';
-      
-      // For images with data URL
-      if (fileType === 'image' || fileType.startsWith('image/') || (props.file.data && props.file.data.startsWith('data:image/'))) {
-        return <CustomImagePreview {...props} ref={ref} />
-      }
-      
-      // For text files
-      if (fileType.startsWith('text/') || (props.file.name && 
-          (props.file.name.endsWith('.txt') || props.file.name.endsWith('.md')))) {
-        return <GenericFilePreview {...props} ref={ref} />
-      }
-      
-      // Default fallback
-      return <GenericFilePreview {...props} ref={ref} />
+export const FilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>((props, ref) => {
+  // Handle case where file is a standard File object
+  if (props.file instanceof File) {
+    if (props.file.type.startsWith('image/')) {
+      return <ImageFilePreview {...props} ref={ref} />;
     }
+
+    if (
+      props.file.type.startsWith('text/') ||
+      props.file.name.endsWith('.txt') ||
+      props.file.name.endsWith('.md')
+    ) {
+      return <TextFilePreview {...props} ref={ref} />;
+    }
+
+    return <GenericFilePreview {...props} ref={ref} />;
   }
-)
-FilePreview.displayName = "FilePreview"
+
+  // Handle our custom image data format from chat messages
+  else {
+    const fileType = props.file.type || props.file.mimeType || '';
+
+    // For images with data URL
+    if (
+      fileType === 'image' ||
+      fileType.startsWith('image/') ||
+      (props.file.data && props.file.data.startsWith('data:image/'))
+    ) {
+      return <CustomImagePreview {...props} ref={ref} />;
+    }
+
+    // For text files
+    if (
+      fileType.startsWith('text/') ||
+      (props.file.name && (props.file.name.endsWith('.txt') || props.file.name.endsWith('.md')))
+    ) {
+      return <GenericFilePreview {...props} ref={ref} />;
+    }
+
+    // Default fallback
+    return <GenericFilePreview {...props} ref={ref} />;
+  }
+});
+FilePreview.displayName = 'FilePreview';
 
 // New component for handling custom image format from chat
 const CustomImagePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
@@ -68,9 +74,9 @@ const CustomImagePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
         ref={ref}
         className="relative flex flex-col w-[120px] rounded-md border p-2 text-xs"
         layout
-        initial={{ opacity: 0, y: "100%" }}
+        initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: "100%" }}
+        exit={{ opacity: 0, y: '100%' }}
       >
         <span className="mb-1 truncate text-muted-foreground text-center">
           {fileName || 'Image attachment'}
@@ -98,14 +104,14 @@ const CustomImagePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
           </button>
         ) : null}
       </motion.div>
-    )
+    );
   }
-)
-CustomImagePreview.displayName = "CustomImagePreview"
+);
+CustomImagePreview.displayName = 'CustomImagePreview';
 
 const ImageFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
   ({ file, onRemove }, ref) => {
-    const [imageUrl, setImageUrl] = useState<string>("");
+    const [imageUrl, setImageUrl] = useState<string>('');
 
     useEffect(() => {
       // Only use URL.createObjectURL for actual File objects
@@ -123,20 +129,18 @@ const ImageFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
       }
     }, [file]);
 
-    const fileName = file instanceof File ? file.name : ('name' in file ? file.name : 'image.png');
+    const fileName = file instanceof File ? file.name : 'name' in file ? file.name : 'image.png';
 
     return (
       <motion.div
         ref={ref}
         className="relative flex flex-col w-[120px] rounded-md border p-2 text-xs"
         layout
-        initial={{ opacity: 0, y: "100%" }}
+        initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: "100%" }}
+        exit={{ opacity: 0, y: '100%' }}
       >
-        <span className="mb-1 truncate text-muted-foreground text-center">
-          {fileName}
-        </span>
+        <span className="mb-1 truncate text-muted-foreground text-center">{fileName}</span>
         {imageUrl && imageUrl !== '' ? (
           <img
             alt={`Attachment ${fileName}`}
@@ -160,53 +164,51 @@ const ImageFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
           </button>
         ) : null}
       </motion.div>
-    )
+    );
   }
-)
-ImageFilePreview.displayName = "ImageFilePreview"
+);
+ImageFilePreview.displayName = 'ImageFilePreview';
 
 const TextFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
   ({ file, onRemove }, ref) => {
-    const [preview, setPreview] = React.useState<string>("")
+    const [preview, setPreview] = React.useState<string>('');
 
     useEffect(() => {
       // Handle standard File objects
       if (file instanceof File) {
-        const reader = new FileReader()
+        const reader = new FileReader();
         reader.onload = (e) => {
-          const text = e.target?.result as string
-          setPreview(text.slice(0, 50) + (text.length > 50 ? "..." : ""))
-        }
-        reader.readAsText(file)
-      } 
+          const text = e.target?.result as string;
+          setPreview(text.slice(0, 50) + (text.length > 50 ? '...' : ''));
+        };
+        reader.readAsText(file);
+      }
       // Handle custom data objects
       else if ('data' in file && typeof file.data === 'string') {
         // For text data, just show the first 50 chars
-        setPreview(file.data.slice(0, 50) + (file.data.length > 50 ? "..." : ""))
+        setPreview(file.data.slice(0, 50) + (file.data.length > 50 ? '...' : ''));
       }
-    }, [file])
+    }, [file]);
 
     // Get file name from either standard File or custom object
-    const fileName = file instanceof File ? file.name : (file.name || 'text.txt');
+    const fileName = file instanceof File ? file.name : file.name || 'text.txt';
 
     return (
       <motion.div
         ref={ref}
         className="relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs"
         layout
-        initial={{ opacity: 0, y: "100%" }}
+        initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: "100%" }}
+        exit={{ opacity: 0, y: '100%' }}
       >
         <div className="flex w-full items-center space-x-2">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted p-0.5">
             <div className="h-full w-full overflow-hidden text-[6px] leading-none text-muted-foreground">
-              {preview || "Loading..."}
+              {preview || 'Loading...'}
             </div>
           </div>
-          <span className="w-full truncate text-muted-foreground">
-            {fileName}
-          </span>
+          <span className="w-full truncate text-muted-foreground">{fileName}</span>
         </div>
 
         {onRemove ? (
@@ -220,10 +222,10 @@ const TextFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
           </button>
         ) : null}
       </motion.div>
-    )
+    );
   }
-)
-TextFilePreview.displayName = "TextFilePreview"
+);
+TextFilePreview.displayName = 'TextFilePreview';
 
 const GenericFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
   ({ file, onRemove }, ref) => {
@@ -232,17 +234,15 @@ const GenericFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
         ref={ref}
         className="relative flex max-w-[200px] rounded-md border p-1.5 pr-2 text-xs"
         layout
-        initial={{ opacity: 0, y: "100%" }}
+        initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: "100%" }}
+        exit={{ opacity: 0, y: '100%' }}
       >
         <div className="flex w-full items-center space-x-2">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-sm border bg-muted">
             <FileIcon className="h-6 w-6 text-foreground" />
           </div>
-          <span className="w-full truncate text-muted-foreground">
-            {file.name}
-          </span>
+          <span className="w-full truncate text-muted-foreground">{file.name}</span>
         </div>
 
         {onRemove ? (
@@ -256,7 +256,7 @@ const GenericFilePreview = React.forwardRef<HTMLDivElement, FilePreviewProps>(
           </button>
         ) : null}
       </motion.div>
-    )
+    );
   }
-)
-GenericFilePreview.displayName = "GenericFilePreview"
+);
+GenericFilePreview.displayName = 'GenericFilePreview';

@@ -20,6 +20,7 @@ The background script is the heart of the extension, running persistently and ha
 - Chat processing and AI interactions
 
 Key files:
+
 - `index.ts`: Main background script entry point and message handler
 - `chat-handler.ts`: Processes chat requests using the AI SDK
 - `shadow-workspace.ts`: Manages an in-memory "shadow" copy of the Earth Engine code editor state, handling versioning and synchronization
@@ -33,6 +34,7 @@ The UI components run in the extension's side panel and provide:
 - Tools testing interface
 
 Key files:
+
 - `Chat.tsx`: The main chat interface component
 - `Settings.tsx`: Configuration UI for API keys and settings
 - `ui/Chat.tsx`: UI components for chat rendering
@@ -41,15 +43,17 @@ Key files:
 
 1. User enters a message in the UI
 2. `Chat.tsx` sends message to background via port connection:
+
    ```typescript
    port.postMessage({
      type: 'CHAT_MESSAGE',
      message: userMessageContent,
-     messages: messagesForApi
+     messages: messagesForApi,
    });
    ```
 
 3. Background script receives message:
+
    ```typescript
    case 'CHAT_MESSAGE':
      handleChatMessage(message, port);
@@ -57,6 +61,7 @@ Key files:
    ```
 
 4. Background script retrieves API keys from storage:
+
    ```typescript
    const apiConfig = await new Promise<{apiKey: string, provider: string, model: string}>(
      (resolve, reject) => {
@@ -66,6 +71,7 @@ Key files:
    ```
 
 5. Background script calls the AI handler with messages:
+
    ```typescript
    const response = await handleChatRequest(
      conversationMessages,
@@ -76,11 +82,12 @@ Key files:
    ```
 
 6. Background script streams response chunks back to UI:
+
    ```typescript
-   port.postMessage({ 
+   port.postMessage({
      type: 'CHAT_STREAM_CHUNK',
      requestId,
-     chunk: chunk
+     chunk: chunk,
    });
    ```
 
@@ -108,4 +115,4 @@ Unlike a traditional web app with separate frontend and API server, this extensi
 2. Handles API keys and configuration storage securely
 3. Uses the background script as a service layer instead of external API endpoints
 
-This architecture provides better security and offline capability while maintaining separation of concerns. 
+This architecture provides better security and offline capability while maintaining separation of concerns.

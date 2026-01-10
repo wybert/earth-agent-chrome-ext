@@ -3,10 +3,12 @@
 ## 🚨 问题描述
 
 Chrome Web Store **不允许**扩展在manifest.json中包含以下host_permissions：
+
 - `http://localhost:*/*`
 - `http://127.0.0.1:*/*`
 
 ### 错误信息
+
 ```
 Error: The manifest defines an invalid url: http://127.0.0.1:*/*. (PKG_MANIFEST_PARSE_ERROR)
 Error: The manifest defines an invalid url: http://localhost:*/*. (PKG_MANIFEST_PARSE_ERROR)
@@ -15,6 +17,7 @@ Error: The manifest defines an invalid url: http://localhost:*/*. (PKG_MANIFEST_
 ## 🔍 为什么我们有这些权限？
 
 这些权限是为了支持**Ollama本地AI服务器**：
+
 - Ollama默认运行在 `http://localhost:11434`
 - 需要这些权限才能与本地Ollama通信
 
@@ -30,6 +33,7 @@ node scripts/prepare-manifest-for-store.js
 ```
 
 这个脚本会：
+
 - ✅ 自动移除localhost/127.0.0.1权限
 - ✅ 保留其他所有权限
 - ✅ 使manifest符合Web Store要求
@@ -48,6 +52,7 @@ node scripts/prepare-manifest-for-store.js
 ```
 
 完整的步骤顺序应该是：
+
 ```yaml
 - name: Build extension for production
   run: npm run build
@@ -78,6 +83,7 @@ node scripts/prepare-manifest-for-store.js
 ```
 
 **缺点**：
+
 - ❌ 本地开发时Ollama功能将无法使用
 - ❌ 需要维护两个版本的manifest
 
@@ -86,11 +92,13 @@ node scripts/prepare-manifest-for-store.js
 ### 移除localhost权限的影响：
 
 **✅ 正面影响：**
+
 - 可以成功发布到Chrome Web Store
 - 符合Google的安全政策
 - 减少潜在的安全风险
 
 **❌ 负面影响：**
+
 - Ollama本地服务器功能将无法使用
 - 用户必须使用云端AI提供商：
   - OpenAI
@@ -101,6 +109,7 @@ node scripts/prepare-manifest-for-store.js
 ### 替代方案：
 
 对于想使用Ollama的用户：
+
 1. 可以从GitHub下载开发版（保留localhost权限）
 2. 使用"Load unpacked"方式手动安装
 3. 在README中说明Web Store版本不支持Ollama
@@ -113,10 +122,12 @@ node scripts/prepare-manifest-for-store.js
 ## ⚠️ Important Notice - Ollama Support
 
 **Chrome Web Store Version:**
+
 - Does NOT support Ollama (local AI server)
 - Requires cloud-based AI providers (OpenAI, Anthropic, Google, Qwen)
 
 **For Ollama Users:**
+
 - Download the development version from [GitHub Releases]
 - Install manually using "Load unpacked" method
 - See installation guide for details
@@ -125,6 +136,7 @@ node scripts/prepare-manifest-for-store.js
 ## 🔄 未来的解决方案
 
 Chrome正在开发新的API来支持本地服务通信：
+
 - [Private Network Access](https://developer.chrome.com/docs/extensions/develop/concepts/private-network-access)
 - 目前仍在实验阶段
 

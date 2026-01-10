@@ -6,7 +6,7 @@
 
   // 1. 查找GEE标签页
   console.log('Step 1: Finding GEE tabs...');
-  const tabs = await chrome.tabs.query({ url: "*://code.earthengine.google.com/*" });
+  const tabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
 
   if (tabs.length === 0) {
     console.log('❌ No GEE tab found. Please open https://code.earthengine.google.com/');
@@ -38,12 +38,12 @@
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['content.js']
+        files: ['content.js'],
       });
       console.log('✅ Content script injected successfully');
 
       // 等待一下让content script初始化
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch (injectError) {
       console.log('❌ Failed to inject content script:', injectError.message);
       return;
@@ -60,17 +60,21 @@ print('If you see this, the extension is working correctly.');`;
 
   try {
     const editResponse = await new Promise((resolve, reject) => {
-      chrome.tabs.sendMessage(tab.id, {
-        type: 'EDIT_SCRIPT',
-        scriptId: 'current',
-        content: testCode
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(response);
+      chrome.tabs.sendMessage(
+        tab.id,
+        {
+          type: 'EDIT_SCRIPT',
+          scriptId: 'current',
+          content: testCode,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(response);
+          }
         }
-      });
+      );
     });
 
     console.log('✅ EDIT_SCRIPT response:', editResponse);
@@ -89,15 +93,19 @@ print('If you see this, the extension is working correctly.');`;
   console.log('\nStep 4: Testing RUN_CODE...');
   try {
     const runResponse = await new Promise((resolve, reject) => {
-      chrome.tabs.sendMessage(tab.id, {
-        type: 'RUN_CODE'
-      }, (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else {
-          resolve(response);
+      chrome.tabs.sendMessage(
+        tab.id,
+        {
+          type: 'RUN_CODE',
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            reject(chrome.runtime.lastError);
+          } else {
+            resolve(response);
+          }
         }
-      });
+      );
     });
 
     console.log('✅ RUN_CODE response:', runResponse);
@@ -123,14 +131,14 @@ print('If you see this, the extension is working correctly.');`;
           aceEditorCount: document.querySelectorAll('.ace_editor').length,
           hasMonacoEditor: document.querySelectorAll('.monaco-editor').length > 0,
           monacoEditorCount: document.querySelectorAll('.monaco-editor').length,
-          hasWindowAce: typeof (window as any).ace !== 'undefined',
-          hasWindowMonaco: typeof (window as any).monaco !== 'undefined',
-          contentScriptLoaded: !!(window as any)['earth-engine-ai-assistant-content-script'],
-          contentScriptTimestamp: (window as any)['earth-engine-ai-assistant-content-script'],
+          hasWindowAce: typeof window.ace !== 'undefined',
+          hasWindowMonaco: typeof window.monaco !== 'undefined',
+          contentScriptLoaded: !!window['earth-engine-ai-assistant-content-script'],
+          contentScriptTimestamp: window['earth-engine-ai-assistant-content-script'],
           url: window.location.href,
-          title: document.title
+          title: document.title,
         };
-      }
+      },
     });
 
     const info = pageInfo[0].result;
@@ -143,7 +151,10 @@ print('If you see this, the extension is working correctly.');`;
     console.log('   window.monaco:', info.hasWindowMonaco);
     console.log('   Content Script Loaded:', info.contentScriptLoaded);
     if (info.contentScriptTimestamp) {
-      console.log('   Content Script Timestamp:', new Date(info.contentScriptTimestamp).toISOString());
+      console.log(
+        '   Content Script Timestamp:',
+        new Date(info.contentScriptTimestamp).toISOString()
+      );
     }
   } catch (error) {
     console.log('❌ Failed to gather page info:', error.message);

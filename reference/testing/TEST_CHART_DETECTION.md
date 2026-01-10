@@ -3,6 +3,7 @@
 ## 功能说明
 
 `getConsoleOutput` 工具现在可以检测 GEE 控制台中的图表和可视化内容，包括：
+
 - Canvas 图表
 - SVG 图形
 - 图片
@@ -11,6 +12,7 @@
 ## 已实现的功能
 
 ### 1. 接口更新
+
 ```typescript
 interface ConsoleOutputEntry {
   type: 'info' | 'error' | 'warning' | 'log' | 'chart';
@@ -22,12 +24,14 @@ interface ConsoleOutputEntry {
 ```
 
 ### 2. 检测逻辑
+
 - 自动扫描控制台条目中的可视化元素
 - 识别元素类型（canvas, svg, img, iframe）
 - 提取图表描述（如果有标题）
 - 在消息中添加提示：`[📊 Chart/visualization detected]`
 
 ### 3. AI 输出格式
+
 ```
 📋 Console Output (5 entries):
 
@@ -59,13 +63,14 @@ print('=== Chart Detection Test ===');
 
 // 生成一个简单的时间序列图表
 var chart = ui.Chart.image.series({
-  imageCollection: ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA')
+  imageCollection: ee
+    .ImageCollection('LANDSAT/LC08/C02/T1_TOA')
     .filterBounds(ee.Geometry.Point([-122.262, 37.8719]))
     .filterDate('2014-01-01', '2014-12-31')
     .select(['B4', 'B3', 'B2']),
   region: ee.Geometry.Point([-122.262, 37.8719]),
   reducer: ee.Reducer.mean(),
-  scale: 200
+  scale: 200,
 });
 print('Chart Example:', chart);
 
@@ -78,7 +83,7 @@ var histogram = ui.Chart.image.histogram({
   image: ee.Image('LANDSAT/LC08/C02/T1_TOA/LC08_044034_20140318').select(['B4']),
   region: ee.Geometry.Rectangle([-122.45, 37.74, -122.38, 37.84]),
   scale: 30,
-  maxBuckets: 100
+  maxBuckets: 100,
 });
 print('Histogram:', histogram);
 
@@ -102,7 +107,7 @@ print('=== End Test ===');
     const hasImg = log.querySelector('img');
 
     if (hasCanvas || hasSvg || hasImg) {
-      console.log(`Entry ${i+1}: HAS VISUAL CONTENT`);
+      console.log(`Entry ${i + 1}: HAS VISUAL CONTENT`);
       console.log('  Canvas:', !!hasCanvas);
       console.log('  SVG:', !!hasSvg);
       console.log('  IMG:', !!hasImg);
@@ -116,15 +121,15 @@ print('=== End Test ===');
 右键点击扩展图标 → "Inspect" 打开 service worker 控制台，运行：
 
 ```javascript
-chrome.tabs.query({url: "*://code.earthengine.google.com/*"}, (tabs) => {
-  chrome.tabs.sendMessage(tabs[0].id, {type: "GET_CONSOLE_OUTPUT"}, (response) => {
+chrome.tabs.query({ url: '*://code.earthengine.google.com/*' }, (tabs) => {
+  chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_CONSOLE_OUTPUT' }, (response) => {
     console.log('=== getConsoleOutput Result ===');
     console.log('Success:', response.success);
     console.log('Count:', response.count);
     console.log('');
 
     response.outputs.forEach((output, i) => {
-      console.log(`${i+1}. Type: ${output.type}`);
+      console.log(`${i + 1}. Type: ${output.type}`);
       console.log(`   Message: ${output.message.substring(0, 80)}`);
       if (output.hasVisualContent) {
         console.log(`   📊 Visual: ${output.visualElementType}`);
@@ -146,6 +151,7 @@ chrome.tabs.query({url: "*://code.earthengine.google.com/*"}, (tabs) => {
 4. AI 应该能看到图表并提示使用 screenshot 工具查看
 
 期望的 AI 响应：
+
 ```
 我检查了控制台，发现了 6 个条目，其中包括 2 个图表：
 
@@ -186,6 +192,7 @@ chrome.tabs.query({url: "*://code.earthengine.google.com/*"}, (tabs) => {
 ## 下一步
 
 测试成功后，可以：
+
 1. 让 AI 自动调用 screenshot 工具查看图表
 2. 添加更多图表类型的测试用例
 3. 考虑添加图表数据提取功能（高级功能）

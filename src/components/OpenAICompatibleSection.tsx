@@ -7,9 +7,9 @@ import { OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '@/constants/models';
 
 // UUID generator
 function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 }
@@ -42,7 +42,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
       apiKey: apiKey.trim(),
       modelName: modelName.trim(),
       supportsImages,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     });
   };
 
@@ -55,7 +55,10 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
   return (
     <div className="border rounded-md">
       {/* Collapsed Header */}
-      <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" onClick={onToggle}>
+      <div
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+        onClick={onToggle}
+      >
         <div className="flex items-center gap-2">
           <span className="font-medium">{config.name || 'Unnamed Provider'}</span>
         </div>
@@ -70,11 +73,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
           >
             <Trash2 className="h-4 w-4 text-red-500" />
           </button>
-          {expanded ? (
-            <ChevronUp className="h-4 w-4" />
-          ) : (
-            <ChevronDown className="h-4 w-4" />
-          )}
+          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </div>
       </div>
 
@@ -121,11 +120,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
                 className="absolute inset-y-0 right-0 px-3 flex items-center"
                 onClick={() => setShowApiKey(!showApiKey)}
               >
-                {showApiKey ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -154,11 +149,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
               <span className="text-sm">Supports Images</span>
             </label>
 
-            <Button
-              onClick={handleSave}
-              disabled={!isValid}
-              size="sm"
-            >
+            <Button onClick={handleSave} disabled={!isValid} size="sm">
               Save
             </Button>
           </div>
@@ -175,7 +166,8 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         No OpenAI Compatible providers configured
       </p>
       <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-        Add providers like DeepSeek, Together AI, Groq, or any service that supports OpenAI-compatible APIs
+        Add providers like DeepSeek, Together AI, Groq, or any service that supports
+        OpenAI-compatible APIs
       </p>
       <Button onClick={onAdd} variant="outline" size="sm">
         <Plus className="h-4 w-4 mr-2" />
@@ -199,12 +191,15 @@ export function OpenAICompatibleSection() {
   }, []);
 
   const saveConfigs = (newConfigs: OpenAICompatibleConfig[]) => {
-    chrome.storage.sync.set({
-      [OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]: newConfigs
-    }, () => {
-      setConfigs(newConfigs);
-      showMessage('✓ Configuration saved successfully!');
-    });
+    chrome.storage.sync.set(
+      {
+        [OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]: newConfigs,
+      },
+      () => {
+        setConfigs(newConfigs);
+        showMessage('✓ Configuration saved successfully!');
+      }
+    );
   };
 
   const showMessage = (message: string) => {
@@ -221,7 +216,7 @@ export function OpenAICompatibleSection() {
       modelName: '',
       supportsImages: false,
       createdAt: Date.now(),
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
     };
 
     const newConfigs = [...configs, newConfig];
@@ -230,14 +225,12 @@ export function OpenAICompatibleSection() {
   };
 
   const handleSave = (updatedConfig: OpenAICompatibleConfig) => {
-    const newConfigs = configs.map(c =>
-      c.id === updatedConfig.id ? updatedConfig : c
-    );
+    const newConfigs = configs.map((c) => (c.id === updatedConfig.id ? updatedConfig : c));
     saveConfigs(newConfigs);
   };
 
   const handleDelete = (id: string) => {
-    const newConfigs = configs.filter(c => c.id !== id);
+    const newConfigs = configs.filter((c) => c.id !== id);
     saveConfigs(newConfigs);
     if (expandedId === id) {
       setExpandedId(null);
@@ -276,9 +269,7 @@ export function OpenAICompatibleSection() {
       )}
 
       {statusMessage && (
-        <div className="text-sm text-green-600 dark:text-green-400">
-          {statusMessage}
-        </div>
+        <div className="text-sm text-green-600 dark:text-green-400">{statusMessage}</div>
       )}
     </div>
   );

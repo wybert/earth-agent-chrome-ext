@@ -1,7 +1,7 @@
 /**
  * GetElement tool for browser automation
  * This tool retrieves information about elements on the page using a CSS selector
- * 
+ *
  * @returns Promise with success status and element information
  */
 
@@ -40,24 +40,24 @@ export interface GetElementParams {
 
 /**
  * Get information about elements on the page using a CSS selector
- * 
+ *
  * @param params Object containing the selector and optional limit
  * @returns Promise with success status and element information
  */
 export async function getElement(params: GetElementParams): Promise<GetElementResponse> {
   try {
     const { selector, limit = 10 } = params;
-    
+
     if (!selector) {
       return {
         success: false,
-        error: 'Selector is required'
+        error: 'Selector is required',
       };
     }
-    
+
     // If running in a content script or sidepanel context, use the background script
     const env = detectEnvironment();
-    
+
     if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
       return new Promise<GetElementResponse>((resolve) => {
         // Add a timeout to handle cases where background script doesn't respond
@@ -65,29 +65,31 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
           console.warn('Background script connection timed out.');
           resolve({
             success: false,
-            error: 'Background script connection timed out'
+            error: 'Background script connection timed out',
           });
         }, 5000); // 5 second timeout
-        
+
         try {
           chrome.runtime.sendMessage(
             {
               type: 'GET_ELEMENT',
-              payload: { selector, limit }
+              payload: { selector, limit },
             },
             (response) => {
               // Clear the timeout since we got a response
               clearTimeout(timeoutId);
-              
+
               if (chrome.runtime.lastError) {
                 console.warn('Chrome runtime error:', chrome.runtime.lastError);
                 resolve({
                   success: false,
-                  error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                  error:
+                    chrome.runtime.lastError.message ||
+                    'Error communicating with background script',
                 });
                 return;
               }
-              
+
               // We got a valid response from the background
               resolve(response);
             }
@@ -98,12 +100,12 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
           console.error('Error sending message to background script:', err);
           resolve({
             success: false,
-            error: err instanceof Error ? err.message : String(err)
+            error: err instanceof Error ? err.message : String(err),
           });
         }
       });
     }
-    
+
     // If running in the background script
     if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
       return new Promise<GetElementResponse>((resolve) => {
@@ -112,20 +114,20 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
           if (!tabs || tabs.length === 0) {
             resolve({
               success: false,
-              error: 'No active tab found'
+              error: 'No active tab found',
             });
             return;
           }
-          
+
           const tabId = tabs[0].id;
           if (!tabId) {
             resolve({
               success: false,
-              error: 'Invalid tab'
+              error: 'Invalid tab',
             });
             return;
           }
-          
+
           // Execute script in the tab to get element information
           chrome.tabs.executeScript(
             tabId,
@@ -211,25 +213,25 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
                     };
                   }
                 })();
-              `
+              `,
             },
             (results) => {
               if (chrome.runtime.lastError) {
                 resolve({
                   success: false,
-                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                  error: chrome.runtime.lastError.message || 'Error executing script in tab',
                 });
                 return;
               }
-              
+
               if (!results || results.length === 0) {
                 resolve({
                   success: false,
-                  error: 'No result from tab script execution'
+                  error: 'No result from tab script execution',
                 });
                 return;
               }
-              
+
               // Return the result from the executed script
               resolve(results[0]);
             }
@@ -237,7 +239,7 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
         });
       });
     }
-    
+
     // If running directly in page context (content script)
     if (env.isContentScript && typeof document !== 'undefined') {
       try {
@@ -245,35 +247,36 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
         if (!elements || elements.length === 0) {
           return {
             success: false,
-            error: `No elements found with selector: ${selector}`
+            error: `No elements found with selector: ${selector}`,
           };
         }
-        
+
         const limitedElements = elements.slice(0, limit);
-        
-        const elementInfos = limitedElements.map(element => {
+
+        const elementInfos = limitedElements.map((element) => {
           // Get all attributes as key-value pairs
           const attributesObj: Record<string, string> = {};
           for (const attr of Array.from(element.attributes)) {
             attributesObj[attr.name] = attr.value;
           }
-          
+
           // Check if element is visible
           const style = window.getComputedStyle(element);
-          const isVisible = style.display !== 'none' && 
-                           style.visibility !== 'hidden' && 
-                           style.opacity !== '0';
-          
+          const isVisible =
+            style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+
           // Check if element is enabled (for form controls)
           let isEnabled = true;
-          if (element instanceof HTMLButtonElement || 
-              element instanceof HTMLInputElement || 
-              element instanceof HTMLSelectElement || 
-              element instanceof HTMLTextAreaElement || 
-              element instanceof HTMLOptionElement) {
+          if (
+            element instanceof HTMLButtonElement ||
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLSelectElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLOptionElement
+          ) {
             isEnabled = !element.disabled;
           }
-          
+
           // Get bounding client rect
           const rect = element.getBoundingClientRect();
           const boundingRect = {
@@ -282,17 +285,19 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
             bottom: rect.bottom,
             left: rect.left,
             width: rect.width,
-            height: rect.height
+            height: rect.height,
           };
-          
+
           // Get element value if applicable
           let value = undefined;
-          if (element instanceof HTMLInputElement || 
-              element instanceof HTMLTextAreaElement || 
-              element instanceof HTMLSelectElement) {
+          if (
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement ||
+            element instanceof HTMLSelectElement
+          ) {
             value = element.value;
           }
-          
+
           return {
             tagName: element.tagName.toLowerCase(),
             id: element.id || undefined,
@@ -302,40 +307,40 @@ export async function getElement(params: GetElementParams): Promise<GetElementRe
             attributes: attributesObj,
             isVisible,
             isEnabled,
-            boundingRect
+            boundingRect,
           };
         });
-        
+
         return {
           success: true,
           elements: elementInfos,
-          count: elements.length
+          count: elements.length,
         };
       } catch (error) {
         return {
           success: false,
-          error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
+          error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`,
         };
       }
     }
-    
+
     // If not in a browser environment, we can't get elements
     if (env.isNodeJs) {
       return {
         success: false,
-        error: 'Cannot get element information in Node.js environment'
+        error: 'Cannot get element information in Node.js environment',
       };
     }
-    
+
     // Default error if environment detection doesn't work as expected
     return {
       success: false,
-      error: 'Unsupported environment for getting element information'
+      error: 'Unsupported environment for getting element information',
     };
   } catch (error) {
     return {
       success: false,
-      error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
+      error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }
@@ -348,26 +353,28 @@ export interface GetElementByRefIdParams {
 
 /**
  * Get information about an element on the page using its aria-ref ID
- * 
+ *
  * @param params Object containing the refId
  * @returns Promise with success status and element information
  */
-export async function getElementByRefId(params: GetElementByRefIdParams): Promise<GetElementResponse> {
+export async function getElementByRefId(
+  params: GetElementByRefIdParams
+): Promise<GetElementResponse> {
   try {
     const { refId } = params;
-    
+
     if (!refId) {
       return {
         success: false,
-        error: 'refId is required'
+        error: 'refId is required',
       };
     }
-    
+
     const selector = `[aria-ref="${refId}"]`;
-    
+
     // If running in a content script or sidepanel context, use the background script
     const env = detectEnvironment();
-    
+
     if (env.useBackgroundProxy && typeof chrome !== 'undefined' && chrome.runtime) {
       return new Promise<GetElementResponse>((resolve) => {
         // Add a timeout to handle cases where background script doesn't respond
@@ -375,29 +382,31 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
           console.warn('Background script connection timed out.');
           resolve({
             success: false,
-            error: 'Background script connection timed out'
+            error: 'Background script connection timed out',
           });
         }, 5000); // 5 second timeout
-        
+
         try {
           chrome.runtime.sendMessage(
             {
               type: 'GET_ELEMENT_BY_REF_ID', // New message type
-              payload: { refId }
+              payload: { refId },
             },
             (response) => {
               // Clear the timeout since we got a response
               clearTimeout(timeoutId);
-              
+
               if (chrome.runtime.lastError) {
                 console.warn('Chrome runtime error:', chrome.runtime.lastError);
                 resolve({
                   success: false,
-                  error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                  error:
+                    chrome.runtime.lastError.message ||
+                    'Error communicating with background script',
                 });
                 return;
               }
-              
+
               // We got a valid response from the background
               resolve(response);
             }
@@ -408,12 +417,12 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
           console.error('Error sending message to background script:', err);
           resolve({
             success: false,
-            error: err instanceof Error ? err.message : String(err)
+            error: err instanceof Error ? err.message : String(err),
           });
         }
       });
     }
-    
+
     // If running in the background script
     if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
       return new Promise<GetElementResponse>((resolve) => {
@@ -422,20 +431,20 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
           if (!tabs || tabs.length === 0) {
             resolve({
               success: false,
-              error: 'No active tab found'
+              error: 'No active tab found',
             });
             return;
           }
-          
+
           const tabId = tabs[0].id;
           if (!tabId) {
             resolve({
               success: false,
-              error: 'Invalid tab'
+              error: 'Invalid tab',
             });
             return;
           }
-          
+
           // Execute script in the tab to get element information
           chrome.tabs.executeScript(
             tabId,
@@ -516,25 +525,25 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
                     };
                   }
                 })();
-              `
+              `,
             },
             (results) => {
               if (chrome.runtime.lastError) {
                 resolve({
                   success: false,
-                  error: chrome.runtime.lastError.message || 'Error executing script in tab'
+                  error: chrome.runtime.lastError.message || 'Error executing script in tab',
                 });
                 return;
               }
-              
+
               if (!results || results.length === 0) {
                 resolve({
                   success: false,
-                  error: 'No result from tab script execution'
+                  error: 'No result from tab script execution',
                 });
                 return;
               }
-              
+
               // Return the result from the executed script
               resolve(results[0]);
             }
@@ -542,7 +551,7 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
         });
       });
     }
-    
+
     // If running directly in page context (content script)
     if (env.isContentScript && typeof document !== 'undefined') {
       try {
@@ -550,29 +559,30 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
         if (!element) {
           return {
             success: false,
-            error: `No element found with refId: ${refId}`
+            error: `No element found with refId: ${refId}`,
           };
         }
-        
+
         const attributesObj: Record<string, string> = {};
         for (const attr of Array.from(element.attributes)) {
           attributesObj[attr.name] = attr.value;
         }
-        
+
         const style = window.getComputedStyle(element);
-        const isVisible = style.display !== 'none' && 
-                         style.visibility !== 'hidden' && 
-                         style.opacity !== '0';
-        
+        const isVisible =
+          style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+
         let isEnabled = true;
-        if (element instanceof HTMLButtonElement || 
-            element instanceof HTMLInputElement || 
-            element instanceof HTMLSelectElement || 
-            element instanceof HTMLTextAreaElement || 
-            element instanceof HTMLOptionElement) {
+        if (
+          element instanceof HTMLButtonElement ||
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLSelectElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLOptionElement
+        ) {
           isEnabled = !element.disabled;
         }
-        
+
         const rect = element.getBoundingClientRect();
         const boundingRect = {
           top: rect.top,
@@ -580,16 +590,18 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
           bottom: rect.bottom,
           left: rect.left,
           width: rect.width,
-          height: rect.height
+          height: rect.height,
         };
-        
+
         let value = undefined;
-        if (element instanceof HTMLInputElement || 
-            element instanceof HTMLTextAreaElement || 
-            element instanceof HTMLSelectElement) {
+        if (
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement
+        ) {
           value = element.value;
         }
-        
+
         const elementInfo: ElementInfo = {
           tagName: element.tagName.toLowerCase(),
           id: element.id || undefined,
@@ -599,39 +611,39 @@ export async function getElementByRefId(params: GetElementByRefIdParams): Promis
           attributes: attributesObj,
           isVisible,
           isEnabled,
-          boundingRect
+          boundingRect,
         };
-        
+
         return {
           success: true,
           elements: [elementInfo], // Return as an array
-          count: 1
+          count: 1,
         };
       } catch (error) {
         return {
           success: false,
-          error: `Error getting element information by refId: ${error instanceof Error ? error.message : String(error)}`
+          error: `Error getting element information by refId: ${error instanceof Error ? error.message : String(error)}`,
         };
       }
     }
-    
+
     // If not in a browser environment, we can't get elements
     if (env.isNodeJs) {
       return {
         success: false,
-        error: 'Cannot get element information by refId in Node.js environment'
+        error: 'Cannot get element information by refId in Node.js environment',
       };
     }
-    
+
     // Default error if environment detection doesn't work as expected
     return {
       success: false,
-      error: 'Unsupported environment for getting element information by refId'
+      error: 'Unsupported environment for getting element information by refId',
     };
   } catch (error) {
     return {
       success: false,
-      error: `Error getting element information by refId: ${error instanceof Error ? error.message : String(error)}`
+      error: `Error getting element information by refId: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
-} 
+}

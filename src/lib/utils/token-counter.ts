@@ -92,7 +92,7 @@ export function estimatePromptTokens(
     systemTokens,
     toolTokens,
     messageTokens,
-    totalTokens
+    totalTokens,
   };
 }
 

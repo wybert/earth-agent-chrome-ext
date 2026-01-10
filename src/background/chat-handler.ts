@@ -1,10 +1,19 @@
 import { ModelMessage, streamText, tool, TextPart, ImagePart, FilePart, stepCountIs } from 'ai';
-import type { Message, Provider, BuiltInProvider, OpenAICompatibleConfig } from '../types/extension';
+import type {
+  Message,
+  Provider,
+  BuiltInProvider,
+  OpenAICompatibleConfig,
+} from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createResilientFetch } from '../lib/utils';
-import { GEE_ASK_MODE_PROMPT, GEE_DO_MODE_PROMPT, GEE_SYSTEM_PROMPT } from '../lib/prompts/gee-prompts';
+import {
+  GEE_ASK_MODE_PROMPT,
+  GEE_DO_MODE_PROMPT,
+  GEE_SYSTEM_PROMPT,
+} from '../lib/prompts/gee-prompts';
 import { createAITools, type ToolEventCallback } from '../lib/tools/ai-tools';
 import { OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '../constants/models';
 import { estimatePromptTokens } from '../lib/utils/token-counter';
@@ -18,7 +27,7 @@ export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
   openai: 'gpt-4o',
   anthropic: 'claude-sonnet-4-5-20250929',
   google: 'gemini-2.5-pro',
-  'z-ai': 'glm-4.7'
+  'z-ai': 'glm-4.7',
 };
 
 const NETWORK_RETRY_ATTEMPTS = 3;
@@ -36,20 +45,23 @@ const NETWORK_RETRY_BASE_DELAY_MS = 700;
 const SEQUENTIAL_TOOL_EXECUTION = true;
 
 // Custom fetch function for Anthropic to handle CORS
-const corsProxyFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
+const corsProxyFetch = async (
+  input: string | URL | Request,
+  options: RequestInit = {}
+): Promise<Response> => {
   // Get the URL as a string
   let url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-  
+
   // Fix the Anthropic API path if needed
   // If the URL is to Anthropic but missing the /v1 path segment, add it
   if (url.startsWith('https://api.anthropic.com/') && !url.includes('/v1/')) {
     url = url.replace('https://api.anthropic.com/', 'https://api.anthropic.com/v1/');
     console.log(`🔄 [CORS Proxy] Fixed API path: ${url}`);
-    
+
     // If input is a string, replace it directly
     if (typeof input === 'string') {
       input = url;
-    } 
+    }
     // If input is a URL object, create a new URL
     else if (input instanceof URL) {
       input = new URL(url);
@@ -59,15 +71,15 @@ const corsProxyFetch = async (input: string | URL | Request, options: RequestIni
       input = new Request(url, input);
     }
   }
-  
+
   console.log(`🔄 [CORS Proxy] Fetching from ${url}`);
-  
+
   try {
     // Add the required headers for browser requests to Anthropic
     const headers = new Headers(options.headers || {});
     headers.set('anthropic-version', '2023-06-01');
     headers.set('anthropic-dangerous-direct-browser-access', 'true');
-    
+
     // Create new options with enhanced headers
     const enhancedOptions: RequestInit = {
       ...options,
@@ -75,14 +87,16 @@ const corsProxyFetch = async (input: string | URL | Request, options: RequestIni
       // Add credentials to ensure cookies are sent with the request
       credentials: 'include',
       // Add mode to handle CORS preflight
-      mode: 'cors'
+      mode: 'cors',
     };
-    
-    console.log(`🔄 [CORS Proxy] Headers set: ${JSON.stringify(Object.fromEntries(headers.entries()))}`);
-    
+
+    console.log(
+      `🔄 [CORS Proxy] Headers set: ${JSON.stringify(Object.fromEntries(headers.entries()))}`
+    );
+
     // Make the fetch request with enhanced options
     const response = await fetch(input, enhancedOptions);
-    
+
     // Log success or error
     if (response.ok) {
       console.log(`✅ [CORS Proxy] Request succeeded: ${response.status} ${response.statusText}`);
@@ -96,7 +110,7 @@ const corsProxyFetch = async (input: string | URL | Request, options: RequestIni
         console.error(`❌ [CORS Proxy] Could not read error details`);
       }
     }
-    
+
     return response;
   } catch (error) {
     console.error(`❌ [CORS Proxy] Fetch error:`, error);
@@ -106,12 +120,12 @@ const corsProxyFetch = async (input: string | URL | Request, options: RequestIni
         error: {
           type: 'fetch_error',
           message: error instanceof Error ? error.message : String(error),
-          details: 'Error occurred during custom fetch operation'
-        }
+          details: 'Error occurred during custom fetch operation',
+        },
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   }
@@ -133,23 +147,28 @@ export async function handleChatRequest(
 ): Promise<Response> {
   try {
     // Debug log at start of request
-    console.log(`🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}, mode: ${mode}`);
-    
+    console.log(
+      `🔍 [Chat Handler] Request starting with provider: ${provider}, requested model: ${model || 'default'}, mode: ${mode}`
+    );
+
     if (!apiKey && !provider.startsWith('custom:')) {
       console.error(`❌ [Chat Handler] API key not configured for ${provider}`);
-      return new Response(JSON.stringify({
-        error: 'API key not configured',
-        message: 'Please set your API key in the extension settings'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({
+          error: 'API key not configured',
+          message: 'Please set your API key in the extension settings',
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: 'No messages provided' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -159,7 +178,9 @@ export async function handleChatRequest(
       const storageResult = await chrome.storage.sync.get(['earth_engine_project_context']);
       projectContext = storageResult['earth_engine_project_context'] || '';
       if (projectContext) {
-        console.log(`📋 [Chat Handler] Loaded project context (${projectContext.length} characters)`);
+        console.log(
+          `📋 [Chat Handler] Loaded project context (${projectContext.length} characters)`
+        );
       }
     } catch (error) {
       console.error('❌ [Chat Handler] Error loading project context:', error);
@@ -167,7 +188,10 @@ export async function handleChatRequest(
     }
 
     // Setup LLM provider
-    let llmProvider: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic> | ReturnType<typeof createGoogleGenerativeAI>;
+    let llmProvider:
+      | ReturnType<typeof createOpenAI>
+      | ReturnType<typeof createAnthropic>
+      | ReturnType<typeof createGoogleGenerativeAI>;
     let effectiveModel: string;
     let forceChatCompletions = false;
     let customProviderSupportsImages: boolean | undefined; // For custom providers: multimodal support flag
@@ -176,28 +200,39 @@ export async function handleChatRequest(
       // Validate API key
       if (!apiKey || apiKey.trim() === '') {
         console.error(`❌ [Chat Handler] OpenAI API key is missing or empty`);
-        return new Response(JSON.stringify({
-          error: 'OpenAI API key is required',
-          message: 'Please configure your OpenAI API key in the extension settings.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'OpenAI API key is required',
+            message: 'Please configure your OpenAI API key in the extension settings.',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
 
       // Validate API key format (OpenAI keys start with sk-)
       if (!apiKey.startsWith('sk-')) {
-        console.error(`❌ [Chat Handler] Invalid OpenAI API key format. Key should start with 'sk-', got: ${apiKey.substring(0, 10)}...`);
-        return new Response(JSON.stringify({
-          error: 'Invalid OpenAI API key format',
-          message: 'OpenAI API keys should start with "sk-". Please check your API key in settings.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        console.error(
+          `❌ [Chat Handler] Invalid OpenAI API key format. Key should start with 'sk-', got: ${apiKey.substring(0, 10)}...`
+        );
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid OpenAI API key format',
+            message:
+              'OpenAI API keys should start with "sk-". Please check your API key in settings.',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
 
-      console.log(`🔧 [Chat Handler] OpenAI API key validated: ${apiKey.substring(0, 10)}... (length: ${apiKey.length})`);
+      console.log(
+        `🔧 [Chat Handler] OpenAI API key validated: ${apiKey.substring(0, 10)}... (length: ${apiKey.length})`
+      );
 
       // Configure OpenAI with Helicone proxy if headers are provided
       const openaiConfig: any = {
@@ -206,7 +241,7 @@ export async function handleChatRequest(
           label: 'ChatHandler:OpenAI',
           maxAttempts: NETWORK_RETRY_ATTEMPTS,
           baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
-        })
+        }),
       };
 
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
@@ -217,7 +252,9 @@ export async function handleChatRequest(
 
       llmProvider = createOpenAI(openaiConfig);
       effectiveModel = model || DEFAULT_MODELS.openai;
-      console.log(`✅ [Chat Handler] Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`);
+      console.log(
+        `✅ [Chat Handler] Using OpenAI provider with model: ${effectiveModel}${heliconeHeaders ? ' (with Helicone)' : ''}`
+      );
     } else if (provider === 'anthropic') {
       effectiveModel = model || DEFAULT_MODELS.anthropic;
 
@@ -232,7 +269,7 @@ export async function handleChatRequest(
           baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
         }),
       };
-      
+
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
         console.log('🔍 [Chat Handler] Configuring Anthropic with Helicone observability');
         anthropicConfig.baseURL = 'https://anthropic.helicone.ai';
@@ -241,24 +278,31 @@ export async function handleChatRequest(
         // Set the correct baseURL for the Anthropic API, without the version path
         anthropicConfig.baseURL = 'https://api.anthropic.com';
       }
-      
+
       llmProvider = createAnthropic(anthropicConfig);
-      
-      console.log(`Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+
+      console.log(
+        `Using Anthropic provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`
+      );
     } else if (provider === 'google') {
       effectiveModel = model || DEFAULT_MODELS.google;
 
       // Validate API key format for Google
       if (!apiKey || !apiKey.startsWith('AIza') || apiKey.length !== 39) {
-        console.error(`❌ [Chat Handler] Invalid Google API key format. Expected format: AIzaXXX... (39 characters), got: ${apiKey ? apiKey.substring(0, 10) + '...' : 'empty'}`);
-        return new Response(JSON.stringify({ 
-          error: 'Invalid Google API key format. Please check your Google API key in settings.' 
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        console.error(
+          `❌ [Chat Handler] Invalid Google API key format. Expected format: AIzaXXX... (39 characters), got: ${apiKey ? apiKey.substring(0, 10) + '...' : 'empty'}`
+        );
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid Google API key format. Please check your Google API key in settings.',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
-      
+
       // Create the Google provider
       const googleConfig: any = {
         apiKey,
@@ -270,71 +314,87 @@ export async function handleChatRequest(
         // Add baseURL to help with debugging
         // Note: AI SDK Google provider uses the default Google AI API endpoint
       };
-      
+
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
         console.log('🔍 [Chat Handler] Configuring Google with Helicone observability');
         // Note: Helicone support for Google might need different configuration
         googleConfig.headers = heliconeHeaders;
       }
-      
+
       console.log(`🔧 [Chat Handler] Creating Google provider with config:`, {
         apiKeyPrefix: apiKey.substring(0, 10) + '...',
         model: effectiveModel,
-        hasHeliconeHeaders: !!heliconeHeaders
+        hasHeliconeHeaders: !!heliconeHeaders,
       });
-      
+
       try {
         llmProvider = createGoogleGenerativeAI(googleConfig);
         console.log(`✅ [Chat Handler] Google provider created successfully`);
       } catch (error) {
         console.error(`❌ [Chat Handler] Failed to create Google provider:`, error);
-        return new Response(JSON.stringify({ 
-          error: `Failed to create Google provider: ${error instanceof Error ? error.message : String(error)}` 
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Failed to create Google provider: ${error instanceof Error ? error.message : String(error)}`,
+          }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
-      
-      console.log(`Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`);
+
+      console.log(
+        `Using Google provider with model: ${effectiveModel} (UI selection was: ${model || 'not specified'})${heliconeHeaders ? ' (with Helicone)' : ''}`
+      );
     } else if (provider === 'z-ai') {
       effectiveModel = model || DEFAULT_MODELS['z-ai'];
       forceChatCompletions = true;
 
       if (!apiKey) {
         console.error(`❌ [Chat Handler] Z.AI API key is missing`);
-        return new Response(JSON.stringify({
-          error: 'Z.AI API key is required',
-          message: 'Please configure your Z.AI API key in the extension settings.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Z.AI API key is required',
+            message: 'Please configure your Z.AI API key in the extension settings.',
+          }),
+          {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
 
       console.log(`🔧 [Chat Handler] Configuring Z.AI provider`);
-      
+
       // Custom fetch for Z.AI to debug connection issues
-      const zAiFetch = async (input: string | URL | Request, options: RequestInit = {}): Promise<Response> => {
-        const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const zAiFetch = async (
+        input: string | URL | Request,
+        options: RequestInit = {}
+      ): Promise<Response> => {
+        const url =
+          typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
         console.log(`🌐 [Z.AI Debug] Requesting URL: ${url}`);
         console.log(`🌐 [Z.AI Debug] Method: ${options.method || 'GET'}`);
-        
+
         // Log headers to debug auth issues
         const headers = options.headers ? new Headers(options.headers) : new Headers();
         const authHeader = headers.get('Authorization');
         if (authHeader) {
-          console.log(`🌐 [Z.AI Debug] Authorization header present: ${authHeader.startsWith('Bearer ') ? 'Bearer <token>' : 'Non-Bearer format'}`);
+          console.log(
+            `🌐 [Z.AI Debug] Authorization header present: ${authHeader.startsWith('Bearer ') ? 'Bearer <token>' : 'Non-Bearer format'}`
+          );
           console.log(`🌐 [Z.AI Debug] Token length: ${authHeader.replace('Bearer ', '').length}`);
-          console.log(`🌐 [Z.AI Debug] Token prefix: ${authHeader.replace('Bearer ', '').substring(0, 5)}...`);
+          console.log(
+            `🌐 [Z.AI Debug] Token prefix: ${authHeader.replace('Bearer ', '').substring(0, 5)}...`
+          );
         } else {
           console.error(`❌ [Z.AI Debug] Missing Authorization header!`);
         }
-        
+
         try {
           const response = await fetch(input, options);
           console.log(`🌐 [Z.AI Debug] Response status: ${response.status} ${response.statusText}`);
-          
+
           if (!response.ok) {
             try {
               const text = await response.clone().text();
@@ -343,7 +403,7 @@ export async function handleChatRequest(
               console.error(`❌ [Z.AI Debug] Could not read error body`);
             }
           }
-          
+
           return response;
         } catch (error) {
           console.error(`❌ [Z.AI Debug] Network error:`, error);
@@ -361,7 +421,7 @@ export async function handleChatRequest(
           fetchImpl: zAiFetch, // Use our debug fetch
           maxAttempts: NETWORK_RETRY_ATTEMPTS,
           baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
-        })
+        }),
       };
 
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
@@ -370,7 +430,9 @@ export async function handleChatRequest(
       }
 
       llmProvider = createOpenAI(zAiConfig);
-      console.log(`✅ [Chat Handler] Z.AI provider created successfully with model: ${effectiveModel}`);
+      console.log(
+        `✅ [Chat Handler] Z.AI provider created successfully with model: ${effectiveModel}`
+      );
     } else if (provider.startsWith('custom:')) {
       // Handle custom OpenAI Compatible providers
       const configId = provider.replace('custom:', '');
@@ -378,26 +440,34 @@ export async function handleChatRequest(
 
       try {
         // Load custom provider config from storage
-        const storageResult = await chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]);
-        const configs: OpenAICompatibleConfig[] = storageResult[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
-        const customConfig = configs.find(c => c.id === configId);
+        const storageResult = await chrome.storage.sync.get([
+          OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
+        ]);
+        const configs: OpenAICompatibleConfig[] =
+          storageResult[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+        const customConfig = configs.find((c) => c.id === configId);
 
         if (!customConfig) {
           console.error(`❌ [Chat Handler] Custom provider config not found: ${configId}`);
-          return new Response(JSON.stringify({
-            error: 'Custom provider configuration not found',
-            message: 'The selected custom provider no longer exists. Please check your settings.'
-          }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return new Response(
+            JSON.stringify({
+              error: 'Custom provider configuration not found',
+              message: 'The selected custom provider no longer exists. Please check your settings.',
+            }),
+            {
+              status: 404,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          );
         }
 
         console.log(`✅ [Chat Handler] Found custom provider config: ${customConfig.name}`);
 
         // Store the supportsImages flag for later use
         customProviderSupportsImages = customConfig.supportsImages ?? false;
-        console.log(`🖼️ [Chat Handler] Custom provider supportsImages: ${customProviderSupportsImages}`);
+        console.log(
+          `🖼️ [Chat Handler] Custom provider supportsImages: ${customProviderSupportsImages}`
+        );
 
         // Use the custom provider's configuration
         const customOpenAIConfig: any = {
@@ -407,12 +477,14 @@ export async function handleChatRequest(
             label: `ChatHandler:Custom:${customConfig.name}`,
             maxAttempts: NETWORK_RETRY_ATTEMPTS,
             baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
-          })
+          }),
         };
 
         // Add Helicone headers if provided
         if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
-          console.log(`🔍 [Chat Handler] Configuring custom provider "${customConfig.name}" with Helicone observability`);
+          console.log(
+            `🔍 [Chat Handler] Configuring custom provider "${customConfig.name}" with Helicone observability`
+          );
           customOpenAIConfig.headers = heliconeHeaders;
         }
 
@@ -422,21 +494,26 @@ export async function handleChatRequest(
           forceChatCompletions = true;
         }
 
-        console.log(`✅ [Chat Handler] Using custom provider "${customConfig.name}" with model: ${effectiveModel} at ${customConfig.baseURL}${heliconeHeaders ? ' (with Helicone)' : ''}`);
+        console.log(
+          `✅ [Chat Handler] Using custom provider "${customConfig.name}" with model: ${effectiveModel} at ${customConfig.baseURL}${heliconeHeaders ? ' (with Helicone)' : ''}`
+        );
       } catch (error) {
         console.error(`❌ [Chat Handler] Error loading custom provider config:`, error);
-        return new Response(JSON.stringify({
-          error: 'Failed to load custom provider configuration',
-          message: error instanceof Error ? error.message : String(error)
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(
+          JSON.stringify({
+            error: 'Failed to load custom provider configuration',
+            message: error instanceof Error ? error.message : String(error),
+          }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       }
     } else {
       return new Response(JSON.stringify({ error: 'Unsupported API provider' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     }
 
@@ -444,51 +521,60 @@ export async function handleChatRequest(
     const formattedMessages: ModelMessage[] = messages
       .map((msg): ModelMessage | null => {
         // Handle messages with simple string content
-        if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') && 
-            typeof msg.content === 'string') {
+        if (
+          (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') &&
+          typeof msg.content === 'string'
+        ) {
           return { role: msg.role, content: msg.content };
         }
         // Handle messages with parts (multi-modal content)
-        else if ((msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') && 
-                 msg.parts && Array.isArray(msg.parts)) {
-          
+        else if (
+          (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'system') &&
+          msg.parts &&
+          Array.isArray(msg.parts)
+        ) {
           // Log that we're processing a multi-modal message
           console.log('Processing multi-modal message with parts:', msg.parts.length);
-          console.log('Multi-modal message parts types:', msg.parts.map(p => p.type).join(', '));
-          
+          console.log('Multi-modal message parts types:', msg.parts.map((p) => p.type).join(', '));
+
           // Build an array of properly-typed parts
           const formattedParts: (TextPart | ImagePart)[] = [];
-          
+
           for (const part of msg.parts) {
             if (part.type === 'text' && part.text) {
-              console.log('Processing text part:', part.text.substring(0, 50) + (part.text.length > 50 ? '...' : ''));
+              console.log(
+                'Processing text part:',
+                part.text.substring(0, 50) + (part.text.length > 50 ? '...' : '')
+              );
               formattedParts.push({ type: 'text', text: part.text } as TextPart);
             } else if (part.type === 'file' && part.mimeType?.startsWith('image/') && part.data) {
               console.log('Processing image attachment in message', {
                 mimeType: part.mimeType,
                 dataLength: part.data.length,
-                dataPrefix: part.data.substring(0, 30) + '...'
+                dataPrefix: part.data.substring(0, 30) + '...',
               });
-              
+
               // Ensure data URL format is correct (should start with data:image/...)
               let imageData = part.data;
               if (!imageData.startsWith('data:')) {
                 imageData = `data:${part.mimeType || 'image/png'};base64,${part.data}`;
                 console.log('Added proper data URL prefix to image');
               }
-              
-              formattedParts.push({ 
-                type: 'image', 
+
+              formattedParts.push({
+                type: 'image',
                 image: imageData,
-                mimeType: part.mimeType 
+                mimeType: part.mimeType,
               } as ImagePart);
             }
           }
-          
+
           // Only return if we have valid parts
           if (formattedParts.length > 0) {
-            console.log(`Created formatted message with ${formattedParts.length} parts:`, 
-              formattedParts.map(p => p.type).join(', '));
+            console.log(
+              `Created formatted message with ${formattedParts.length} parts:`,
+              formattedParts.map((p) => p.type).join(', ')
+            );
             return { role: msg.role, content: formattedParts as any };
           } else {
             console.warn('No valid parts found in multi-modal message');
@@ -508,7 +594,9 @@ export async function handleChatRequest(
 ## Project-Specific Context
 
 ${projectContext}`;
-      console.log(`📋 [Chat Handler] Using ${mode} mode system prompt with project context (${projectContext.length} chars)`);
+      console.log(
+        `📋 [Chat Handler] Using ${mode} mode system prompt with project context (${projectContext.length} chars)`
+      );
       console.log(`📋 [Chat Handler] Full system prompt:\n${finalSystemPrompt}`);
     } else {
       console.log(`📋 [Chat Handler] Using ${mode} mode system prompt (no project context)`);
@@ -520,24 +608,32 @@ ${projectContext}`;
 ## Profile Instructions
 
 ${profile.prompt.trim()}`;
-      console.log(`📋 [Chat Handler] Applied profile prompt (${profile.prompt.trim().length} chars)`);
+      console.log(
+        `📋 [Chat Handler] Applied profile prompt (${profile.prompt.trim().length} chars)`
+      );
     }
 
     // Add sequential tool execution instruction for providers without native support
     // OpenAI and Anthropic have native providerOptions, others need prompt-based control
     if (SEQUENTIAL_TOOL_EXECUTION) {
       if (['openai', 'anthropic'].includes(provider)) {
-        console.log(`📋 [Chat Handler] Sequential tool execution enabled for ${provider} (native providerOptions)`);
+        console.log(
+          `📋 [Chat Handler] Sequential tool execution enabled for ${provider} (native providerOptions)`
+        );
       } else {
         finalSystemPrompt = `${finalSystemPrompt}
 
 ## Tool Execution Rules
 
 IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its result before calling the next tool. Do not call multiple tools in parallel.`;
-        console.log(`📋 [Chat Handler] Sequential tool execution enabled for ${provider} (prompt fallback)`);
+        console.log(
+          `📋 [Chat Handler] Sequential tool execution enabled for ${provider} (prompt fallback)`
+        );
       }
     } else {
-      console.log(`📋 [Chat Handler] Parallel tool execution enabled (SEQUENTIAL_TOOL_EXECUTION = false)`);
+      console.log(
+        `📋 [Chat Handler] Parallel tool execution enabled (SEQUENTIAL_TOOL_EXECUTION = false)`
+      );
     }
 
     // Add multimodal capability warning for providers that don't support images
@@ -564,17 +660,18 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 - If you take a screenshot, tell the user: "I captured a screenshot but I cannot view or analyze images with this model"
 - Use the snapshot tool instead to get a text-based accessibility tree of the page
 - If the user asks you to look at or analyze something visual, explain that you cannot see images and suggest they switch to a multimodal-capable model (OpenAI, Anthropic, or Google Gemini)`;
-      console.log(`⚠️ [Chat Handler] Added multimodal limitation warning for provider: ${provider}`);
+      console.log(
+        `⚠️ [Chat Handler] Added multimodal limitation warning for provider: ${provider}`
+      );
     }
 
     // Configure stream options based on provider
     // Create a shared error container that can be accessed from both onError and the stream
     let streamError: { message: string } | null = null;
 
-    const modelForProvider =
-      forceChatCompletions
-        ? (llmProvider as ReturnType<typeof createOpenAI>).chat(effectiveModel as any)
-        : llmProvider(effectiveModel);
+    const modelForProvider = forceChatCompletions
+      ? (llmProvider as ReturnType<typeof createOpenAI>).chat(effectiveModel as any)
+      : llmProvider(effectiveModel);
 
     let streamOptions: any = {
       model: modelForProvider,
@@ -592,13 +689,16 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       },
       // Add onError callback to capture streaming errors and store them
       onError: ({ error }: { error: any }) => {
-        console.error(`❌ [Chat Handler] Streaming error occurred for ${provider} provider:`, error);
+        console.error(
+          `❌ [Chat Handler] Streaming error occurred for ${provider} provider:`,
+          error
+        );
         console.error(`❌ [Chat Handler] Error type: ${error?.name}`);
         console.error(`❌ [Chat Handler] Error message: ${error?.message}`);
 
         // Store the error so we can include it in the response
         streamError = {
-          message: error?.message || String(error)
+          message: error?.message || String(error),
         };
 
         if (error?.cause) {
@@ -622,18 +722,22 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         if (toolCalls && toolCalls.length > 0) {
           toolCalls.forEach((toolCall: any) => {
             console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, {
-              args: toolCall.args
+              args: toolCall.args,
             });
           });
         }
       },
-      onStepFinish: ({ toolCalls, toolResults }: { toolCalls?: any[], toolResults?: any[] }) => {
+      onStepFinish: ({ toolCalls, toolResults }: { toolCalls?: any[]; toolResults?: any[] }) => {
         if (toolCalls && toolCalls.length > 0) {
           toolCalls.forEach((toolCall: any, index: number) => {
             const result = toolResults?.[index];
             console.log(`✅ [Tool Finish] ${toolCall.toolName}`, {
               success: result ? 'completed' : 'no result',
-              resultPreview: result ? (typeof result === 'string' ? result.substring(0, 100) : JSON.stringify(result).substring(0, 100)) : 'none'
+              resultPreview: result
+                ? typeof result === 'string'
+                  ? result.substring(0, 100)
+                  : JSON.stringify(result).substring(0, 100)
+                : 'none',
             });
           });
         }
@@ -663,15 +767,15 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       clearMapInspectorAndConsoleTool,
       getConsoleOutputTool,
       getMapScreenPositionTool,
-      getInspectorOutputTool
+      getInspectorOutputTool,
     } = createAITools(onToolEvent, { provider, customProviderSupportsImages });
 
     // Read-only tools for "ask" mode
     const readOnlyTools = {
       weather: weatherTool,
       dateTime: dateTimeTool,
-      wait: waitTool,  // Wait for long-running operations
-      readCode: readCodeTool,  // Can read code (no modifications)
+      wait: waitTool, // Wait for long-running operations
+      readCode: readCodeTool, // Can read code (no modifications)
       geeDocs: geeDocsTool,
       screenshot: screenshotTool,
       snapshot: snapshotTool,
@@ -688,7 +792,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       writeCode: writeCodeTool,
       undoEdit: undoEditTool,
       runCurrentCode: runCurrentCodeTool,
-      clearMapInspectorAndConsole: clearMapInspectorAndConsoleTool
+      clearMapInspectorAndConsole: clearMapInspectorAndConsoleTool,
     };
 
     // Determine which tools to use based on mode
@@ -705,33 +809,39 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
     streamOptions.stopWhen = stepCountIs(50); // Allow up to 50 reasoning/tool steps
-    
+
     // For Anthropic models, add special headers for browser usage
     if (provider === 'anthropic') {
       console.log(`🔧 [Chat Handler] Adding special headers for Anthropic browser usage`);
       streamOptions.headers = {
         'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'anthropic-dangerous-direct-browser-access': 'true',
       };
       // Note: In AI SDK 5.0, multi-modal tool results (images) are automatically
       // supported for both Anthropic and OpenAI when using toModelOutput
     }
-    
+
     // For Google provider, add specific logging and validation
     if (provider === 'google') {
       console.log(`🔧 [Chat Handler] Using Google provider with API key length: ${apiKey.length}`);
       console.log(`🔧 [Chat Handler] Google model being used: ${effectiveModel}`);
     }
-      
 
-    
-    console.log(`📊 [Chat Handler] Final stream configuration:`, JSON.stringify(streamOptions, (k, v) => 
-      k === 'messages' ? '[Messages array]' : (k === 'tools' ? '[Tools object]' : v), 2));
-    
+    console.log(
+      `📊 [Chat Handler] Final stream configuration:`,
+      JSON.stringify(
+        streamOptions,
+        (k, v) => (k === 'messages' ? '[Messages array]' : k === 'tools' ? '[Tools object]' : v),
+        2
+      )
+    );
+
     try {
       // Update callbacks to call onToolEvent if provided
       if (onToolEvent) {
-        console.log('🔧 [Chat Handler] onToolEvent callback is provided, setting up step callbacks');
+        console.log(
+          '🔧 [Chat Handler] onToolEvent callback is provided, setting up step callbacks'
+        );
 
         // Track tool start times for duration calculation
         const toolStartTimes = new Map<string, number>();
@@ -765,7 +875,13 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
           console.log('🔧 [Chat Handler] ========== onStepStart END ==========');
         };
 
-        streamOptions.onStepFinish = ({ toolCalls, toolResults }: { toolCalls?: any[], toolResults?: any[] }) => {
+        streamOptions.onStepFinish = ({
+          toolCalls,
+          toolResults,
+        }: {
+          toolCalls?: any[];
+          toolResults?: any[];
+        }) => {
           console.log('🔧 [Chat Handler] ========== onStepFinish CALLED ==========');
           console.log('🔧 [Chat Handler] Timestamp:', new Date().toISOString());
           console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
@@ -775,15 +891,18 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
             toolCalls.forEach((toolCall: any, index: number) => {
               const result = toolResults?.[index];
 
-              console.log(`✅ [Tool Finish][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`);
+              console.log(
+                `✅ [Tool Finish][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`
+              );
               console.log(`   - Tool ID: ${toolCall.toolCallId || 'N/A'}`);
               console.log(`   - Result status: ${result ? 'completed' : 'no result'}`);
 
               if (result) {
                 console.log(`   - Result type: ${typeof result}`);
-                const resultPreview = typeof result === 'string'
-                  ? result.substring(0, 100)
-                  : JSON.stringify(result).substring(0, 100);
+                const resultPreview =
+                  typeof result === 'string'
+                    ? result.substring(0, 100)
+                    : JSON.stringify(result).substring(0, 100);
                 console.log(`   - Result preview: ${resultPreview}...`);
 
                 // Special logging for code execution results
@@ -800,7 +919,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
               // We need to extract the actual result from the wrapper
               let eventResult: any;
               console.log(`   - Raw result type: ${typeof result}`);
-              console.log(`   - Raw result keys: ${result ? Object.keys(result).join(', ') : 'null'}`);
+              console.log(
+                `   - Raw result keys: ${result ? Object.keys(result).join(', ') : 'null'}`
+              );
               console.log(`   - Raw result:`, JSON.stringify(result, null, 2)?.substring(0, 500));
 
               if (!result) {
@@ -810,11 +931,20 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
               } else if (typeof result === 'object') {
                 // Check if this is a Vercel AI SDK wrapper object
                 // The actual tool result is in result.output (not result.result!)
-                const actualResult = result.output !== undefined ? result.output :
-                                     result.result !== undefined ? result.result : result;
-                console.log(`   - Extracted result keys: ${actualResult ? Object.keys(actualResult).join(', ') : 'null'}`);
-                console.log(`   - Extracted result has diff: ${!!(actualResult?.diff)}`);
-                console.log(`   - Extracted result:`, JSON.stringify(actualResult, null, 2)?.substring(0, 500));
+                const actualResult =
+                  result.output !== undefined
+                    ? result.output
+                    : result.result !== undefined
+                      ? result.result
+                      : result;
+                console.log(
+                  `   - Extracted result keys: ${actualResult ? Object.keys(actualResult).join(', ') : 'null'}`
+                );
+                console.log(`   - Extracted result has diff: ${!!actualResult?.diff}`);
+                console.log(
+                  `   - Extracted result:`,
+                  JSON.stringify(actualResult, null, 2)?.substring(0, 500)
+                );
                 eventResult = actualResult;
               } else {
                 eventResult = 'completed';
@@ -830,10 +960,12 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
                 toolName: toolCall.toolName,
                 args: toolCall.args,
                 result: eventResult,
-                duration,  // Add duration in milliseconds
-                timestamp: Date.now()
+                duration, // Add duration in milliseconds
+                timestamp: Date.now(),
               };
-              console.log(`🔧 [Chat Handler] Calling onToolEvent with tool_finish (duration: ${duration}ms)`);
+              console.log(
+                `🔧 [Chat Handler] Calling onToolEvent with tool_finish (duration: ${duration}ms)`
+              );
               onToolEvent(event);
             });
           } else {
@@ -846,7 +978,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       }
 
       // Estimate token usage before making the API call
-      const systemPrompt = streamOptions.system as string || '';
+      const systemPrompt = (streamOptions.system as string) || '';
       const toolCount = Object.keys(toolsToUse).length;
       const tokenEstimate = estimatePromptTokens(systemPrompt, messages, toolCount);
 
@@ -854,7 +986,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         systemTokens: tokenEstimate.systemTokens,
         toolTokens: tokenEstimate.toolTokens,
         messageTokens: tokenEstimate.messageTokens,
-        totalEstimated: tokenEstimate.totalTokens
+        totalEstimated: tokenEstimate.totalTokens,
       });
 
       // Check token estimate against model limit
@@ -863,9 +995,13 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 
       // Warn if approaching or exceeding limit (but still allow the request)
       if (estimatedPercentage >= 100) {
-        console.error(`🚨 [Chat Handler] Token estimate (${tokenEstimate.totalTokens}) exceeds model limit (${modelLimit})! Request may fail.`);
+        console.error(
+          `🚨 [Chat Handler] Token estimate (${tokenEstimate.totalTokens}) exceeds model limit (${modelLimit})! Request may fail.`
+        );
       } else if (estimatedPercentage >= 90) {
-        console.warn(`⚠️ [Chat Handler] Token estimate (${tokenEstimate.totalTokens}) is ${estimatedPercentage.toFixed(1)}% of model limit (${modelLimit})`);
+        console.warn(
+          `⚠️ [Chat Handler] Token estimate (${tokenEstimate.totalTokens}) is ${estimatedPercentage.toFixed(1)}% of model limit (${modelLimit})`
+        );
       }
 
       // Use streamText for AI generation with tools
@@ -873,7 +1009,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       const result = streamText(streamOptions);
 
       console.timeEnd('streamText execution');
-      console.log(`✅ [Chat Handler] Completed streamText call. Converting to text stream response.`);
+      console.log(
+        `✅ [Chat Handler] Completed streamText call. Converting to text stream response.`
+      );
 
       // Create a custom stream that wraps the AI SDK stream and catches errors
       const encoder = new TextEncoder();
@@ -881,15 +1019,17 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         async start(controller) {
           try {
             // Send token estimate as the first chunk
-            const estimateChunk = encoder.encode(`data: ${JSON.stringify({
-              type: 'token_estimate',
-              estimate: {
-                promptTokens: tokenEstimate.totalTokens,
-                systemTokens: tokenEstimate.systemTokens,
-                toolTokens: tokenEstimate.toolTokens,
-                messageTokens: tokenEstimate.messageTokens
-              }
-            })}\n\n`);
+            const estimateChunk = encoder.encode(
+              `data: ${JSON.stringify({
+                type: 'token_estimate',
+                estimate: {
+                  promptTokens: tokenEstimate.totalTokens,
+                  systemTokens: tokenEstimate.systemTokens,
+                  toolTokens: tokenEstimate.toolTokens,
+                  messageTokens: tokenEstimate.messageTokens,
+                },
+              })}\n\n`
+            );
             controller.enqueue(estimateChunk);
             // Get the original text stream
             const originalStream = result.toTextStreamResponse().body;
@@ -910,14 +1050,16 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
                   const usage = await result.usage;
                   if (usage) {
                     console.log(`📊 [Chat Handler] Token usage:`, usage);
-                    const usageChunk = encoder.encode(`data: ${JSON.stringify({
-                      type: 'token_usage',
-                      usage: {
-                        promptTokens: usage.inputTokens || 0,
-                        completionTokens: usage.outputTokens || 0,
-                        totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0)
-                      }
-                    })}\n\n`);
+                    const usageChunk = encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'token_usage',
+                        usage: {
+                          promptTokens: usage.inputTokens || 0,
+                          completionTokens: usage.outputTokens || 0,
+                          totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
+                        },
+                      })}\n\n`
+                    );
                     controller.enqueue(usageChunk);
                   }
                 } catch (usageError) {
@@ -926,8 +1068,13 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 
                 // Check if there was an error captured by onError
                 if (streamError) {
-                  console.log(`❌ [Chat Handler] Sending captured error to frontend:`, streamError.message);
-                  const errorChunk = encoder.encode(`error:${JSON.stringify({ error: streamError.message })}\n`);
+                  console.log(
+                    `❌ [Chat Handler] Sending captured error to frontend:`,
+                    streamError.message
+                  );
+                  const errorChunk = encoder.encode(
+                    `error:${JSON.stringify({ error: streamError.message })}\n`
+                  );
                   controller.enqueue(errorChunk);
                 }
                 controller.close();
@@ -947,19 +1094,22 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
             controller.enqueue(errorChunk);
             controller.close();
           }
-        }
+        },
       });
 
       return new Response(customErrorHandlingStream, {
-        headers: result.toTextStreamResponse().headers
+        headers: result.toTextStreamResponse().headers,
       });
     } catch (streamError: any) {
       console.timeEnd('streamText execution');
       // This block will catch errors during the *initial setup* of the stream,
       // but not errors that occur *during* the streaming process itself.
       // Those are handled by the `onError` callback.
-      console.error(`❌ [Chat Handler] streamText setup error for ${provider} provider:`, streamError);
-      
+      console.error(
+        `❌ [Chat Handler] streamText setup error for ${provider} provider:`,
+        streamError
+      );
+
       // Additional logging for Google provider errors
       if (provider === 'google') {
         console.error(`❌ [Google Provider] Detailed error information:`);
@@ -968,11 +1118,11 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         console.error(`  - Error name: ${streamError.name}`);
         console.error(`  - Error message: ${streamError.message}`);
         console.error(`  - Error stack: ${streamError.stack}`);
-        
+
         if (streamError.cause) {
           console.error(`  - Error cause:`, streamError.cause);
         }
-        
+
         // Check for specific Google API errors
         if (streamError.message?.includes('API key')) {
           console.error(`❌ [Google Provider] API key related error detected`);
@@ -984,25 +1134,31 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
           console.error(`❌ [Google Provider] Quota/billing related error detected`);
         }
       }
-      
-      return new Response(JSON.stringify({ 
-        error: 'Chat processing failed',
-        message: streamError instanceof Error ? streamError.message : 'Unknown error occurred',
-        provider: provider,
-        model: effectiveModel
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return new Response(
+        JSON.stringify({
+          error: 'Chat processing failed',
+          message: streamError instanceof Error ? streamError.message : 'Unknown error occurred',
+          provider: provider,
+          model: effectiveModel,
+        }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   } catch (error: any) {
     console.error('Chat handler general error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Chat processing failed',
-      message: error instanceof Error ? error.message : 'Unknown error occurred' 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        error: 'Chat processing failed',
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }

@@ -96,7 +96,7 @@ export async function getEditorContent(tabId?: number): Promise<EditorContentRes
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
@@ -104,7 +104,10 @@ export async function getEditorContent(tabId?: number): Promise<EditorContentRes
 /**
  * Set the Earth Engine editor content by executing in MAIN world
  */
-export async function setEditorContent(content: string, tabId?: number): Promise<SetEditorContentResult> {
+export async function setEditorContent(
+  content: string,
+  tabId?: number
+): Promise<SetEditorContentResult> {
   // Validate Chrome APIs
   const apiCheck = validateChromeAPIs();
   if (!apiCheck.success) {
@@ -138,7 +141,7 @@ export async function setEditorContent(content: string, tabId?: number): Promise
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
