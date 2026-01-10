@@ -7,16 +7,15 @@
 **Earth Agent** is a Cursor/Claude Code like AI-agent for Google Earth Engine. It can be used right in your browser as a Chrome extension or through MCP server support. It helps you do anything related to Google Earth Engine automatically through chatting (write code, run analysis, debug errors, explain maps, and manage your environment). Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
 
 > [!TIP]
-> **Quick Start**: Install from [Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple), set up your API key (OpenAI/Anthropic/Google), and say "Help me map NDVI for California".
+> **Quick Start**: Install from [Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple), set up your API key (OpenAI/Anthropic/Google) or MCP server with Claude Code/Cursor/Zed/OpenCode, and say "Help me map NDVI for California".
 
 [![Watch the Demo](https://img.youtube.com/vi/RkSconBroyY/0.jpg)](https://youtu.be/RkSconBroyY?si=otXuZP6L8sp48K_1)
 
 ## Table of Contents
 - [Features](#features)
-- [MCP Server Support](#mcp-server-support-new)
 - [Installation](#installation)
+- [MCP Server Support](#mcp-server-support-new)
 - [Configuration](#configuration)
-- [Customization](#customization)
 - [Usage Examples & Prompts](#usage-examples--prompts)
 - [Available Tools](#available-tools--functions)
 - [Troubleshooting](#troubleshooting)
@@ -36,6 +35,39 @@
 - **Custom Instructions**: Tailor the AI's behavior and responses to your specific needs. Work like AGENTS.MD.
 - **Agent Profiles**: Create and switch between different agent configurations for different tasks
 - **MCP Server Support**: Use Earth Agent tools directly from [Claude Code](https://claude.ai/code), [Cursor](https://cursor.sh), or [Zed](https://zed.dev) via the Model Context Protocol.
+
+
+
+## Installation
+
+### Option 1: Install from Chrome Web Store (Easiest & Recommended)
+
+1.  Visit the [Earth Agent page on the Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple).
+2.  Click "Add to Chrome".
+3.  The extension will be added to your browser and will appear in your Chrome toolbar.
+
+<details>
+<summary><b>Option 2: Download from GitHub Releases</b></summary>
+
+1. Go to the [Releases page](https://github.com/wybert/earth-agent-chrome-ext/releases)
+2. Download the latest `earth-agent-extension.zip`
+3. Extract the zip file to a folder on your computer
+4. Open Chrome and navigate to `chrome://extensions/`
+5. Enable "Developer mode" (toggle in the top right)
+6. Click "Load unpacked" and select the extracted folder
+7. The extension will appear in your Chrome toolbar
+
+</details>
+
+<details>
+<summary><b>Option 3: Install from Source</b></summary>
+
+1. Clone the repository
+2. Install dependencies with `npm install`
+3. Build the extension with `npm run build`
+4. Load the unpacked extension from the `dist` directory in Chrome
+
+</details>
 
 ## MCP Server Support (New!)
 
@@ -108,37 +140,6 @@ Then:
 
 👉 **[Full MCP Server Documentation](./mcp-server/README.md)** (troubleshooting, all 17 tools, usage examples)
 
-## Installation
-
-### Option 1: Install from Chrome Web Store (Easiest & Recommended)
-
-1.  Visit the [Earth Agent page on the Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple).
-2.  Click "Add to Chrome".
-3.  The extension will be added to your browser and will appear in your Chrome toolbar.
-
-<details>
-<summary><b>Option 2: Download from GitHub Releases</b></summary>
-
-1. Go to the [Releases page](https://github.com/wybert/earth-agent-chrome-ext/releases)
-2. Download the latest `earth-agent-extension.zip`
-3. Extract the zip file to a folder on your computer
-4. Open Chrome and navigate to `chrome://extensions/`
-5. Enable "Developer mode" (toggle in the top right)
-6. Click "Load unpacked" and select the extracted folder
-7. The extension will appear in your Chrome toolbar
-
-</details>
-
-<details>
-<summary><b>Option 3: Install from Source</b></summary>
-
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Build the extension with `npm run build`
-4. Load the unpacked extension from the `dist` directory in Chrome
-
-</details>
-
 ## Configuration
 
 ### API Keys
@@ -158,7 +159,14 @@ After installation, you'll need to configure your AI provider, you don't have to
 
 ### 📝 Custom Instructions
 
-You can provide global custom instructions that apply to all interactions like what AGENTS.md/CLAUDE.md/GEMINI.md does. This is useful 
+Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.md` to define project-specific rules for their AI coding assistants, Earth Agent allows you to set **Custom Instructions** to align the AI with your scientific or policy goals.
+
+Think of it as giving the agent a "Standard Operating Procedure" for your research. This is powerful for:
+
+- **Scientific Rigor**: e.g., "Always use the 'Cloud Score+' dataset for cloud masking in Sentinel-2 images."
+- **Policy & Communication**: e.g., "Draft all explanations as policy briefs suitable for decision-makers, avoiding jargon."
+- **Methodology Standardization**: e.g., "Always use median compositing instead of mean for annual composites."
+- **Coding Conventions**: e.g., "Use functional programming styles in GEE (e.g., `map()`) over client-side loops."
 
 **To configure:**
 1. Open Extension Settings
@@ -179,20 +187,7 @@ This allow you to create your own agent with specific system prompt and tool acc
 1. Open Extension Settings
 2. Scroll to **Profiles** to create new agent personas
 
-## AI Model Tool Support
 
-The extension provides powerful Earth Engine integration tools. All built-in providers support tool calling:
-
-| Provider | Tool Support | Multimodal (Screenshot) |
-|----------|-------------|------------------------|
-| OpenAI | ✅ Full | ✅ Supported |
-| Anthropic | ✅ Full | ✅ Supported |
-| Google | ✅ Full | ✅ Supported |
-| Z.AI | ✅ Full | ❌ Not supported |
-
-**Note**: Z.AI currently does not support multimodal inputs, so screenshot analysis features are unavailable when using Z.AI models.
-
-**Tip**: For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
 
 ## How to Use the Extension
 
@@ -242,108 +237,54 @@ Full execution mode - the agent can take action:
 
 ## Usage Examples & Prompts
 
-### 🌍 **Getting Started with Earth Engine**
+### 🌍 Getting Started
 ```
-"Help me create a simple map showing NDVI for California using Landsat data"
-
-"Show me how to filter satellite imagery by date and cloud cover"
-
-"What datasets are available for precipitation data?"
-
-"Create a time series chart of vegetation indices for a specific location"
+Help me create a simple map showing NDVI for California using Landsat data
 ```
 
-### 🛰️ **Satellite Data Analysis**
+### 🛰️ Satellite Data Analysis
 ```
-"Find and display the latest Sentinel-2 image over New York City with less than 10% cloud cover"
-
-"Calculate NDVI for cropland areas in Iowa and create a visualization"
-
-"Compare deforestation between 2010 and 2020 in the Amazon rainforest"
-
-"Detect urban expansion using night lights data over the past 5 years"
+Find and display the latest Sentinel-2 image over New York City with less than 10% cloud cover
 ```
 
-### 📊 **Data Processing and Analysis**
+### 📊 Data Processing (⚡ Requires Do Mode)
 ```
-"Create a reducer to calculate mean temperature by administrative boundaries"
-
-"Help me export this image to Google Drive with specific projection and scale"
-
-"Set up a batch processing workflow for multiple images"
-
-"Calculate zonal statistics for land use categories within protected areas"
+Calculate zonal statistics for land use categories within protected areas and export the results to Drive
 ```
 
-### 🗺️ **Visualization and Mapping**
+### � Complex Workflow (⚡ Requires Do Mode)
 ```
-"Add a legend to this map showing the color scale for elevation data"
-
-"Create an interactive map with multiple layers that users can toggle"
-
-"Style this land cover classification with appropriate colors"
-
-"Add geometry drawing tools and export the drawn polygons"
-```
-
-### 🔧 **Debugging and Optimization**
-```
-"This code is running slowly, can you optimize it?"
-
-"I'm getting a memory error, help me fix this computation"
-
-"Explain what this error message means and how to fix it"
-
-"Check my code for best practices and suggest improvements"
-```
-
-### 🧹 **Workspace Management**
-```
-"Clear my console and reset the map view"
-
-"Remove all code from the editor so I can start fresh"
-
-"Reset my workspace to a clean state"
-
-"Take a screenshot of my current results"
-```
-
-## 🚀 Advanced Workflows
-
-### Complex Analysis
-```
-"I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023. 
+I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023. 
 Please create a complete workflow that:
 1. Loads appropriate satellite imagery
 2. Calculates forest loss over time
 3. Creates visualizations showing the changes
 4. Generates statistics by state/region
-5. Exports the results for further analysis"
+5. Exports the results for further analysis
 ```
 
-### Data Science Integration
+### 🔧 Debugging
 ```
-"Help me create a climate change impact study that:
-1. Uses ERA5 temperature and precipitation data
-2. Calculates 30-year climate normals
-3. Identifies significant trends and anomalies
-4. Creates publication-ready visualizations
-5. Exports data in formats suitable for statistical analysis"
+This code is running slowly, check my code for best practices and suggest improvements
 ```
 
-### Automated Processing
-```
-"I have a list of 50 protected areas. Please create a batch processing workflow that:
-1. Processes each area separately
-2. Calculates vegetation indices for each season
-3. Detects any significant changes or disturbances
-4. Creates standardized reports for each area
-5. Compiles results into a summary dashboard"
-```
 
 ## Available Tools & Functions
 
-The Earth Agent includes powerful tools that enable it to interact directly with your Google Earth Engine environment:
+
+The extension provides powerful Earth Engine integration tools. All built-in providers support tool calling:
+
+| Provider | Tool Support | Multimodal (Screenshot) |
+|----------|-------------|------------------------|
+| OpenAI | ✅ Full | ✅ Supported |
+| Anthropic | ✅ Full | ✅ Supported |
+| Google | ✅ Full | ✅ Supported |
+| Z.AI | ✅ Full | ❌ Not supported |
+
+**Note**: Z.AI currently does not support multimodal inputs, so screenshot analysis features are unavailable when using Z.AI models.
+
+**Tip**: For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
+
 
 ### 🌍 **Earth Engine Integration Tools**
 
@@ -403,6 +344,7 @@ Example queries:
 - **Code Examples**: Access curated code examples and tutorials
 - **Best Practices**: Learn recommended approaches and patterns
 
+
 ### 🤖 **AI Agent Capabilities**
 
 #### **Multi-Step Workflows**
@@ -422,21 +364,6 @@ Example queries:
 - **Trend Detection**: Identify patterns and trends in your data
 - **Anomaly Detection**: Find unusual patterns or outliers
 - **Comparative Analysis**: Compare different datasets or time periods
-
-## Tool Compatibility by Provider
-
-### ✅ **Full Tool Support**
-**OpenAI, Anthropic, Google, Z.AI**: All tools and functions available
-- Complete Earth Engine integration
-- Full browser automation
-- Advanced multi-step workflows
-- Error recovery and debugging
-
-### ⚠️ **Multimodal Limitation**
-**Z.AI (GLM-4.7)**: Does not support multimodal inputs
-- All text-based tools work fully
-- Screenshot analysis features unavailable
-- Use OpenAI, Anthropic, or Google for visual analysis tasks
 
 ### 💡 **Usage Tips**
 
