@@ -1,5 +1,29 @@
 # Changelog
 
+## [v1.2.0] - 2026-01-10
+
+### 🚀 Major Features
+
+- **MCP Server Support**: Use Earth Agent tools from Claude Code, Cursor, and Zed.
+- **Agent Profiles**: Customizable personas with specific tools and prompts.
+- **Enhanced Code Editing**: Undo support, diff views, and `insertAtLine` tool.
+- **Prettier Formatting**: Standardized code style across the project.
+- **Agent Testing Framework**: Built-in panel for automated agent testing.
+
+### 🛠️ Improvements
+
+- **Architecture**: Shared service layer for Extension and MCP server.
+- **AI SDK 6.0**: Upgraded core AI libraries for better performance.
+- **Settings**: Added OpenAI Compatible provider support (Z.AI/GLM).
+- **Tooling**: Added `wait` tool and enforced sequential execution.
+- **Documentation**: Reorganized `docs/` and `reference/` folders.
+
+### 🐛 Bug Fixes
+
+- Fixed parallel tool execution race conditions.
+- Fixed background communication stability.
+- Fixed custom provider model selection.
+
 ## [v1.1.0] - 2026-01-10
 
 ### ⚠️ Important Changes

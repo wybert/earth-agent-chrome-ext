@@ -1,6 +1,6 @@
 {
   "name": "earth-agent-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "MCP Server for Earth Agent - exposes Google Earth Engine tools to AI assistants like Claude Code, Cursor, and Zed",
   "type": "module",
   "main": "dist/index.js",
