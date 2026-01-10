@@ -73,7 +73,10 @@ const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
-const MODEL_STORAGE_KEY = 'earth_engine_llm_model'; // Key for storing the model choice
+// Key for storing the model choice
+const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
+// Key for tracking permission state in session storage
+const PERMISSION_NEEDED_KEY = 'earth_agent_permission_needed';
 
 // Initialize MCP WebSocket connection for external AI tool integration
 // This allows Claude Code, Zed, and other tools to use Earth Agent's functionality
@@ -84,6 +87,13 @@ initMCPFromStorage();
 chrome.action.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked, current tab URL:', tab.url);
   console.log('Tab details:', { id: tab.id, url: tab.url, windowId: tab.windowId });
+
+  // User clicked the icon on a tab -> We have activeTab permission!
+  // Clear the permission needed flag.
+  chrome.storage.session.set({ [PERMISSION_NEEDED_KEY]: false });
+
+  // Notify side panel that user clicked the action (granting permission)
+  postToSidepanel({ type: 'ACTION_CLICKED', tabId: tab.id });
 
   // First, immediately open the side panel (this preserves user gesture)
   chrome.sidePanel.setOptions(
@@ -112,6 +122,13 @@ chrome.action.onClicked.addListener(async (tab) => {
   if (!isOnEarthEngine) {
     console.log('Not on Earth Engine, checking for existing tabs...');
 
+    // CRITICAL: We are about to programmatically switch tabs or create a new one.
+    // This forfeits the 'activeTab' permission granted by the user's click on the CURRENT tab.
+    // We must set the flag in session storage so the UI knows to show the tip.
+    // This is persistent across Side Panel reloads and race conditions.
+    chrome.storage.session.set({ [PERMISSION_NEEDED_KEY]: true });
+    postToSidepanel({ type: 'TAB_AUTO_OPENED' });
+
     // Check if there's already an Earth Engine tab
     const earthEngineTabs = await chrome.tabs.query({
       url: 'https://code.earthengine.google.com/*',
@@ -122,6 +139,7 @@ chrome.action.onClicked.addListener(async (tab) => {
     if (earthEngineTabs.length > 0) {
       // Switch to existing tab
       const targetTab = earthEngineTabs[0];
+
       console.log('Switching to existing Earth Engine tab:', targetTab.id);
       await chrome.tabs.update(targetTab.id!, { active: true });
       if (targetTab.windowId) {
@@ -144,7 +162,6 @@ chrome.action.onClicked.addListener(async (tab) => {
     console.log('Already on Earth Engine tab, nothing to do');
   }
 });
-
 // Validate server identity with better error handling
 async function validateServerIdentity(host: string, port: number): Promise<boolean> {
   try {
@@ -1723,7 +1740,10 @@ chrome.runtime.onConnect.addListener((newPort) => {
       // Handle side panel specific messages
       switch (message.type) {
         case 'INIT':
-          postToPort(newPort, { type: 'INIT_RESPONSE', status: 'initialized' });
+          postToPort(newPort, {
+            type: 'INIT_RESPONSE',
+            status: 'initialized',
+          });
           break;
 
         case 'CHAT_MESSAGE':
