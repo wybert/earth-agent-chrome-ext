@@ -55,6 +55,10 @@ export async function captureScreenshot(tabId: number, windowId: number): Promis
   try {
     let dataUrl: string;
     try {
+      // Attempt to ensure the window is focused before capturing
+      // This can sometimes resolve 'activeTab' permission issues if the window lost focus
+      await chrome.windows.update(windowId, { focused: true }).catch(() => {});
+
       // 1. Try capturing the specific window of the tab
       dataUrl = await capture(windowId);
     } catch (specificError) {
@@ -68,7 +72,7 @@ export async function captureScreenshot(tabId: number, windowId: number): Promis
         dataUrl = await capture(undefined);
       } catch (fallbackError) {
         throw new Error(
-          `Failed to capture screenshot. Permission 'activeTab' or '<all_urls>' is required. Ensure the Earth Engine tab is active. Details: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+          `Screenshot failed. Chrome requires user interaction to grant permission. \n\n👉 FIX: Click the Earth Agent extension icon in the toolbar again to re-authorize.`
         );
       }
     }

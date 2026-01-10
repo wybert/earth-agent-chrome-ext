@@ -1,6 +1,6 @@
 {
   "name": "earth-agent-ai-sdk",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Chrome extension for Earth Engine AI assistance",
   "main": "dist/background.js",
   "scripts": {
