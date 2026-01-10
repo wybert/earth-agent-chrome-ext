@@ -1,9 +1,10 @@
 {
   "name": "earth-agent-ai-sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Chrome extension for Earth Engine AI assistance",
   "main": "dist/background.js",
   "scripts": {
+    "version": "node scripts/version-sync.js && git add src/manifest.json mcp-server/package.json",
     "build": "webpack --config webpack.config.js",
     "watch": "webpack --config webpack.config.js --watch",
     "dev": "npm run watch",

@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) and other coding agents like gemini, cursor, codex, opencode, etc when working with code in this repository.
 
 ## Project Overview
 
-Earth Agent is a Chrome extension (Manifest V3) that provides an AI-powered assistant for Google Earth Engine. It integrates multiple AI providers (OpenAI, Anthropic, Google Gemini, Qwen, and Ollama) using the Vercel AI SDK to help users write, run, and debug Earth Engine code directly in the browser.
+Earth Agent is a Chrome extension (Manifest V3) that provides an AI-powered assistant for Google Earth Engine. It can be used right in your browser as a Chrome extension or through MCP server support. It helps you do anything related to Google Earth Engine automatically through chatting (write code, run analysis, debug errors, explain maps, and manage your environment) by intergrating Google Earth Engine tools and AI providers (OpenAI, Anthropic, Google Gemini, Qwen, and Ollama). It can be used withClaude code, cursor or any other AI coding tools or just with extension itself through AI SDK.
 
 ## Build and Development Commands
 
@@ -19,7 +19,6 @@ npm run dev               # Alias for watch mode
 ```bash
 npm test                   # Run Jest test suite
 npm test:watch            # Run tests in watch mode
-npm run test:context7     # Test Context7 tool integration
 ```
 
 ### Type Checking
@@ -147,51 +146,64 @@ earth-agent-ai-sdk/
 ├── src/                    # Source code
 │   ├── background/         # Background service worker
 │   │   ├── index.ts       # Main message listener and routing
-│   │   └── chat-handler.ts # AI provider integration (806 lines, refactored)
+│   │   ├── chat-handler.ts # AI provider integration (~1000 lines)
+│   │   ├── mcp-ws-client.ts # WebSocket client for MCP server
+│   │   └── shadow-workspace.ts # Shadow workspace management
 │   ├── content/           # Content script for Earth Engine pages
-│   │   └── index.ts
+│   │   ├── index.ts
+│   │   └── dom-helpers.ts # DOM manipulation utilities
 │   ├── sidepanel/         # React UI entry point
 │   │   └── index.tsx
 │   ├── components/        # React components
-│   │   ├── Chat.tsx       # Main chat component with Help button
+│   │   ├── Chat.tsx       # Main chat component
 │   │   ├── Settings.tsx   # Provider/model configuration
 │   │   ├── EarthEngineAgent.tsx
+│   │   ├── Onboarding/   # User onboarding flow
 │   │   └── ui/           # Reusable UI components (shadcn/ui based)
 │   ├── lib/
 │   │   ├── prompts/
 │   │   │   └── gee-prompts.ts  # All system prompts (Ask/Do modes)
 │   │   ├── tools/
-│   │   │   ├── ai-tools.ts     # All AI SDK tool definitions (1,256 lines)
+│   │   │   ├── ai-tools.ts     # All AI SDK tool definitions (~2000 lines)
+│   │   │   ├── services/       # Shared service layer
 │   │   │   ├── earth-engine/   # EE-specific tool implementations
 │   │   │   ├── browser/        # Browser interaction tools
 │   │   │   └── context7/       # Documentation query tools
-│   │   ├── utils.ts      # Shared utilities (255 lines: detectEnvironment,
-│   │   │                 # tab selection, content script injection, resilient fetch)
-│   │   └── audio-utils.ts
+│   │   └── utils.ts      # Shared utilities
 │   ├── hooks/            # React hooks
+│   ├── constants/        # Model configs and limits
 │   ├── types/            # TypeScript type definitions
-│   │   ├── extension.ts  # Extension-specific types
-│   │   └── chrome.d.ts   # Chrome API type extensions
 │   ├── assets/           # Icons and images
 │   └── manifest.json     # Chrome extension manifest
 │
-├── docs/                   # Documentation
-│   ├── developers/        # Developer documentation
-│   │   ├── development/   # Development guides and plans
-│   │   ├── implementation/# Implementation records and analysis
-│   │   └── testing/       # Test documentation
-│   └── users/             # User documentation
+├── mcp-server/           # MCP server for external AI editors (npm: earth-agent-mcp)
+│   ├── src/
+│   │   ├── index.ts     # Main entry point, WebSocket server
+│   │   └── tools.ts     # Tool definitions
+│   └── package.json
 │
 ├── scripts/               # Utility scripts
+│   ├── version-sync.js   # Version synchronization
+│   ├── prepare-manifest-for-store.js  # Chrome Web Store prep
 │   └── debug/            # Debug and testing scripts
 │
-├── reference/             # Reference materials
-│   └── api-models/       # API model definitions (JSON files)
+├── docs/                  # User-facing documentation
+│   ├── index.md          # Documentation landing page
+│   ├── TROUBLESHOOTING.md
+│   └── RELEASE_NOTES_*.md
+│
+├── reference/             # Developer reference materials
+│   ├── api-models/       # API model definitions (JSON)
+│   ├── deploy/           # Deployment guides (Chrome Web Store, etc.)
+│   ├── implementation/   # Architecture and design docs
+│   ├── testing/          # Test documentation
+│   └── samples/          # Sample prompts and test data
 │
 ├── tests/                 # Test files
-├── memory-bank/          # Project context and history
 └── dist/                 # Build output (generated, not committed)
 ```
+
+**Note:** `AGENT.md` and `GEMINI.md` are symlinks to `CLAUDE.md` for editor compatibility.
 
 ### Code Organization Philosophy
 
@@ -204,60 +216,30 @@ This approach reduces file fragmentation while maintaining clear separation of c
 
 ## File Organization Guidelines
 
-**IMPORTANT**: Keep the root directory clean and organized. When creating new files, follow these rules:
+**IMPORTANT**: Keep the root directory clean and organized.
 
-### ✅ What Goes in the Root Directory
-- Configuration files only: `package.json`, `tsconfig.json`, `webpack.config.js`, etc.
-- Main documentation: `README.md`, `CLAUDE.md`, `PRIVACY_POLICY.md`
+### Root Directory Contents
+- Configuration: `package.json`, `tsconfig.json`, `webpack.config.js`, etc.
+- Documentation: `README.md`, `CLAUDE.md`, `PRIVACY_POLICY.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
 - Project management: `roadmap.md`
 
-### 📁 Where to Create New Files
+### Where to Create New Files
 
-**Documentation Files** → `docs/`
-- Landing Page → `docs/index.md` (Start here)
-- User guides → `docs/users/`
-- Development plans, guides → `docs/developers/development/`
-- Implementation notes, analysis → `docs/developers/implementation/`
-- Test documentation → `docs/developers/testing/`
+| Type | Location |
+|------|----------|
+| User docs, release notes | `docs/` |
+| Debug/test scripts | `scripts/debug/` |
+| API model definitions | `reference/api-models/` |
+| Deployment guides | `reference/deploy/` |
+| Architecture/design docs | `reference/implementation/` |
+| Test documentation | `reference/testing/` |
+| Sample data | `reference/samples/` |
+| Source code | `src/` subdirectories |
 
-**Scripts** → `scripts/`
-- Debug/test scripts → `scripts/debug/`
-- Build scripts → `scripts/build/`
-
-**Reference Materials** → `reference/`
-- API schemas, model definitions → `reference/api-models/`
-- Code examples → `reference/examples/`
-- High-level Guides & Architecture -> `reference/` (For user consumption)
-
-**Source Code** → `src/`
-- All application code must go in `src/` subdirectories
-- Follow the established structure (components, lib, hooks, etc.)
-
-### 🚫 Never Create These in Root
-- Debug scripts (e.g., `test-*.js`, `analyze-*.js`, `debug-*.js`)
-- Implementation notes (e.g., `*-ANALYSIS.md`, `*-IMPLEMENTATION.md`)
-- Temporary files or test outputs
-- API reference files (e.g., `*_models.json`)
-
-### 📝 Examples
-
-**Bad** ❌
-```bash
-# Creating files in root directory
-touch test-new-feature.js
-touch FEATURE-ANALYSIS.md
-touch openai-models.json
-```
-
-**Good** ✅
-```bash
-# Creating files in appropriate directories
-touch scripts/debug/test-new-feature.js
-touch docs/developers/implementation/FEATURE-ANALYSIS.md
-touch reference/api-models/openai-models.json
-```
-
-**Before creating any file, ask yourself**: "Does this belong in the root directory?" If not, choose the appropriate subdirectory from the structure above.
+### Never Create in Root
+- Debug scripts (`test-*.js`, `analyze-*.js`)
+- Implementation notes (`*-ANALYSIS.md`)
+- API reference files (`*_models.json`)
 
 ## Key Implementation Details
 
@@ -269,6 +251,28 @@ The extension handles CORS for Anthropic API by:
    - Adds required headers (`anthropic-version`, `anthropic-dangerous-direct-browser-access`)
    - Fixes API path to include `/v1/` if missing
    - Handles errors gracefully
+
+### Host Permissions
+
+The extension uses specific host permissions (not `<all_urls>`) for Chrome Web Store compliance:
+
+```json
+"host_permissions": [
+  "https://code.earthengine.google.com/*",    // Main GEE Code Editor
+  "https://code.earthengine.google.co.in/*",  // India regional domain
+  "https://earthengine.google.com/*",         // GEE main site
+  "https://context7.com/*",                   // Documentation API
+  "https://api.anthropic.com/*",              // Anthropic API (CORS)
+  "https://www.googleapis.com/upload/drive/v3/*",  // Google Drive uploads
+  "http://localhost:*/*",                     // Local Ollama (dev only)
+  "http://127.0.0.1:*/*"                      // Local Ollama (dev only)
+]
+```
+
+**Why specific domains instead of `<all_urls>`:**
+- Chrome Web Store requires justification for broad permissions
+- Screenshots only work on tabs matching host_permissions
+- Localhost permissions are removed for Chrome Web Store builds (see `scripts/prepare-manifest-for-store.js`)
 
 ### Storage Keys
 
@@ -293,13 +297,10 @@ Ollama requires:
 
 ### Testing Framework
 
-The extension includes two testing panels:
-
-1. **Tools Test Panel** (🔧 icon): Manual testing of individual tools
-2. **Agent Test Panel** (🧪 icon): Automated batch testing with:
+The extension has a **Agent Test Panel** (🧪 icon): Automated batch testing with:
    - Multi-prompt execution
    - Configurable delays between tests
-   - Screenshot capture and storage options (local, downloads, Google Drive)
+   - Screenshot capture and storage options
    - Environment reset controls (map/console clear, editor reload)
 
 ## Common Development Workflows
@@ -429,25 +430,58 @@ The UI uses [shadcn/ui](https://ui.shadcn.com/) components with:
 - **Tool Support**: Ollama tool support varies by model; other providers fully support all tools
 - **CORS**: Some APIs require proxy or special headers (handled automatically)
 
-## Memory Bank
+## Version Management
 
-The `memory-bank/` directory contains project documentation:
-- `techContext.md`: Technical implementation details
-- `activeContext.md`: Current development status
-- `progress.md`: Project milestones and progress
-- `productContext.md`: Product requirements
-- `systemPatterns.md`: Design patterns and conventions
+### Version Files
 
-These are useful references but may not always be up-to-date with the code.
+Version is synchronized across three files:
+- `package.json` - **Source of truth**
+- `src/manifest.json` - Chrome extension manifest
+- `mcp-server/package.json` - MCP npm package
 
-## Release Process
+The Settings UI displays the version dynamically via `chrome.runtime.getManifest().version`.
 
-Releases are automated via GitHub Actions:
+### Version Sync Script
+
+The `scripts/version-sync.js` script keeps all version files synchronized:
+
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
-# GitHub Actions will build, test, and create release
+# Sync from package.json (default)
+node scripts/version-sync.js
+
+# Set specific version across all files
+node scripts/version-sync.js 1.2.3
 ```
+
+### Releasing a New Version
+
+```bash
+# 1. Bump version (automatically syncs all files via npm hook)
+npm version patch   # 1.1.0 → 1.1.1 (bug fixes)
+npm version minor   # 1.1.0 → 1.2.0 (new features)
+npm version major   # 1.1.0 → 2.0.0 (breaking changes)
+
+# 2. Push commit and tag
+git push origin main --follow-tags
+
+# 3. GitHub Actions automatically:
+#    - Builds the extension
+#    - Verifies version consistency
+#    - Creates GitHub release
+#    - Uploads to Chrome Web Store
+
+# 4. Publish MCP server to npm (manual step)
+cd mcp-server && npm publish
+```
+
+### How It Works
+
+1. `npm version` updates `package.json`
+2. The `version` npm hook runs `scripts/version-sync.js`
+3. Script updates `src/manifest.json` and `mcp-server/package.json`
+4. Script stages changed files with `git add`
+5. npm creates the version commit and git tag
+6. GitHub Actions verifies all versions match the tag before releasing
 
 ## MCP Server
 
@@ -519,11 +553,13 @@ Google Earth Engine Code Editor
 
 ### Publishing Updates to npm
 
+After releasing a new version (see Version Management section above):
 ```bash
 cd mcp-server
-# Update version in package.json
 npm publish
 ```
+
+Note: The version is automatically synced when you run `npm version` in the root directory.
 
 ### Troubleshooting: "Chrome extension not connected"
 
