@@ -355,18 +355,30 @@ The extension provides powerful Earth Engine integration tools. All built-in pro
 3. **Visualization**: Create map → Style layers → Add legends → Capture results
 4. **Debugging**: Describe problem → Analyze code → Apply fixes → Test solution
 
-## Agent Testing Panel
+## Available Tools & Functions
 
-The extension includes a comprehensive testing framework for evaluating AI agent performance:
+Earth Agent provides a comprehensive set of tools available both in the Chrome Extension and via MCP.
 
-- **Multi-Provider Support**: Test with OpenAI GPT models, Anthropic Claude models, Google Gemini, Z.AI models, or custom providers
-- **Batch Testing**: Run multiple prompts automatically with configurable intervals
-- **Environment Controls**: Configure reset and clear functions, including optional GEE editor reload
-- **Results Analysis**: Export detailed test results with screenshots and metadata
-- **Screenshot Storage**: Multiple storage options (local, downloads folder, Google Drive)
-- **Tool Compatibility**: Automatically adapts testing based on model tool support capabilities
-
-Access the testing panel by clicking the flask icon (🧪) in the main chat interface.
+| Category | Agent Tool Name | MCP Tool Name | Description |
+|----------|----------------|---------------|-------------|
+| **Code Editing** | `readCode` | `read_gee_code` | Read current code from editor |
+| | `editCode` | `edit_gee_code` | Edit code using search & replace |
+| | `writeCode` | `write_gee_code` | Overwrite entire editor content |
+| | `undoEdit` | `undo_gee_edit` | Revert last edit |
+| | `insertAtLine` | N/A | Insert text at specific line |
+| **Execution** | `runCurrentCode` | `run_gee_code` | Run the script in editor |
+| | `wait` | `wait` | Wait for execution/loading |
+| **Analysis** | `getConsoleOutput` | `gee_console` | Read console logs & errors |
+| | `getMapScreenPosition` | `gee_map_position` | Get map bounds & zoom |
+| | `getInspectorOutput` | `gee_inspector` | Read inspector panel data |
+| | `screenshot` | `gee_screenshot` | Take screenshot of interface |
+| | `snapshot` | `gee_snapshot` | Get accessibility DOM tree |
+| **Knowledge** | `geeDocs` | `gee_docs` | Search datasets & API docs |
+| | `weather` | `weather` | Get weather data |
+| | `dateTime` | `date_time` | Get current date/time |
+| **Control** | `clearMapInspectorAndConsole` | `clear_gee` | Reset workspace |
+| | `clickByRefId` | `click_element` | Click element by ID |
+| | `clickAtScreenPosition` | `click_position` | Click at coordinates |
 
 
 
