@@ -109,3 +109,34 @@ npm run build
 ---
 
 For more detailed technical documentation, please consult the **[Developer Guide](docs/developers/README.md)**.
+
+## 🚀 Creating a New Release
+
+For developers who want to create releases:
+
+```bash
+# Create and push a version tag
+git tag v1.0.0
+git push origin v1.0.0
+
+# GitHub Actions will automatically:
+# - Build the extension
+# - Run tests
+# - Create a release with installation files
+```
+
+## 🌐 CORS Handling
+
+The extension handles Cross-Origin Resource Sharing (CORS) issues by proxying API requests through the background script. This setup works because:
+
+1. Chrome extension background scripts have permission to make cross-origin requests if the URL is included in the `host_permissions` in `manifest.json`
+2. Content scripts and the sidepanel are subject to CORS restrictions
+3. The tools are designed to automatically detect the current environment and:
+   - Make direct API calls when running in the background script or Node.js
+   - Proxy requests via the background script when running in a content script or sidepanel
+
+If you encounter CORS issues:
+- Check that `https://context7.com/*` is included in the `host_permissions` in `manifest.json`
+- Verify that the background script is properly handling the message types
+- Check the background script console for detailed error messages
+

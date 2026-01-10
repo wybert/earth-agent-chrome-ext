@@ -4,18 +4,37 @@
   <img src="src/assets/mydesign/Robot-earth-transparent-cut-edge.png" alt="Earth Agent Robot" width="200"/>
 </div>
 
-Cursor like AI-agent for Google Earth Engine right in your browser as a Chrome extension. It helps you do anything related to Google Earth Engine automatically through chatting. Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
+**Earth Agent** is a Cursor/Claude Code like AI-agent for Google Earth Engine. It can be used right in your browser as a Chrome extension or through MCP server support. It helps you do anything related to Google Earth Engine automatically through chatting (write code, run analysis, debug errors, explain maps, and manage your environment). Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
+
+> [!TIP]
+> **Quick Start**: Install from [Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple), set up your API key (OpenAI/Anthropic/Google), and say "Help me map NDVI for California".
+
+[![Watch the Demo](https://img.youtube.com/vi/RkSconBroyY/0.jpg)](https://youtu.be/RkSconBroyY?si=otXuZP6L8sp48K_1)
+
+## Table of Contents
+- [Features](#features)
+- [MCP Server Support](#mcp-server-support-new)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Customization](#customization)
+- [Usage Examples & Prompts](#usage-examples--prompts)
+- [Available Tools](#available-tools--functions)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
 
 ## Features
 
 - Chat interface for Earth Engine assistance
 - Knows Earth Engine Data Catalog as well as community dataset
+- Knows Earth Engine APIs
 - Help you write code, and run the code
 - Help debug the code
-- Help you explian the map
+- Help you explain the map
 - Planning and reasoning
 - Environment management tools (reset map/console, clear code)
 - Comprehensive agent testing framework with automated testing capabilities
+- **Custom Instructions**: Tailor the AI's behavior and responses to your specific needs. Work like AGENTS.MD.
+- **Agent Profiles**: Create and switch between different agent configurations for different tasks
 - **MCP Server Support**: Use Earth Agent tools directly from [Claude Code](https://claude.ai/code), [Cursor](https://cursor.sh), or [Zed](https://zed.dev) via the Model Context Protocol.
 
 ## MCP Server Support (New!)
@@ -86,7 +105,7 @@ Then:
 
 👉 **[Full MCP Server Documentation](./mcp-server/README.md)** (troubleshooting, all 17 tools, usage examples)
 
-## Installation
+## Extension Installation
 
 ### Option 1: Install from Chrome Web Store (Easiest & Recommended)
 
@@ -122,26 +141,33 @@ After installation, you'll need to configure your AI provider:
    - **Anthropic**: Add your Anthropic API key (supports Claude Opus 4.5, Sonnet 4.5, Haiku 4.5)
    - **Google**: Add your Google API key (supports Gemini 2.5 Pro, Gemini 3 Flash Preview)
    - **Z.AI**: Add your Z.AI API key (supports GLM-4.7)
+   - **Custom OpenAI-Compatible Providers**: Add your custom OpenAI-compatible API key
 4. Select your preferred model
 5. Start chatting with Earth Engine!
 
-### Custom OpenAI-Compatible Providers
 
-You can also add custom providers that use the OpenAI API format:
+## Customization
 
-1. Click "Add Custom Provider" in Settings
-2. Enter provider name, base URL, API key, and default model
-3. Use providers like DeepSeek, Together AI, or any OpenAI-compatible API
+### 🎭 Agent Profiles
+Profiles allow you to save different agent configurations for specific workflows. Each profile can have its own:
+- **Custom System Prompt**: Define exactly how the agent should behave
+- **Tool Access**: Enable or disable specific tools for focused tasks
 
-## Environment Management
+**Example Profiles:**
+- **"Strict Coder"**: Focused purely on writing optimized code, with no chit-chat.
+- **"Tutor"**: Explains every step in detail for learning.
+- **"Analyst"**: Specialized in statistical analysis and visualization.
 
-The agent includes powerful environment management capabilities:
+### 📝 Custom Instructions
+You can provide global custom instructions that apply to all interactions. This is useful for:
+- Enforcing specific coding styles (e.g., "Always use `var` instead of `const`")
+- Setting preferred output formats (e.g., "Always add comments to every line")
+- Defining role-playing behaviors
 
-- **Reset Map/Inspector/Console**: Ask the agent to "reset the map" or "clear the console" to clean up your Google Earth Engine workspace
-- **Clear Script**: Request "clear the code" or "start fresh" to remove all code from the Earth Engine editor
-- **Natural Language Control**: Simply describe what you want to clean up, and the agent will handle it automatically
-
-These tools help maintain a clean workspace during development and are particularly useful when switching between different Earth Engine tasks.
+**To configure:**
+1. Open Extension Settings
+2. Scroll to **Profiles** to create new agent personas
+3. Use **Custom Instructions** to set global preferences
 
 ## AI Model Tool Support
 
@@ -204,7 +230,7 @@ Full execution mode - the agent can take action:
 
 **Tip**: Start in Ask Mode when exploring new concepts, switch to Do Mode when ready to implement
 
-## Example Prompts to Try
+## Usage Examples & Prompts
 
 ### 🌍 **Getting Started with Earth Engine**
 ```
@@ -270,6 +296,39 @@ Full execution mode - the agent can take action:
 "Reset my workspace to a clean state"
 
 "Take a screenshot of my current results"
+```
+
+## 🚀 Advanced Workflows
+
+### Complex Analysis
+```
+"I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023. 
+Please create a complete workflow that:
+1. Loads appropriate satellite imagery
+2. Calculates forest loss over time
+3. Creates visualizations showing the changes
+4. Generates statistics by state/region
+5. Exports the results for further analysis"
+```
+
+### Data Science Integration
+```
+"Help me create a climate change impact study that:
+1. Uses ERA5 temperature and precipitation data
+2. Calculates 30-year climate normals
+3. Identifies significant trends and anomalies
+4. Creates publication-ready visualizations
+5. Exports data in formats suitable for statistical analysis"
+```
+
+### Automated Processing
+```
+"I have a list of 50 protected areas. Please create a batch processing workflow that:
+1. Processes each area separately
+2. Calculates vegetation indices for each season
+3. Detects any significant changes or disturbances
+4. Creates standardized reports for each area
+5. Compiles results into a summary dashboard"
 ```
 
 ## Available Tools & Functions
@@ -397,64 +456,7 @@ The extension includes a comprehensive testing framework for evaluating AI agent
 
 Access the testing panel by clicking the flask icon (🧪) in the main chat interface.
 
-## Advanced Usage Examples
 
-### 🚀 **Complex Multi-Step Workflows**
-
-**Example: Creating a Complete Deforestation Analysis**
-```
-"I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023. 
-Please create a complete workflow that:
-1. Loads appropriate satellite imagery
-2. Calculates forest loss over time
-3. Creates visualizations showing the changes
-4. Generates statistics by state/region
-5. Exports the results for further analysis"
-```
-
-**Example: Agricultural Monitoring Pipeline**
-```
-"Set up an agricultural monitoring system for corn fields in Iowa that:
-- Uses Sentinel-2 and Landsat data
-- Calculates NDVI, EVI, and SAVI indices
-- Creates time series analysis for growing seasons
-- Identifies areas of crop stress
-- Generates automated reports with charts and maps"
-```
-
-### 📈 **Data Science Integration**
-
-**Example: Climate Change Analysis**
-```
-"Help me create a climate change impact study that:
-1. Uses ERA5 temperature and precipitation data
-2. Calculates 30-year climate normals
-3. Identifies significant trends and anomalies
-4. Creates publication-ready visualizations
-5. Exports data in formats suitable for statistical analysis"
-```
-
-**Example: Urban Heat Island Study**
-```
-"Design an urban heat island analysis for major cities that:
-- Uses Landsat thermal bands and MODIS LST
-- Compares urban vs rural temperatures
-- Analyzes the relationship with land cover
-- Creates before/after comparisons over 20 years
-- Generates interactive maps for public outreach"
-```
-
-### 🔄 **Automated Processing**
-
-**Example: Batch Processing Multiple Regions**
-```
-"I have a list of 50 protected areas. Please create a batch processing workflow that:
-1. Processes each area separately
-2. Calculates vegetation indices for each season
-3. Detects any significant changes or disturbances
-4. Creates standardized reports for each area
-5. Compiles results into a summary dashboard"
-```
 
 ## Troubleshooting
 
@@ -510,48 +512,12 @@ Please create a complete workflow that:
 - **Use appropriate models**: Choose models based on your data sensitivity requirements
 - **Regular updates**: Keep the extension updated for latest security features
 
-## Creating a New Release
-
-For developers who want to create releases:
-
-```bash
-# Create and push a version tag
-git tag v1.0.0
-git push origin v1.0.0
-
-# GitHub Actions will automatically:
-# - Build the extension
-# - Run tests
-# - Create a release with installation files
-```
-
-## Development
-
-You need nodejs and npm,
-
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Build the extension with `npm run build`
-4. Load the unpacked extension from the `dist` directory in Chrome
-5. Create branches and make changes
-6. Build the project and refresh the chrome extension to see updates
-7. push changes if all works good
 
 
-## CORS Handling
+## Contributing
 
-The extension handles Cross-Origin Resource Sharing (CORS) issues by proxying API requests through the background script. This setup works because:
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to set up your development environment, build the project, and submit pull requests.
 
-1. Chrome extension background scripts have permission to make cross-origin requests if the URL is included in the `host_permissions` in `manifest.json`
-2. Content scripts and the sidepanel are subject to CORS restrictions
-3. The tools are designed to automatically detect the current environment and:
-   - Make direct API calls when running in the background script or Node.js
-   - Proxy requests via the background script when running in a content script or sidepanel
-
-If you encounter CORS issues:
-- Check that `https://context7.com/*` is included in the `host_permissions` in `manifest.json`
-- Verify that the background script is properly handling the message types
-- Check the background script console for detailed error messages
 
 ## License
 
