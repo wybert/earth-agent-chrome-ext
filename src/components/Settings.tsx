@@ -43,7 +43,9 @@ export function Settings({ onClose }: SettingsProps) {
   const [showZAiKey, setShowZAiKey] = useState(false);
 
   // Status
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<
+    Record<string, 'idle' | 'saving' | 'success' | 'error'>
+  >({});
   const [saveMessage, setSaveMessage] = useState('');
 
   // Project Context state
@@ -177,6 +179,8 @@ export function Settings({ onClose }: SettingsProps) {
     const trimmedApiKey = apiKey.trim();
     const storageData: { [key: string]: string } = {};
 
+    setSaveStatus((prev) => ({ ...prev, [provider]: 'saving' }));
+
     // Store API key in the provider-specific key
     if (provider === 'openai') {
       storageData[OPENAI_API_KEY_STORAGE_KEY] = trimmedApiKey;
@@ -191,17 +195,15 @@ export function Settings({ onClose }: SettingsProps) {
     chrome.storage.sync.set(storageData, () => {
       if (chrome.runtime.lastError) {
         console.error('Error saving API key:', chrome.runtime.lastError);
-        setSaveStatus('error');
-        setSaveMessage(`Failed to save ${provider} API key`);
+        setSaveStatus((prev) => ({ ...prev, [provider]: 'error' }));
+        toast.error(`Failed to save ${provider} API key`);
       } else {
-        setSaveStatus('success');
-        setSaveMessage(`${provider} API key saved successfully`);
+        setSaveStatus((prev) => ({ ...prev, [provider]: 'success' }));
       }
 
       // Reset status after 2 seconds
       setTimeout(() => {
-        setSaveStatus('idle');
-        setSaveMessage('');
+        setSaveStatus((prev) => ({ ...prev, [provider]: 'idle' }));
       }, 2000);
     });
   };
@@ -335,6 +337,18 @@ export function Settings({ onClose }: SettingsProps) {
     });
   };
 
+  // Helper to render the status icon
+  const renderStatusIcon = (provider: string) => {
+    const status = saveStatus[provider];
+    if (status === 'success') {
+      return <Check className="h-4 w-4 text-green-500 animate-in fade-in zoom-in duration-300" />;
+    }
+    if (status === 'error') {
+      return <X className="h-4 w-4 text-red-500" />;
+    }
+    return null;
+  };
+
   return (
     <Card className="p-4 w-full h-full flex flex-col overflow-hidden">
       <div className="flex justify-between items-center mb-4 flex-shrink-0">
@@ -376,54 +390,52 @@ export function Settings({ onClose }: SettingsProps) {
           <h3 className="text-sm font-semibold mb-1">API Keys</h3>
           <p className="text-xs text-gray-500 mb-3">
             Your API keys are stored securely in Chrome's synced storage and are never sent to our
-            servers.
+            servers. Keys are saved automatically when you click outside the field.
           </p>
 
           <div className="space-y-4">
             {/* OpenAI */}
             <div>
               <label className="text-sm mb-1 block">OpenAI API Key</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showOpenaiKey ? 'text' : 'password'}
-                    value={openaiApiKey}
-                    onChange={(e) => setOpenaiApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="pr-10"
-                  />
+              <div className="relative">
+                <Input
+                  type={showOpenaiKey ? 'text' : 'password'}
+                  value={openaiApiKey}
+                  onChange={(e) => setOpenaiApiKey(e.target.value)}
+                  onBlur={() => handleSaveApiKey('openai', openaiApiKey)}
+                  placeholder="sk-..."
+                  className="pr-16"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
+                  {renderStatusIcon('openai')}
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     onClick={() => setShowOpenaiKey(!showOpenaiKey)}
                   >
                     {showOpenaiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button
-                  onClick={() => handleSaveApiKey('openai', openaiApiKey)}
-                  disabled={!openaiApiKey}
-                >
-                  Save
-                </Button>
               </div>
             </div>
 
             {/* Anthropic */}
             <div>
               <label className="text-sm mb-1 block">Anthropic API Key</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showAnthropicKey ? 'text' : 'password'}
-                    value={anthropicApiKey}
-                    onChange={(e) => setAnthropicApiKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                    className="pr-10"
-                  />
+              <div className="relative">
+                <Input
+                  type={showAnthropicKey ? 'text' : 'password'}
+                  value={anthropicApiKey}
+                  onChange={(e) => setAnthropicApiKey(e.target.value)}
+                  onBlur={() => handleSaveApiKey('anthropic', anthropicApiKey)}
+                  placeholder="sk-ant-..."
+                  className="pr-16"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
+                  {renderStatusIcon('anthropic')}
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     onClick={() => setShowAnthropicKey(!showAnthropicKey)}
                   >
                     {showAnthropicKey ? (
@@ -433,41 +445,31 @@ export function Settings({ onClose }: SettingsProps) {
                     )}
                   </button>
                 </div>
-                <Button
-                  onClick={() => handleSaveApiKey('anthropic', anthropicApiKey)}
-                  disabled={!anthropicApiKey}
-                >
-                  Save
-                </Button>
               </div>
             </div>
 
             {/* Google */}
             <div>
               <label className="text-sm mb-1 block">Google API Key</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showGoogleKey ? 'text' : 'password'}
-                    value={googleApiKey}
-                    onChange={(e) => setGoogleApiKey(e.target.value)}
-                    placeholder="AIza..."
-                    className="pr-10"
-                  />
+              <div className="relative">
+                <Input
+                  type={showGoogleKey ? 'text' : 'password'}
+                  value={googleApiKey}
+                  onChange={(e) => setGoogleApiKey(e.target.value)}
+                  onBlur={() => handleSaveApiKey('google', googleApiKey)}
+                  placeholder="AIza..."
+                  className="pr-16"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
+                  {renderStatusIcon('google')}
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     onClick={() => setShowGoogleKey(!showGoogleKey)}
                   >
                     {showGoogleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button
-                  onClick={() => handleSaveApiKey('google', googleApiKey)}
-                  disabled={!googleApiKey}
-                >
-                  Save
-                </Button>
               </div>
             </div>
 
@@ -479,26 +481,25 @@ export function Settings({ onClose }: SettingsProps) {
                   (Text Only - No Screenshot Analysis)
                 </span>
               </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type={showZAiKey ? 'text' : 'password'}
-                    value={zAiApiKey}
-                    onChange={(e) => setZAiApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="pr-10"
-                  />
+              <div className="relative">
+                <Input
+                  type={showZAiKey ? 'text' : 'password'}
+                  value={zAiApiKey}
+                  onChange={(e) => setZAiApiKey(e.target.value)}
+                  onBlur={() => handleSaveApiKey('z-ai', zAiApiKey)}
+                  placeholder="sk-..."
+                  className="pr-16"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
+                  {renderStatusIcon('z-ai')}
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 px-3 flex items-center"
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     onClick={() => setShowZAiKey(!showZAiKey)}
                   >
                     {showZAiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button onClick={() => handleSaveApiKey('z-ai', zAiApiKey)} disabled={!zAiApiKey}>
-                  Save
-                </Button>
               </div>
             </div>
 
@@ -538,18 +539,7 @@ export function Settings({ onClose }: SettingsProps) {
             {/* OpenAI Compatible Providers */}
             <OpenAICompatibleSection />
 
-            {/* Status Messages */}
-            {saveStatus === 'success' && (
-              <div className="text-sm flex items-center text-green-600">
-                <Check className="h-4 w-4 mr-1" /> {saveMessage}
-              </div>
-            )}
-
-            {saveStatus === 'error' && (
-              <div className="text-sm flex items-center text-red-600">
-                <X className="h-4 w-4 mr-1" /> {saveMessage}
-              </div>
-            )}
+            {/* Status messages at bottom are removed in favor of inline icons */}
           </div>
         </div>
 
