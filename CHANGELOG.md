@@ -1,5 +1,14 @@
 # Changelog
 
+## [v1.2.1] - 2026-01-10
+
+### 🔧 Hotfixes & Polishes
+
+- **Onboarding Fix**: Prioritized onboarding tour over auto-opening settings for new users.
+- **Screenshot Stability**: Added retry logic and improved error handling for tab capture.
+- **Settings UX**: Implemented auto-save on blur and added inline visual feedback icons for API keys.
+- **Bug Fixes**: Removed TypeScript syntax from debug scripts and improved tab validation.
+
 ## [v1.2.0] - 2026-01-10
 
 ### 🚀 Major Features
