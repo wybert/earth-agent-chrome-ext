@@ -6,7 +6,16 @@ import { Settings as SettingsIcon, RefreshCw, Plus, FlaskConical, Menu, Edit2, X
 // AI SDK types (UIMessage, ModelMessage) are only used in chat-handler.ts
 import { Settings } from './Settings';
 import { Message, ExtensionMessage, Provider, type OpenAICompatibleConfig } from '../types/extension';
-import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview } from './chat-helpers';
+import { createSessionRecord, getSuggestedSessionTitle, migrateSessions, truncateText, createWelcomeMessage, getLastMessagePreview, type ChatSessions, type StoredChatSession, type ChatSessionMeta } from './chat-helpers';
+import {
+  exportSessionToJSON,
+  exportSessionToMarkdown,
+  exportAllSessionsToJSON,
+  parseImportedJSON,
+  downloadFile,
+  generateFilename,
+  triggerFileImport,
+} from './session-export-import';
 import type { AgentProfile } from '@/types/extension';
 import { ACTIVE_PROFILE_ID_STORAGE_KEY, PROFILES_STORAGE_KEY, MODE_SELECTION_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles as migrateProfilesList } from '@/lib/profiles';
 import AgentTestPanel from './ui/AgentTestPanel';
@@ -91,23 +100,6 @@ const processImageFile = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
   });
 };
-
-interface ChatSessionMeta {
-  id: string
-  title: string
-  createdAt: number
-  updatedAt: number
-  lastMessagePreview?: string
-  pinned?: boolean
-}
-
-interface StoredChatSession {
-  id: string
-  meta: ChatSessionMeta
-  messages: Message[]
-}
-
-type ChatSessions = Record<string, StoredChatSession>
 
 // Restore original component name and structure
 export function ChatUI() {
@@ -1366,6 +1358,68 @@ export function ChatUI() {
     setIsMobileSidebarOpen(false);
   }, [persistSessionsState]);
 
+  // Export a single session
+  const handleExportSession = useCallback((sessionId: string, format: 'json' | 'markdown') => {
+    const session = sessions[sessionId];
+    if (!session) return;
+
+    const title = session.meta.title;
+    if (format === 'json') {
+      const content = exportSessionToJSON(session);
+      const filename = generateFilename(title, 'json');
+      downloadFile(content, filename, 'application/json');
+    } else {
+      const content = exportSessionToMarkdown(session);
+      const filename = generateFilename(title, 'md');
+      downloadFile(content, filename, 'text/markdown');
+    }
+  }, [sessions]);
+
+  // Export all sessions
+  const handleExportAllSessions = useCallback((format: 'json' | 'markdown') => {
+    if (format === 'json') {
+      const content = exportAllSessionsToJSON(sessions);
+      const filename = `earth-agent-all-sessions-${new Date().toISOString().split('T')[0]}.json`;
+      downloadFile(content, filename, 'application/json');
+    } else {
+      // For markdown, export each session to a separate file would be complex
+      // Instead, combine all into one markdown file
+      const allContent = Object.values(sessions)
+        .map(session => exportSessionToMarkdown(session))
+        .join('\n\n---\n\n');
+      const filename = `earth-agent-all-sessions-${new Date().toISOString().split('T')[0]}.md`;
+      downloadFile(allContent, filename, 'text/markdown');
+    }
+  }, [sessions]);
+
+  // Import sessions from file
+  const handleImportSessions = useCallback(async () => {
+    try {
+      const fileContent = await triggerFileImport();
+      const importedSessions = parseImportedJSON(fileContent);
+
+      if (importedSessions.length === 0) {
+        alert('No sessions found in the import file.');
+        return;
+      }
+
+      setSessions(prev => {
+        const nextSessions: ChatSessions = { ...prev };
+        for (const session of importedSessions) {
+          nextSessions[session.id] = session;
+        }
+        persistSessionsState(nextSessions);
+        return nextSessions;
+      });
+
+      alert(`Successfully imported ${importedSessions.length} session(s).`);
+    } catch (err) {
+      if (err instanceof Error && err.message !== 'File selection cancelled') {
+        alert(err.message);
+      }
+    }
+  }, [persistSessionsState]);
+
   // Restore simple local fallback handler
   const handleLocalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1544,6 +1598,9 @@ export function ChatUI() {
                 onDelete={handleDeleteSession}
                 onDuplicate={handleDuplicateSession}
                 onTogglePin={handleTogglePin}
+                onExportSession={handleExportSession}
+                onExportAll={handleExportAllSessions}
+                onImport={handleImportSessions}
                 className="w-full"
               />
             </div>
@@ -1608,6 +1665,9 @@ export function ChatUI() {
               onDelete={handleDeleteSession}
               onDuplicate={handleDuplicateSession}
               onTogglePin={handleTogglePin}
+              onExportSession={handleExportSession}
+              onExportAll={handleExportAllSessions}
+              onImport={handleImportSessions}
               className="h-full w-full bg-background shadow-xl"
             />
             <Button

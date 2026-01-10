@@ -3,6 +3,9 @@
 ## 1. Core Agentic Intelligence (Stability & Reasoning)
 **Goal:** Make the agent a reliable, autonomous coding partner.
 
+- [ ] **Diff Preview**
+    - Show visual diffs for large code changes before insertion.
+    - User confirmation workflow for destructive edits.
 - [ ] **Planner / Reflection Loop (High Priority)**
     - Implement a lightweight "Plan-Execute-Reflect" cycle (max X steps).
     - Track sub-goals, tools used, and successful/failed outcomes.
@@ -13,9 +16,6 @@
 - [ ] **State Memory Management**
     - Context retention: Remember current code, selected entries, and recent outputs to reduce API calls.
     - Caching: Cache expensive operations like dataset queries (`geeDocs` results).
-- [ ] **Diff Preview**
-    - Show visual diffs for large code changes before insertion.
-    - User confirmation workflow for destructive edits.
 - [ ] **Web Search Agent**
     - Integrate Perplexity-style web search for real-time GEE examples and debugging.
 
@@ -65,14 +65,10 @@
 **Suggestion**: Build a feature to one-click share a conversation or a generated script as a Gist or a publicly accessible URL.
 - **Why?** GEE is community-heavy. Making your tool the easiest way to share working solutions will drive growth.
 
-### B. Interactive Onboarding
-**Suggestion**: Create a "First Run" interactive tutorial where the agent guides the user to creating their first map.
-- **Why?** New users might not know what to ask. A structured "Hello World" workflow builds confidence.
+## Others
 
-### C. "Explain My Map" Multimodal Feature
-**Suggestion**: Since you have screenshot capabilities (via MCP/Extension), double down on the "Vision" aspect.
-- **User Action**: Click "Explain this Map".
-- **Agent**: Takes screenshot + Inspector data → Explains what biological/urban phenomenon is visible.
+- Chart reading and understanding
+- Natural language processing for GEE scripts
 
 ---
 
