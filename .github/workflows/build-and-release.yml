@@ -50,17 +50,34 @@ jobs:
         echo "Build completed successfully. Dist folder contents:"
         ls -la dist/
         
-    - name: Update manifest version
+    - name: Verify version consistency
       run: |
-        # Extract version from git tag (remove 'v' prefix)
-        VERSION=${GITHUB_REF#refs/tags/v}
+        ROOT_VERSION=$(node -p "require('./package.json').version")
+        MANIFEST_VERSION=$(node -p "require('./src/manifest.json').version")
+        MCP_VERSION=$(node -p "require('./mcp-server/package.json').version")
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
 
-        # Update manifest.json version
-        sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" dist/manifest.json
+        echo "Tag version: $TAG_VERSION"
+        echo "package.json: $ROOT_VERSION"
+        echo "src/manifest.json: $MANIFEST_VERSION"
+        echo "mcp-server/package.json: $MCP_VERSION"
 
-        # Verify version was updated
-        echo "Updated manifest.json version to: $VERSION"
-        grep "version" dist/manifest.json
+        if [ "$ROOT_VERSION" != "$TAG_VERSION" ]; then
+          echo ""
+          echo "ERROR: Tag version ($TAG_VERSION) does not match package.json ($ROOT_VERSION)"
+          echo "Please run 'npm version $TAG_VERSION' before tagging"
+          exit 1
+        fi
+
+        if [ "$ROOT_VERSION" != "$MANIFEST_VERSION" ] || [ "$ROOT_VERSION" != "$MCP_VERSION" ]; then
+          echo ""
+          echo "ERROR: Version mismatch detected!"
+          echo "Run 'node scripts/version-sync.js' to synchronize versions"
+          exit 1
+        fi
+
+        echo ""
+        echo "All versions are synchronized and match tag!"
 
     - name: Clean manifest for Chrome Web Store
       run: |
