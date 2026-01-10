@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.2.3] - 2026-01-10
+
+### 🔧 Fixes
+
+- **Permission Logic**: Improved reliability of the "Permission Tip" card by using session storage and handling race conditions during tab creation.
+- **Race Condition Fix**: Ensured the extension correctly detects when it auto-opens a tab, even if the UI loads faster than the tab creation callback.
+
 ## [v1.2.2] - 2026-01-10
 
 ### 🔧 Fixes
