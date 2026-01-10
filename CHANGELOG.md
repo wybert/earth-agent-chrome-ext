@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.2.2] - 2026-01-10
+
+### 🔧 Fixes
+
+- **Screenshot Tool**: Critical fix for `activeTab` permission errors. The tool now correctly targets the user's last focused window for capture.
+
 ## [v1.2.1] - 2026-01-10
 
 ### 🔧 Hotfixes & Polishes

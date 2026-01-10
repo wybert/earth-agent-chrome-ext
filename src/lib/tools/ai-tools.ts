@@ -1342,32 +1342,53 @@ WORKFLOW:
           return { success: false, error: 'Extension context not available' };
         }
 
-        // Get best GEE tab
-        const tabId = await getActiveEarthEngineTabId();
-        if (!tabId) {
-          return {
-            success: false,
-            error: 'No Google Earth Engine tab found. Please open the Code Editor.',
-          };
-        }
-
-        // Get tab details to check if active and get windowId
-        const tab = await new Promise<chrome.tabs.Tab>((resolve, reject) => {
-          chrome.tabs.get(tabId, (t) => {
-            if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
-            else resolve(t);
-          });
+        // Strategy: Capture the currently active tab in the last focused window.
+        // This is critical because 'captureVisibleTab' requires the 'activeTab' permission,
+        // which is only granted for the specific tab/window the user interacted with.
+        const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
+          chrome.tabs.query({ active: true, lastFocusedWindow: true }, resolve);
         });
 
-        if (!tab.active) {
-          return {
-            success: false,
-            error:
-              'The Earth Engine tab is not currently visible. The agent can only screenshot the active tab. Please switch to the Earth Engine tab and try again.',
-          };
-        }
+        let tabId: number;
+        let windowId: number;
 
-        const windowId = tab.windowId;
+        if (tabs.length > 0 && tabs[0].id) {
+          // We found the active tab in the focused window
+          tabId = tabs[0].id;
+          windowId = tabs[0].windowId;
+          console.log(`📸 [ScreenshotTool] Target active tab: ${tabId} (window: ${windowId})`);
+        } else {
+          // Fallback: If no active tab found (rare), try finding any GEE tab
+          console.warn(
+            '📸 [ScreenshotTool] No active tab found in lastFocusedWindow, searching for GEE tab...'
+          );
+          const geeTabId = await getActiveEarthEngineTabId();
+          if (!geeTabId) {
+            return {
+              success: false,
+              error: 'No active tab or Google Earth Engine tab found.',
+            };
+          }
+
+          // Get details for the GEE tab
+          const tab = await new Promise<chrome.tabs.Tab>((resolve, reject) => {
+            chrome.tabs.get(geeTabId, (t) => {
+              if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+              else resolve(t);
+            });
+          });
+
+          if (!tab.active) {
+            return {
+              success: false,
+              error:
+                'The Earth Engine tab is not currently visible. Please switch to it to take a screenshot.',
+            };
+          }
+
+          tabId = geeTabId;
+          windowId = tab.windowId;
+        }
 
         // Use BrowserService with the specific tab/window
         const result = await BrowserService.captureScreenshot(tabId, windowId);
