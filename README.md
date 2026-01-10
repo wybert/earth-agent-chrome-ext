@@ -78,16 +78,12 @@
 
 [![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
 
-Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code editor.
-
-- **Seamless Integration**: Connects Claude Code, Cursor, OpenCode, or Zed to your browser session.
-- **Full Tool Access**: Read/write code, inspect maps, take screenshots, and search docs from your terminal or editor.
-- **No Extra Config**: works automatically with the Chrome extension.
-
-### Quick Setup (No Build Required!)
+Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code tools like Claude Code, Cursor, OpenCode, OpenCode, or Zed.
 
 > [!IMPORTANT]
-> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine. After installing the Earth Agent Chrome extension, you need to go to settings and turn on the MCP server. It's better to keep the Earth Agent side panel open when you use the MCP server. Then add the configuration to your `Claude Code`, `Cursor`, or `Zed`:
+> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine. After installing the Earth Agent Chrome extension, you need to go to settings and turn on the MCP server. It's better to keep the Earth Agent side panel open when you use the MCP server. 
+
+Add the configuration to your `Claude Code`, `Cursor`, `Zed`, or other tools that support MCP server:
 
 <details open>
 <summary><b>Claude Code</b> (~/.claude/settings.json)</summary>
@@ -104,68 +100,30 @@ Earth Agent now includes an **MCP Server** that lets you use all its Earth Engin
 ```
 </details>
 
-<details>
-<summary><b>Cursor</b> (~/.cursor/mcp.json)</summary>
-
-```json
-{
-  "mcpServers": {
-    "earth-agent": {
-      "command": "npx",
-      "args": ["-y", "earth-agent-mcp"]
-    }
-  }
-}
-```
-</details>
-
-<details>
-<summary><b>Zed</b> (~/.config/zed/settings.json)</summary>
-
-```json
-{
-  "context_servers": {
-    "earth-agent": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "earth-agent-mcp"]
-      }
-    }
-  }
-}
-```
-</details>
 
 Then:
 1. **Open Chrome** with Earth Agent extension
-2. **Navigate to** [code.earthengine.google.com](https://code.earthengine.google.com)
-3. **Restart your editor** - the MCP tools will be available automatically!
+2. **Click the Earth Agent extension icon** in Chrome, wait it loads
+3. **Restart your AI code tool** - the MCP tools will be available!
 
-👉 **[Full MCP Server Documentation](./mcp-server/README.md)** (troubleshooting, all 17 tools, usage examples)
+👉 **[Full MCP Server Documentation](./mcp-server/README.md)** 
 
 ## Configuration
 
 > [!TIP]
-> You do not have to do this if you only want to use Earth Agent MCP server. If you want to use it directly in your browser with external agents tools, you need to do this.
+> You do not have to do this if you only want to use Earth Agent as MCP server. If you want to use it directly in your browser without external agents tools, you need to do this.
 
 ### API Keys
 
 1. Click the Earth Agent extension icon in Chrome
 2. Go to Settings
-3. Configure your AI providers we support:
-   - **OpenAI**: Add your OpenAI API key (supports GPT-5.2, GPT-5.2 Pro, GPT-5.1)
-   - **Anthropic**: Add your Anthropic API key (supports Claude Opus 4.5, Sonnet 4.5, Haiku 4.5)
-   - **Google**: Add your Google API key (supports Gemini 2.5 Pro, Gemini 3 Flash Preview)
-   - **Z.AI**: Add your Z.AI API key (supports GLM-4.7)
-   - **Custom OpenAI-Compatible Providers**: Add your custom OpenAI-compatible API key
+3. Configure your AI providers keys. we support OpenAI, Anthropic, Google, Z.AI, and Custom OpenAI-Compatible Providers. You need input at least one of them to use Earth Agent.
 4. Go back to the chat page, select your preferred model
 5. Start chatting with Earth Engine!
 
-### 📝 Custom Instructions
+### Custom Instructions
 
-Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.md` to define project-specific rules for their AI coding assistants, Earth Agent allows you to set **Custom Instructions** to align the AI with your scientific or policy goals.
-
-Think of it as giving the agent a "Standard Operating Procedure" for your research. This is powerful for:
+Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.md` to define project-specific rules for their AI coding assistants, Earth Agent allows you to set **Custom Instructions** to align the AI with your scientific or policy goals. Think of it as giving the agent a "Standard Operating Procedure" for your research. This is powerful for:
 
 - **Scientific Rigor**: e.g., "Always use the 'Cloud Score+' dataset for cloud masking in Sentinel-2 images."
 - **Policy & Communication**: e.g., "Draft all explanations as policy briefs suitable for decision-makers, avoiding jargon."
@@ -176,7 +134,7 @@ Think of it as giving the agent a "Standard Operating Procedure" for your resear
 1. Open Extension Settings
 2. Use **Custom Instructions** to set global preferences
 
-### 🎭 Agent Profiles
+### Agent Profiles
 
 This allows you to create your own agent with specific system prompts and tool access for specific workflows or use cases. Each agent profile can have its own:
 - **Custom System Prompt**: Define exactly how the agent should behave
@@ -195,7 +153,7 @@ This allows you to create your own agent with specific system prompts and tool a
 
 ## How to Use the Extension
 
-You can use this extension in two ways: through the MCP Server or inside the Earth Agent side panel. MCP servers expose the same tools as the Earth Agent assistant. Check [MCP Server Support](#mcp-server-support-new) for details on using it as an MCP server. The following section will show you how to use it inside the Earth Agent side panel.
+You can use this extension in two ways: through the MCP Server or inside the Earth Agent side panel. MCP servers expose the [same tools](##available-tools--functions) as the Earth Agent assistant. Check [MCP Server Support](#mcp-server-support-new) for details on using it as an MCP server. The following section will show you how to use it inside the Earth Agent side panel.
 
 ### Getting Started
 
@@ -296,7 +254,7 @@ Earth Agent provides a comprehensive set of tools available both in the Chrome E
 > [!NOTE]
 > Z.AI currently does not support multimodal inputs yet, so screenshot analysis features are unavailable when using Z.AI models. For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
 
-## 💡 **Usage Tips**
+## Usage Tips
 
 ### **For Maximum Productivity**
 1. **Use tool-compatible models** when you need automated code execution
