@@ -43,6 +43,18 @@ docs/                  # User docs, release notes
 reference/             # Developer docs, deployment guides
 ```
 
+## MCP Server Architecture
+
+```
+AI Editor (Claude Code/Cursor/Zed)
+    ↓ stdio (MCP Protocol)
+MCP Server (earth-agent-mcp)
+    ↓ WebSocket (port 3847)
+Chrome Extension (Background Script)
+    ↓ Chrome APIs
+Google Earth Engine Code Editor
+```
+
 ## Key Files
 
 | File | Purpose |
@@ -79,6 +91,8 @@ Custom: Any OpenAI-compatible API (DeepSeek, Together AI, Ollama, etc.)
 | Deployment guides | `reference/deploy/` |
 | Architecture docs | `reference/implementation/` |
 
+DO NOT write temperal files like testing files or summary files in root folder, put it in scripts and reference folder instead
+
 ## Important Notes
 
 - **No `<all_urls>` permission** - Use specific host permissions for Chrome Web Store
@@ -95,3 +109,6 @@ Custom: Any OpenAI-compatible API (DeepSeek, Together AI, Ollama, etc.)
 ---
 
 **Symlinks:** `AGENT.md`, `GEMINI.md` point to this file.
+
+- remeber to use chrome devtools mcp when you need interact with gee, and when you need run code in gee console
+- you don't do any git commit and any other git commands that change could change the git history
