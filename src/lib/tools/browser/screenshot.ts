@@ -18,7 +18,7 @@ export interface ScreenshotResponse {
  *
  * @returns Promise with success status and screenshot data/error message
  */
-export async function screenshot(): Promise<ScreenshotResponse> {
+export async function screenshot(targetTabId?: number): Promise<ScreenshotResponse> {
   try {
     // If running in a content script or sidepanel context, use the background script
     const env = detectEnvironment();
@@ -38,6 +38,8 @@ export async function screenshot(): Promise<ScreenshotResponse> {
           chrome.runtime.sendMessage(
             {
               type: 'SCREENSHOT',
+              // Note: We don't pass targetTabId here because the background script
+              // should determine the best tab (usually the one communicating with it)
             },
             (response) => {
               // Clear the timeout since we got a response
@@ -73,41 +75,59 @@ export async function screenshot(): Promise<ScreenshotResponse> {
     // If running in the background script
     if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
       return new Promise<ScreenshotResponse>((resolve) => {
-        // Get the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          if (!tabs || tabs.length === 0) {
+        const captureCallback = (dataUrl: string) => {
+          if (chrome.runtime.lastError) {
             resolve({
               success: false,
-              error: 'No active tab found',
+              error: chrome.runtime.lastError.message || 'Error capturing screenshot',
             });
             return;
           }
+          resolve({
+            success: true,
+            screenshotData: dataUrl,
+          });
+        };
 
-          const tabId = tabs[0].id;
-          if (!tabId) {
-            resolve({
-              success: false,
-              error: 'Invalid tab',
-            });
-            return;
-          }
+        // If targetTabId is provided, use it to find the window
+        if (targetTabId) {
+          chrome.tabs.get(targetTabId, (tab) => {
+            if (chrome.runtime.lastError || !tab) {
+              console.warn(`Could not find tab ${targetTabId}, falling back to active tab`);
+              queryActiveTab();
+              return;
+            }
+            chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' }, captureCallback);
+          });
+          return;
+        }
 
-          // Capture screenshot of the tab
-          chrome.tabs.captureVisibleTab(tabs[0].windowId, { format: 'png' }, (dataUrl) => {
-            if (chrome.runtime.lastError) {
+        function queryActiveTab() {
+          // Get the active tab
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (!tabs || tabs.length === 0) {
               resolve({
                 success: false,
-                error: chrome.runtime.lastError.message || 'Error capturing screenshot',
+                error: 'No active tab found',
               });
               return;
             }
 
-            resolve({
-              success: true,
-              screenshotData: dataUrl,
-            });
+            const tabId = tabs[0].id;
+            if (!tabId) {
+              resolve({
+                success: false,
+                error: 'Invalid tab',
+              });
+              return;
+            }
+
+            // Capture screenshot of the tab
+            chrome.tabs.captureVisibleTab(tabs[0].windowId, { format: 'png' }, captureCallback);
           });
-        });
+        }
+
+        queryActiveTab();
       });
     }
 

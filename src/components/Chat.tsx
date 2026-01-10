@@ -335,7 +335,18 @@ export function ChatUI() {
       });
 
       if (!hasKey && !isCustomProvider) {
-        setShowSettings(true);
+        // Only show settings automatically if onboarding is already completed or dismissed
+        // Otherwise, let the Onboarding flow guide the user
+        chrome.storage.local.get(
+          ['earth_agent_onboarding_completed', 'earth_agent_onboarding_dismissed'],
+          (onboardingResult) => {
+            const completed = onboardingResult['earth_agent_onboarding_completed'];
+            const dismissed = onboardingResult['earth_agent_onboarding_dismissed'];
+            if (completed || dismissed) {
+              setShowSettings(true);
+            }
+          }
+        );
       }
     });
   }, []);

@@ -41,17 +41,39 @@ export async function captureSnapshot(tabId: number): Promise<BrowserResult> {
 }
 
 export async function captureScreenshot(tabId: number, windowId: number): Promise<BrowserResult> {
-  try {
-    // 1. Capture visible tab
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      chrome.tabs.captureVisibleTab(windowId, { format: 'jpeg', quality: 50 }, (url) => {
+  const capture = async (wid?: number) => {
+    return new Promise<string>((resolve, reject) => {
+      // @ts-ignore - captureVisibleTab accepts null/undefined for current window
+      chrome.tabs.captureVisibleTab(wid, { format: 'jpeg', quality: 50 }, (url) => {
         if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
         else if (!url) reject(new Error('Empty data URL'));
         else resolve(url);
       });
     });
+  };
 
-    // 2. Resize in content script (logic ported from ai-tools.ts)
+  try {
+    let dataUrl: string;
+    try {
+      // 1. Try capturing the specific window of the tab
+      dataUrl = await capture(windowId);
+    } catch (specificError) {
+      console.warn(
+        `[Screenshot] Failed to capture specific window ${windowId}, retrying with current window context...`,
+        specificError
+      );
+      try {
+        // 2. Fallback: Capture "current" window (undefined/null)
+        // This often works if the background script context implies the active window
+        dataUrl = await capture(undefined);
+      } catch (fallbackError) {
+        throw new Error(
+          `Failed to capture screenshot. Permission 'activeTab' or '<all_urls>' is required. Ensure the Earth Engine tab is active. Details: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+        );
+      }
+    }
+
+    // 3. Resize in content script (logic ported from ai-tools.ts)
     let resizedDataUrl = dataUrl;
     try {
       const results = await chrome.scripting.executeScript({

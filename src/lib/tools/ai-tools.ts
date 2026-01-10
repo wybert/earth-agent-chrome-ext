@@ -1342,21 +1342,34 @@ WORKFLOW:
           return { success: false, error: 'Extension context not available' };
         }
 
-        // Get active tab
-        const tabs = await new Promise<chrome.tabs.Tab[]>((resolve) => {
-          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            resolve(tabs || []);
+        // Get best GEE tab
+        const tabId = await getActiveEarthEngineTabId();
+        if (!tabId) {
+          return {
+            success: false,
+            error: 'No Google Earth Engine tab found. Please open the Code Editor.',
+          };
+        }
+
+        // Get tab details to check if active and get windowId
+        const tab = await new Promise<chrome.tabs.Tab>((resolve, reject) => {
+          chrome.tabs.get(tabId, (t) => {
+            if (chrome.runtime.lastError) reject(chrome.runtime.lastError);
+            else resolve(t);
           });
         });
 
-        if (!tabs || tabs.length === 0 || !tabs[0].id || !tabs[0].windowId) {
-          return { success: false, error: 'No active tab found' };
+        if (!tab.active) {
+          return {
+            success: false,
+            error:
+              'The Earth Engine tab is not currently visible. The agent can only screenshot the active tab. Please switch to the Earth Engine tab and try again.',
+          };
         }
 
-        const tabId = tabs[0].id;
-        const windowId = tabs[0].windowId;
+        const windowId = tab.windowId;
 
-        // Use BrowserService
+        // Use BrowserService with the specific tab/window
         const result = await BrowserService.captureScreenshot(tabId, windowId);
 
         console.timeEnd('ScreenshotTool execution');
