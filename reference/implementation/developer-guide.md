@@ -76,30 +76,35 @@ Settings persisted to `chrome.storage.local`:
 
 ## Adding a New AI Provider
 
-1. Add provider package to `package.json`
-2. Update `Provider` type in `src/types/extension.ts`
-3. Add `create*()` function in `chat-handler.ts`
-4. Add API key storage constant and handling
-5. Update Settings UI to include provider option
+1. Add provider package to `package.json` (if using a new SDK)
+2. Update `Provider` type in `src/types/extension.ts` (e.g., add `'z-ai'`)
+3. Add `create*()` function in `chat-handler.ts` (e.g., `createZAI()`)
+4. Add API key storage constant in `src/constants/models.ts`
+5. Update Settings UI (`src/components/Settings.tsx`) to include provider option
 6. Add default model to `DEFAULT_MODELS` in `src/constants/models.ts`
+7. If the provider does NOT support images, add it to `NON_MULTIMODAL_PROVIDERS` in `src/lib/tools/ai-tools.ts`
 
 ## Updating Model Options
 
-Models defined in `src/constants/models.ts`:
+Models are centrally defined in `src/constants/models.ts`:
 
-1. Update `AVAILABLE_MODELS` - Add/remove model IDs
-2. Update `MODEL_DISPLAY_NAMES` - Human-readable names
+1. Update `AVAILABLE_MODELS` - Add/remove model IDs for the specific provider
+2. Update `MODEL_DISPLAY_NAMES` - Add human-readable names for new models
 3. Update `DEFAULT_MODELS` - Change defaults if needed
 4. Build and test: `npm run build`
 
 ## Adding a New Tool
 
-1. Create implementation in `src/lib/tools/services/`
+1. Create implementation in `src/lib/tools/services/` (if logic is reusable)
 2. Add AI tool definition in `src/lib/tools/ai-tools.ts`:
+   - Locate `createAITools` function
    - Use Vercel AI SDK's `tool()` function
    - Define Zod schema for parameters
-   - Implement execute block
-3. Add to appropriate tools array in `chat-handler.ts`
+   - Implement execute block (call service layer)
+   - **Crucial**: Add the new tool to the returned object at the end of `createAITools`
+3. Update `src/background/chat-handler.ts`:
+   - Destructure your new tool from the `createAITools` result
+   - Add it to `readOnlyTools` (if safe/read-only) or `writeTools` (if it modifies state) objects
 
 ## Debugging Tool Execution
 

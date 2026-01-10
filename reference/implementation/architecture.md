@@ -22,6 +22,7 @@ The background script is the heart of the extension, running persistently and ha
 Key files:
 - `index.ts`: Main background script entry point and message handler
 - `chat-handler.ts`: Processes chat requests using the AI SDK
+- `shadow-workspace.ts`: Manages an in-memory "shadow" copy of the Earth Engine code editor state, handling versioning and synchronization
 
 ### Side Panel UI (`src/components/`)
 
@@ -97,6 +98,7 @@ The extension integrates with Google Earth Engine via:
 
 - **Chrome Sync Storage**: Stores API keys and provider preferences
 - **Chrome Local Storage**: Stores conversation history
+- **In-Memory (Shadow Workspace)**: Stores current editor content, version history, and diffs (lost on extension reload)
 
 ## Extension vs. API Architecture
 
