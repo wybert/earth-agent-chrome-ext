@@ -6,10 +6,11 @@
 
 **Earth Agent** is a Cursor/Claude Code like AI-agent for Google Earth Engine. It can be used right in your browser as a Chrome extension or through MCP server support. It helps you do anything related to Google Earth Engine automatically through chatting (write code, run analysis, debug errors, explain maps, and manage your environment). Hatched from [sundai.club](https://www.sundai.club/projects/ad38a4e9-5cd5-4a90-b66c-c3f811cc5e8a).
 
+[![Watch the Demo](https://img.youtube.com/vi/RkSconBroyY/0.jpg)](https://youtu.be/RkSconBroyY?si=otXuZP6L8sp48K_1)
+
+
 > [!TIP]
 > **Quick Start**: Install from [Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple), set up your API key (OpenAI/Anthropic/Google) or MCP server with Claude Code/Cursor/Zed/OpenCode, and say "Help me map NDVI for California".
-
-[![Watch the Demo](https://img.youtube.com/vi/RkSconBroyY/0.jpg)](https://youtu.be/RkSconBroyY?si=otXuZP6L8sp48K_1)
 
 ## Table of Contents
 - [Features](#features)
@@ -75,16 +76,14 @@
 
 Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code editor.
 
-- **Seamless Integration**: Connects Claude Code, Cursor, or Zed to your browser session.
+- **Seamless Integration**: Connects Claude Code, Cursor, OpenCode, or Zed to your browser session.
 - **Full Tool Access**: Read/write code, inspect maps, take screenshots, and search docs from your terminal or editor.
 - **No Extra Config**: works automatically with the Chrome extension.
 
 ### Quick Setup (No Build Required!)
 
 > [!IMPORTANT]
-> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine.
-
-Just add the configuration to your editor:
+> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine. After installing the Earth Agent Chrome extension, you need to go to settings and turn on the MCP server. It's better to keep the Earth Agent side panel open when you use the MCP server. Then add the configuration to your `Claude Code`, `Cursor`, or `Zed`:
 
 <details open>
 <summary><b>Claude Code</b> (~/.claude/settings.json)</summary>
@@ -142,9 +141,10 @@ Then:
 
 ## Configuration
 
-### API Keys
+> [!TIP]
+> You do not have to do this if you only want to use Earth Agent MCP server. If you want to use it directly in your browser with external agents tools, you need to do this.
 
-After installation, you'll need to configure your AI provider, you don't have to do it if only use it as MCP server:
+### API Keys
 
 1. Click the Earth Agent extension icon in Chrome
 2. Go to Settings
@@ -191,7 +191,31 @@ This allow you to create your own agent with specific system prompt and tool acc
 
 ## How to Use the Extension
 
+You can use this extension in two ways. Through MCP Server or use inside Earth Agent side panel. Mcp servers expose the same tools as the Earth Agent assistant. Check [MCP Server Support](#mcp-server-support-new) for more details for use it as MCP server. The following section will show you how to use it inside Earth Agent side panel.
+
+### AI Agent Capabilities
+
+#### **Multi-Step Workflows**
+- **Plan and Execute**: Break down complex tasks into manageable steps
+- **Error Recovery**: Automatically retry and fix failed operations
+- **Progress Tracking**: Monitor long-running processes and operations
+- **Adaptive Learning**: Adjust approach based on results and feedback
+
+#### **Code Generation**
+- **Custom Scripts**: Generate Earth Engine scripts for specific tasks
+- **Function Creation**: Create reusable functions and modules
+- **Workflow Automation**: Build complete analysis pipelines
+- **Batch Processing**: Set up automated processing for multiple datasets
+
+#### **Analysis and Insights**
+- **Data Interpretation**: Explain results and findings from your analysis
+- **Trend Detection**: Identify patterns and trends in your data
+- **Anomaly Detection**: Find unusual patterns or outliers
+- **Comparative Analysis**: Compare different datasets or time periods
+
 ### Getting Started
+
+ After the configuration, 
 
 1. **Open Google Earth Engine Code Editor** in a Chrome tab: https://code.earthengine.google.com/
 2. **Click the Earth Agent extension icon** in your Chrome toolbar
@@ -271,21 +295,6 @@ This code is running slowly, check my code for best practices and suggest improv
 
 ## Available Tools & Functions
 
-
-The extension provides powerful Earth Engine integration tools. All built-in providers support tool calling:
-
-| Provider | Tool Support | Multimodal (Screenshot) |
-|----------|-------------|------------------------|
-| OpenAI | ✅ Full | ✅ Supported |
-| Anthropic | ✅ Full | ✅ Supported |
-| Google | ✅ Full | ✅ Supported |
-| Z.AI | ✅ Full | ❌ Not supported |
-
-**Note**: Z.AI currently does not support multimodal inputs, so screenshot analysis features are unavailable when using Z.AI models.
-
-**Tip**: For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
-
-
 ### 🌍 **Earth Engine Integration Tools**
 
 #### **Code Editor Integration**
@@ -345,25 +354,21 @@ Example queries:
 - **Best Practices**: Learn recommended approaches and patterns
 
 
-### 🤖 **AI Agent Capabilities**
+The extension provides powerful Earth Engine integration tools. All built-in providers support tool calling:
 
-#### **Multi-Step Workflows**
-- **Plan and Execute**: Break down complex tasks into manageable steps
-- **Error Recovery**: Automatically retry and fix failed operations
-- **Progress Tracking**: Monitor long-running processes and operations
-- **Adaptive Learning**: Adjust approach based on results and feedback
+| Provider | Tool Support | Multimodal (Screenshot) |
+|----------|-------------|------------------------|
+| OpenAI | ✅ Full | ✅ Supported |
+| Anthropic | ✅ Full | ✅ Supported |
+| Google | ✅ Full | ✅ Supported |
+| Z.AI | ✅ Full | ❌ Not supported |
 
-#### **Code Generation**
-- **Custom Scripts**: Generate Earth Engine scripts for specific tasks
-- **Function Creation**: Create reusable functions and modules
-- **Workflow Automation**: Build complete analysis pipelines
-- **Batch Processing**: Set up automated processing for multiple datasets
+**Note**: Z.AI currently does not support multimodal inputs, so screenshot analysis features are unavailable when using Z.AI models.
 
-#### **Analysis and Insights**
-- **Data Interpretation**: Explain results and findings from your analysis
-- **Trend Detection**: Identify patterns and trends in your data
-- **Anomaly Detection**: Find unusual patterns or outliers
-- **Comparative Analysis**: Compare different datasets or time periods
+**Tip**: For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
+
+
+
 
 ### 💡 **Usage Tips**
 
