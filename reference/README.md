@@ -6,7 +6,7 @@
 
 The Earth Engine Agent now supports a comprehensive range of AI models, with over 15 OpenAI models and 5 Anthropic models available. This extensive selection gives you precise control over which models power your Earth Engine assistant, allowing you to balance capabilities, speed, and cost based on your specific needs.
 
-[Learn more about model selection](./model-selection.md) | [View model comparison](./model-comparison.md)
+
 
 ## Settings
 

@@ -23,6 +23,7 @@ build/
 .idea/
 .vscode/
 .cursor/
+.claude/
 .gemini-clipboard/
 *.suo
 *.ntvs*
