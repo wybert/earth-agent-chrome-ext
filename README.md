@@ -265,98 +265,6 @@ This code is running slowly, check my code for best practices and suggest improv
 
 ## Available Tools & Functions
 
-### 🌍 **Earth Engine Integration Tools**
-
-#### **Code Editor Integration**
-- **readCode**: Read current code from the Earth Engine editor
-- **writeCode**: Write new code to the editor (replaces all content)
-- **editCode**: Modify specific parts of existing code
-- **runCurrentCode**: Execute the code in your editor and monitor execution
-- **undoEdit**: Revert the last code edit
-
-#### **Dataset Discovery (geeDocs Tool)**
-The `geeDocs` tool uses semantic search to find relevant documentation. **Ask like you're asking a person** - use natural language questions for best results:
-- **geeDatasets**: Official Earth Engine dataset catalog (dataset IDs, bands, code examples)
-- **communityDatasets**: Awesome GEE community datasets contributed by users
-- **apiDocs**: Earth Engine API documentation (functions, usage, best practices)
-
-Example queries:
-- "What nighttime light datasets are available for urban analysis?"
-- "How to load and visualize LANDSAT 8 surface reflectance imagery?"
-- "Are there any global building footprint datasets?"
-
-#### **Map and Visualization Tools**
-- **Map Inspection**: Analyze what's currently displayed on your map
-- **Layer Management**: Add, remove, and modify map layers
-- **Visualization Parameters**: Automatically configure visualization settings
-- **Legend Creation**: Generate appropriate legends for your data
-
-#### **Environment Management**
-- **clearMapInspectorAndConsole**: Clean up your workspace with a single command
-- **getConsoleOutput**: Check console output and error messages
-- **getMapScreenPosition**: Get map screen coordinates for inspection
-- **getInspectorOutput**: Read Inspector panel data after clicking on map
-- **screenshot**: Take snapshots of your work for documentation
-- **snapshot**: Get DOM structure for page inspection
-
-### 🌐 **Browser Automation Tools**
-
-#### **Web Page Interaction**
-- **clickByRefId**: Click elements by reference ID
-- **clickAtScreenPosition**: Click at specific screen pixel coordinates
-- **wait**: Wait for specified seconds (useful for page loading)
-
-#### **Visual Analysis**
-- **screenshot**: Capture the current browser state as an image
-- **snapshot**: Get DOM structure snapshot for inspection
-
-### 🔍 **Information and Research Tools**
-
-#### **Weather Integration**
-- **Current Weather**: Get real-time weather information for any location
-- **Weather Data**: Access meteorological data for analysis
-- **Climate Information**: Historical and current climate data
-
-#### **Documentation Access (geeDocs)**
-- **Semantic Search**: Natural language queries across all Earth Engine documentation
-- **Three Sources**: Official datasets, community datasets, and API documentation
-- **Code Examples**: Access curated code examples and tutorials
-- **Best Practices**: Learn recommended approaches and patterns
-
-
-The extension provides powerful Earth Engine integration tools. All built-in providers support tool calling:
-
-| Provider | Tool Support | Multimodal (Screenshot) |
-|----------|-------------|------------------------|
-| OpenAI | ✅ Full | ✅ Supported |
-| Anthropic | ✅ Full | ✅ Supported |
-| Google | ✅ Full | ✅ Supported |
-| Z.AI | ✅ Full | ❌ Not supported |
-
-**Note**: Z.AI currently does not support multimodal inputs, so screenshot analysis features are unavailable when using Z.AI models.
-
-**Tip**: For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
-
-
-
-
-### 💡 **Usage Tips**
-
-#### **For Maximum Productivity**
-1. **Use tool-compatible models** when you need automated code execution
-2. **Be specific** in your requests for better results
-3. **Ask for explanations** to learn Earth Engine concepts
-4. **Use workspace management** tools to keep your environment clean
-5. **Take screenshots** to document your work and results
-
-#### **Common Workflows**
-1. **Exploratory Analysis**: Ask questions → Get code → Run and iterate
-2. **Data Processing**: Define requirements → Generate pipeline → Execute and export
-3. **Visualization**: Create map → Style layers → Add legends → Capture results
-4. **Debugging**: Describe problem → Analyze code → Apply fixes → Test solution
-
-## Available Tools & Functions
-
 Earth Agent provides a comprehensive set of tools available both in the Chrome Extension and via MCP.
 
 | Category | Agent Tool Name | MCP Tool Name | Description |
@@ -379,6 +287,27 @@ Earth Agent provides a comprehensive set of tools available both in the Chrome E
 | **Control** | `clearMapInspectorAndConsole` | `clear_gee` | Reset workspace |
 | | `clickByRefId` | `click_element` | Click element by ID |
 | | `clickAtScreenPosition` | `click_position` | Click at coordinates |
+
+
+> [!NOTE]
+> Z.AI currently does not support multimodal inputs yet, so screenshot analysis features are unavailable when using Z.AI models. For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
+
+## 💡 **Usage Tips**
+
+### **For Maximum Productivity**
+1. **Use tool-compatible models** when you need automated code execution
+2. **Be specific** in your requests for better results
+3. **Ask for explanations** to learn Earth Engine concepts
+4. **Use workspace management** tools to keep your environment clean
+5. **Take screenshots** to document your work and results
+
+### **Common Workflows**
+1. **Exploratory Analysis**: Ask questions → Get code → Run and iterate
+2. **Data Processing**: Define requirements → Generate pipeline → Execute and export
+3. **Visualization**: Create map → Style layers → Add legends → Capture results
+4. **Debugging**: Describe problem → Analyze code → Apply fixes → Test solution
+
+
 
 
 
