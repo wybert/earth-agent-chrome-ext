@@ -12,7 +12,9 @@
 > [!TIP]
 > **Quick Start**: Install from [Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple), set up your API key (OpenAI/Anthropic/Google) or MCP server with Claude Code/Cursor/Zed/OpenCode, and say "Help me map NDVI for California".
 
-## Table of Contents
+<details>
+<summary><b>Table of Contents</b></summary>
+
 - [Features](#features)
 - [Installation](#installation)
 - [MCP Server Support](#mcp-server-support-new)
@@ -21,10 +23,12 @@
 - [Usage Examples & Prompts](#usage-examples--prompts)
 - [Available Tools & Functions](#available-tools--functions)
 - [Usage Tips](#usage-tips)
-- [Troubleshooting](#troubleshooting)
+- [Troubleshooting & Help](docs/TROUBLESHOOTING.md)
 - [Privacy and Security](#privacy-and-security)
 - [Changelog](CHANGELOG.md)
 - [Contributing](#contributing)
+
+</details>
 
 ## Features
 
@@ -121,7 +125,7 @@ Then:
 4. Go back to the chat page, select your preferred model
 5. Start chatting with Earth Engine!
 
-### Custom Instructions
+### Custom Instructions (AGENTS.md)
 
 Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.md` to define project-specific rules for their AI coding assistants, Earth Agent allows you to set **Custom Instructions** to align the AI with your scientific or policy goals. Think of it as giving the agent a "Standard Operating Procedure" for your research. This is powerful for:
 
@@ -134,7 +138,7 @@ Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.m
 1. Open Extension Settings
 2. Use **Custom Instructions** to set global preferences
 
-### Agent Profiles
+### Agent Profiles (Custom Agents)
 
 This allows you to create your own agent with specific system prompts and tool access for specific workflows or use cases. Each agent profile can have its own:
 - **Custom System Prompt**: Define exactly how the agent should behave
@@ -162,6 +166,9 @@ After configuration:
 1. **Open Google Earth Engine Code Editor** in a Chrome tab: https://code.earthengine.google.com/
 2. **Click the Earth Agent extension icon** in your Chrome toolbar
 3. **Start chatting!** The agent can see your Earth Engine environment and help with any GEE-related tasks
+
+> [!NOTE]
+> The agent can only see the code in temp/new scripts in the Google Earth Engine Code Editor for now. You should save it once you think the script is ready.
 
 ### Ask Mode vs Do Mode
 
@@ -273,45 +280,9 @@ Earth Agent provides a comprehensive set of tools available both in the Chrome E
 
 
 
-## Troubleshooting
+## Troubleshooting & Help
 
-### Common Issues and Solutions
-
-#### **🔧 Extension Not Working**
-- **Refresh the Earth Engine tab** and try again
-- **Check your API keys** in the extension settings
-- **Verify internet connection** for cloud-based providers
-
-#### **🚫 Tools Not Working**
-- **Check model compatibility**: All built-in providers (OpenAI, Anthropic, Google, Z.AI) support tools
-- **Try a different model**: Some newer models may have better tool support
-- **Refresh the extension**: Close and reopen the side panel
-
-#### **📷 Screenshot Analysis Not Working**
-- **Z.AI limitation**: Z.AI does not support multimodal inputs
-- **Switch to another provider**: Use OpenAI, Anthropic, or Google for screenshot analysis
-- **Text-based tools still work**: All other tools function normally with Z.AI
-
-#### **⚡ Performance Issues**
-- **Use more specific prompts** to reduce processing time
-- **Break complex tasks** into smaller steps
-- **Check Earth Engine quotas** if operations fail
-
-#### **🐛 Code Errors**
-- **Ask the agent to debug**: "This code has an error, please fix it"
-- **Check console output**: "What errors are showing in the console?"
-- **Reset workspace**: "Clear everything and start fresh"
-
-#### **📡 Connectivity Issues**
-- **Verify API keys** are correctly entered
-- **Check provider status** (OpenAI, Anthropic, Google status pages)
-
-### Getting Help
-
-1. **Use the agent itself**: Ask "How do I..." or "Help me troubleshoot..."
-2. **Check the console**: Look for error messages in browser developer tools
-3. **Try different models**: Some models may work better for specific tasks
-4. **Reset your workspace**: Use environment management tools to start fresh
+See **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** for solutions to common issues (API keys, connectivity, tools, screenshots) and help resources.
 
 ## Privacy and Security
 
@@ -340,7 +311,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## License
 
-MIT
+[MIT](LICENSE)
 
 ## Thanks
 
