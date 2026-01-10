@@ -4,7 +4,10 @@
  */
 
 (function aggressiveInspectorSearch() {
-  console.log('%c=== Aggressive Inspector Search ===', 'font-size: 16px; color: blue; font-weight: bold');
+  console.log(
+    '%c=== Aggressive Inspector Search ===',
+    'font-size: 16px; color: blue; font-weight: bold'
+  );
   console.log('');
 
   // 1. Search ALL elements for "inspector" text
@@ -12,9 +15,13 @@
   const allElements = document.querySelectorAll('*');
   const elementsWithInspector = [];
 
-  allElements.forEach(el => {
+  allElements.forEach((el) => {
     // Check class name
-    if (el.className && typeof el.className === 'string' && el.className.toLowerCase().includes('inspector')) {
+    if (
+      el.className &&
+      typeof el.className === 'string' &&
+      el.className.toLowerCase().includes('inspector')
+    ) {
       elementsWithInspector.push({ el, reason: 'class', value: el.className });
     }
     // Check id
@@ -23,22 +30,28 @@
     }
     // Check aria-label
     else if (el.getAttribute('aria-label')?.toLowerCase().includes('inspector')) {
-      elementsWithInspector.push({ el, reason: 'aria-label', value: el.getAttribute('aria-label') });
+      elementsWithInspector.push({
+        el,
+        reason: 'aria-label',
+        value: el.getAttribute('aria-label'),
+      });
     }
   });
 
   console.log(`   Found ${elementsWithInspector.length} elements with "inspector"`);
   elementsWithInspector.slice(0, 5).forEach(({ el, reason, value }, i) => {
-    console.log(`   ${i+1}. ${el.tagName} (${reason}: "${value}")`);
+    console.log(`   ${i + 1}. ${el.tagName} (${reason}: "${value}")`);
   });
 
   // 2. Look for tabs/panels on the right side
   console.log('\n2. Looking for right-side panels/tabs...');
-  const rightPanels = document.querySelectorAll('[class*="panel"], [class*="tab"], [class*="pane"]');
+  const rightPanels = document.querySelectorAll(
+    '[class*="panel"], [class*="tab"], [class*="pane"]'
+  );
   console.log(`   Found ${rightPanels.length} panels/tabs`);
 
   // Filter for visible ones
-  const visiblePanels = Array.from(rightPanels).filter(el => {
+  const visiblePanels = Array.from(rightPanels).filter((el) => {
     const style = window.getComputedStyle(el);
     return style.display !== 'none' && style.visibility !== 'hidden';
   });
@@ -49,7 +62,7 @@
   const coordPattern = /[-]?\d+\.\d{3,}/; // Decimal numbers like -122.456
   const elementsWithCoords = [];
 
-  Array.from(allElements).forEach(el => {
+  Array.from(allElements).forEach((el) => {
     const text = el.textContent;
     if (text && text.length < 200 && coordPattern.test(text)) {
       // Avoid script tags and very long text
@@ -61,7 +74,7 @@
 
   console.log(`   Found ${elementsWithCoords.length} elements with coordinate-like text`);
   elementsWithCoords.slice(0, 5).forEach(({ el, text }, i) => {
-    console.log(`   ${i+1}. ${el.tagName}.${el.className || '(no class)'}`);
+    console.log(`   ${i + 1}. ${el.tagName}.${el.className || '(no class)'}`);
     console.log(`      Text: "${text}"`);
   });
 
@@ -71,9 +84,10 @@
   console.log(`   Found ${tabs.length} tab elements`);
 
   tabs.forEach((tab, i) => {
-    if (i < 10) { // Show first 10
+    if (i < 10) {
+      // Show first 10
       const text = tab.textContent?.trim();
-      console.log(`   ${i+1}. "${text}" - ${tab.tagName}.${tab.className}`);
+      console.log(`   ${i + 1}. "${text}" - ${tab.tagName}.${tab.className}`);
       if (text?.toLowerCase().includes('inspector')) {
         console.log('      ⭐ THIS MIGHT BE THE INSPECTOR TAB!');
       }
@@ -84,7 +98,9 @@
   console.log('\n5. Checking for recently shown elements...');
   console.log('   Elements visible with data attributes:');
 
-  const dataElements = document.querySelectorAll('[data-value], [data-lat], [data-lng], [data-point]');
+  const dataElements = document.querySelectorAll(
+    '[data-value], [data-lat], [data-lng], [data-point]'
+  );
   console.log(`   Found ${dataElements.length} elements with data attributes`);
 
   // 6. Look in the right sidebar area
@@ -100,7 +116,7 @@
 
     sidebarTabs.forEach((tab, i) => {
       const text = tab.textContent?.trim();
-      console.log(`     Tab ${i+1}: "${text}"`);
+      console.log(`     Tab ${i + 1}: "${text}"`);
     });
 
     // Get all visible text in sidebar
@@ -110,7 +126,9 @@
 
   // 7. Check for drawer/collapsible panels
   console.log('\n7. Looking for drawer/collapsible panels...');
-  const drawers = document.querySelectorAll('[class*="drawer"], [class*="collapse"], [class*="accordion"]');
+  const drawers = document.querySelectorAll(
+    '[class*="drawer"], [class*="collapse"], [class*="accordion"]'
+  );
   console.log(`   Found ${drawers.length} drawer-like elements`);
 
   // 8. Try to find map click listener info
@@ -128,7 +146,10 @@
   }
 
   // 9. Manual inspection helper
-  console.log('\n%c=== Manual Inspection Helper ===', 'font-size: 14px; color: orange; font-weight: bold');
+  console.log(
+    '\n%c=== Manual Inspection Helper ===',
+    'font-size: 14px; color: orange; font-weight: bold'
+  );
   console.log('');
   console.log('Please do this manually:');
   console.log('1. Look at the GEE interface - do you see Inspector data?');
@@ -148,20 +169,20 @@
   let shadowCount = 0;
   const elementsWithShadow = [];
 
-  customElements.forEach(el => {
+  customElements.forEach((el) => {
     if (el.shadowRoot) {
       shadowCount++;
       elementsWithShadow.push({
         tag: el.tagName,
         class: el.className,
-        shadowMode: el.shadowRoot.mode
+        shadowMode: el.shadowRoot.mode,
       });
     }
   });
 
   console.log(`   Elements with Shadow DOM: ${shadowCount}`);
   elementsWithShadow.slice(0, 5).forEach((info, i) => {
-    console.log(`   ${i+1}. <${info.tag}> class="${info.class}" (${info.shadowMode})`);
+    console.log(`   ${i + 1}. <${info.tag}> class="${info.class}" (${info.shadowMode})`);
   });
 
   // If we found Shadow DOMs, search inside them
@@ -184,6 +205,6 @@
     visiblePanels: visiblePanels.length,
     elementsWithCoords: elementsWithCoords.length,
     shadowDOMCount: shadowCount,
-    sidebar: !!sidebar
+    sidebar: !!sidebar,
   };
 })();

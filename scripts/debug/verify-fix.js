@@ -27,7 +27,7 @@
     let trivialMessage = '';
     if (trivialDivs.length > 0) {
       const trivialTexts = [];
-      trivialDivs.forEach(div => {
+      trivialDivs.forEach((div) => {
         const text = div.textContent?.trim();
         if (text) trivialTexts.push(text);
       });
@@ -36,9 +36,10 @@
 
     // Use trivial method if available, otherwise use full textContent
     const finalMessage = trivialMessage || message;
-    const preview = finalMessage.length > 100 ? finalMessage.substring(0, 100) + '...' : finalMessage;
+    const preview =
+      finalMessage.length > 100 ? finalMessage.substring(0, 100) + '...' : finalMessage;
 
-    console.log((index + 1) + '. ' + preview);
+    console.log(index + 1 + '. ' + preview);
   });
 
   console.log('');

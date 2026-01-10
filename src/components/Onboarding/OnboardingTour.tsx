@@ -267,8 +267,8 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
                   index === currentStep
                     ? 'w-8 bg-blue-500'
                     : index < currentStep
-                    ? 'w-1.5 bg-blue-300'
-                    : 'w-1.5 bg-gray-300 dark:bg-gray-700'
+                      ? 'w-1.5 bg-blue-300'
+                      : 'w-1.5 bg-gray-300 dark:bg-gray-700'
                 }`}
               />
             ))}
@@ -281,9 +281,14 @@ export const OnboardingTour: React.FC<OnboardingTourProps> = ({
 
           {/* Description */}
           <div className="text-sm text-gray-600 dark:text-gray-400 mb-4 space-y-1">
-            {step.description.split('\n').filter(line => line.trim()).map((line, index) => (
-              <p key={index} className="leading-relaxed">{line}</p>
-            ))}
+            {step.description
+              .split('\n')
+              .filter((line) => line.trim())
+              .map((line, index) => (
+                <p key={index} className="leading-relaxed">
+                  {line}
+                </p>
+              ))}
           </div>
 
           {/* Actions */}

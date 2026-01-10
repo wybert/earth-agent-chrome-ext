@@ -5,45 +5,53 @@
 从你运行的 `explore-gee-coordinate-api.js` 结果，我们知道：
 
 ✅ **Google Maps API 可用**
+
 - 版本：3.62.13e
 - `window.google.maps.Map` 存在
 - 可以创建 `LatLng` 对象
 
 ✅ **地图元素存在**
+
 - 选择器：`.ui-map`
 - 位置：viewport (left: 0, top: 397, width: 1226, height: 310)
 - 中心：(613, 552)
 
 ❓ **地图实例未找到**
+
 - `window.Map` 是一个 Function，不是地图实例
 - 需要找到实际的 Google Maps 对象
 
 ## 需要运行的测试
 
 ### 测试 1: 找到地图实例
+
 ```javascript
 // 在 GEE 控制台粘贴并运行
 // 文件: find-map-instance.js
 ```
 
 这个脚本会：
+
 1. 深度搜索 `mapElement` 和 `window` 的所有属性
 2. 寻找包含 `getProjection()`, `getCenter()`, `getZoom()` 的对象
 3. 如果找到，立即测试坐标转换
 4. 自动保存 `window.latLngToScreenPixel(lat, lng)` 函数
 
 **预期结果**：
+
 - 如果成功：会显示 "✅ Map instance found and tested"
 - 会自动尝试点击指定坐标
 - 检查 Inspector 是否更新
 
 ### 测试 2: 直接测试坐标点击
+
 ```javascript
 // 在 GEE 控制台粘贴并运行
 // 文件: test-coordinate-click.js
 ```
 
 这个脚本会：
+
 1. 尝试多种方法找地图实例
 2. 执行完整的坐标转换（地理 → 世界 → 像素 → 屏幕）
 3. 在计算出的位置模拟点击
@@ -51,6 +59,7 @@
 5. 计算点击精度
 
 **预期结果**：
+
 - 如果成功：会显示实际点击的坐标和目标坐标的差异
 - 创建可重用的 `window.clickAtLatLng(lat, lng)` 函数
 
@@ -59,33 +68,37 @@
 即使我们成功在**浏览器控制台**实现了坐标转换和点击，仍然可能在 **extension content script** 中失败，原因：
 
 ### 问题 1: Isolated World
+
 ```javascript
 // 浏览器控制台（page context）
-window.google.maps.Map  // ✅ 可访问
+window.google.maps.Map; // ✅ 可访问
 
 // Content script (isolated world)
-window.google.maps.Map  // ✅ 可访问（shared）
-mapElement.someMapInstance  // ❌ 可能不可访问（DOM 属性在 page context）
+window.google.maps.Map; // ✅ 可访问（shared）
+mapElement.someMapInstance; // ❌ 可能不可访问（DOM 属性在 page context）
 ```
 
 ### 问题 2: Event isTrusted
+
 ```javascript
 // 浏览器控制台
-event.isTrusted = false  // 但仍被 GEE 接受 ✅
+event.isTrusted = false; // 但仍被 GEE 接受 ✅
 
 // Content script
-event.isTrusted = false  // 可能被 GEE 拒绝 ❌
+event.isTrusted = false; // 可能被 GEE 拒绝 ❌
 ```
 
 ## 三种可能的结果
 
 ### 结果 A: 完全成功 🎉
+
 - 在浏览器控制台成功 ✅
 - 在 extension content script 也成功 ✅
 
 **行动**：直接集成到 `inspectMap` 工具
 
 ### 结果 B: 部分成功 ⚠️
+
 - 在浏览器控制台成功 ✅
 - 在 extension content script 失败 ❌
 
@@ -110,6 +123,7 @@ function injectClickCode(lat, lng) {
 ```
 
 ### 结果 C: 完全失败 ❌
+
 - 坐标转换成功，但点击被拒绝
 
 **行动**：保持当前的手动点击方案，但改进用户体验
@@ -125,7 +139,7 @@ showTargetMarker(screenCoords.x, screenCoords.y);
 return {
   success: false,
   error: 'Please click on the red marker on the map',
-  targetCoordinates: { x: screenCoords.x, y: screenCoords.y }
+  targetCoordinates: { x: screenCoords.x, y: screenCoords.y },
 };
 ```
 
@@ -152,6 +166,7 @@ return {
 请告诉我：
 
 1. **地图实例是否找到？**
+
    ```
    输出包含：
    ✅ Found map instance in: mapElement.XXX
@@ -160,12 +175,14 @@ return {
    ```
 
 2. **坐标转换是否成功？**
+
    ```
    输出包含：
    ✅ FINAL SCREEN COORDINATES: x: XXX, y: YYY
    ```
 
 3. **点击是否触发 Inspector 更新？**
+
    ```
    Inspector 面板显示：
    Point (lng, lat) at zoom
@@ -183,14 +200,18 @@ return {
 ### Step 3: 根据结果实现（我来做）
 
 #### 如果测试成功
+
 我会：
+
 1. 在 `content/index.ts` 中实现完整的坐标转换逻辑
 2. 修改 `handleInspectMap` 函数，添加自动点击
 3. 更新 `inspectMap` tool 的描述
 4. 创建测试用例
 
 #### 如果测试失败
+
 我会：
+
 1. 分析具体失败原因
 2. 实现 page context injection（如果是 isolated world 问题）
 3. 或者保持手动点击，但添加视觉辅助（显示目标位置）
@@ -198,13 +219,13 @@ return {
 
 ## 文件清单
 
-| 文件名 | 用途 | 运行位置 |
-|--------|------|----------|
-| `explore-gee-coordinate-api.js` | ❌ 有 bug，已废弃 | - |
-| `find-map-instance.js` | ✅ 深度搜索地图实例 | GEE 控制台 |
-| `test-coordinate-click.js` | ✅ 完整测试（推荐） | GEE 控制台 |
-| `COORDINATE-CONVERSION-ANALYSIS.md` | 技术分析文档 | 阅读 |
-| `NEXT-STEPS-COORDINATE-CONVERSION.md` | 本文件 | 阅读 |
+| 文件名                                | 用途                | 运行位置   |
+| ------------------------------------- | ------------------- | ---------- |
+| `explore-gee-coordinate-api.js`       | ❌ 有 bug，已废弃   | -          |
+| `find-map-instance.js`                | ✅ 深度搜索地图实例 | GEE 控制台 |
+| `test-coordinate-click.js`            | ✅ 完整测试（推荐） | GEE 控制台 |
+| `COORDINATE-CONVERSION-ANALYSIS.md`   | 技术分析文档        | 阅读       |
+| `NEXT-STEPS-COORDINATE-CONVERSION.md` | 本文件              | 阅读       |
 
 ## 期待的最佳结果
 

@@ -29,7 +29,7 @@ export const GEE_BASE_CONTENT = {
 - Cite specific Earth Engine functions and methods when relevant
 - For complex topics, break down explanations step-by-step
 - If you're unsure about something, acknowledge limitations rather than providing incorrect information
-- Speak in a helpful, educational tone while providing practical guidance for Earth Engine tasks`
+- Speak in a helpful, educational tone while providing practical guidance for Earth Engine tasks`,
 };
 
 // ASK MODE: Read-only, analysis and guidance

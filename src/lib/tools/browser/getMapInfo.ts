@@ -40,17 +40,14 @@ export async function getMapInfo(): Promise<GetMapInfoResult> {
   } else if (env.useBackgroundProxy) {
     // Running in background/sidepanel - use message passing
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { type: 'GET_MAP_INFO' },
-        (response: GetMapInfoResult) => {
-          resolve(response);
-        }
-      );
+      chrome.runtime.sendMessage({ type: 'GET_MAP_INFO' }, (response: GetMapInfoResult) => {
+        resolve(response);
+      });
     });
   } else {
     return {
       success: false,
-      error: 'getMapInfo can only be called from extension contexts'
+      error: 'getMapInfo can only be called from extension contexts',
     };
   }
 }
@@ -65,7 +62,7 @@ function getMapInfoFromDOM(): GetMapInfoResult {
     if (!mapElement) {
       return {
         success: false,
-        error: 'Map element not found. Please ensure you are on the Earth Engine Code Editor page.'
+        error: 'Map element not found. Please ensure you are on the Earth Engine Code Editor page.',
       };
     }
 
@@ -76,26 +73,26 @@ function getMapInfoFromDOM(): GetMapInfoResult {
         x: rect.x,
         y: rect.y,
         width: rect.width,
-        height: rect.height
+        height: rect.height,
       },
       centerPoint: {
         x: rect.x + rect.width / 2,
-        y: rect.y + rect.height / 2
+        y: rect.y + rect.height / 2,
       },
       viewport: {
         width: window.innerWidth,
-        height: window.innerHeight
-      }
+        height: window.innerHeight,
+      },
     };
 
     return {
       success: true,
-      data: mapInfo
+      data: mapInfo,
     };
   } catch (error) {
     return {
       success: false,
-      error: `Error getting map info: ${error instanceof Error ? error.message : String(error)}`
+      error: `Error getting map info: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

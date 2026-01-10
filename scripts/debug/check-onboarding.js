@@ -24,7 +24,7 @@
     console.log('\n📊 Current Onboarding State:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    Object.keys(result).forEach(key => {
+    Object.keys(result).forEach((key) => {
       const value = result[key];
       const icon = value ? '✅' : '❌';
       console.log(`${icon} ${key}: ${JSON.stringify(value)}`);
@@ -38,7 +38,7 @@
 
     if (!completed && !dismissed) {
       console.log('✅ Onboarding SHOULD be shown (neither completed nor dismissed)');
-      console.log('💡 If you don\'t see it, try refreshing the page');
+      console.log("💡 If you don't see it, try refreshing the page");
     } else {
       console.log('ℹ️  Onboarding is hidden because:');
       if (completed) console.log('   - Already completed');

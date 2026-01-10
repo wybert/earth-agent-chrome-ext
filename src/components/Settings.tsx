@@ -62,100 +62,115 @@ export function Settings({ onClose }: SettingsProps) {
   // Load all data on mount (with migration from local to sync)
   useEffect(() => {
     // Load all sync storage data
-    chrome.storage.sync.get([
-      OPENAI_API_KEY_STORAGE_KEY,
-      ANTHROPIC_API_KEY_STORAGE_KEY,
-      GOOGLE_API_KEY_STORAGE_KEY,
-      Z_AI_API_KEY_STORAGE_KEY,
-      PROJECT_NAME_STORAGE_KEY,
-      PROJECT_CONTEXT_STORAGE_KEY,
-      PROFILES_STORAGE_KEY,
-      PROJECT_NAME_STORAGE_KEY,
-      PROJECT_CONTEXT_STORAGE_KEY,
-      PROFILES_STORAGE_KEY,
-      ACTIVE_PROFILE_ID_STORAGE_KEY
-    ], (syncResult) => {
-      // Load local MCP setting
-      chrome.storage.local.get([MCP_ENABLED_STORAGE_KEY], (localResult) => {
-        setMcpEnabled(localResult[MCP_ENABLED_STORAGE_KEY] !== false); // Default true
-      });
-
-      // Set API keys
-      setOpenaiApiKey(syncResult[OPENAI_API_KEY_STORAGE_KEY] || '');
-      setAnthropicApiKey(syncResult[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
-      setGoogleApiKey(syncResult[GOOGLE_API_KEY_STORAGE_KEY] || '');
-      setZAiApiKey(syncResult[Z_AI_API_KEY_STORAGE_KEY] || '');
-
-      // Check if we need to migrate from local storage
-      const hasProfilesInSync = syncResult[PROFILES_STORAGE_KEY] !== undefined;
-      const hasContextInSync = syncResult[PROJECT_NAME_STORAGE_KEY] !== undefined || syncResult[PROJECT_CONTEXT_STORAGE_KEY] !== undefined;
-
-      if (hasProfilesInSync && hasContextInSync) {
-        // Data already in sync, use it directly
-        setProjectName(syncResult[PROJECT_NAME_STORAGE_KEY] || '');
-        setProjectContext(syncResult[PROJECT_CONTEXT_STORAGE_KEY] || '');
-        setProfiles(migrateProfiles(syncResult[PROFILES_STORAGE_KEY]));
-        setActiveProfileId(syncResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
-      } else {
-        // Check local storage for data to migrate
-        chrome.storage.local.get([
-          PROJECT_NAME_STORAGE_KEY,
-          PROJECT_CONTEXT_STORAGE_KEY,
-          PROFILES_STORAGE_KEY,
-          ACTIVE_PROFILE_ID_STORAGE_KEY
-        ], (localResult) => {
-          const localProjectName = localResult[PROJECT_NAME_STORAGE_KEY] || '';
-          const localProjectContext = localResult[PROJECT_CONTEXT_STORAGE_KEY] || '';
-          const localProfiles = migrateProfiles(localResult[PROFILES_STORAGE_KEY]);
-          const localActiveProfileId = localResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null;
-
-          // Use sync data if available, otherwise use local data
-          const finalProjectName = syncResult[PROJECT_NAME_STORAGE_KEY] || localProjectName;
-          const finalProjectContext = syncResult[PROJECT_CONTEXT_STORAGE_KEY] || localProjectContext;
-          const finalProfiles = hasProfilesInSync ? migrateProfiles(syncResult[PROFILES_STORAGE_KEY]) : localProfiles;
-          const finalActiveProfileId = hasProfilesInSync ? (syncResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null) : localActiveProfileId;
-
-          setProjectName(finalProjectName);
-          setProjectContext(finalProjectContext);
-          setProfiles(finalProfiles);
-          setActiveProfileId(finalActiveProfileId);
-
-          // Migrate local data to sync if there's data to migrate
-          const dataToMigrate: Record<string, unknown> = {};
-          if (!hasContextInSync && (localProjectName || localProjectContext)) {
-            dataToMigrate[PROJECT_NAME_STORAGE_KEY] = localProjectName;
-            dataToMigrate[PROJECT_CONTEXT_STORAGE_KEY] = localProjectContext;
-          }
-          if (!hasProfilesInSync && localProfiles.length > 0) {
-            // Truncate profiles to fit sync limits
-            const truncatedProfiles = localProfiles.slice(0, PROFILE_LIMITS.MAX_PROFILES).map(p => ({
-              ...p,
-              name: p.name.slice(0, PROFILE_LIMITS.MAX_NAME_LENGTH),
-              prompt: p.prompt.slice(0, PROFILE_LIMITS.MAX_PROMPT_LENGTH)
-            }));
-            dataToMigrate[PROFILES_STORAGE_KEY] = truncatedProfiles;
-            dataToMigrate[ACTIVE_PROFILE_ID_STORAGE_KEY] = localActiveProfileId;
-          }
-
-          if (Object.keys(dataToMigrate).length > 0) {
-            chrome.storage.sync.set(dataToMigrate, () => {
-              if (chrome.runtime.lastError) {
-                console.error('Migration to sync storage failed:', chrome.runtime.lastError);
-              } else {
-                console.log('Successfully migrated data to sync storage');
-                // Clean up local storage after successful migration
-                chrome.storage.local.remove([
-                  PROJECT_NAME_STORAGE_KEY,
-                  PROJECT_CONTEXT_STORAGE_KEY,
-                  PROFILES_STORAGE_KEY,
-                  ACTIVE_PROFILE_ID_STORAGE_KEY
-                ]);
-              }
-            });
-          }
+    chrome.storage.sync.get(
+      [
+        OPENAI_API_KEY_STORAGE_KEY,
+        ANTHROPIC_API_KEY_STORAGE_KEY,
+        GOOGLE_API_KEY_STORAGE_KEY,
+        Z_AI_API_KEY_STORAGE_KEY,
+        PROJECT_NAME_STORAGE_KEY,
+        PROJECT_CONTEXT_STORAGE_KEY,
+        PROFILES_STORAGE_KEY,
+        PROJECT_NAME_STORAGE_KEY,
+        PROJECT_CONTEXT_STORAGE_KEY,
+        PROFILES_STORAGE_KEY,
+        ACTIVE_PROFILE_ID_STORAGE_KEY,
+      ],
+      (syncResult) => {
+        // Load local MCP setting
+        chrome.storage.local.get([MCP_ENABLED_STORAGE_KEY], (localResult) => {
+          setMcpEnabled(localResult[MCP_ENABLED_STORAGE_KEY] !== false); // Default true
         });
+
+        // Set API keys
+        setOpenaiApiKey(syncResult[OPENAI_API_KEY_STORAGE_KEY] || '');
+        setAnthropicApiKey(syncResult[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
+        setGoogleApiKey(syncResult[GOOGLE_API_KEY_STORAGE_KEY] || '');
+        setZAiApiKey(syncResult[Z_AI_API_KEY_STORAGE_KEY] || '');
+
+        // Check if we need to migrate from local storage
+        const hasProfilesInSync = syncResult[PROFILES_STORAGE_KEY] !== undefined;
+        const hasContextInSync =
+          syncResult[PROJECT_NAME_STORAGE_KEY] !== undefined ||
+          syncResult[PROJECT_CONTEXT_STORAGE_KEY] !== undefined;
+
+        if (hasProfilesInSync && hasContextInSync) {
+          // Data already in sync, use it directly
+          setProjectName(syncResult[PROJECT_NAME_STORAGE_KEY] || '');
+          setProjectContext(syncResult[PROJECT_CONTEXT_STORAGE_KEY] || '');
+          setProfiles(migrateProfiles(syncResult[PROFILES_STORAGE_KEY]));
+          setActiveProfileId(syncResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
+        } else {
+          // Check local storage for data to migrate
+          chrome.storage.local.get(
+            [
+              PROJECT_NAME_STORAGE_KEY,
+              PROJECT_CONTEXT_STORAGE_KEY,
+              PROFILES_STORAGE_KEY,
+              ACTIVE_PROFILE_ID_STORAGE_KEY,
+            ],
+            (localResult) => {
+              const localProjectName = localResult[PROJECT_NAME_STORAGE_KEY] || '';
+              const localProjectContext = localResult[PROJECT_CONTEXT_STORAGE_KEY] || '';
+              const localProfiles = migrateProfiles(localResult[PROFILES_STORAGE_KEY]);
+              const localActiveProfileId = localResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null;
+
+              // Use sync data if available, otherwise use local data
+              const finalProjectName = syncResult[PROJECT_NAME_STORAGE_KEY] || localProjectName;
+              const finalProjectContext =
+                syncResult[PROJECT_CONTEXT_STORAGE_KEY] || localProjectContext;
+              const finalProfiles = hasProfilesInSync
+                ? migrateProfiles(syncResult[PROFILES_STORAGE_KEY])
+                : localProfiles;
+              const finalActiveProfileId = hasProfilesInSync
+                ? syncResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null
+                : localActiveProfileId;
+
+              setProjectName(finalProjectName);
+              setProjectContext(finalProjectContext);
+              setProfiles(finalProfiles);
+              setActiveProfileId(finalActiveProfileId);
+
+              // Migrate local data to sync if there's data to migrate
+              const dataToMigrate: Record<string, unknown> = {};
+              if (!hasContextInSync && (localProjectName || localProjectContext)) {
+                dataToMigrate[PROJECT_NAME_STORAGE_KEY] = localProjectName;
+                dataToMigrate[PROJECT_CONTEXT_STORAGE_KEY] = localProjectContext;
+              }
+              if (!hasProfilesInSync && localProfiles.length > 0) {
+                // Truncate profiles to fit sync limits
+                const truncatedProfiles = localProfiles
+                  .slice(0, PROFILE_LIMITS.MAX_PROFILES)
+                  .map((p) => ({
+                    ...p,
+                    name: p.name.slice(0, PROFILE_LIMITS.MAX_NAME_LENGTH),
+                    prompt: p.prompt.slice(0, PROFILE_LIMITS.MAX_PROMPT_LENGTH),
+                  }));
+                dataToMigrate[PROFILES_STORAGE_KEY] = truncatedProfiles;
+                dataToMigrate[ACTIVE_PROFILE_ID_STORAGE_KEY] = localActiveProfileId;
+              }
+
+              if (Object.keys(dataToMigrate).length > 0) {
+                chrome.storage.sync.set(dataToMigrate, () => {
+                  if (chrome.runtime.lastError) {
+                    console.error('Migration to sync storage failed:', chrome.runtime.lastError);
+                  } else {
+                    console.log('Successfully migrated data to sync storage');
+                    // Clean up local storage after successful migration
+                    chrome.storage.local.remove([
+                      PROJECT_NAME_STORAGE_KEY,
+                      PROJECT_CONTEXT_STORAGE_KEY,
+                      PROFILES_STORAGE_KEY,
+                      ACTIVE_PROFILE_ID_STORAGE_KEY,
+                    ]);
+                  }
+                });
+              }
+            }
+          );
+        }
       }
-    });
+    );
   }, []);
 
   const handleSaveApiKey = (provider: ApiProvider, apiKey: string) => {
@@ -200,22 +215,25 @@ export function Settings({ onClose }: SettingsProps) {
     }
 
     // Save to sync storage (syncs across devices)
-    chrome.storage.sync.set({
-      [PROJECT_NAME_STORAGE_KEY]: projectName,
-      [PROJECT_CONTEXT_STORAGE_KEY]: projectContext
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Error saving project context:', chrome.runtime.lastError);
-        setContextSaveStatus('error');
-      } else {
-        setContextSaveStatus('success');
-      }
+    chrome.storage.sync.set(
+      {
+        [PROJECT_NAME_STORAGE_KEY]: projectName,
+        [PROJECT_CONTEXT_STORAGE_KEY]: projectContext,
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error saving project context:', chrome.runtime.lastError);
+          setContextSaveStatus('error');
+        } else {
+          setContextSaveStatus('success');
+        }
 
-      // Reset status after 3 seconds
-      setTimeout(() => {
-        setContextSaveStatus('idle');
-      }, 3000);
-    });
+        // Reset status after 3 seconds
+        setTimeout(() => {
+          setContextSaveStatus('idle');
+        }, 3000);
+      }
+    );
   };
 
   const handleClearContext = () => {
@@ -224,22 +242,25 @@ export function Settings({ onClose }: SettingsProps) {
     setProjectContext('');
 
     // Clear from sync storage
-    chrome.storage.sync.set({
-      [PROJECT_NAME_STORAGE_KEY]: '',
-      [PROJECT_CONTEXT_STORAGE_KEY]: ''
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Error clearing project context:', chrome.runtime.lastError);
+    chrome.storage.sync.set(
+      {
+        [PROJECT_NAME_STORAGE_KEY]: '',
+        [PROJECT_CONTEXT_STORAGE_KEY]: '',
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error('Error clearing project context:', chrome.runtime.lastError);
+        }
       }
-    });
+    );
   };
 
   const persistProfiles = (nextProfiles: AgentProfile[], nextActiveId: string | null) => {
     // Validate and truncate profiles to fit sync storage limits
-    const truncatedProfiles = nextProfiles.slice(0, PROFILE_LIMITS.MAX_PROFILES).map(p => ({
+    const truncatedProfiles = nextProfiles.slice(0, PROFILE_LIMITS.MAX_PROFILES).map((p) => ({
       ...p,
       name: p.name.slice(0, PROFILE_LIMITS.MAX_NAME_LENGTH),
-      prompt: p.prompt.slice(0, PROFILE_LIMITS.MAX_PROMPT_LENGTH)
+      prompt: p.prompt.slice(0, PROFILE_LIMITS.MAX_PROMPT_LENGTH),
     }));
 
     chrome.storage.sync.set(
@@ -251,7 +272,7 @@ export function Settings({ onClose }: SettingsProps) {
         if (chrome.runtime.lastError) {
           console.error('Error saving profiles:', chrome.runtime.lastError);
           toast.error('Failed to save profiles', {
-            description: chrome.runtime.lastError.message
+            description: chrome.runtime.lastError.message,
           });
         }
       }
@@ -329,9 +350,13 @@ export function Settings({ onClose }: SettingsProps) {
           <div className="flex items-start gap-3">
             <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1 space-y-2">
-              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Privacy & Your Data</h3>
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                Privacy & Your Data
+              </h3>
               <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">
-                By using Earth Agent, you agree to our data practices. All your data (API keys, chat history, settings) is stored locally on your device and never sent to our servers. Your messages are sent directly to your chosen AI provider.
+                By using Earth Agent, you agree to our data practices. All your data (API keys, chat
+                history, settings) is stored locally on your device and never sent to our servers.
+                Your messages are sent directly to your chosen AI provider.
               </p>
               <a
                 href="https://github.com/wybert/earth-agent-ai-sdk/blob/main/PRIVACY_POLICY.md"
@@ -349,7 +374,10 @@ export function Settings({ onClose }: SettingsProps) {
         {/* API Keys Section */}
         <div className="pt-2">
           <h3 className="text-sm font-semibold mb-1">API Keys</h3>
-          <p className="text-xs text-gray-500 mb-3">Your API keys are stored securely in Chrome's synced storage and are never sent to our servers.</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Your API keys are stored securely in Chrome's synced storage and are never sent to our
+            servers.
+          </p>
 
           <div className="space-y-4">
             {/* OpenAI */}
@@ -372,7 +400,10 @@ export function Settings({ onClose }: SettingsProps) {
                     {showOpenaiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button onClick={() => handleSaveApiKey('openai', openaiApiKey)} disabled={!openaiApiKey}>
+                <Button
+                  onClick={() => handleSaveApiKey('openai', openaiApiKey)}
+                  disabled={!openaiApiKey}
+                >
                   Save
                 </Button>
               </div>
@@ -395,10 +426,17 @@ export function Settings({ onClose }: SettingsProps) {
                     className="absolute inset-y-0 right-0 px-3 flex items-center"
                     onClick={() => setShowAnthropicKey(!showAnthropicKey)}
                   >
-                    {showAnthropicKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showAnthropicKey ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
-                <Button onClick={() => handleSaveApiKey('anthropic', anthropicApiKey)} disabled={!anthropicApiKey}>
+                <Button
+                  onClick={() => handleSaveApiKey('anthropic', anthropicApiKey)}
+                  disabled={!anthropicApiKey}
+                >
                   Save
                 </Button>
               </div>
@@ -424,7 +462,10 @@ export function Settings({ onClose }: SettingsProps) {
                     {showGoogleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <Button onClick={() => handleSaveApiKey('google', googleApiKey)} disabled={!googleApiKey}>
+                <Button
+                  onClick={() => handleSaveApiKey('google', googleApiKey)}
+                  disabled={!googleApiKey}
+                >
                   Save
                 </Button>
               </div>
@@ -432,7 +473,12 @@ export function Settings({ onClose }: SettingsProps) {
 
             {/* Z.AI */}
             <div>
-              <label className="text-sm mb-1 block">Z.AI API Key <span className="text-xs text-muted-foreground">(Text Only - No Screenshot Analysis)</span></label>
+              <label className="text-sm mb-1 block">
+                Z.AI API Key{' '}
+                <span className="text-xs text-muted-foreground">
+                  (Text Only - No Screenshot Analysis)
+                </span>
+              </label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input
@@ -467,9 +513,13 @@ export function Settings({ onClose }: SettingsProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">MCP Server</span>
-                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">Beta</span>
+                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+                      Beta
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">Allow external AI editors (Cursor, Claude Code) to control Earth Agent</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Allow external AI editors (Cursor, Claude Code) to control Earth Agent
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -538,7 +588,9 @@ Examples:
                 maxLength={2000}
               />
               <div className="flex items-center justify-between mt-1">
-                <span className={`text-xs ${projectContext.length > 1900 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'}`}>
+                <span
+                  className={`text-xs ${projectContext.length > 1900 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-500'}`}
+                >
                   {projectContext.length}/2000 characters
                 </span>
                 {projectContext.length > 2000 && (
@@ -553,7 +605,11 @@ Examples:
               <Button onClick={handleSaveContext} disabled={projectContext.length > 2000}>
                 Save Context
               </Button>
-              <Button onClick={handleClearContext} variant="outline" disabled={!projectName && !projectContext}>
+              <Button
+                onClick={handleClearContext}
+                variant="outline"
+                disabled={!projectName && !projectContext}
+              >
                 Clear
               </Button>
             </div>
@@ -595,7 +651,10 @@ Examples:
             {profiles.map((profile) => {
               const isEditing = editingProfileId === profile.id;
               return (
-                <div key={profile.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                <div
+                  key={profile.id}
+                  className="rounded-md border border-gray-200 dark:border-gray-700 p-3"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -608,10 +667,18 @@ Examples:
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <Button size="sm" variant="outline" onClick={() => setEditingProfileId(isEditing ? null : profile.id)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingProfileId(isEditing ? null : profile.id)}
+                      >
                         {isEditing ? 'Close' : 'Edit'}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDeleteProfile(profile.id)}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteProfile(profile.id)}
+                      >
                         Delete
                       </Button>
                     </div>
@@ -624,7 +691,9 @@ Examples:
                         <Input
                           type="text"
                           value={profile.name}
-                          onChange={(e) => handleUpdateProfile(profile.id, { name: e.target.value })}
+                          onChange={(e) =>
+                            handleUpdateProfile(profile.id, { name: e.target.value })
+                          }
                           placeholder="e.g. memory bank"
                         />
                       </div>
@@ -633,7 +702,9 @@ Examples:
                         <label className="text-sm mb-1 block">Custom Prompt</label>
                         <textarea
                           value={profile.prompt}
-                          onChange={(e) => handleUpdateProfile(profile.id, { prompt: e.target.value })}
+                          onChange={(e) =>
+                            handleUpdateProfile(profile.id, { prompt: e.target.value })
+                          }
                           placeholder="Additional instructions appended to the system prompt..."
                           className="w-full h-[110px] px-3 py-2 text-sm border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background"
                         />
@@ -652,7 +723,9 @@ Examples:
                               />
                               <span className="min-w-0">
                                 <span className="font-medium">{tool.label}</span>
-                                <span className="block text-xs text-gray-500">{tool.description}</span>
+                                <span className="block text-xs text-gray-500">
+                                  {tool.description}
+                                </span>
                               </span>
                             </label>
                           ))}
@@ -697,9 +770,7 @@ Examples:
               <span>Report an Issue</span>
               <ExternalLink className="h-4 w-4" />
             </a>
-            <p className="pt-2 text-xs">
-              AI-powered assistant for Google Earth Engine
-            </p>
+            <p className="pt-2 text-xs">AI-powered assistant for Google Earth Engine</p>
           </div>
 
           {/* Logo */}

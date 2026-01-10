@@ -7,12 +7,16 @@ const truncateText = (text: string, max = 80) => {
 
 const getLastMessagePreview = (messages: Message[]) => {
   // Show the last user message (question) instead of last message (which could be assistant's reply)
-  const lastUserMessage = [...messages].reverse().find((msg) => msg.role === 'user' && (msg.content || '').trim().length > 0);
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((msg) => msg.role === 'user' && (msg.content || '').trim().length > 0);
   return lastUserMessage ? truncateText(lastUserMessage.content || '', 80) : '';
 };
 
 const getSuggestedSessionTitle = (messages: Message[], timestamp: number) => {
-  const firstUser = messages.find((msg) => msg.role === 'user' && (msg.content || '').trim().length > 0);
+  const firstUser = messages.find(
+    (msg) => msg.role === 'user' && (msg.content || '').trim().length > 0
+  );
   if (firstUser) {
     const firstLine = firstUser.content?.split('\n')[0] || '';
     return truncateText(firstLine.trim(), 40) || `Chat ${new Date(timestamp).toLocaleDateString()}`;

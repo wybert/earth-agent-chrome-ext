@@ -134,7 +134,7 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
       return {
         success: true,
         message: 'Code edited successfully',
-        replacements: result.replacements
+        replacements: result.replacements,
       };
     }
 
@@ -327,10 +327,12 @@ export function connectToMCPServer(): void {
       reconnectAttempts = 0;
 
       // Send identification message
-      ws?.send(JSON.stringify({
-        type: 'extension_connected',
-        timestamp: Date.now(),
-      }));
+      ws?.send(
+        JSON.stringify({
+          type: 'extension_connected',
+          timestamp: Date.now(),
+        })
+      );
 
       // Notify listeners of connection status change
       notifyStatusChange();
@@ -382,7 +384,9 @@ function scheduleReconnect(): void {
   reconnectAttempts++;
   const delay = RECONNECT_INTERVAL * Math.min(reconnectAttempts, 3); // Cap backoff at 3x
 
-  console.log(`[MCP-WS] Scheduling reconnect in ${delay / 1000}s (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+  console.log(
+    `[MCP-WS] Scheduling reconnect in ${delay / 1000}s (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`
+  );
 
   reconnectTimer = setTimeout(() => {
     connectToMCPServer();
@@ -453,7 +457,7 @@ export function getMCPStatus(): MCPStatus {
  */
 function notifyStatusChange(): void {
   const status = getMCPStatus();
-  statusListeners.forEach(listener => {
+  statusListeners.forEach((listener) => {
     try {
       listener(status);
     } catch (e) {

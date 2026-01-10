@@ -2,7 +2,12 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-type DiffLine = { type: 'context' | 'delete' | 'insert'; text: string; oldLine?: number; newLine?: number };
+type DiffLine = {
+  type: 'context' | 'delete' | 'insert';
+  text: string;
+  oldLine?: number;
+  newLine?: number;
+};
 type DiffHunk = { oldStart: number; newStart: number; lines: DiffLine[] };
 
 export function ShadowDiffCard({
@@ -76,4 +81,3 @@ export function ShadowDiffCard({
     </Card>
   );
 }
-

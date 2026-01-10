@@ -1,21 +1,18 @@
 import React, { type ComponentProps } from 'react';
-import {
-  ChatMessage,
-  type Message,
-} from "@/components/ui/chat-message"
-import { TypingIndicator } from "@/components/ui/typing-indicator"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { ChatMessage, type Message } from '@/components/ui/chat-message';
+import { TypingIndicator } from '@/components/ui/typing-indicator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-type AdditionalMessageOptions = Omit<ComponentProps<typeof ChatMessage>, keyof Message>
+type AdditionalMessageOptions = Omit<ComponentProps<typeof ChatMessage>, keyof Message>;
 
 interface MessageListProps {
-  messages: Message[]
-  showTimeStamps?: boolean
-  isTyping?: boolean
+  messages: Message[];
+  showTimeStamps?: boolean;
+  isTyping?: boolean;
   messageOptions?:
     | AdditionalMessageOptions
-    | ((message: Message, index: number) => AdditionalMessageOptions)
-  isGenerating?: boolean
+    | ((message: Message, index: number) => AdditionalMessageOptions);
+  isGenerating?: boolean;
 }
 
 export function MessageList({
@@ -26,34 +23,29 @@ export function MessageList({
   isGenerating,
 }: MessageListProps) {
   if (!messages || messages.length === 0) {
-    return null
+    return null;
   }
 
   return (
     <ScrollArea className="flex-1 overflow-y-auto">
       <div className="w-full flex flex-col gap-4 px-2 sm:px-4 py-4">
-      {messages.map((message, index) => {
-        const additionalOptions =
-          typeof messageOptions === "function"
-            ? messageOptions(message, index)
-            : messageOptions
+        {messages.map((message, index) => {
+          const additionalOptions =
+            typeof messageOptions === 'function' ? messageOptions(message, index) : messageOptions;
 
-        return (
-          <ChatMessage
+          return (
+            <ChatMessage
               key={message.id || index}
               message={message}
               isLoading={isGenerating && index === messages.length - 1}
-            {...additionalOptions}
-          />
-        )
-      })}
+              {...additionalOptions}
+            />
+          );
+        })}
         {isGenerating && messages[messages.length - 1]?.role !== 'assistant' && (
-          <ChatMessage 
-            message={{ id: 'typing', role: 'assistant'}} 
-            isLoading={true} 
-          />
+          <ChatMessage message={{ id: 'typing', role: 'assistant' }} isLoading={true} />
         )}
-    </div>
+      </div>
     </ScrollArea>
-  )
+  );
 }

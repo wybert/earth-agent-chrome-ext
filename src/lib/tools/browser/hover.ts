@@ -26,7 +26,7 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
   if (!selector) {
     return {
       success: false,
-      error: 'No selector provided'
+      error: 'No selector provided',
     };
   }
 
@@ -38,7 +38,7 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
     if (!element) {
       return {
         success: false,
-        error: `No element found for selector: ${selector}`
+        error: `No element found for selector: ${selector}`,
       };
     }
 
@@ -47,7 +47,7 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
       const event = new MouseEvent('mouseover', {
         view: window,
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
       element.dispatchEvent(event);
 
@@ -55,18 +55,18 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
       const enterEvent = new MouseEvent('mouseenter', {
         view: window,
         bubbles: true,
-        cancelable: true
+        cancelable: true,
       });
       element.dispatchEvent(enterEvent);
 
       return {
         success: true,
-        message: `Successfully hovered over element: ${selector}`
+        message: `Successfully hovered over element: ${selector}`,
       };
     } catch (error) {
       return {
         success: false,
-        error: `Error hovering over element: ${error}`
+        error: `Error hovering over element: ${error}`,
       };
     }
   } else if (env.isBackground) {
@@ -76,7 +76,7 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
       if (!tab?.id) {
         return {
           success: false,
-          error: 'No active tab found'
+          error: 'No active tab found',
         };
       }
 
@@ -93,7 +93,7 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
             const event = new MouseEvent('mouseover', {
               view: window,
               bubbles: true,
-              cancelable: true
+              cancelable: true,
             });
             element.dispatchEvent(event);
 
@@ -101,7 +101,7 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
             const enterEvent = new MouseEvent('mouseenter', {
               view: window,
               bubbles: true,
-              cancelable: true
+              cancelable: true,
             });
             element.dispatchEvent(enterEvent);
 
@@ -110,13 +110,13 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
             return { error: `Error hovering over element: ${error}` };
           }
         },
-        args: [selector]
+        args: [selector],
       });
 
       if (!results || results.length === 0) {
         return {
           success: false,
-          error: 'No result from script execution'
+          error: 'No result from script execution',
         };
       }
 
@@ -124,24 +124,24 @@ export async function hover(params: HoverParams): Promise<HoverResponse> {
       if ('error' in result) {
         return {
           success: false,
-          error: result.error
+          error: result.error,
         };
       }
 
       return {
         success: true,
-        message: `Successfully hovered over element: ${selector}`
+        message: `Successfully hovered over element: ${selector}`,
       };
     } catch (error) {
       return {
         success: false,
-        error: `Error executing hover script: ${error}`
+        error: `Error executing hover script: ${error}`,
       };
     }
   }
 
   return {
     success: false,
-    error: 'Hover tool can only be used in a browser extension context'
+    error: 'Hover tool can only be used in a browser extension context',
   };
-} 
+}

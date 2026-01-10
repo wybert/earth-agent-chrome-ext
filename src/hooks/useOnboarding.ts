@@ -31,21 +31,24 @@ export const useOnboarding = (): UseOnboardingReturn => {
     {
       id: 'settings',
       title: 'Configure API Key',
-      description: 'First, set up your API key here\n\nSupported: OpenAI, Anthropic, Google, Ollama',
+      description:
+        'First, set up your API key here\n\nSupported: OpenAI, Anthropic, Google, Ollama',
       target: '[data-onboarding="settings-button"]',
       position: 'bottom',
     },
     {
       id: 'mode',
       title: 'Ask Mode vs Do Mode',
-      description: 'Ask Mode: AI provides suggestions (read-only)\nDo Mode: AI executes code directly\n\n💡 Recommended for beginners: Do Mode',
+      description:
+        'Ask Mode: AI provides suggestions (read-only)\nDo Mode: AI executes code directly\n\n💡 Recommended for beginners: Do Mode',
       target: '[data-onboarding="mode-selector"]',
       position: 'top',
     },
     {
       id: 'input',
       title: 'Start Chatting',
-      description: 'Type your questions here\n\nTry these examples:\n"Show Landsat 8 imagery for San Francisco"\n"Calculate NDVI for California"',
+      description:
+        'Type your questions here\n\nTry these examples:\n"Show Landsat 8 imagery for San Francisco"\n"Calculate NDVI for California"',
       target: '[data-onboarding="chat-input"]',
       position: 'top',
     },
@@ -73,7 +76,7 @@ export const useOnboarding = (): UseOnboardingReturn => {
         console.log('🔍 [Onboarding] Status check:', {
           completed,
           dismissed,
-          shouldShow: !completed && !dismissed
+          shouldShow: !completed && !dismissed,
         });
 
         // Show welcome modal if not completed and not dismissed

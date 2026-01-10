@@ -58,13 +58,13 @@ const formatMessageForMarkdown = (message: Message): string => {
   // Handle multipart messages (e.g., with images)
   if (message.parts && message.parts.length > 0) {
     const textParts = message.parts
-      .filter(p => p.type === 'text' && p.text)
-      .map(p => p.text)
+      .filter((p) => p.type === 'text' && p.text)
+      .map((p) => p.text)
       .join('\n');
 
     const imageParts = message.parts
-      .filter(p => p.type === 'image' || p.mimeType?.startsWith('image/'))
-      .map(p => `[Image: ${p.name || 'attachment'}]`)
+      .filter((p) => p.type === 'image' || p.mimeType?.startsWith('image/'))
+      .map((p) => `[Image: ${p.name || 'attachment'}]`)
       .join('\n');
 
     content = [textParts, imageParts].filter(Boolean).join('\n');
@@ -92,7 +92,10 @@ export const exportSessionToMarkdown = (session: StoredChatSession): string => {
 
   // Filter out welcome messages for cleaner export
   const conversationMessages = messages.filter(
-    msg => !msg.id.startsWith('welcome-') || msg.content !== "Hello! I'm your Earth Engine Assistant. How can I help you with Earth Engine today?"
+    (msg) =>
+      !msg.id.startsWith('welcome-') ||
+      msg.content !==
+        "Hello! I'm your Earth Engine Assistant. How can I help you with Earth Engine today?"
   );
 
   for (const message of conversationMessages) {

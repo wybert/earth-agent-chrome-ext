@@ -5,7 +5,9 @@ export function showClickIndicator(x: number, y: number): void {
   try {
     if (!document.body) {
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => showClickIndicator(x, y), { once: true });
+        document.addEventListener('DOMContentLoaded', () => showClickIndicator(x, y), {
+          once: true,
+        });
         return;
       }
       return;

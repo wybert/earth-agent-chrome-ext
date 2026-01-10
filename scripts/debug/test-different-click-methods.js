@@ -24,7 +24,7 @@
     view: window,
     clientX: centerX,
     clientY: centerY,
-    button: 0
+    button: 0,
   });
   mapElement.dispatchEvent(evt1);
   await checkInspectorAfterDelay(500, 'Method 1');
@@ -37,7 +37,7 @@
     view: window,
     clientX: centerX,
     clientY: centerY,
-    button: 0
+    button: 0,
   });
   const mouseup = new MouseEvent('mouseup', {
     bubbles: true,
@@ -45,7 +45,7 @@
     view: window,
     clientX: centerX,
     clientY: centerY,
-    button: 0
+    button: 0,
   });
   const click = new MouseEvent('click', {
     bubbles: true,
@@ -53,13 +53,13 @@
     view: window,
     clientX: centerX,
     clientY: centerY,
-    button: 0
+    button: 0,
   });
 
   mapElement.dispatchEvent(mousedown);
-  await new Promise(r => setTimeout(r, 10));
+  await new Promise((r) => setTimeout(r, 10));
   mapElement.dispatchEvent(mouseup);
-  await new Promise(r => setTimeout(r, 10));
+  await new Promise((r) => setTimeout(r, 10));
   mapElement.dispatchEvent(click);
   await checkInspectorAfterDelay(500, 'Method 2');
 
@@ -73,7 +73,7 @@
     clientY: centerY,
     button: 0,
     buttons: 1,
-    isPrimary: true
+    isPrimary: true,
   });
   mapElement.dispatchEvent(pointerEvent);
   await checkInspectorAfterDelay(500, 'Method 3');
@@ -100,7 +100,7 @@
       console.log('   Trying google.maps.event.trigger...');
       const center = gmap.getCenter();
       google.maps.event.trigger(gmap, 'click', {
-        latLng: center
+        latLng: center,
       });
       await checkInspectorAfterDelay(500, 'Method 4');
     }
@@ -112,7 +112,7 @@
   console.log('If none worked, Inspector might use a custom event system');
 
   async function checkInspectorAfterDelay(ms, methodName) {
-    await new Promise(r => setTimeout(r, ms));
+    await new Promise((r) => setTimeout(r, ms));
     const panel = document.querySelector('.inspect-panel');
     if (panel) {
       const text = panel.textContent;

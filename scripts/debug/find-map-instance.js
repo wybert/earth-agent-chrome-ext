@@ -27,7 +27,7 @@
 
     // 检查常见的方法
     const mapMethods = ['getProjection', 'getBounds', 'getCenter', 'getZoom'];
-    const hasMapMethods = mapMethods.filter(m => typeof obj[m] === 'function');
+    const hasMapMethods = mapMethods.filter((m) => typeof obj[m] === 'function');
     if (hasMapMethods.length >= 3) {
       console.log(`✅ FOUND map-like object at: ${path}`);
       console.log(`   Has methods: ${hasMapMethods.join(', ')}`);
@@ -88,11 +88,11 @@
     () => mapElement._map,
     // React/Angular 框架属性
     () => {
-      const reactKey = Object.keys(mapElement).find(k => k.startsWith('__react'));
+      const reactKey = Object.keys(mapElement).find((k) => k.startsWith('__react'));
       return reactKey ? mapElement[reactKey]?.memoizedProps?.map : null;
     },
     () => {
-      const angularKey = Object.keys(mapElement).find(k => k.startsWith('__ng'));
+      const angularKey = Object.keys(mapElement).find((k) => k.startsWith('__ng'));
       return angularKey ? mapElement[angularKey]?.map : null;
     },
   ];
@@ -105,7 +105,7 @@
         console.log(`   Constructor: ${obj.constructor?.name}`);
 
         // 检查是否有地图方法
-        ['getProjection', 'getBounds', 'getCenter', 'getZoom'].forEach(method => {
+        ['getProjection', 'getBounds', 'getCenter', 'getZoom'].forEach((method) => {
           if (typeof obj[method] === 'function') {
             console.log(`   ✓ Has ${method}()`);
             if (!mapInstance) mapInstance = obj;
@@ -145,7 +145,7 @@
 
         // 检查投影方法
         const projMethods = ['fromLatLngToPoint', 'fromPointToLatLng'];
-        projMethods.forEach(method => {
+        projMethods.forEach((method) => {
           if (typeof projection[method] === 'function') {
             console.log(`   ✓ Has ${method}()`);
           }
@@ -169,7 +169,7 @@
 
         const pixelPoint = {
           x: worldPoint.x * scale,
-          y: worldPoint.y * scale
+          y: worldPoint.y * scale,
         };
         console.log(`   Pixel Point (world space): (${pixelPoint.x}, ${pixelPoint.y})`);
 
@@ -178,24 +178,24 @@
         const centerWorldPoint = projection.fromLatLngToPoint(center);
         const centerPixelPoint = {
           x: centerWorldPoint.x * scale,
-          y: centerWorldPoint.y * scale
+          y: centerWorldPoint.y * scale,
         };
 
         // 计算偏移
         const mapBounds = mapElement.getBoundingClientRect();
         const mapCenterScreen = {
           x: mapBounds.left + mapBounds.width / 2,
-          y: mapBounds.top + mapBounds.height / 2
+          y: mapBounds.top + mapBounds.height / 2,
         };
 
         const offset = {
           x: pixelPoint.x - centerPixelPoint.x,
-          y: pixelPoint.y - centerPixelPoint.y
+          y: pixelPoint.y - centerPixelPoint.y,
         };
 
         const screenPoint = {
           x: mapCenterScreen.x + offset.x,
-          y: mapCenterScreen.y + offset.y
+          y: mapCenterScreen.y + offset.y,
         };
 
         console.log(`\n✅ FINAL SCREEN COORDINATES:`);
@@ -203,36 +203,36 @@
         console.log(`   y: ${screenPoint.y}`);
 
         // 保存转换函数到全局
-        window.latLngToScreenPixel = function(lat, lng) {
+        window.latLngToScreenPixel = function (lat, lng) {
           const latLng = new google.maps.LatLng(lat, lng);
           const worldPoint = projection.fromLatLngToPoint(latLng);
           const scale = Math.pow(2, mapInstance.getZoom());
           const pixelPoint = {
             x: worldPoint.x * scale,
-            y: worldPoint.y * scale
+            y: worldPoint.y * scale,
           };
 
           const center = mapInstance.getCenter();
           const centerWorldPoint = projection.fromLatLngToPoint(center);
           const centerPixelPoint = {
             x: centerWorldPoint.x * scale,
-            y: centerWorldPoint.y * scale
+            y: centerWorldPoint.y * scale,
           };
 
           const mapBounds = mapElement.getBoundingClientRect();
           const mapCenterScreen = {
             x: mapBounds.left + mapBounds.width / 2,
-            y: mapBounds.top + mapBounds.height / 2
+            y: mapBounds.top + mapBounds.height / 2,
           };
 
           const offset = {
             x: pixelPoint.x - centerPixelPoint.x,
-            y: pixelPoint.y - centerPixelPoint.y
+            y: pixelPoint.y - centerPixelPoint.y,
           };
 
           return {
             x: mapCenterScreen.x + offset.x,
-            y: mapCenterScreen.y + offset.y
+            y: mapCenterScreen.y + offset.y,
           };
         };
 
@@ -249,13 +249,12 @@
           view: window,
           clientX: screenPoint.x,
           clientY: screenPoint.y,
-          button: 0
+          button: 0,
         });
 
         mapElement.dispatchEvent(clickEvent);
         console.log('   ✅ Click dispatched!');
         console.log('   💡 Check Inspector panel to see if it worked');
-
       } else {
         console.warn('⚠️  Projection not available');
       }
@@ -290,6 +289,6 @@
   return {
     mapInstance,
     mapElement,
-    latLngToScreenPixel: window.latLngToScreenPixel
+    latLngToScreenPixel: window.latLngToScreenPixel,
   };
 })();

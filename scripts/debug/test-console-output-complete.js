@@ -23,7 +23,7 @@ print('Test 5: Undefined:', undefined);
 // Test with Earth Engine objects
 print('Test 6: Image:', ee.Image(0));
 print('Test 7: Geometry:', ee.Geometry.Point([0, 0]));
-print('Test 8: Feature:', ee.Feature(ee.Geometry.Point([0, 0]), {name: 'test'}));
+print('Test 8: Feature:', ee.Feature(ee.Geometry.Point([0, 0]), { name: 'test' }));
 
 // Test with collections
 print('Test 9: ImageCollection:', ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA'));
@@ -31,10 +31,13 @@ print('Test 10: FeatureCollection:', ee.FeatureCollection('TIGER/2010/Blocks'));
 
 // Test with lists and dictionaries
 print('Test 11: List:', ee.List([1, 2, 3, 4, 5]));
-print('Test 12: Dictionary:', ee.Dictionary({key1: 'value1', key2: 'value2'}));
+print('Test 12: Dictionary:', ee.Dictionary({ key1: 'value1', key2: 'value2' }));
 
 // Test with long text
-print('Test 13: Long text:', 'This is a very long string that might exceed normal display limits. '.repeat(10));
+print(
+  'Test 13: Long text:',
+  'This is a very long string that might exceed normal display limits. '.repeat(10)
+);
 
 // Test with special characters
 print('Test 14: Special chars:', '特殊字符 🌍 🛰️ ①②③');
@@ -49,11 +52,11 @@ var complexObject = {
   nested: {
     level1: {
       level2: {
-        deep: 'value'
-      }
-    }
+        deep: 'value',
+      },
+    },
   },
-  array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  array: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 };
 print('Test 16: Complex object:', complexObject);
 

@@ -30,8 +30,7 @@ const writeJson = (filePath, data) => {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
 };
 
-const isValidSemver = (version) =>
-  /^\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/.test(version);
+const isValidSemver = (version) => /^\d+\.\d+\.\d+(-[\w.]+)?(\+[\w.]+)?$/.test(version);
 
 const main = () => {
   const argVersion = process.argv[2];

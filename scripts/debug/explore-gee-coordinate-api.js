@@ -11,7 +11,7 @@
   console.log('📦 Part 1: Checking Global Objects\n');
 
   const globalObjects = ['ee', 'Map', 'google', 'goog', 'geeMap'];
-  globalObjects.forEach(name => {
+  globalObjects.forEach((name) => {
     if (window[name]) {
       console.log(`✅ Found: window.${name}`);
       console.log(`   Type: ${typeof window[name]}`);
@@ -19,8 +19,9 @@
 
       // 列出所有方法
       if (typeof window[name] === 'object') {
-        const methods = Object.getOwnPropertyNames(window[name])
-          .filter(key => typeof window[name][key] === 'function');
+        const methods = Object.getOwnPropertyNames(window[name]).filter(
+          (key) => typeof window[name][key] === 'function'
+        );
         if (methods.length > 0) {
           console.log(`   Methods (${methods.length}):`, methods.slice(0, 10));
         }
@@ -52,10 +53,12 @@
   }
 
   // 按类型分类
-  const dataProps = allProps.filter(k => k.startsWith('data-') || k.startsWith('__'));
-  const reactProps = allProps.filter(k => k.includes('react') || k.includes('React'));
-  const mapProps = allProps.filter(k => k.toLowerCase().includes('map'));
-  const geeProps = allProps.filter(k => k.toLowerCase().includes('gee') || k.toLowerCase().includes('earth'));
+  const dataProps = allProps.filter((k) => k.startsWith('data-') || k.startsWith('__'));
+  const reactProps = allProps.filter((k) => k.includes('react') || k.includes('React'));
+  const mapProps = allProps.filter((k) => k.toLowerCase().includes('map'));
+  const geeProps = allProps.filter(
+    (k) => k.toLowerCase().includes('gee') || k.toLowerCase().includes('earth')
+  );
 
   if (dataProps.length > 0) console.log('   Data props:', dataProps);
   if (reactProps.length > 0) console.log('   React props:', reactProps);
@@ -81,8 +84,15 @@
       console.log(`   Type: ${typeof obj}`);
 
       // 检查是否有地图方法
-      const mapMethods = ['getProjection', 'getBounds', 'getCenter', 'getZoom', 'latLngToPixel', 'pixelToLatLng'];
-      mapMethods.forEach(method => {
+      const mapMethods = [
+        'getProjection',
+        'getBounds',
+        'getCenter',
+        'getZoom',
+        'latLngToPixel',
+        'pixelToLatLng',
+      ];
+      mapMethods.forEach((method) => {
         if (typeof obj[method] === 'function') {
           console.log(`   ✓ Has method: ${method}`);
         }
@@ -124,7 +134,7 @@
     observer.observe(inspectPanel, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
     });
 
     console.log('✅ Monitor active - waiting for map clicks...\n');
@@ -144,7 +154,7 @@
       width: mapBounds.width,
       height: mapBounds.height,
       centerX: mapBounds.left + mapBounds.width / 2,
-      centerY: mapBounds.top + mapBounds.height / 2
+      centerY: mapBounds.top + mapBounds.height / 2,
     });
 
     // 检查 Google Maps API
@@ -189,7 +199,7 @@
   const listeners = getEventListeners(mapElement);
   if (listeners) {
     console.log('Event listeners on map element:');
-    Object.keys(listeners).forEach(eventType => {
+    Object.keys(listeners).forEach((eventType) => {
       console.log(`   ${eventType}: ${listeners[eventType].length} listener(s)`);
 
       // 显示点击事件的详细信息
@@ -200,7 +210,7 @@
             useCapture: listener.useCapture,
             passive: listener.passive,
             once: listener.once,
-            type: listener.type
+            type: listener.type,
           });
         });
       }
@@ -213,7 +223,7 @@
   console.log('\n🧰 Part 7: Test Functions Available\n');
 
   // 将测试函数挂载到 window
-  window.testLatLngToPixel = function(lat, lng) {
+  window.testLatLngToPixel = function (lat, lng) {
     console.log(`\n🧪 Testing conversion: (${lat}, ${lng}) → (x, y)`);
 
     const mapBounds = mapElement.getBoundingClientRect();
@@ -247,7 +257,7 @@
           console.log('   Map info:', {
             zoom,
             bounds: bounds.toString(),
-            center: mapInstance.getCenter().toString()
+            center: mapInstance.getCenter().toString(),
           });
 
           // 实际的投影转换
@@ -280,6 +290,6 @@
   return {
     mapElement,
     inspectPanel,
-    testLatLngToPixel: window.testLatLngToPixel
+    testLatLngToPixel: window.testLatLngToPixel,
   };
 })();

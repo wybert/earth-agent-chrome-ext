@@ -26,7 +26,7 @@ export const TokenUsageDisplay = React.memo(function TokenUsageDisplay({
     completionTokens,
     totalTokens,
     model,
-    maxTokens: effectiveMaxTokens
+    maxTokens: effectiveMaxTokens,
   });
 
   const percentage = (totalTokens / effectiveMaxTokens) * 100;
@@ -60,21 +60,16 @@ export const TokenUsageDisplay = React.memo(function TokenUsageDisplay({
       <div className="flex items-center justify-between text-xs mb-1.5">
         <div className="flex items-center gap-4">
           <span className="text-muted-foreground">
-            Tokens: <span className={`font-medium ${getColor()}`}>{formatNumber(totalTokens)}</span> / {formatNumber(effectiveMaxTokens)}
+            Tokens: <span className={`font-medium ${getColor()}`}>{formatNumber(totalTokens)}</span>{' '}
+            / {formatNumber(effectiveMaxTokens)}
           </span>
           <span className="text-muted-foreground">
             ({formatNumber(promptTokens)} in + {formatNumber(completionTokens)} out)
           </span>
         </div>
-        <span className={`font-medium ${getColor()}`}>
-          {percentage.toFixed(1)}%
-        </span>
+        <span className={`font-medium ${getColor()}`}>{percentage.toFixed(1)}%</span>
       </div>
-      <Progress
-        value={percentage}
-        className="h-1.5"
-        indicatorClassName={getProgressColor()}
-      />
+      <Progress value={percentage} className="h-1.5" indicatorClassName={getProgressColor()} />
       {percentage >= 100 && (
         <div className="mt-1.5 text-xs text-red-600 dark:text-red-400 font-semibold">
           🚨 Context limit exceeded! Start a new session or switch to a larger model.

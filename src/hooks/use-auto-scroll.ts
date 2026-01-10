@@ -1,79 +1,76 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from 'react';
 
 // How many pixels from the bottom of the container to enable auto-scroll
-const ACTIVATION_THRESHOLD = 50
+const ACTIVATION_THRESHOLD = 50;
 // Minimum pixels of scroll-up movement required to disable auto-scroll
-const MIN_SCROLL_UP_THRESHOLD = 10
+const MIN_SCROLL_UP_THRESHOLD = 10;
 
 export function useAutoScroll(dependencies: React.DependencyList) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const previousScrollTop = useRef<number | null>(null)
-  const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
-  const [hasScrollableContent, setHasScrollableContent] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const previousScrollTop = useRef<number | null>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [hasScrollableContent, setHasScrollableContent] = useState(false);
 
   const scrollToBottom = () => {
     if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }
+  };
 
   const handleScroll = () => {
     if (containerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = containerRef.current
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
 
       // Check if content is scrollable
-      setHasScrollableContent(scrollHeight > clientHeight)
+      setHasScrollableContent(scrollHeight > clientHeight);
 
-      const distanceFromBottom = Math.abs(
-        scrollHeight - scrollTop - clientHeight
-      )
+      const distanceFromBottom = Math.abs(scrollHeight - scrollTop - clientHeight);
 
       const isScrollingUp = previousScrollTop.current
         ? scrollTop < previousScrollTop.current
-        : false
+        : false;
 
       const scrollUpDistance = previousScrollTop.current
         ? previousScrollTop.current - scrollTop
-        : 0
+        : 0;
 
-      const isDeliberateScrollUp =
-        isScrollingUp && scrollUpDistance > MIN_SCROLL_UP_THRESHOLD
+      const isDeliberateScrollUp = isScrollingUp && scrollUpDistance > MIN_SCROLL_UP_THRESHOLD;
 
       if (isDeliberateScrollUp) {
-        setShouldAutoScroll(false)
+        setShouldAutoScroll(false);
       } else {
-        const isScrolledToBottom = distanceFromBottom < ACTIVATION_THRESHOLD
-        setShouldAutoScroll(isScrolledToBottom)
+        const isScrolledToBottom = distanceFromBottom < ACTIVATION_THRESHOLD;
+        setShouldAutoScroll(isScrolledToBottom);
       }
 
-      previousScrollTop.current = scrollTop
+      previousScrollTop.current = scrollTop;
     }
-  }
+  };
 
   const handleTouchStart = () => {
-    setShouldAutoScroll(false)
-  }
+    setShouldAutoScroll(false);
+  };
 
   useEffect(() => {
     if (containerRef.current) {
-      previousScrollTop.current = containerRef.current.scrollTop
+      previousScrollTop.current = containerRef.current.scrollTop;
       // Initial check for scrollable content
-      const { scrollHeight, clientHeight } = containerRef.current
-      setHasScrollableContent(scrollHeight > clientHeight)
+      const { scrollHeight, clientHeight } = containerRef.current;
+      setHasScrollableContent(scrollHeight > clientHeight);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     if (shouldAutoScroll) {
-      scrollToBottom()
+      scrollToBottom();
     }
     // Check scrollable content on dependency change
     if (containerRef.current) {
-      const { scrollHeight, clientHeight } = containerRef.current
-      setHasScrollableContent(scrollHeight > clientHeight)
+      const { scrollHeight, clientHeight } = containerRef.current;
+      setHasScrollableContent(scrollHeight > clientHeight);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, dependencies)
+  }, dependencies);
 
   return {
     containerRef,
@@ -82,5 +79,5 @@ export function useAutoScroll(dependencies: React.DependencyList) {
     shouldAutoScroll,
     hasScrollableContent,
     handleTouchStart,
-  }
+  };
 }

@@ -31,14 +31,14 @@ export async function getScript(): Promise<GetScriptResponse> {
           console.warn('Background script connection timed out.');
           resolve({
             success: false,
-            error: 'Background script connection timed out'
+            error: 'Background script connection timed out',
           });
         }, 5000); // 5 second timeout
 
         try {
           chrome.runtime.sendMessage(
             {
-              type: 'GET_SCRIPT'
+              type: 'GET_SCRIPT',
             },
             (response) => {
               // Clear the timeout since we got a response
@@ -48,7 +48,9 @@ export async function getScript(): Promise<GetScriptResponse> {
                 console.warn('Chrome runtime error:', chrome.runtime.lastError);
                 resolve({
                   success: false,
-                  error: chrome.runtime.lastError.message || 'Error communicating with background script'
+                  error:
+                    chrome.runtime.lastError.message ||
+                    'Error communicating with background script',
                 });
                 return;
               }
@@ -63,7 +65,7 @@ export async function getScript(): Promise<GetScriptResponse> {
           console.error('Error sending message to background script:', err);
           resolve({
             success: false,
-            error: err instanceof Error ? err.message : String(err)
+            error: err instanceof Error ? err.message : String(err),
           });
         }
       });
@@ -73,11 +75,11 @@ export async function getScript(): Promise<GetScriptResponse> {
     if (env.isBackground && typeof chrome !== 'undefined' && chrome.tabs) {
       return new Promise<GetScriptResponse>((resolve) => {
         // First we need to find the Earth Engine tab
-        chrome.tabs.query({ url: "*://code.earthengine.google.com/*" }, (tabs) => {
+        chrome.tabs.query({ url: '*://code.earthengine.google.com/*' }, (tabs) => {
           if (!tabs || tabs.length === 0) {
             resolve({
               success: false,
-              error: 'No Earth Engine tab found. Please open Earth Engine in a tab.'
+              error: 'No Earth Engine tab found. Please open Earth Engine in a tab.',
             });
             return;
           }
@@ -86,27 +88,24 @@ export async function getScript(): Promise<GetScriptResponse> {
           if (!tabId) {
             resolve({
               success: false,
-              error: 'Invalid Earth Engine tab'
+              error: 'Invalid Earth Engine tab',
             });
             return;
           }
 
           // Send message to the content script in the Earth Engine tab
-          chrome.tabs.sendMessage(
-            tabId,
-            { type: 'GET_SCRIPT' },
-            (response) => {
-              if (chrome.runtime.lastError) {
-                resolve({
-                  success: false,
-                  error: chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab'
-                });
-                return;
-              }
-
-              resolve(response);
+          chrome.tabs.sendMessage(tabId, { type: 'GET_SCRIPT' }, (response) => {
+            if (chrome.runtime.lastError) {
+              resolve({
+                success: false,
+                error:
+                  chrome.runtime.lastError.message || 'Error communicating with Earth Engine tab',
+              });
+              return;
             }
-          );
+
+            resolve(response);
+          });
         });
       });
     }
@@ -115,19 +114,19 @@ export async function getScript(): Promise<GetScriptResponse> {
     if (env.isNodeJs) {
       return {
         success: false,
-        error: 'Cannot get Earth Engine script in Node.js environment'
+        error: 'Cannot get Earth Engine script in Node.js environment',
       };
     }
 
     // Default error if environment detection doesn't work as expected
     return {
       success: false,
-      error: 'Unsupported environment for getting Earth Engine script'
+      error: 'Unsupported environment for getting Earth Engine script',
     };
   } catch (error) {
     return {
       success: false,
-      error: `Error getting script: ${error instanceof Error ? error.message : String(error)}`
+      error: `Error getting script: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
 }

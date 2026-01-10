@@ -86,21 +86,24 @@ chrome.action.onClicked.addListener(async (tab) => {
   console.log('Tab details:', { id: tab.id, url: tab.url, windowId: tab.windowId });
 
   // First, immediately open the side panel (this preserves user gesture)
-  chrome.sidePanel.setOptions({
-    enabled: true,
-    path: 'sidepanel.html'
-  }, () => {
-    // Open side panel in the current window
-    if (tab.windowId) {
-      chrome.sidePanel.open({ windowId: tab.windowId }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('Failed to open side panel:', chrome.runtime.lastError);
-        } else {
-          console.log('Side panel opened successfully');
-        }
-      });
+  chrome.sidePanel.setOptions(
+    {
+      enabled: true,
+      path: 'sidepanel.html',
+    },
+    () => {
+      // Open side panel in the current window
+      if (tab.windowId) {
+        chrome.sidePanel.open({ windowId: tab.windowId }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Failed to open side panel:', chrome.runtime.lastError);
+          } else {
+            console.log('Side panel opened successfully');
+          }
+        });
+      }
     }
-  });
+  );
 
   // Check if we need to create or switch to Earth Engine tab
   const isOnEarthEngine = tab.url?.startsWith('https://code.earthengine.google.com/');
@@ -111,7 +114,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 
     // Check if there's already an Earth Engine tab
     const earthEngineTabs = await chrome.tabs.query({
-      url: "https://code.earthengine.google.com/*"
+      url: 'https://code.earthengine.google.com/*',
     });
 
     console.log('Found', earthEngineTabs.length, 'existing Earth Engine tabs');
@@ -127,12 +130,15 @@ chrome.action.onClicked.addListener(async (tab) => {
     } else {
       // Create new tab
       console.log('Creating new Earth Engine tab');
-      chrome.tabs.create({
-        url: 'https://code.earthengine.google.com/',
-        active: true
-      }, (newTab) => {
-        console.log('New tab created:', newTab.id);
-      });
+      chrome.tabs.create(
+        {
+          url: 'https://code.earthengine.google.com/',
+          active: true,
+        },
+        (newTab) => {
+          console.log('New tab created:', newTab.id);
+        }
+      );
     }
   } else {
     console.log('Already on Earth Engine tab, nothing to do');
@@ -159,15 +165,15 @@ async function validateServerIdentity(host: string, port: number): Promise<boole
     const identity = await response.json();
 
     // Validate the server signature
-    if (identity && identity.signature === "mcp-browser-connector-24x7") {
+    if (identity && identity.signature === 'mcp-browser-connector-24x7') {
       return true;
     } else {
-      console.error("Invalid server signature - not the browser tools server");
+      console.error('Invalid server signature - not the browser tools server');
       return false;
     }
   } catch (error) {
     // Handle network errors more gracefully
-    console.error("Error validating server identity:", error);
+    console.error('Error validating server identity:', error);
 
     // Don't throw an error, just return false if we can't connect
     return false;
@@ -188,13 +194,14 @@ export async function sendMessageToEarthEngineTab(
 
   async function attemptSend(): Promise<any> {
     // Find Earth Engine tab
-    const tabs = await chrome.tabs.query({ url: "*://code.earthengine.google.com/*" });
+    const tabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
 
     if (!tabs || tabs.length === 0) {
       console.error('No Earth Engine tab found');
       return {
         success: false,
-        error: 'No Earth Engine tab found. Please open Google Earth Engine at https://code.earthengine.google.com/ in a tab and try again.'
+        error:
+          'No Earth Engine tab found. Please open Google Earth Engine at https://code.earthengine.google.com/ in a tab and try again.',
       };
     }
 
@@ -203,7 +210,7 @@ export async function sendMessageToEarthEngineTab(
       console.error('Invalid Earth Engine tab');
       return {
         success: false,
-        error: 'Invalid Earth Engine tab'
+        error: 'Invalid Earth Engine tab',
       };
     }
 
@@ -223,14 +230,16 @@ export async function sendMessageToEarthEngineTab(
         if (retryCount >= maxRetries) {
           return {
             success: false,
-            error: `Content script did not respond after ${maxRetries} attempts. Please ensure you have the Google Earth Engine tab open and fully loaded at https://code.earthengine.google.com/`
+            error: `Content script did not respond after ${maxRetries} attempts. Please ensure you have the Google Earth Engine tab open and fully loaded at https://code.earthengine.google.com/`,
           };
         }
 
         if (!allowReload) {
           retryCount++;
-          console.log(`Skipping tab reload; retrying ping (attempt ${retryCount}/${maxRetries})...`);
-          await new Promise(resolve => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
+          console.log(
+            `Skipping tab reload; retrying ping (attempt ${retryCount}/${maxRetries})...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
           return attemptSend();
         }
 
@@ -240,7 +249,7 @@ export async function sendMessageToEarthEngineTab(
           await chrome.tabs.reload(tabId);
 
           // Wait for the page to reload and content script to initialize
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // Increment retry count and try again
           retryCount++;
@@ -249,7 +258,8 @@ export async function sendMessageToEarthEngineTab(
         } catch (reloadError) {
           return {
             success: false,
-            error: 'Content script not loaded and tab refresh failed. Please ensure the Earth Engine tab is open and refresh it manually.'
+            error:
+              'Content script not loaded and tab refresh failed. Please ensure the Earth Engine tab is open and refresh it manually.',
           };
         }
       }
@@ -292,14 +302,14 @@ export async function sendMessageToEarthEngineTab(
       if (retryCount < maxRetries) {
         retryCount++;
         console.log(`Communication failed, retrying (attempt ${retryCount}/${maxRetries})...`);
-        await new Promise(resolve => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
+        await new Promise((resolve) => setTimeout(resolve, TAB_ACTION_RETRY_DELAY));
         return attemptSend();
       }
 
       return {
         success: false,
         error: `Error communicating with Earth Engine tab: ${error instanceof Error ? error.message : String(error)}.
-        Please make sure the Earth Engine tab is open and active at https://code.earthengine.google.com/`
+        Please make sure the Earth Engine tab is open and active at https://code.earthengine.google.com/`,
       };
     }
   }
@@ -351,7 +361,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         try {
           const tabId = sender.tab.id;
           const attemptSync = async (delayMs: number) => {
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
             try {
               const resp = await getEditorContent(tabId);
               if (resp?.success && typeof resp.content === 'string') {
@@ -396,7 +406,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             message.payload.reason || 'editor changed'
           );
           if (port) {
-            const diff = shadowWorkspaceSingleton.diffSinceSynced(sender.tab.id, message.payload.scriptId || 'current_editor');
+            const diff = shadowWorkspaceSingleton.diffSinceSynced(
+              sender.tab.id,
+              message.payload.scriptId || 'current_editor'
+            );
             postToSidepanel({ type: 'SHADOW_DIFF_UPDATE', diff });
           }
         } catch (e) {
@@ -411,10 +424,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
     case 'VALIDATE_SERVER':
       if (message.payload && message.payload.host && message.payload.port) {
         validateServerIdentity(message.payload.host, message.payload.port)
-          .then(isValid => {
+          .then((isValid) => {
             sendResponse({ isValid });
           })
-          .catch(error => {
+          .catch((error) => {
             sendResponse({ isValid: false, error: error.message });
           });
         return true; // Will respond asynchronously
@@ -451,7 +464,6 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             // For simplicity, let's assume non-streaming for direct API calls for now
             const responseData = await response.json(); // Or handle stream appropriately
             sendResponse({ success: true, data: responseData });
-
           } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error handling proxied API request:', error);
@@ -474,7 +486,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
         } catch (error) {
           sendResponse({
             success: false,
-            error: error instanceof Error ? error.message : String(error)
+            error: error instanceof Error ? error.message : String(error),
           });
         }
       })();
@@ -494,14 +506,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           console.log(`🔧 [Background] API key validation for ${provider}:`, {
             hasApiKey: !!apiKey,
             provider: provider,
-            apiKeyLength: apiKey ? apiKey.length : 0
+            apiKeyLength: apiKey ? apiKey.length : 0,
           });
 
           if (!apiKey) {
             console.error(`❌ [Background] API key not configured for ${provider}`);
             sendResponse({
               type: 'ERROR',
-              error: 'API key not configured. Please set your API key in the extension settings.'
+              error: 'API key not configured. Please set your API key in the extension settings.',
             });
             return;
           }
@@ -520,12 +532,12 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               // Convert the message to use parts if it doesn't have them already
               if (!chatMessages[lastUserMessageIndex].parts) {
                 chatMessages[lastUserMessageIndex].parts = [
-                  { type: 'text', text: chatMessages[lastUserMessageIndex].content || '' }
+                  { type: 'text', text: chatMessages[lastUserMessageIndex].content || '' },
                 ];
               }
 
               // Add image parts
-              message.attachments.forEach((attachment: { type: string, data: string }) => {
+              message.attachments.forEach((attachment: { type: string; data: string }) => {
                 if (attachment.type === 'image' && chatMessages[lastUserMessageIndex].parts) {
                   chatMessages[lastUserMessageIndex].parts.push(attachment);
                 }
@@ -538,7 +550,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               provider: provider,
               model: model,
               hasApiKey: !!apiKey,
-              messageCount: chatMessages.length
+              messageCount: chatMessages.length,
             });
 
             // Handle the chat request through the appropriate handler
@@ -553,7 +565,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               message.mode || 'ask',
               {
                 prompt: (message as any).profilePrompt,
-                tools: (message as any).profileTools
+                tools: (message as any).profileTools,
               }
             );
 
@@ -572,7 +584,9 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               if (done) break;
 
               // Convert the chunk to text with proper streaming handling
-              const chunkText = new TextDecoder('utf-8', { fatal: false }).decode(value, { stream: true });
+              const chunkText = new TextDecoder('utf-8', { fatal: false }).decode(value, {
+                stream: true,
+              });
               accumulatedResponse += chunkText;
 
               // Forward the chunk to the sender - using proper API
@@ -580,14 +594,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 chrome.tabs.sendMessage(sender.tab.id, {
                   type: 'CHAT_STREAM_CHUNK',
                   requestId,
-                  chunk: chunkText
+                  chunk: chunkText,
                 });
               } else if (port) {
                 // If this is from a port connection like sidebar
                 postToSidepanel({
                   type: 'CHAT_STREAM_CHUNK',
                   requestId,
-                  chunk: chunkText
+                  chunk: chunkText,
                 });
               }
             }
@@ -597,17 +611,16 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               chrome.tabs.sendMessage(sender.tab.id, {
                 type: 'CHAT_STREAM_END',
                 requestId,
-                fullText: accumulatedResponse
+                fullText: accumulatedResponse,
               });
             } else if (port) {
               // If this is from a port connection like sidebar
               postToSidepanel({
                 type: 'CHAT_STREAM_END',
                 requestId,
-                fullText: accumulatedResponse
+                fullText: accumulatedResponse,
               });
             }
-
           } catch (error: unknown) {
             console.error('Error processing chat request:', error);
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -617,14 +630,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               chrome.tabs.sendMessage(sender.tab.id, {
                 type: 'ERROR',
                 requestId,
-                error: `Chat request failed: ${errorMessage}`
+                error: `Chat request failed: ${errorMessage}`,
               });
             } else if (port) {
               // If this is from a port connection like sidebar
               postToSidepanel({
                 type: 'ERROR',
                 requestId,
-                error: `Chat request failed: ${errorMessage}`
+                error: `Chat request failed: ${errorMessage}`,
               });
             }
           }
@@ -635,7 +648,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           // Send error response
           sendResponse({
             type: 'ERROR',
-            error: `Error handling chat message: ${errorMessage}`
+            error: `Error handling chat message: ${errorMessage}`,
           });
         }
       })();
@@ -654,7 +667,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           sendResponse({
             success: false,
             libraryId: null,
-            message: `Error resolving library ID: ${error instanceof Error ? error.message : String(error)}`
+            message: `Error resolving library ID: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -664,10 +677,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       (async () => {
         try {
           console.log('Getting documentation for:', message.libraryId, message.topic);
-          const result = await getDocumentation(
-            message.libraryId,
-            message.topic
-          );
+          const result = await getDocumentation(message.libraryId, message.topic);
           console.log('Documentation result:', result.success, result.content?.substring(0, 50));
           sendResponse(result);
         } catch (error) {
@@ -675,7 +685,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           sendResponse({
             success: false,
             content: null,
-            message: `Error getting documentation: ${error instanceof Error ? error.message : String(error)}`
+            message: `Error getting documentation: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -699,10 +709,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           }
 
           // Then get documentation
-          const docResult = await getDocumentation(
-            searchResult.libraryId,
-            message.topic
-          );
+          const docResult = await getDocumentation(searchResult.libraryId, message.topic);
 
           if (!docResult.success || !docResult.content) {
             sendResponse({
@@ -739,7 +746,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!tabs || tabs.length === 0 || !tabs[0]) {
             sendResponse({
               success: false,
-              error: 'No active tab found'
+              error: 'No active tab found',
             });
             return;
           }
@@ -748,7 +755,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!activeTab.windowId) {
             sendResponse({
               success: false,
-              error: 'Active tab has no window ID'
+              error: 'Active tab has no window ID',
             });
             return;
           }
@@ -757,7 +764,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           try {
             const dataUrl = await chrome.tabs.captureVisibleTab(activeTab.windowId, {
               format: 'png',
-              quality: 100
+              quality: 100,
             });
 
             if (!dataUrl) {
@@ -768,21 +775,22 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             sendResponse({
               success: true,
               screenshotData: dataUrl,
-              message: 'Screenshot captured successfully'
+              message: 'Screenshot captured successfully',
             });
           } catch (captureError) {
             console.error('Error capturing screenshot:', captureError);
-            const errorMessage = captureError instanceof Error ? captureError.message : String(captureError);
+            const errorMessage =
+              captureError instanceof Error ? captureError.message : String(captureError);
             sendResponse({
               success: false,
-              error: `Error capturing screenshot: ${errorMessage}. This may happen if the tab is not fully loaded, is a Chrome internal page (like chrome://, chrome-extension://), or if the extension lacks permissions.`
+              error: `Error capturing screenshot: ${errorMessage}. This may happen if the tab is not fully loaded, is a Chrome internal page (like chrome://, chrome-extension://), or if the extension lacks permissions.`,
             });
           }
         } catch (error) {
           console.error('Error processing screenshot request:', error);
           sendResponse({
             success: false,
-            error: `Error processing screenshot request: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error processing screenshot request: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -799,7 +807,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!tabs || tabs.length === 0 || !tabs[0].id) {
             sendResponse({
               success: false,
-              error: 'No active tab found'
+              error: 'No active tab found',
             });
             return;
           }
@@ -827,8 +835,17 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
 
                 // Always include interactive elements
                 const interactiveElements = [
-                  'a', 'button', 'input', 'textarea', 'select', 'option',
-                  'details', 'summary', 'label', 'fieldset', 'legend'
+                  'a',
+                  'button',
+                  'input',
+                  'textarea',
+                  'select',
+                  'option',
+                  'details',
+                  'summary',
+                  'label',
+                  'fieldset',
+                  'legend',
                 ];
 
                 if (interactiveElements.includes(tagName)) {
@@ -851,7 +868,15 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 }
 
                 // Include structural elements with meaningful content
-                const structuralElements = ['main', 'nav', 'aside', 'section', 'article', 'header', 'footer'];
+                const structuralElements = [
+                  'main',
+                  'nav',
+                  'aside',
+                  'section',
+                  'article',
+                  'header',
+                  'footer',
+                ];
                 if (structuralElements.includes(tagName)) {
                   return true;
                 }
@@ -882,29 +907,29 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 // Determine implicit role based on tag
                 const tagName = element.tagName.toLowerCase();
                 const roleMap: Record<string, string> = {
-                  'a': 'link',
-                  'button': 'button',
-                  'input': getInputRole(element as HTMLInputElement),
-                  'textarea': 'textbox',
-                  'select': 'combobox',
-                  'option': 'option',
-                  'img': 'img',
-                  'h1': 'heading',
-                  'h2': 'heading',
-                  'h3': 'heading',
-                  'h4': 'heading',
-                  'h5': 'heading',
-                  'h6': 'heading',
-                  'main': 'main',
-                  'nav': 'navigation',
-                  'aside': 'complementary',
-                  'section': 'region',
-                  'article': 'article',
-                  'header': 'banner',
-                  'footer': 'contentinfo',
-                  'fieldset': 'group',
-                  'legend': 'legend',
-                  'label': 'label'
+                  a: 'link',
+                  button: 'button',
+                  input: getInputRole(element as HTMLInputElement),
+                  textarea: 'textbox',
+                  select: 'combobox',
+                  option: 'option',
+                  img: 'img',
+                  h1: 'heading',
+                  h2: 'heading',
+                  h3: 'heading',
+                  h4: 'heading',
+                  h5: 'heading',
+                  h6: 'heading',
+                  main: 'main',
+                  nav: 'navigation',
+                  aside: 'complementary',
+                  section: 'region',
+                  article: 'article',
+                  header: 'banner',
+                  footer: 'contentinfo',
+                  fieldset: 'group',
+                  legend: 'legend',
+                  label: 'label',
                 };
 
                 return roleMap[tagName] || 'generic';
@@ -913,20 +938,20 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               function getInputRole(input: HTMLInputElement): string {
                 const type = (input.type || 'text').toLowerCase();
                 const inputRoleMap: Record<string, string> = {
-                  'text': 'textbox',
-                  'email': 'textbox',
-                  'password': 'textbox',
-                  'search': 'searchbox',
-                  'tel': 'textbox',
-                  'url': 'textbox',
-                  'number': 'spinbutton',
-                  'range': 'slider',
-                  'checkbox': 'checkbox',
-                  'radio': 'radio',
-                  'button': 'button',
-                  'submit': 'button',
-                  'reset': 'button',
-                  'file': 'button'
+                  text: 'textbox',
+                  email: 'textbox',
+                  password: 'textbox',
+                  search: 'searchbox',
+                  tel: 'textbox',
+                  url: 'textbox',
+                  number: 'spinbutton',
+                  range: 'slider',
+                  checkbox: 'checkbox',
+                  radio: 'radio',
+                  button: 'button',
+                  submit: 'button',
+                  reset: 'button',
+                  file: 'button',
                 };
 
                 return inputRoleMap[type] || 'textbox';
@@ -949,10 +974,11 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 }
 
                 // For form controls, check associated label
-                if (element instanceof HTMLInputElement ||
+                if (
+                  element instanceof HTMLInputElement ||
                   element instanceof HTMLTextAreaElement ||
-                  element instanceof HTMLSelectElement) {
-
+                  element instanceof HTMLSelectElement
+                ) {
                   // Check for label element
                   const labels = document.querySelectorAll(`label[for="${element.id}"]`);
                   if (labels.length > 0) {
@@ -988,7 +1014,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
 
                 // Get text content for other elements
                 const textContent = getTextContent(element).trim();
-                if (textContent && textContent.length < 100) { // Reasonable length limit
+                if (textContent && textContent.length < 100) {
+                  // Reasonable length limit
                   return textContent;
                 }
 
@@ -1000,13 +1027,19 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
 
                 // Remove child interactive elements to avoid nested labels
                 const interactiveSelectors = [
-                  'button', 'a', 'input', 'textarea', 'select',
-                  '[role="button"]', '[role="link"]', '[role="textbox"]'
+                  'button',
+                  'a',
+                  'input',
+                  'textarea',
+                  'select',
+                  '[role="button"]',
+                  '[role="link"]',
+                  '[role="textbox"]',
                 ];
 
                 for (const selector of interactiveSelectors) {
                   const interactiveElements = clone.querySelectorAll(selector);
-                  interactiveElements.forEach(el => el.remove());
+                  interactiveElements.forEach((el) => el.remove());
                 }
 
                 return clone.textContent || '';
@@ -1016,9 +1049,11 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 const computedStyle = window.getComputedStyle(element);
 
                 // Skip hidden elements
-                if (computedStyle.display === 'none' ||
+                if (
+                  computedStyle.display === 'none' ||
                   computedStyle.visibility === 'hidden' ||
-                  computedStyle.opacity === '0') {
+                  computedStyle.opacity === '0'
+                ) {
                   return null;
                 }
 
@@ -1047,7 +1082,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 const cursor = computedStyle.cursor;
 
                 const node: AccessibilityNode = {
-                  role
+                  role,
                 };
 
                 if (name) {
@@ -1106,7 +1141,11 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     // Process shadow DOM children if element has open shadow root
                     if (element.shadowRoot && element.shadowRoot.mode === 'open') {
                       for (const shadowChild of Array.from(element.shadowRoot.children)) {
-                        const shadowNodes = buildAccessibilityTree(shadowChild, maxDepth, currentDepth + 1);
+                        const shadowNodes = buildAccessibilityTree(
+                          shadowChild,
+                          maxDepth,
+                          currentDepth + 1
+                        );
                         children.push(...shadowNodes);
                       }
                     }
@@ -1125,7 +1164,11 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   // Also process shadow DOM children if element has open shadow root
                   if (element.shadowRoot && element.shadowRoot.mode === 'open') {
                     for (const shadowChild of Array.from(element.shadowRoot.children)) {
-                      const shadowNodes = buildAccessibilityTree(shadowChild, maxDepth, currentDepth);
+                      const shadowNodes = buildAccessibilityTree(
+                        shadowChild,
+                        maxDepth,
+                        currentDepth
+                      );
                       nodes.push(...shadowNodes);
                     }
                   }
@@ -1191,26 +1234,26 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                   '- Page Snapshot',
                   '```yaml',
                   yamlContent,
-                  '```'
+                  '```',
                 ].join('\n');
 
                 return {
                   success: true,
-                  snapshot
+                  snapshot,
                 };
               } catch (error) {
                 return {
                   success: false,
-                  error: error instanceof Error ? error.message : 'Failed to capture snapshot'
+                  error: error instanceof Error ? error.message : 'Failed to capture snapshot',
                 };
               }
-            }
+            },
           });
 
           if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
-              error: 'Failed to execute snapshot script'
+              error: 'Failed to execute snapshot script',
             });
             return;
           }
@@ -1222,7 +1265,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           console.error('Error taking accessibility snapshot:', error);
           sendResponse({
             success: false,
-            error: `Error taking accessibility snapshot: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error taking accessibility snapshot: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1237,28 +1280,31 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             console.error('[Background Index] Invalid payload for CLICK message:', message.payload);
             sendResponse({
               success: false,
-              error: 'Invalid payload for CLICK message. "ref" and "element" description are required.'
+              error:
+                'Invalid payload for CLICK message. "ref" and "element" description are required.',
             });
             return;
           }
 
           const clickParams: ClickParams = {
             element: message.payload.element, // The human-readable description
-            ref: message.payload.ref          // The ref string (e.g., "e50")
+            ref: message.payload.ref, // The ref string (e.g., "e50")
           };
 
-          console.log('[Background Index] Calling executeToolClick from lib/tools/browser/click.ts with params:', clickParams);
+          console.log(
+            '[Background Index] Calling executeToolClick from lib/tools/browser/click.ts with params:',
+            clickParams
+          );
           // Now, actually call the click function from your click.ts tool
           const toolResponse: ClickResponse = await executeToolClick(clickParams);
 
           console.log('[Background Index] Response from executeToolClick:', toolResponse);
           sendResponse(toolResponse);
-
         } catch (error) {
           console.error('[Background Index] Error processing CLICK message:', error);
           sendResponse({
             success: false,
-            error: `Error processing CLICK message in background/index.ts: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error processing CLICK message in background/index.ts: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1275,7 +1321,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!tabs || tabs.length === 0 || !tabs[0].id) {
             sendResponse({
               success: false,
-              error: 'No active tab found'
+              error: 'No active tab found',
             });
             return;
           }
@@ -1288,7 +1334,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!selector) {
             sendResponse({
               success: false,
-              error: 'No selector provided'
+              error: 'No selector provided',
             });
             return;
           }
@@ -1296,7 +1342,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (text === undefined || text === null) {
             sendResponse({
               success: false,
-              error: 'No text provided'
+              error: 'No text provided',
             });
             return;
           }
@@ -1333,7 +1379,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 } else {
                   return {
                     success: false,
-                    error: 'Element is not an input, textarea, or contentEditable element'
+                    error: 'Element is not an input, textarea, or contentEditable element',
                   };
                 }
 
@@ -1341,17 +1387,17 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
               } catch (error) {
                 return {
                   success: false,
-                  error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`
+                  error: `Error typing text: ${error instanceof Error ? error.message : String(error)}`,
                 };
               }
             },
-            args: [selector, text]
+            args: [selector, text],
           });
 
           if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
-              error: 'No result from script execution'
+              error: 'No result from script execution',
             });
             return;
           }
@@ -1362,7 +1408,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           console.error('Error processing type request:', error);
           sendResponse({
             success: false,
-            error: `Error processing type request: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error processing type request: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1379,7 +1425,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!tabs || tabs.length === 0 || !tabs[0].id) {
             sendResponse({
               success: false,
-              error: 'No active tab found'
+              error: 'No active tab found',
             });
             return;
           }
@@ -1392,7 +1438,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           if (!selector) {
             sendResponse({
               success: false,
-              error: 'No selector provided'
+              error: 'No selector provided',
             });
             return;
           }
@@ -1405,13 +1451,13 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                 if (!elements || elements.length === 0) {
                   return {
                     success: false,
-                    error: `No elements found with selector: ${selector}`
+                    error: `No elements found with selector: ${selector}`,
                   };
                 }
 
                 const limitedElements = elements.slice(0, limit);
 
-                const elementInfos = limitedElements.map(element => {
+                const elementInfos = limitedElements.map((element) => {
                   // Get all attributes as key-value pairs
                   const attributesObj: Record<string, string> = {};
                   for (const attr of element.attributes) {
@@ -1420,17 +1466,20 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
 
                   // Check if element is visible
                   const style = window.getComputedStyle(element);
-                  const isVisible = style.display !== 'none' &&
+                  const isVisible =
+                    style.display !== 'none' &&
                     style.visibility !== 'hidden' &&
                     style.opacity !== '0';
 
                   // Check if element is enabled (for form controls)
                   let isEnabled = true;
-                  if (element instanceof HTMLButtonElement ||
+                  if (
+                    element instanceof HTMLButtonElement ||
                     element instanceof HTMLInputElement ||
                     element instanceof HTMLSelectElement ||
                     element instanceof HTMLTextAreaElement ||
-                    element instanceof HTMLOptionElement) {
+                    element instanceof HTMLOptionElement
+                  ) {
                     isEnabled = !element.disabled;
                   }
 
@@ -1442,14 +1491,16 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     bottom: rect.bottom,
                     left: rect.left,
                     width: rect.width,
-                    height: rect.height
+                    height: rect.height,
                   };
 
                   // Get element value if applicable
                   let value = undefined;
-                  if (element instanceof HTMLInputElement ||
+                  if (
+                    element instanceof HTMLInputElement ||
                     element instanceof HTMLTextAreaElement ||
-                    element instanceof HTMLSelectElement) {
+                    element instanceof HTMLSelectElement
+                  ) {
                     value = element.value;
                   }
 
@@ -1462,29 +1513,29 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
                     attributes: attributesObj,
                     isVisible,
                     isEnabled,
-                    boundingRect
+                    boundingRect,
                   };
                 });
 
                 return {
                   success: true,
                   elements: elementInfos,
-                  count: elements.length
+                  count: elements.length,
                 };
               } catch (error) {
                 return {
                   success: false,
-                  error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`
+                  error: `Error getting element information: ${error instanceof Error ? error.message : String(error)}`,
                 };
               }
             },
-            args: [selector, limit]
+            args: [selector, limit],
           });
 
           if (!results || results.length === 0 || !results[0]) {
             sendResponse({
               success: false,
-              error: 'No result from script execution'
+              error: 'No result from script execution',
             });
             return;
           }
@@ -1495,7 +1546,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           console.error('Error processing getElement request:', error);
           sendResponse({
             success: false,
-            error: `Error processing getElement request: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error processing getElement request: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1505,7 +1556,10 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
       // Forward to content script, similar to GET_ELEMENT
       (async () => {
         try {
-          console.log('Forwarding GET_ELEMENT_BY_REF_ID to content script with payload:', message.payload);
+          console.log(
+            'Forwarding GET_ELEMENT_BY_REF_ID to content script with payload:',
+            message.payload
+          );
           // Ensure payload exists and contains refId
           if (message.payload && message.payload.refId) {
             const response = await sendMessageToEarthEngineTab(message);
@@ -1513,14 +1567,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           } else {
             sendResponse({
               success: false,
-              error: 'Invalid payload for GET_ELEMENT_BY_REF_ID: refId is missing.'
+              error: 'Invalid payload for GET_ELEMENT_BY_REF_ID: refId is missing.',
             });
           }
         } catch (error) {
           console.error('Error forwarding GET_ELEMENT_BY_REF_ID to content script:', error);
           sendResponse({
             success: false,
-            error: `Error forwarding GET_ELEMENT_BY_REF_ID: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error forwarding GET_ELEMENT_BY_REF_ID: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1529,21 +1583,28 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
     case 'CLICK_BY_COORDINATES': // New case for clicking by coordinates
       (async () => {
         try {
-          console.log('Forwarding CLICK_BY_COORDINATES to content script with payload:', message.payload);
-          if (message.payload && typeof message.payload.x === 'number' && typeof message.payload.y === 'number') {
+          console.log(
+            'Forwarding CLICK_BY_COORDINATES to content script with payload:',
+            message.payload
+          );
+          if (
+            message.payload &&
+            typeof message.payload.x === 'number' &&
+            typeof message.payload.y === 'number'
+          ) {
             const response = await sendMessageToEarthEngineTab(message); // Forward the whole message
             sendResponse(response);
           } else {
             sendResponse({
               success: false,
-              error: 'Invalid payload for CLICK_BY_COORDINATES: x and y coordinates are required.'
+              error: 'Invalid payload for CLICK_BY_COORDINATES: x and y coordinates are required.',
             });
           }
         } catch (error) {
           console.error('Error forwarding CLICK_BY_COORDINATES to content script:', error);
           sendResponse({
             success: false,
-            error: `Error forwarding CLICK_BY_COORDINATES: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error forwarding CLICK_BY_COORDINATES: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1552,21 +1613,24 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
     case 'CLICK_BY_SELECTOR': // New case for clicking by CSS selector
       (async () => {
         try {
-          console.log('Forwarding CLICK_BY_SELECTOR to content script with payload:', message.payload);
+          console.log(
+            'Forwarding CLICK_BY_SELECTOR to content script with payload:',
+            message.payload
+          );
           if (message.payload && typeof message.payload.selector === 'string') {
             const response = await sendMessageToEarthEngineTab(message); // Forward the whole message
             sendResponse(response);
           } else {
             sendResponse({
               success: false,
-              error: 'Invalid payload for CLICK_BY_SELECTOR: selector is required.'
+              error: 'Invalid payload for CLICK_BY_SELECTOR: selector is required.',
             });
           }
         } catch (error) {
           console.error('Error forwarding CLICK_BY_SELECTOR to content script:', error);
           sendResponse({
             success: false,
-            error: `Error forwarding CLICK_BY_SELECTOR: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error forwarding CLICK_BY_SELECTOR: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1580,14 +1644,14 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
 
           // Query for all GEE tabs
           const earthEngineTabs = await chrome.tabs.query({
-            url: "*://code.earthengine.google.com/*"
+            url: '*://code.earthengine.google.com/*',
           });
 
           if (!earthEngineTabs || earthEngineTabs.length === 0) {
             sendResponse({
               success: true,
               hasGEETab: false,
-              message: 'No Google Earth Engine tab found'
+              message: 'No Google Earth Engine tab found',
             });
             return;
           }
@@ -1595,7 +1659,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           // Get the currently active tab
           const activeTabs = await chrome.tabs.query({
             active: true,
-            currentWindow: true
+            currentWindow: true,
           });
           const activeTab = activeTabs && activeTabs.length > 0 ? activeTabs[0] : null;
 
@@ -1606,7 +1670,7 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             sendResponse({
               success: true,
               hasGEETab: false,
-              message: 'No valid Google Earth Engine tab found'
+              message: 'No valid Google Earth Engine tab found',
             });
             return;
           }
@@ -1624,13 +1688,13 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
             activeTabId: activeTab?.id,
             activeTabTitle: activeTab?.title,
             activeTabUrl: activeTab?.url,
-            totalGEETabs: earthEngineTabs.length
+            totalGEETabs: earthEngineTabs.length,
           });
         } catch (error) {
           console.error('Error getting target tab status:', error);
           sendResponse({
             success: false,
-            error: `Error getting target tab status: ${error instanceof Error ? error.message : String(error)}`
+            error: `Error getting target tab status: ${error instanceof Error ? error.message : String(error)}`,
           });
         }
       })();
@@ -1652,7 +1716,9 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
     newPort.onMessage.addListener(async (message: any) => {
       console.log('Received message from side panel:', message);
-      console.log(`🐛 [Debug] Message type: ${message.type}, Provider: ${message.provider}, Model: ${message.model}`);
+      console.log(
+        `🐛 [Debug] Message type: ${message.type}, Provider: ${message.provider}, Model: ${message.model}`
+      );
 
       // Handle side panel specific messages
       switch (message.type) {
@@ -1684,7 +1750,9 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
         case 'SHADOW_GET_DIFF': {
           try {
-            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const earthEngineTabs = await chrome.tabs.query({
+              url: '*://code.earthengine.google.com/*',
+            });
             const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
             const tabId = selectedTab?.id;
             if (!tabId) {
@@ -1701,7 +1769,9 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
         case 'SHADOW_UNDO': {
           try {
-            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const earthEngineTabs = await chrome.tabs.query({
+              url: '*://code.earthengine.google.com/*',
+            });
             const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
             const tabId = selectedTab?.id;
             if (!tabId) {
@@ -1714,7 +1784,10 @@ chrome.runtime.onConnect.addListener((newPort) => {
             // Sync the reverted content back to the editor
             const syncResult = await setEditorContent(afterState.content, tabId);
             if (!syncResult.success) {
-              postToPort(newPort, { type: 'ERROR', error: `Undo failed to sync to editor: ${syncResult.error}` });
+              postToPort(newPort, {
+                type: 'ERROR',
+                error: `Undo failed to sync to editor: ${syncResult.error}`,
+              });
               break;
             }
 
@@ -1731,7 +1804,9 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
         case 'SHADOW_REDO': {
           try {
-            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const earthEngineTabs = await chrome.tabs.query({
+              url: '*://code.earthengine.google.com/*',
+            });
             const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
             const tabId = selectedTab?.id;
             if (!tabId) {
@@ -1749,7 +1824,9 @@ chrome.runtime.onConnect.addListener((newPort) => {
 
         case 'SHADOW_SYNC_TO_EDITOR': {
           try {
-            const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+            const earthEngineTabs = await chrome.tabs.query({
+              url: '*://code.earthengine.google.com/*',
+            });
             const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
             const tabId = selectedTab?.id;
             if (!tabId) {
@@ -1815,11 +1892,17 @@ chrome.runtime.onConnect.addListener((newPort) => {
           (async () => {
             try {
               console.log('[Agent Test] Resetting map, inspector, and console...');
-              const earthEngineTabs = await chrome.tabs.query({ url: '*://code.earthengine.google.com/*' });
+              const earthEngineTabs = await chrome.tabs.query({
+                url: '*://code.earthengine.google.com/*',
+              });
               const selectedTab = selectBestEarthEngineTab(earthEngineTabs);
 
               if (!selectedTab?.id) {
-                postToPort(newPort, { type: 'RESET_MAP_CONSOLE_RESULT', success: false, error: 'No Earth Engine tab found' });
+                postToPort(newPort, {
+                  type: 'RESET_MAP_CONSOLE_RESULT',
+                  success: false,
+                  error: 'No Earth Engine tab found',
+                });
                 return;
               }
 
@@ -1831,7 +1914,9 @@ chrome.runtime.onConnect.addListener((newPort) => {
                 func: () => {
                   try {
                     // Find the reset button
-                    const resetButton = document.querySelector('button.goog-button.reset-button[title="Clear map, inspector, and console"]') as HTMLElement;
+                    const resetButton = document.querySelector(
+                      'button.goog-button.reset-button[title="Clear map, inspector, and console"]'
+                    ) as HTMLElement;
                     if (!resetButton) {
                       return { success: false, error: 'Reset button not found' };
                     }
@@ -1840,9 +1925,12 @@ chrome.runtime.onConnect.addListener((newPort) => {
                     resetButton.click();
                     return { success: true, message: 'Reset button clicked successfully' };
                   } catch (error) {
-                    return { success: false, error: `Error clicking reset button: ${error instanceof Error ? error.message : String(error)}` };
+                    return {
+                      success: false,
+                      error: `Error clicking reset button: ${error instanceof Error ? error.message : String(error)}`,
+                    };
                   }
-                }
+                },
               });
 
               const result = results?.[0]?.result;
@@ -1851,14 +1939,18 @@ chrome.runtime.onConnect.addListener((newPort) => {
                 postToPort(newPort, { type: 'RESET_MAP_CONSOLE_RESULT', success: true });
               } else {
                 console.warn('[Agent Test] Map/console reset failed:', result?.error);
-                postToPort(newPort, { type: 'RESET_MAP_CONSOLE_RESULT', success: false, error: result?.error || 'Unknown error' });
+                postToPort(newPort, {
+                  type: 'RESET_MAP_CONSOLE_RESULT',
+                  success: false,
+                  error: result?.error || 'Unknown error',
+                });
               }
             } catch (error) {
               console.error('[Agent Test] Error resetting map/console:', error);
               postToPort(newPort, {
                 type: 'RESET_MAP_CONSOLE_RESULT',
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
               });
             }
           })();
@@ -1876,14 +1968,18 @@ chrome.runtime.onConnect.addListener((newPort) => {
                 postToPort(newPort, { type: 'CLEAR_EDITOR_RESULT', success: true });
               } else {
                 console.warn('[Agent Test] Failed to clear editor:', result.error);
-                postToPort(newPort, { type: 'CLEAR_EDITOR_RESULT', success: false, error: result.error });
+                postToPort(newPort, {
+                  type: 'CLEAR_EDITOR_RESULT',
+                  success: false,
+                  error: result.error,
+                });
               }
             } catch (error) {
               console.error('[Agent Test] Error clearing editor:', error);
               postToPort(newPort, {
                 type: 'CLEAR_EDITOR_RESULT',
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
               });
             }
           })();
@@ -1922,7 +2018,7 @@ chrome.runtime.onConnect.addListener((newPort) => {
           console.error('Error clearing code:', error);
           postToPort(newPort, {
             type: 'ERROR',
-            error: error instanceof Error ? error.message : 'Unknown error clearing code'
+            error: error instanceof Error ? error.message : 'Unknown error clearing code',
           });
         }
       }
@@ -1969,9 +2065,13 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
   // Log attachment information
   if (message.attachments && message.attachments.length > 0) {
     console.log(`[${requestId}] Message contains ${message.attachments.length} attachment(s)`);
-    message.attachments.forEach((att: { type: string, mimeType?: string, data: string }, index: number) => {
-      console.log(`[${requestId}] Attachment ${index + 1}: type=${att.type}, data length=${att.data ? att.data.length : 'undefined'}`);
-    });
+    message.attachments.forEach(
+      (att: { type: string; mimeType?: string; data: string }, index: number) => {
+        console.log(
+          `[${requestId}] Attachment ${index + 1}: type=${att.type}, data length=${att.data ? att.data.length : 'undefined'}`
+        );
+      }
+    );
   } else {
     console.log(`[${requestId}] Message contains no attachments`);
   }
@@ -1986,72 +2086,84 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       // If we're adding to existing messages, replace the last user message with one that has parts
       if (message.messages && message.messages.length > 0) {
         // Copy all except the last message if it's a user message
-        conversationMessages = lastMessage && lastMessage.role === 'user'
-          ? message.messages.slice(0, -1)
-          : [...message.messages];
+        conversationMessages =
+          lastMessage && lastMessage.role === 'user'
+            ? message.messages.slice(0, -1)
+            : [...message.messages];
 
         // Add a new user message with parts array
         conversationMessages.push({
           role: 'user',
           parts: [
             { type: 'text', text: message.message || "Here's an image:" },
-            ...message.attachments.map((img: { type: string, mimeType?: string, data: string }) => ({
-              type: 'file',
-              mimeType: img.mimeType || 'image/png',
-              name: 'image.png',
-              data: img.data,
-              size: img.data.length
-            }))
-          ]
+            ...message.attachments.map(
+              (img: { type: string; mimeType?: string; data: string }) => ({
+                type: 'file',
+                mimeType: img.mimeType || 'image/png',
+                name: 'image.png',
+                data: img.data,
+                size: img.data.length,
+              })
+            ),
+          ],
         });
       } else {
         // No existing messages, create new array with single user message
-        conversationMessages = [{
-          role: 'user',
-          parts: [
-            { type: 'text', text: message.message || "Here's an image:" },
-            ...message.attachments.map((img: { type: string, mimeType?: string, data: string }) => ({
-              type: 'file',
-              mimeType: img.mimeType || 'image/png',
-              name: 'image.png',
-              data: img.data,
-              size: img.data.length
-            }))
-          ]
-        }];
+        conversationMessages = [
+          {
+            role: 'user',
+            parts: [
+              { type: 'text', text: message.message || "Here's an image:" },
+              ...message.attachments.map(
+                (img: { type: string; mimeType?: string; data: string }) => ({
+                  type: 'file',
+                  mimeType: img.mimeType || 'image/png',
+                  name: 'image.png',
+                  data: img.data,
+                  size: img.data.length,
+                })
+              ),
+            ],
+          },
+        ];
       }
-      console.log(`[${requestId}] Created message with ${message.attachments.length} attachments in parts array`);
+      console.log(
+        `[${requestId}] Created message with ${message.attachments.length} attachments in parts array`
+      );
     } else {
       // No attachments, proceed with normal message
-      conversationMessages = message.messages || [{
-        role: 'user',
-        content: message.message
-      }];
+      conversationMessages = message.messages || [
+        {
+          role: 'user',
+          content: message.message,
+        },
+      ];
     }
 
-    console.log(`[${requestId}] Processing chat with ${conversationMessages.length} messages in history`);
+    console.log(
+      `[${requestId}] Processing chat with ${conversationMessages.length} messages in history`
+    );
 
     // Get API key and provider - use test panel settings if provided, otherwise fall back to stored settings
 
-    const apiConfig = await new Promise<{ apiKey: string, provider: string, model: string }>(
-
+    const apiConfig = await new Promise<{ apiKey: string; provider: string; model: string }>(
       (resolve, reject) => {
-
         chrome.storage.sync.get(
-
-          [OPENAI_API_KEY_STORAGE_KEY, ANTHROPIC_API_KEY_STORAGE_KEY, GOOGLE_API_KEY_STORAGE_KEY, Z_AI_API_KEY_STORAGE_KEY, API_PROVIDER_STORAGE_KEY, MODEL_STORAGE_KEY],
+          [
+            OPENAI_API_KEY_STORAGE_KEY,
+            ANTHROPIC_API_KEY_STORAGE_KEY,
+            GOOGLE_API_KEY_STORAGE_KEY,
+            Z_AI_API_KEY_STORAGE_KEY,
+            API_PROVIDER_STORAGE_KEY,
+            MODEL_STORAGE_KEY,
+          ],
 
           (result) => {
-
             if (chrome.runtime.lastError) {
-
               reject(new Error(chrome.runtime.lastError.message));
 
               return;
-
             }
-
-
 
             // Use provider and model from test message if provided, otherwise use stored settings
 
@@ -2059,104 +2171,64 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
             const model = message.model || result[MODEL_STORAGE_KEY] || '';
 
-
-
             let apiKey = '';
 
             if (provider === 'openai') {
-
               apiKey = result[OPENAI_API_KEY_STORAGE_KEY] || '';
-
             } else if (provider === 'anthropic') {
-
               apiKey = result[ANTHROPIC_API_KEY_STORAGE_KEY] || '';
-
             } else if (provider === 'google') {
-
               apiKey = result[GOOGLE_API_KEY_STORAGE_KEY] || '';
 
               console.log(`🐛 [Debug] Google API key retrieval:`, {
-
                 googleKey: result[GOOGLE_API_KEY_STORAGE_KEY] ? 'present' : 'missing',
 
                 finalKey: apiKey ? 'present' : 'missing',
 
                 keyLength: apiKey ? apiKey.length : 0,
 
-                keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none'
-
+                keyPrefix: apiKey ? apiKey.substring(0, 5) : 'none',
               });
-
             } else if (provider === 'z-ai') {
-
               apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
-
             }
-
-
 
             console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
 
-            console.log(`[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`);
-
-
+            console.log(
+              `[${requestId}] API key status: ${apiKey ? 'configured' : 'NOT CONFIGURED'}`
+            );
 
             resolve({
-
               apiKey,
 
               provider,
 
-              model: model
-
+              model: model,
             });
-
           }
-
         );
-
       }
-
     );
 
-
-
     if (!apiConfig.apiKey && !apiConfig.provider.startsWith('custom:')) {
-
-
-
       console.error(`[${requestId}] API key not configured`);
 
-
-
       safePostMessage({
-
-
-
         type: 'ERROR',
-
-
 
         requestId,
 
-
-
-        error: 'API key not configured. Please configure it in the extension settings.'
-
-
-
+        error: 'API key not configured. Please configure it in the extension settings.',
       });
 
-
-
       return;
-
-
-
     }
 
     // Check if any messages have parts or attachments
-    const hasMultiModalContent = conversationMessages.some((msg: any) => msg.parts && Array.isArray(msg.parts));
+    const hasMultiModalContent = conversationMessages.some(
+      (msg: any) => msg.parts && Array.isArray(msg.parts)
+    );
     if (hasMultiModalContent) {
       console.log(`[${requestId}] Detected messages with multi-modal content (parts array)`);
     }
@@ -2173,7 +2245,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       safePostMessage({
         type: 'TOOL_EVENT',
         requestId,
-        event
+        event,
       });
       console.log(`🔧 [Background] TOOL_EVENT message sent to frontend`);
     };
@@ -2194,7 +2266,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       mode,
       {
         prompt: (message as any).profilePrompt,
-        tools: (message as any).profileTools
+        tools: (message as any).profileTools,
       }
     );
 
@@ -2212,7 +2284,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       safePostMessage({
         type: 'ERROR',
         requestId,
-        error: errorPayload.error || errorPayload.message || 'Unknown API error'
+        error: errorPayload.error || errorPayload.message || 'Unknown API error',
       });
       return; // Stop processing on error
     }
@@ -2223,7 +2295,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       safePostMessage({
         type: 'ERROR',
         requestId,
-        error: 'Received empty response from API handler'
+        error: 'Received empty response from API handler',
       });
       return; // Stop processing if no body
     }
@@ -2247,10 +2319,12 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
         if (done) {
           console.log(`[${requestId}] Text stream finished.`);
-          if (!safePostMessage({
-            type: 'CHAT_STREAM_END',
-            requestId
-          })) {
+          if (
+            !safePostMessage({
+              type: 'CHAT_STREAM_END',
+              requestId,
+            })
+          ) {
             break;
           }
           break; // Exit loop when stream is done
@@ -2259,7 +2333,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         // Decode the chunk with streaming flag to handle partial UTF-8 sequences
         const chunk = decoder.decode(value, { stream: !done });
 
-        if (chunk) { // Avoid sending empty chunks if decoder yields them
+        if (chunk) {
+          // Avoid sending empty chunks if decoder yields them
           // Check if this is an error message from the stream
           if (chunk.startsWith('error:')) {
             try {
@@ -2268,7 +2343,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               safePostMessage({
                 type: 'ERROR',
                 requestId,
-                error: errorData.error
+                error: errorData.error,
               });
               break; // Stop processing the stream after error
             } catch (parseError) {
@@ -2283,21 +2358,21 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
                 safePostMessage({
                   type: 'TOKEN_USAGE',
                   requestId,
-                  usage: data.usage
+                  usage: data.usage,
                 });
               } else if (data.type === 'token_estimate' && data.estimate) {
                 console.log(`📊 [${requestId}] Received token estimate:`, data.estimate);
                 safePostMessage({
                   type: 'TOKEN_ESTIMATE',
                   requestId,
-                  estimate: data.estimate
+                  estimate: data.estimate,
                 });
               } else {
                 // Unknown data type, treat as normal chunk
                 safePostMessage({
                   type: 'CHAT_STREAM_CHUNK',
                   requestId,
-                  chunk: chunk
+                  chunk: chunk,
                 });
               }
             } catch (parseError) {
@@ -2305,7 +2380,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               safePostMessage({
                 type: 'CHAT_STREAM_CHUNK',
                 requestId,
-                chunk: chunk
+                chunk: chunk,
               });
             }
           } else {
@@ -2313,7 +2388,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
             safePostMessage({
               type: 'CHAT_STREAM_CHUNK',
               requestId,
-              chunk: chunk
+              chunk: chunk,
             });
           }
         }
@@ -2324,7 +2399,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
       safePostMessage({
         type: 'ERROR',
         requestId,
-        error: `Stream reading error: ${errorMessage}`
+        error: `Stream reading error: ${errorMessage}`,
       });
     } finally {
       // Clean up: remove the request from tracking maps
@@ -2334,14 +2409,13 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
         activeRequestsByPort.delete(port);
       }
     }
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[${requestId}] Chat processing error:`, errorMessage);
     safePostMessage({
       type: 'ERROR',
       requestId,
-      error: `Chat handler error: ${errorMessage}`
+      error: `Chat handler error: ${errorMessage}`,
     });
   } finally {
     // Clean up request tracking if not already cleaned up
@@ -2356,12 +2430,15 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 // Generate a fallback response for Earth Engine queries
 function generateFallbackResponse(query: string): string {
   const keywords: Record<string, string> = {
-    'ndvi': 'NDVI (Normalized Difference Vegetation Index) can be calculated using: ```\nvar ndvi = image.normalizedDifference(["NIR", "RED"]);\n```',
-    'landsat': 'Landsat imagery can be accessed via: ```\nvar landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")\n```',
-    'sentinel': 'Sentinel imagery is available through: ```\nvar sentinel = ee.ImageCollection("COPERNICUS/S2_SR")\n```',
-    'export': 'You can export images using Export.image.toDrive() or visualize them with Map.addLayer()',
-    'classify': 'For classification, use ee.Classifier methods like randomForest() or smileCart()',
-    'reducer': 'Reducers like mean(), sum(), or min() can aggregate data spatially or temporally'
+    ndvi: 'NDVI (Normalized Difference Vegetation Index) can be calculated using: ```\nvar ndvi = image.normalizedDifference(["NIR", "RED"]);\n```',
+    landsat:
+      'Landsat imagery can be accessed via: ```\nvar landsat = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")\n```',
+    sentinel:
+      'Sentinel imagery is available through: ```\nvar sentinel = ee.ImageCollection("COPERNICUS/S2_SR")\n```',
+    export:
+      'You can export images using Export.image.toDrive() or visualize them with Map.addLayer()',
+    classify: 'For classification, use ee.Classifier methods like randomForest() or smileCart()',
+    reducer: 'Reducers like mean(), sum(), or min() can aggregate data spatially or temporally',
   };
 
   // Check if any keywords are in the query

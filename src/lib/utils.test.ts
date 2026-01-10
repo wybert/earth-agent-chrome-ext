@@ -1,7 +1,17 @@
-import { createResilientFetch, selectBestEarthEngineTab, ensureContentScript, validateChromeAPIs } from './utils';
+import {
+  createResilientFetch,
+  selectBestEarthEngineTab,
+  ensureContentScript,
+  validateChromeAPIs,
+} from './utils';
 
 const createTab = (overrides: Partial<chrome.tabs.Tab>): chrome.tabs.Tab =>
-  ({ id: Math.floor(Math.random() * 1000), active: false, windowId: 1, ...overrides } as chrome.tabs.Tab);
+  ({
+    id: Math.floor(Math.random() * 1000),
+    active: false,
+    windowId: 1,
+    ...overrides,
+  }) as chrome.tabs.Tab;
 
 describe('selectBestEarthEngineTab', () => {
   it('returns null when no tabs', () => {
@@ -114,11 +124,7 @@ describe('ensureContentScript', () => {
     await Promise.resolve();
     const result = await resultPromise;
 
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      1,
-      { type: 'PING' },
-      expect.any(Function)
-    );
+    expect(sendMessageMock).toHaveBeenCalledWith(1, { type: 'PING' }, expect.any(Function));
     expect(result).toEqual({ success: true });
   });
 

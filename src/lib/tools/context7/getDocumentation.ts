@@ -2,7 +2,7 @@
  * Fetches documentation for Google Earth Engine datasets from Context7
  * This tool uses a Context7-compatible library ID (obtained from resolveLibraryId)
  * to fetch documentation about Earth Engine datasets
- * 
+ *
  * @param context7CompatibleLibraryID - The library ID from resolveLibraryId (e.g., "wybert/earthengine-dataset-catalog-md")
  * @param topic - Optional topic to filter documentation (e.g., "population", "landsat")
  * @param options - Additional options for the request (tokens, folders)
@@ -16,8 +16,8 @@ export interface GetDocumentationResponse {
 }
 
 // Define the base URL for Context7 API
-const CONTEXT7_API_BASE_URL = "https://context7.com/api";
-const DEFAULT_TYPE = "txt";
+const CONTEXT7_API_BASE_URL = 'https://context7.com/api';
+const DEFAULT_TYPE = 'txt';
 
 export async function getDocumentation(
   context7CompatibleLibraryID: string,
@@ -46,19 +46,19 @@ export async function getDocumentation(
           // Fall back to direct API call if background script isn't responding
           makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
         }, 2000); // 2 second timeout
-        
+
         try {
           chrome.runtime.sendMessage(
             {
               type: 'CONTEXT7_GET_DOCUMENTATION',
               libraryId: context7CompatibleLibraryID,
               topic,
-              options
+              options,
             },
             (response) => {
               // Clear the timeout since we got a response
               clearTimeout(timeoutId);
-              
+
               if (chrome.runtime.lastError) {
                 console.warn('Chrome runtime error:', chrome.runtime.lastError);
                 console.info('Falling back to direct API call...');
@@ -66,7 +66,7 @@ export async function getDocumentation(
                 makeDirectApiCall(context7CompatibleLibraryID, topic, options).then(resolve);
                 return;
               }
-              
+
               // We got a valid response from the background
               resolve(response);
             }
@@ -107,23 +107,23 @@ async function makeDirectApiCall(
 ): Promise<GetDocumentationResponse> {
   try {
     // Remove leading slash if present
-    if (context7CompatibleLibraryID.startsWith("/")) {
+    if (context7CompatibleLibraryID.startsWith('/')) {
       context7CompatibleLibraryID = context7CompatibleLibraryID.slice(1);
     }
 
     // Build the URL using URL object
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${context7CompatibleLibraryID}`);
-    
+
     // Add options to URL params
-    if (options.tokens) url.searchParams.set("tokens", options.tokens.toString());
-    if (options.folders) url.searchParams.set("folders", options.folders);
-    if (topic) url.searchParams.set("topic", topic);
-    url.searchParams.set("type", DEFAULT_TYPE);
-    
+    if (options.tokens) url.searchParams.set('tokens', options.tokens.toString());
+    if (options.folders) url.searchParams.set('folders', options.folders);
+    if (topic) url.searchParams.set('topic', topic);
+    url.searchParams.set('type', DEFAULT_TYPE);
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'Accept': 'application/json, text/plain',
+        Accept: 'application/json, text/plain',
         'X-Context7-Source': 'earth-agent-ai-sdk',
       },
     });
@@ -138,16 +138,16 @@ async function makeDirectApiCall(
 
     // Get the text content directly
     const text = await response.text();
-    
+
     // Check if the text is valid
-    if (!text || text === "No content available" || text === "No context data available") {
+    if (!text || text === 'No content available' || text === 'No context data available') {
       return {
         success: false,
         content: null,
         message: 'No documentation content found',
       };
     }
-    
+
     // Try to parse as JSON in case of JSON response
     try {
       const data = JSON.parse(text);
@@ -160,7 +160,7 @@ async function makeDirectApiCall(
     } catch (e) {
       // Not JSON, use text as is
     }
-    
+
     // Return the text content directly
     return {
       success: true,
@@ -175,4 +175,4 @@ async function makeDirectApiCall(
   }
 }
 
-export default getDocumentation; 
+export default getDocumentation;

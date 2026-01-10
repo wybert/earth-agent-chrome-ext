@@ -1,6 +1,7 @@
 # Chrome Web Store Listing Information
 
 ## Short Description (132 characters max)
+
 AI-powered assistant for Google Earth Engine. Chat with GPT-5.1, Claude 4.5, Gemini 3 to write and debug Earth Engine code.
 
 ## Detailed Description
@@ -80,25 +81,32 @@ Earth Agent is your AI-powered companion for Google Earth Engine, bringing the p
 Transform your Earth Engine workflow with AI assistance. Install Earth Agent today and experience the future of geospatial development!
 
 ## Category
+
 **Developer Tools**
 
 ## Language
+
 **English**
 
 ## Privacy Policy URL
+
 https://github.com/wybert/earth-agent-chrome-ext/blob/main/PRIVACY_POLICY.md
 
 ## Homepage URL
+
 https://github.com/wybert/earth-agent-chrome-ext
 
 ## Support URL
+
 https://github.com/wybert/earth-agent-chrome-ext/issues
 
 ## Screenshots Needed
+
 Minimum 1, maximum 5
 Recommended size: 1280x800 or 640x400
 
 Suggested screenshots:
+
 1. Main chat interface with Earth Engine Code Editor
 2. Settings panel showing AI provider options
 3. Code generation example
@@ -108,18 +116,22 @@ Suggested screenshots:
 ## Promotional Images
 
 ### Small Promo Tile (Required)
+
 - Size: 440x280 pixels
 - Format: PNG or JPEG
 
 ### Large Promo Tile (Optional)
+
 - Size: 920x680 pixels
 - Format: PNG or JPEG
 
 ### Marquee Promo Tile (Optional)
+
 - Size: 1400x560 pixels
 - Format: PNG or JPEG
 
 ## Single Purpose Description
+
 This extension provides AI-powered coding assistance specifically for Google Earth Engine development, helping users write, debug, and improve their Earth Engine JavaScript code through natural language interaction.
 
 ## Permission Justifications
@@ -146,6 +158,7 @@ Required to allow users to export chat history and test results.
 Required for Google Drive integration (optional screenshot uploads).
 
 **Host Permissions:**
+
 - https://code.earthengine.google.com/* - Access Earth Engine Code Editor
 - https://context7.com/* - Fetch Earth Engine documentation
 - https://api.anthropic.com/* - Anthropic API for Claude models

@@ -8,7 +8,6 @@
 
 [![Watch the Demo](https://img.youtube.com/vi/RkSconBroyY/0.jpg)](https://youtu.be/RkSconBroyY?si=otXuZP6L8sp48K_1)
 
-
 > [!TIP]
 > **Quick Start**: Install from [Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple), set up your API key (OpenAI/Anthropic/Google) or MCP server with Claude Code/Cursor/Zed/OpenCode, and say "Help me map NDVI for California".
 
@@ -45,8 +44,6 @@
 - **Custom Instructions**: Tailor the AI's behavior and responses to your specific needs. Work like AGENTS.MD.
 - **Agent Profiles**: Create and switch between different agent configurations for different tasks
 - **MCP Server Support**: Use Earth Agent tools directly from [Claude Code](https://claude.ai/code), [Cursor](https://cursor.sh), or [Zed](https://zed.dev) via the Model Context Protocol.
-
-
 
 ## Installation
 
@@ -86,7 +83,7 @@
 Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code tools like Claude Code, Cursor, OpenCode, OpenCode, or Zed.
 
 > [!IMPORTANT]
-> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine. After installing the Earth Agent Chrome extension, you need to go to settings and turn on the MCP server. It's better to keep the Earth Agent side panel open when you use the MCP server. 
+> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine. After installing the Earth Agent Chrome extension, you need to go to settings and turn on the MCP server. It's better to keep the Earth Agent side panel open when you use the MCP server.
 
 Add the configuration to your `Claude Code`, `Cursor`, `Zed`, or other tools that support MCP server:
 
@@ -103,15 +100,16 @@ Add the configuration to your `Claude Code`, `Cursor`, `Zed`, or other tools tha
   }
 }
 ```
+
 </details>
 
-
 Then:
+
 1. **Open Chrome** with Earth Agent extension
 2. **Click the Earth Agent extension icon** in Chrome, wait it loads
 3. **Restart your AI code tool** - the MCP tools will be available!
 
-👉 **[Full MCP Server Documentation](./mcp-server/README.md)** 
+👉 **[Full MCP Server Documentation](./mcp-server/README.md)**
 
 ## Configuration
 
@@ -136,25 +134,27 @@ Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.m
 - **Coding Conventions**: e.g., "Use functional programming styles in GEE (e.g., `map()`) over client-side loops."
 
 **To configure:**
+
 1. Open Extension Settings
 2. Use **Custom Instructions** to set global preferences
 
 ### Agent Profiles (Custom Agents)
 
 This allows you to create your own agent with specific system prompts and tool access for specific workflows or use cases. Each agent profile can have its own:
+
 - **Custom System Prompt**: Define exactly how the agent should behave
 - **Tool Access**: Enable or disable specific tools for focused tasks
 
 **Example Profiles:**
+
 - **"Strict Coder"**: Focused purely on writing optimized code, with no chit-chat.
 - **"Tutor"**: Explains every step in detail for learning.
 - **"Analyst"**: Specialized in statistical analysis and visualization.
 
 **To configure:**
+
 1. Open Extension Settings
 2. Scroll to **Profiles** to create new agent personas
-
-
 
 ## How to Use the Extension
 
@@ -176,7 +176,9 @@ After configuration:
 The agent operates in two modes that you can switch between:
 
 #### **Ask Mode (Read-Only)** 🔍
+
 Analysis and guidance mode - the agent can observe but not modify:
+
 - ✅ Read current code from the editor
 - ✅ Search documentation (geeDocs)
 - ✅ Take screenshots and inspect the page
@@ -188,7 +190,9 @@ Analysis and guidance mode - the agent can observe but not modify:
 **Best for**: Learning, understanding code, exploring datasets, getting explanations
 
 #### **Do Mode (Full Access)** ⚡
+
 Full execution mode - the agent can take action:
+
 - ✅ All Ask Mode capabilities
 - ✅ Write and edit code in the editor
 - ✅ Execute code and monitor results
@@ -202,23 +206,27 @@ Full execution mode - the agent can take action:
 ## Usage Examples & Prompts
 
 ### 🌍 Getting Started
+
 ```
 Help me create a simple map showing NDVI for California using Landsat data
 ```
 
 ### 🛰️ Satellite Data Analysis
+
 ```
 Find and display the latest Sentinel-2 image over New York City with less than 10% cloud cover
 ```
 
 ### 📊 Data Processing (⚡ Requires Do Mode)
+
 ```
 Calculate zonal statistics for land use categories within protected areas and export the results to Drive
 ```
 
 ### 🚀 Complex Workflow (⚡ Requires Do Mode)
+
 ```
-I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023. 
+I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023.
 Please create a complete workflow that:
 1. Loads appropriate satellite imagery
 2. Calculates forest loss over time
@@ -228,36 +236,35 @@ Please create a complete workflow that:
 ```
 
 ### 🔧 Debugging
+
 ```
 This code is running slowly, check my code for best practices and suggest improvements
 ```
-
 
 ## Available Tools & Functions
 
 Earth Agent provides a comprehensive set of tools available both in the Chrome Extension and via MCP.
 
-| Category | Agent Tool Name | MCP Tool Name | Description |
-|----------|----------------|---------------|-------------|
-| **Code Editing** | `readCode` | `read_gee_code` | Read current code from editor |
-| | `editCode` | `edit_gee_code` | Edit code using search & replace |
-| | `writeCode` | `write_gee_code` | Overwrite entire editor content |
-| | `undoEdit` | `undo_gee_edit` | Revert last edit |
-| | `insertAtLine` | N/A | Insert text at specific line |
-| **Execution** | `runCurrentCode` | `run_gee_code` | Run the script in editor |
-| | `wait` | `wait` | Wait for execution/loading |
-| **Analysis** | `getConsoleOutput` | `gee_console` | Read console logs & errors |
-| | `getMapScreenPosition` | `gee_map_position` | Get map bounds & zoom |
-| | `getInspectorOutput` | `gee_inspector` | Read inspector panel data |
-| | `screenshot` | `gee_screenshot` | Take screenshot of interface |
-| | `snapshot` | `gee_snapshot` | Get accessibility DOM tree |
-| **Knowledge** | `geeDocs` | `gee_docs` | Search datasets & API docs |
-| | `weather` | `weather` | Get weather data |
-| | `dateTime` | `date_time` | Get current date/time |
-| **Control** | `clearMapInspectorAndConsole` | `clear_gee` | Reset workspace |
-| | `clickByRefId` | `click_element` | Click element by ID |
-| | `clickAtScreenPosition` | `click_position` | Click at coordinates |
-
+| Category         | Agent Tool Name               | MCP Tool Name      | Description                      |
+| ---------------- | ----------------------------- | ------------------ | -------------------------------- |
+| **Code Editing** | `readCode`                    | `read_gee_code`    | Read current code from editor    |
+|                  | `editCode`                    | `edit_gee_code`    | Edit code using search & replace |
+|                  | `writeCode`                   | `write_gee_code`   | Overwrite entire editor content  |
+|                  | `undoEdit`                    | `undo_gee_edit`    | Revert last edit                 |
+|                  | `insertAtLine`                | N/A                | Insert text at specific line     |
+| **Execution**    | `runCurrentCode`              | `run_gee_code`     | Run the script in editor         |
+|                  | `wait`                        | `wait`             | Wait for execution/loading       |
+| **Analysis**     | `getConsoleOutput`            | `gee_console`      | Read console logs & errors       |
+|                  | `getMapScreenPosition`        | `gee_map_position` | Get map bounds & zoom            |
+|                  | `getInspectorOutput`          | `gee_inspector`    | Read inspector panel data        |
+|                  | `screenshot`                  | `gee_screenshot`   | Take screenshot of interface     |
+|                  | `snapshot`                    | `gee_snapshot`     | Get accessibility DOM tree       |
+| **Knowledge**    | `geeDocs`                     | `gee_docs`         | Search datasets & API docs       |
+|                  | `weather`                     | `weather`          | Get weather data                 |
+|                  | `dateTime`                    | `date_time`        | Get current date/time            |
+| **Control**      | `clearMapInspectorAndConsole` | `clear_gee`        | Reset workspace                  |
+|                  | `clickByRefId`                | `click_element`    | Click element by ID              |
+|                  | `clickAtScreenPosition`       | `click_position`   | Click at coordinates             |
 
 > [!NOTE]
 > Z.AI currently does not support multimodal inputs yet, so screenshot analysis features are unavailable when using Z.AI models. For the best Earth Engine integration experience with visual analysis capabilities, use OpenAI, Anthropic, or Google providers.
@@ -265,6 +272,7 @@ Earth Agent provides a comprehensive set of tools available both in the Chrome E
 ## Usage Tips
 
 ### **For Maximum Productivity**
+
 1. **Use tool-compatible models** when you need automated code execution
 2. **Be specific** in your requests for better results
 3. **Ask for explanations** to learn Earth Engine concepts
@@ -272,14 +280,11 @@ Earth Agent provides a comprehensive set of tools available both in the Chrome E
 5. **Take screenshots** to document your work and results
 
 ### **Common Workflows**
+
 1. **Exploratory Analysis**: Ask questions → Get code → Run and iterate
 2. **Data Processing**: Define requirements → Generate pipeline → Execute and export
 3. **Visualization**: Create map → Style layers → Add legends → Capture results
 4. **Debugging**: Describe problem → Analyze code → Apply fixes → Test solution
-
-
-
-
 
 ## Troubleshooting & Help
 
@@ -288,18 +293,18 @@ See **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** for solutions to common
 ## Privacy and Security
 
 ### Data Handling
+
 - **API Keys**: Stored securely in Chrome extension storage, never shared
 - **Chat History**: Kept locally in your browser, not sent to external servers
 - **Code and Data**: Only shared with your selected AI provider during active conversations
 - **Screenshots**: Stored locally or in your chosen location (Downloads, Google Drive)
 
 ### Best Practices
+
 - **Keep API keys secure**: Don't share your extension settings or API keys
 - **Review generated code**: Always review code before running important analyses
 - **Use appropriate models**: Choose models based on your data sensitivity requirements
 - **Regular updates**: Keep the extension updated for latest security features
-
-
 
 ## Roadmap
 
@@ -312,7 +317,6 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on how to set up your development environment, build the project, and submit pull requests.
-
 
 ## License
 

@@ -9,19 +9,19 @@ module.exports = {
   entry: {
     background: './src/background/index.ts',
     content: './src/content/index.ts',
-    sidepanel: './src/sidepanel/index.tsx'
+    sidepanel: './src/sidepanel/index.tsx',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js',
-    clean: true
+    clean: true,
   },
   module: {
     rules: [
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
-        exclude: /node_modules/
+        exclude: /node_modules/,
       },
       {
         test: /\.css$/,
@@ -32,22 +32,19 @@ module.exports = {
             loader: 'postcss-loader',
             options: {
               postcssOptions: {
-                plugins: [
-                  'tailwindcss',
-                  'autoprefixer',
-                ],
+                plugins: ['tailwindcss', 'autoprefixer'],
               },
             },
           },
         ],
-      }
-    ]
+      },
+    ],
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
     alias: {
-      '@': path.resolve(__dirname, 'src')
-    }
+      '@': path.resolve(__dirname, 'src'),
+    },
   },
   plugins: [
     new MiniCssExtractPlugin({
@@ -62,18 +59,13 @@ module.exports = {
           to: 'sidepanel.html',
           transform(content, absoluteFrom) {
             // Inject the CSS link and script tag for sidepanel
-            return content.toString()
-              .replace(
-                '</head>',
-                '  <link rel="stylesheet" href="sidepanel.css">\n</head>'
-              )
-              .replace(
-                '<script src="index.tsx"></script>',
-                '<script src="sidepanel.js"></script>'
-              );
-          }
-        }
-      ]
-    })
-  ]
-}; 
+            return content
+              .toString()
+              .replace('</head>', '  <link rel="stylesheet" href="sidepanel.css">\n</head>')
+              .replace('<script src="index.tsx"></script>', '<script src="sidepanel.js"></script>');
+          },
+        },
+      ],
+    }),
+  ],
+};

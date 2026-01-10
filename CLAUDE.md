@@ -10,6 +10,7 @@ Earth Agent is a Chrome extension (Manifest V3) + MCP server for Google Earth En
 
 ```bash
 npm run build          # Build extension to dist/
+npm run format         # Format the code with Prettier 
 npm run dev            # Watch mode for development
 npm run type-check     # TypeScript check
 npm test               # Run Jest tests
@@ -57,12 +58,12 @@ Google Earth Engine Code Editor
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/background/chat-handler.ts` | AI provider integration, tool execution |
-| `src/lib/tools/ai-tools.ts` | All AI SDK tool definitions |
-| `src/lib/tools/services/` | Shared service layer (editor, GEE, browser) |
-| `src/lib/prompts/gee-prompts.ts` | System prompts for Ask/Do modes |
+| File                             | Purpose                                     |
+| -------------------------------- | ------------------------------------------- |
+| `src/background/chat-handler.ts` | AI provider integration, tool execution     |
+| `src/lib/tools/ai-tools.ts`      | All AI SDK tool definitions                 |
+| `src/lib/tools/services/`        | Shared service layer (editor, GEE, browser) |
+| `src/lib/prompts/gee-prompts.ts` | System prompts for Ask/Do modes             |
 
 ## Architecture
 
@@ -84,11 +85,11 @@ Custom: Any OpenAI-compatible API (DeepSeek, Together AI, Ollama, etc.)
 
 ## File Organization
 
-| Type | Location |
-|------|----------|
-| User docs | `docs/` |
-| Debug scripts | `scripts/debug/` |
-| Deployment guides | `reference/deploy/` |
+| Type              | Location                    |
+| ----------------- | --------------------------- |
+| User docs         | `docs/`                     |
+| Debug scripts     | `scripts/debug/`            |
+| Deployment guides | `reference/deploy/`         |
 | Architecture docs | `reference/implementation/` |
 
 DO NOT write temperal files like testing files or summary files in root folder, put it in scripts and reference folder instead

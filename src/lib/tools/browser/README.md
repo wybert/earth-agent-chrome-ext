@@ -29,6 +29,7 @@ if (result.success) {
 ```
 
 The snapshot returns structured YAML data containing:
+
 - Page title and URL
 - All interactive elements with their accessibility information
 - Element references (`ref-1`, `ref-2`, etc.) for use with other tools
@@ -41,9 +42,9 @@ Clicks an element on the page using element reference from accessibility snapsho
 ```typescript
 import { click } from '@/lib/tools/browser';
 
-const result = await click({ 
+const result = await click({
   element: 'Submit button', // Human-readable description
-  ref: 'ref-15' // Element reference from snapshot
+  ref: 'ref-15', // Element reference from snapshot
 });
 if (result.success) {
   console.log('Button clicked successfully');
@@ -51,6 +52,7 @@ if (result.success) {
 ```
 
 **Important**: The click tool now requires:
+
 - `element`: Human-readable description of the element
 - `ref`: Exact element reference from the page snapshot (e.g., 'ref-15')
 
@@ -75,10 +77,10 @@ Types text into an input, textarea, or contentEditable element.
 ```typescript
 import { type } from '@/lib/tools/browser';
 
-const result = await type({ 
+const result = await type({
   selector: 'input#search-box',
   text: 'Search query',
-  append: false // Set to true to append to existing text
+  append: false, // Set to true to append to existing text
 });
 if (result.success) {
   console.log('Text typed successfully');
@@ -92,9 +94,9 @@ Retrieves information about elements on the page matching a CSS selector.
 ```typescript
 import { getElement } from '@/lib/tools/browser';
 
-const result = await getElement({ 
+const result = await getElement({
   selector: '.product-item',
-  limit: 5 // Limit the number of results
+  limit: 5, // Limit the number of results
 });
 if (result.success && result.elements) {
   console.log(`Found ${result.count} elements, showing first ${result.elements.length}`);
@@ -117,11 +119,11 @@ For reliable browser automation, follow this pattern:
 const snapshotResult = await snapshot();
 if (snapshotResult.success) {
   console.log('Page snapshot:', snapshotResult.snapshot);
-  
+
   // 2. Use element references from snapshot for actions
   const clickResult = await click({
     element: 'Login button',
-    ref: 'ref-23' // Reference from snapshot
+    ref: 'ref-23', // Reference from snapshot
   });
 }
 ```
@@ -135,6 +137,7 @@ These tools work by detecting the environment they're running in and choosing th
 3. **Sidepanel/Popup Context**: Sends messages to the background script to perform actions
 
 The snapshot tool creates accessibility data by:
+
 - Finding all interactive and meaningful elements on the page
 - Assigning unique references (`aria-ref` attributes) to each element
 - Collecting accessibility information (roles, names, bounds, attributes)
@@ -150,6 +153,7 @@ The snapshot tool creates accessibility data by:
 ## Error Handling
 
 All tools return a response object with:
+
 - `success`: Boolean indicating if the operation succeeded
 - Error information when `success` is false (`error` field)
 - Tool-specific result data when `success` is true

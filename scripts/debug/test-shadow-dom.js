@@ -11,7 +11,10 @@ if (consoleOutput) {
   console.log('   - Tag:', consoleOutput.tagName);
   console.log('   - Classes:', consoleOutput.className);
   console.log('   - Children count:', consoleOutput.children.length);
-  console.log('   - Has Shadow Root?:', consoleOutput.shadowRoot ? 'Yes (mode: ' + consoleOutput.shadowRoot.mode + ')' : 'No');
+  console.log(
+    '   - Has Shadow Root?:',
+    consoleOutput.shadowRoot ? 'Yes (mode: ' + consoleOutput.shadowRoot.mode + ')' : 'No'
+  );
 }
 
 // Test 2: Find all shadow roots in the page
@@ -20,21 +23,23 @@ const allElements = document.querySelectorAll('*');
 let shadowCount = 0;
 const shadowHosts = [];
 
-allElements.forEach(el => {
+allElements.forEach((el) => {
   if (el.shadowRoot) {
     shadowCount++;
     shadowHosts.push({
       tag: el.tagName,
       id: el.id,
       class: el.className,
-      mode: el.shadowRoot.mode
+      mode: el.shadowRoot.mode,
     });
   }
 });
 
 console.log(`   Found ${shadowCount} shadow roots:`);
 shadowHosts.forEach((host, i) => {
-  console.log(`   ${i+1}. <${host.tag}> id="${host.id}" class="${host.class}" mode="${host.mode}"`);
+  console.log(
+    `   ${i + 1}. <${host.tag}> id="${host.id}" class="${host.class}" mode="${host.mode}"`
+  );
 });
 
 // Test 3: Try to find console in shadow DOMs
@@ -47,13 +52,13 @@ function searchInShadowDOM(root, depth = 0) {
   if (consoleElements.length > 0) {
     console.log(`${indent}✅ Found ${consoleElements.length} console-related elements`);
     consoleElements.forEach((el, i) => {
-      console.log(`${indent}   ${i+1}. <${el.tagName}> class="${el.className}"`);
+      console.log(`${indent}   ${i + 1}. <${el.tagName}> class="${el.className}"`);
     });
   }
 
   // Recurse into shadow DOMs
   const allEls = root.querySelectorAll('*');
-  allEls.forEach(el => {
+  allEls.forEach((el) => {
     if (el.shadowRoot && el.shadowRoot.mode === 'open') {
       console.log(`${indent}🔍 Entering shadow DOM of <${el.tagName}>`);
       searchInShadowDOM(el.shadowRoot, depth + 1);
@@ -71,7 +76,7 @@ if (consoleOutput) {
 
   // Group by tag
   const tagCounts = {};
-  allChildren.forEach(el => {
+  allChildren.forEach((el) => {
     tagCounts[el.tagName] = (tagCounts[el.tagName] || 0) + 1;
   });
 
@@ -81,10 +86,14 @@ if (consoleOutput) {
   });
 
   // Check for print outputs
-  const printOutputs = consoleOutput.querySelectorAll('[class*="print"], [class*="output"], .info, .success');
+  const printOutputs = consoleOutput.querySelectorAll(
+    '[class*="print"], [class*="output"], .info, .success'
+  );
   console.log(`\n   Print/output elements found: ${printOutputs.length}`);
   printOutputs.forEach((el, i) => {
-    console.log(`     ${i+1}. <${el.tagName}> class="${el.className}" text="${el.textContent?.substring(0, 50)}..."`);
+    console.log(
+      `     ${i + 1}. <${el.tagName}> class="${el.className}" text="${el.textContent?.substring(0, 50)}..."`
+    );
   });
 }
 
@@ -92,4 +101,7 @@ console.log('\n✅ Test complete!');
 console.log('\n📋 Summary:');
 console.log('   - Console accessible via querySelector: ' + (consoleOutput ? 'YES ✅' : 'NO ❌'));
 console.log('   - Shadow DOM count: ' + shadowCount);
-console.log('   - Recommendation: ' + (consoleOutput ? 'Use direct DOM access' : 'Need Shadow DOM traversal or screenshot method'));
+console.log(
+  '   - Recommendation: ' +
+    (consoleOutput ? 'Use direct DOM access' : 'Need Shadow DOM traversal or screenshot method')
+);

@@ -53,11 +53,7 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart, onSkip }) =
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={onSkip}
-            className="flex-1"
-          >
+          <Button variant="outline" onClick={onSkip} className="flex-1">
             Skip
           </Button>
           <Button
@@ -80,9 +76,7 @@ interface FeatureItemProps {
 const FeatureItem: React.FC<FeatureItemProps> = ({ icon, text }) => (
   <div className="flex items-center gap-3">
     <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-      <span className="text-green-600 dark:text-green-400 text-sm font-semibold">
-        {icon}
-      </span>
+      <span className="text-green-600 dark:text-green-400 text-sm font-semibold">{icon}</span>
     </div>
     <span className="text-gray-700 dark:text-gray-300">{text}</span>
   </div>

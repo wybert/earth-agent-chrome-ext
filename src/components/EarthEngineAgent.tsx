@@ -14,7 +14,9 @@ const EarthEngineAgent = () => {
   const [code, setCode] = useState('');
   const [result, setResult] = useState('');
   const [scriptId, setScriptId] = useState('');
-  const [activeTab, setActiveTab] = useState<'resolve' | 'docs' | 'generate' | 'run' | 'edit' | 'layers'>('resolve');
+  const [activeTab, setActiveTab] = useState<
+    'resolve' | 'docs' | 'generate' | 'run' | 'edit' | 'layers'
+  >('resolve');
   const [layers, setLayers] = useState<any[]>([]);
 
   // ... existing code ...
@@ -34,7 +36,7 @@ const EarthEngineAgent = () => {
       setLoading(false);
     }
   };
-  
+
   const handleRunCurrentScript = async () => {
     setLoading(true);
     setError('');
@@ -56,7 +58,7 @@ const EarthEngineAgent = () => {
       // Get information about the current map layers
       const response = await getMapLayers();
       setResult(JSON.stringify(response, null, 2));
-      
+
       if (response.success && response.layers) {
         setLayers(response.layers);
       }
@@ -70,7 +72,7 @@ const EarthEngineAgent = () => {
   return (
     <div className="flex flex-col p-4 h-full">
       <h2 className="text-xl font-bold mb-4">Earth Engine Agent</h2>
-      
+
       <div className="flex gap-2 mb-4 flex-wrap">
         <Button
           variant={activeTab === 'resolve' ? 'default' : 'outline'}
@@ -154,11 +156,7 @@ const EarthEngineAgent = () => {
             <CardTitle>Run Results</CardTitle>
           </CardHeader>
           <CardContent>
-            {error && (
-              <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">
-                {error}
-              </div>
-            )}
+            {error && <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">{error}</div>}
             {result && (
               <pre className="p-2 bg-gray-100 rounded overflow-auto max-h-96">
                 {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
@@ -189,13 +187,9 @@ const EarthEngineAgent = () => {
                 {loading ? 'Loading...' : 'Get Map Layers'}
               </Button>
             </div>
-            
-            {error && (
-              <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">
-                {error}
-              </div>
-            )}
-            
+
+            {error && <div className="mb-4 p-2 bg-red-100 text-red-800 rounded">{error}</div>}
+
             {layers.length > 0 && (
               <div className="mb-4">
                 <h3 className="text-lg font-medium mb-2">Layer Information:</h3>
@@ -203,18 +197,30 @@ const EarthEngineAgent = () => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visible</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opacity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Visible
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Opacity
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Type
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {layers.map((layer, index) => (
                         <tr key={layer.id || index}>
                           <td className="px-6 py-4 whitespace-nowrap">{layer.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{layer.visible ? 'Yes' : 'No'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">{Math.round(layer.opacity * 100)}%</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {layer.visible ? 'Yes' : 'No'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {Math.round(layer.opacity * 100)}%
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">{layer.type || 'N/A'}</td>
                         </tr>
                       ))}
@@ -223,7 +229,7 @@ const EarthEngineAgent = () => {
                 </div>
               </div>
             )}
-            
+
             {result && (
               <pre className="p-2 bg-gray-100 rounded overflow-auto max-h-96">
                 {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
@@ -236,4 +242,4 @@ const EarthEngineAgent = () => {
   );
 };
 
-export default EarthEngineAgent; 
+export default EarthEngineAgent;

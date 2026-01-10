@@ -5,7 +5,7 @@
 /**
  * Validates coordinates to ensure they are valid numbers within the viewport
  * @param x The x coordinate
- * @param y The y coordinate 
+ * @param y The y coordinate
  * @returns True if coordinates are valid, false otherwise
  */
 export function validateCoordinates(x: number, y: number): boolean {
@@ -31,10 +31,10 @@ export function validateCoordinates(x: number, y: number): boolean {
  * Gets the viewport dimensions
  * @returns An object containing the viewport width and height
  */
-export function getViewportDimensions(): { width: number, height: number } {
+export function getViewportDimensions(): { width: number; height: number } {
   return {
     width: window.innerWidth || document.documentElement.clientWidth,
-    height: window.innerHeight || document.documentElement.clientHeight
+    height: window.innerHeight || document.documentElement.clientHeight,
   };
 }
 
@@ -47,4 +47,4 @@ export function getViewportDimensions(): { width: number, height: number } {
 export function isWithinViewport(x: number, y: number): boolean {
   const { width, height } = getViewportDimensions();
   return x >= 0 && x <= width && y >= 0 && y <= height;
-} 
+}

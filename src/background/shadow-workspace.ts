@@ -61,13 +61,24 @@ export class ShadowWorkspace {
     return initial;
   }
 
-  setFromEditor(tabId: number, scriptId: string, content: string, message = 'sync from editor'): ShadowFileState {
+  setFromEditor(
+    tabId: number,
+    scriptId: string,
+    content: string,
+    message = 'sync from editor'
+  ): ShadowFileState {
     const state = this.getOrCreate(tabId, scriptId);
     if (content === state.content) return state;
     return this.commit(tabId, scriptId, content, message, 'editor');
   }
 
-  commit(tabId: number, scriptId: string, content: string, message: string, source: ShadowCommit['source']): ShadowFileState {
+  commit(
+    tabId: number,
+    scriptId: string,
+    content: string,
+    message: string,
+    source: ShadowCommit['source']
+  ): ShadowFileState {
     const state = this.getOrCreate(tabId, scriptId);
     const nextVersion = state.version + 1;
     const now = Date.now();
@@ -98,7 +109,12 @@ export class ShadowWorkspace {
     if (state.head <= 0) return state;
     const nextHead = state.head - 1;
     const nextContent = state.commits[nextHead].content;
-    const next: ShadowFileState = { ...state, head: nextHead, content: nextContent, version: state.version + 1 };
+    const next: ShadowFileState = {
+      ...state,
+      head: nextHead,
+      content: nextContent,
+      version: state.version + 1,
+    };
     this.files.set(this.key(tabId, scriptId), next);
     return next;
   }
@@ -108,7 +124,12 @@ export class ShadowWorkspace {
     if (state.head >= state.commits.length - 1) return state;
     const nextHead = state.head + 1;
     const nextContent = state.commits[nextHead].content;
-    const next: ShadowFileState = { ...state, head: nextHead, content: nextContent, version: state.version + 1 };
+    const next: ShadowFileState = {
+      ...state,
+      head: nextHead,
+      content: nextContent,
+      version: state.version + 1,
+    };
     this.files.set(this.key(tabId, scriptId), next);
     return next;
   }
@@ -149,7 +170,13 @@ export class ShadowWorkspace {
     return matches;
   }
 
-  replaceAll(tabId: number, scriptId: string, query: string, replacement: string, message = 'replace all'): ShadowFileState {
+  replaceAll(
+    tabId: number,
+    scriptId: string,
+    query: string,
+    replacement: string,
+    message = 'replace all'
+  ): ShadowFileState {
     const state = this.getOrCreate(tabId, scriptId);
     if (!query) return state;
     const nextContent = state.content.split(query).join(replacement);
@@ -236,7 +263,8 @@ export class ShadowWorkspace {
     } else {
       // Replace first (and only) occurrence
       const pos = state.content.indexOf(oldString);
-      nextContent = state.content.slice(0, pos) + newString + state.content.slice(pos + oldString.length);
+      nextContent =
+        state.content.slice(0, pos) + newString + state.content.slice(pos + oldString.length);
     }
 
     const nextState = this.commit(tabId, scriptId, nextContent, message, 'agent');
@@ -279,7 +307,7 @@ export class ShadowWorkspace {
     return {
       success: true,
       state: nextState,
-      lineCount: nextState.content.split('\n').length
+      lineCount: nextState.content.split('\n').length,
     };
   }
 
@@ -388,7 +416,10 @@ function diffLinesMyers(a: string[], b: string[]): DiffOp[] {
       }
     }
   }
-  return [{ type: 'delete', lines: a }, { type: 'insert', lines: b }];
+  return [
+    { type: 'delete', lines: a },
+    { type: 'insert', lines: b },
+  ];
 }
 
 function backtrack(trace: Map<number, number>[], a: string[], b: string[]): DiffOp[] {
@@ -440,7 +471,12 @@ function buildHunksFromOps(ops: DiffOp[], context: number) {
   const hunks: Array<{
     oldStart: number;
     newStart: number;
-    lines: Array<{ type: 'context' | 'delete' | 'insert'; text: string; oldLine?: number; newLine?: number }>;
+    lines: Array<{
+      type: 'context' | 'delete' | 'insert';
+      text: string;
+      oldLine?: number;
+      newLine?: number;
+    }>;
   }> = [];
 
   const pushContext = (hunk: any, text: string) => {
@@ -496,7 +532,11 @@ function buildHunksFromOps(ops: DiffOp[], context: number) {
 
     // non-equal: start a new hunk if needed, including leading context
     if (!current) {
-      current = { oldStart: Math.max(1, oldLine - pendingContext.length), newStart: Math.max(1, newLine - pendingContext.length), lines: [] as any[] };
+      current = {
+        oldStart: Math.max(1, oldLine - pendingContext.length),
+        newStart: Math.max(1, newLine - pendingContext.length),
+        lines: [] as any[],
+      };
       // Add up to `context` lines from the end of pending context as prefix
       const prefix = pendingContext.slice(-context);
       // Adjust old/new line numbers back for prefix push

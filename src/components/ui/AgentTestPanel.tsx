@@ -4,7 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -14,23 +20,25 @@ import { toast } from 'sonner';
 
 import { screenshot } from '@/lib/tools/browser/screenshot';
 import { chromeServices } from '@/lib/services/chrome-storage-service';
-import { AVAILABLE_MODELS, DEFAULT_MODELS, MODEL_DISPLAY_NAMES, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY, type ApiProvider } from '@/constants/models';
-import type { AgentProfile, OpenAICompatibleConfig, Provider } from '@/types/extension';
 import {
-  PROFILES_STORAGE_KEY,
-  inferBaseModeFromTools,
-  migrateProfiles
-} from '@/lib/profiles';
+  AVAILABLE_MODELS,
+  DEFAULT_MODELS,
+  MODEL_DISPLAY_NAMES,
+  OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
+  type ApiProvider,
+} from '@/constants/models';
+import type { AgentProfile, OpenAICompatibleConfig, Provider } from '@/types/extension';
+import { PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles } from '@/lib/profiles';
 
 // Validation constants
 const VALIDATION = {
-  MIN_INTERVAL_MS: 1000,     // 1 second minimum
-  MAX_INTERVAL_MS: 300000,   // 5 minutes maximum
-  MIN_TIMEOUT_MS: 10000,     // 10 seconds minimum
-  MAX_TIMEOUT_MS: 300000,    // 5 minutes maximum
-  MAX_PROMPTS: 1000,         // Rate limiting
-  MAX_PREVIEW_COUNT: 10,     // Maximum screenshot previews in memory
-  DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/
+  MIN_INTERVAL_MS: 1000, // 1 second minimum
+  MAX_INTERVAL_MS: 300000, // 5 minutes maximum
+  MIN_TIMEOUT_MS: 10000, // 10 seconds minimum
+  MAX_TIMEOUT_MS: 300000, // 5 minutes maximum
+  MAX_PROMPTS: 1000, // Rate limiting
+  MAX_PREVIEW_COUNT: 10, // Maximum screenshot previews in memory
+  DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/,
 };
 
 const LIST_PAGE_SIZE = 10;
@@ -80,25 +88,25 @@ const EXAMPLE_PROMPTS = [
   {
     id: 'code-generation',
     text: 'Generate JavaScript code to load and visualize Landsat 9 imagery for San Francisco from the last month.',
-    description: 'Code generation for satellite imagery'
+    description: 'Code generation for satellite imagery',
   },
   {
     id: 'dataset-info',
     text: 'What datasets are available for monitoring deforestation in the Amazon rainforest?',
-    description: 'Dataset discovery and recommendation'
+    description: 'Dataset discovery and recommendation',
   },
   {
     id: 'complex-analysis',
     text: 'Create a complete workflow to calculate NDVI for agricultural fields, mask clouds, and export the results as a time series chart.',
-    description: 'Complex multi-step analysis workflow'
-  }
+    description: 'Complex multi-step analysis workflow',
+  },
 ];
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   google: 'Google',
-  'z-ai': 'Z.AI'
+  'z-ai': 'Z.AI',
 };
 
 const DEFAULT_SELECTED_MODELS = [DEFAULT_MODELS.openai];
@@ -111,9 +119,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     heliconeApiKey: '',
     intervalMs: 5000,
     timeoutMs: 60000,
-    sessionId: `test-session-${Date.now()}`
+    sessionId: `test-session-${Date.now()}`,
   });
-  
+
   const [isRunning, setIsRunning] = useState(false);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -159,13 +167,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       if (parts.length < 3) return null;
       const configId = parts[1];
       const modelName = parts.slice(2).join(':');
-      const customConfig = customProviders.find(config => config.id === configId);
+      const customConfig = customProviders.find((config) => config.id === configId);
       if (!customConfig) return null;
 
       return {
         provider: `custom:${configId}` as Provider,
         model: modelName,
-        label: `${customConfig.name} - ${modelName}`
+        label: `${customConfig.name} - ${modelName}`,
       };
     }
 
@@ -175,15 +183,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     return {
       provider,
       model: value,
-      label: getModelDisplayName(value)
+      label: getModelDisplayName(value),
     };
   };
 
   const toggleModelSelection = (value: string) => {
     updateConfig({
       selectedModels: config.selectedModels.includes(value)
-        ? config.selectedModels.filter(modelId => modelId !== value)
-        : [...config.selectedModels, value]
+        ? config.selectedModels.filter((modelId) => modelId !== value)
+        : [...config.selectedModels, value],
     });
   };
 
@@ -275,9 +283,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       setCustomProviders(configs);
     });
 
-    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
       if (areaName === 'sync' && changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]) {
-        const configs: OpenAICompatibleConfig[] = changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || [];
+        const configs: OpenAICompatibleConfig[] =
+          changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || [];
         setCustomProviders(configs);
       }
     };
@@ -291,7 +303,10 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       setProfiles(migrateProfiles(result[PROFILES_STORAGE_KEY]));
     });
 
-    const handleProfileChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    const handleProfileChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
       if (areaName !== 'sync') return;
       if (changes[PROFILES_STORAGE_KEY]) {
         setProfiles(migrateProfiles(changes[PROFILES_STORAGE_KEY].newValue));
@@ -306,18 +321,26 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   useEffect(() => {
     return () => {
       // Clear all active timeouts
-      activeTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      activeTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
       activeTimeoutsRef.current.clear();
 
       // Disconnect all active ports
-      activePortsRef.current.forEach(port => {
-        try { port.disconnect(); } catch (e) { /* already disconnected */ }
+      activePortsRef.current.forEach((port) => {
+        try {
+          port.disconnect();
+        } catch (e) {
+          /* already disconnected */
+        }
       });
       activePortsRef.current.clear();
 
       // Clear test port
       if (testPortRef.current) {
-        try { testPortRef.current.disconnect(); } catch (e) { /* already disconnected */ }
+        try {
+          testPortRef.current.disconnect();
+        } catch (e) {
+          /* already disconnected */
+        }
         testPortRef.current = null;
       }
 
@@ -337,7 +360,14 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
 
     setIsLoadingConfig(true);
-    chromeServices.storage.get<Partial<TestConfiguration> & { model?: string; provider?: string; reloadGeeEditor?: boolean }>(['agentTestConfig'])
+    chromeServices.storage
+      .get<
+        Partial<TestConfiguration> & {
+          model?: string;
+          provider?: string;
+          reloadGeeEditor?: boolean;
+        }
+      >(['agentTestConfig'])
       .then((result) => {
         if (result.agentTestConfig) {
           console.log('Loading stored config:', result.agentTestConfig);
@@ -352,18 +382,20 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             ? storedConfig.selectedModels
             : [];
           const legacyModel = typeof legacyModelValue === 'string' ? legacyModelValue : '';
-          const candidateModels = storedSelectedModels.length > 0
-            ? storedSelectedModels
-            : legacyModel
-              ? [legacyModel]
-              : [...DEFAULT_SELECTED_MODELS];
+          const candidateModels =
+            storedSelectedModels.length > 0
+              ? storedSelectedModels
+              : legacyModel
+                ? [legacyModel]
+                : [...DEFAULT_SELECTED_MODELS];
           const normalizedModels = candidateModels.filter((value) => {
             if (value.startsWith('custom:')) return true;
             return Boolean(findProviderForModel(value));
           });
-          const selectedModels = normalizedModels.length > 0 ? normalizedModels : [...DEFAULT_SELECTED_MODELS];
+          const selectedModels =
+            normalizedModels.length > 0 ? normalizedModels : [...DEFAULT_SELECTED_MODELS];
 
-          setConfig(prev => ({
+          setConfig((prev) => ({
             ...prev,
             ...storedConfigWithoutLegacy,
             // Always generate a new session ID but keep other settings
@@ -371,7 +403,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             selectedModels,
             // Provide default timeout if not present in saved config
             timeoutMs: storedConfigWithoutLegacy.timeoutMs || prev.timeoutMs,
-            intervalMs: storedConfigWithoutLegacy.intervalMs || prev.intervalMs
+            intervalMs: storedConfigWithoutLegacy.intervalMs || prev.intervalMs,
           }));
         }
       })
@@ -404,12 +436,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           modeSelection: config.modeSelection,
           heliconeApiKey: config.heliconeApiKey,
           intervalMs: config.intervalMs,
-          timeoutMs: config.timeoutMs
+          timeoutMs: config.timeoutMs,
         };
-        chromeServices.storage.set({ agentTestConfig: configToSave })
-          .catch((error) => {
-            console.error('Failed to save config:', error);
-          });
+        chromeServices.storage.set({ agentTestConfig: configToSave }).catch((error) => {
+          console.error('Failed to save config:', error);
+        });
         configChangedRef.current = false;
       }
     }, 500); // 500ms debounce
@@ -422,9 +453,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   }, [isOpen, config]);
 
   const updateConfig = (updates: Partial<TestConfiguration>) => {
-    setConfig(prev => ({ ...prev, ...updates }));
+    setConfig((prev) => ({ ...prev, ...updates }));
   };
-
 
   const addPrompt = () => {
     if (!promptText.trim()) return;
@@ -438,7 +468,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     const newPrompt: TestPrompt = {
       id: `prompt-${Date.now()}`,
       text: promptText.trim(),
-      description: 'Custom prompt'
+      description: 'Custom prompt',
     };
 
     updateConfig({ prompts: [...config.prompts, newPrompt] });
@@ -446,7 +476,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   };
 
   const removePrompt = (id: string) => {
-    updateConfig({ prompts: config.prompts.filter(p => p.id !== id) });
+    updateConfig({ prompts: config.prompts.filter((p) => p.id !== id) });
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -466,7 +496,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             prompts = data.map((item, index) => ({
               id: `uploaded-${index}`,
               text: typeof item === 'string' ? item : item.text || item.prompt || '',
-              description: typeof item === 'object' ? item.description : `Uploaded prompt ${index + 1}`
+              description:
+                typeof item === 'object' ? item.description : `Uploaded prompt ${index + 1}`,
             }));
           } else {
             toast.error('Invalid JSON format', { description: 'Expected an array of prompts' });
@@ -475,35 +506,41 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         } catch (parseError) {
           console.error('JSON parse error:', parseError);
           toast.error('Invalid JSON file', {
-            description: parseError instanceof Error ? parseError.message : 'Could not parse file contents',
+            description:
+              parseError instanceof Error ? parseError.message : 'Could not parse file contents',
             duration: 5000,
           });
           return;
         }
       } else if (file.name.endsWith('.csv')) {
-        const lines = text.split('\n').filter(line => line.trim());
-        const hasHeader = lines[0]?.toLowerCase().includes('prompt') || lines[0]?.toLowerCase().includes('text');
+        const lines = text.split('\n').filter((line) => line.trim());
+        const hasHeader =
+          lines[0]?.toLowerCase().includes('prompt') || lines[0]?.toLowerCase().includes('text');
         const startIndex = hasHeader ? 1 : 0;
 
         prompts = lines.slice(startIndex).map((line, index) => {
-          const columns = line.split(',').map(col => col.trim().replace(/^"(.*)"$/, '$1'));
+          const columns = line.split(',').map((col) => col.trim().replace(/^"(.*)"$/, '$1'));
           return {
             id: `uploaded-${index}`,
             text: columns[0] || '',
-            description: columns[1] || `Uploaded prompt ${index + 1}`
+            description: columns[1] || `Uploaded prompt ${index + 1}`,
           };
         });
       } else {
-        toast.error('Unsupported file format', { description: 'Please upload a .json or .csv file' });
+        toast.error('Unsupported file format', {
+          description: 'Please upload a .json or .csv file',
+        });
         return;
       }
 
-      const validPrompts = prompts.filter(p => p.text);
+      const validPrompts = prompts.filter((p) => p.text);
       if (validPrompts.length > 0) {
         // Check rate limit
         const totalPrompts = config.prompts.length + validPrompts.length;
         if (totalPrompts > VALIDATION.MAX_PROMPTS) {
-          toast.warning(`Only adding first ${VALIDATION.MAX_PROMPTS - config.prompts.length} prompts (limit: ${VALIDATION.MAX_PROMPTS})`);
+          toast.warning(
+            `Only adding first ${VALIDATION.MAX_PROMPTS - config.prompts.length} prompts (limit: ${VALIDATION.MAX_PROMPTS})`
+          );
           const allowedCount = VALIDATION.MAX_PROMPTS - config.prompts.length;
           updateConfig({ prompts: [...config.prompts, ...validPrompts.slice(0, allowedCount)] });
         } else {
@@ -528,7 +565,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   };
 
   // Save screenshot to session folder and store data URL for preview
-  const saveScreenshot = async (screenshotData: string, resultIndex: number, modelName: string): Promise<string> => {
+  const saveScreenshot = async (
+    screenshotData: string,
+    resultIndex: number,
+    modelName: string
+  ): Promise<string> => {
     if (!sessionFolderRef.current) {
       throw new Error('Session folder not created. Please run tests first.');
     }
@@ -548,9 +589,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       console.log('Screenshot saved to session folder:', filename);
 
       // Store data URL for preview
-      setScreenshotPreviews(prev => ({
+      setScreenshotPreviews((prev) => ({
         ...prev,
-        [filename]: screenshotData
+        [filename]: screenshotData,
       }));
 
       return filename;
@@ -579,12 +620,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     }
   };
 
-  const executeTest = async (prompt: TestPrompt, modelEntry: SelectedModelEntry): Promise<TestResult> => {
+  const executeTest = async (
+    prompt: TestPrompt,
+    modelEntry: SelectedModelEntry
+  ): Promise<TestResult> => {
     console.log('executeTest called for prompt:', prompt);
     const startTime = Date.now();
 
     // Helper function to send reset messages via port
-    const sendResetMessage = (port: chrome.runtime.Port, type: string): Promise<{ success: boolean; error?: string }> => {
+    const sendResetMessage = (
+      port: chrome.runtime.Port,
+      type: string
+    ): Promise<{ success: boolean; error?: string }> => {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           resolve({ success: false, error: 'Reset operation timed out' });
@@ -615,7 +662,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         if (resetResult.success) {
           console.log('Reset button clicked successfully');
           // Wait a moment for the reset to take effect
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         } else {
           console.warn('Failed to click reset button:', resetResult.error);
         }
@@ -632,7 +679,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         if (clearResult.success) {
           console.log('Code editor cleared successfully');
           // Wait for clearing to take effect
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
         } else {
           console.warn('Failed to clear code editor:', clearResult.error);
         }
@@ -647,7 +694,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       } catch (e) {
         // Already disconnected
       }
-      
+
       // Send message to the agent through the extension's messaging system first
       console.log('Creating test promise...');
       const response = await new Promise<string>((resolve, reject) => {
@@ -655,7 +702,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           console.log(`Test timeout reached after ${config.timeoutMs}ms`);
           reject(new Error(`Test timeout after ${config.timeoutMs / 1000} seconds`));
         }, config.timeoutMs);
-        
+
         // Create isolated session for each test to prevent conversation memory carryover
         // Each test gets its own unique session ID to ensure independent results
         const modeConfig = resolveModeAndProfile();
@@ -669,7 +716,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           mode: modeConfig.baseMode,
           profileId: modeConfig.profileId,
           profilePrompt: modeConfig.profilePrompt,
-          profileTools: modeConfig.profileTools
+          profileTools: modeConfig.profileTools,
         };
 
         console.log('Sending chat message:', chatMessage);
@@ -677,11 +724,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         // Use the extension's port-based messaging instead of runtime.sendMessage
         let fullResponse = '';
         let responseReceived = false;
-        
+
         // Connect to background script
         console.log('Connecting to background script...');
         const port = chrome.runtime.connect({ name: 'agent-test' });
-        
+
         port.onMessage.addListener((message) => {
           console.log('Received port message:', message);
           if (message.type === 'CHAT_STREAM_CHUNK') {
@@ -699,7 +746,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             port.disconnect();
           }
         });
-        
+
         port.onDisconnect.addListener(() => {
           console.log('Port disconnected');
           if (!responseReceived) {
@@ -707,17 +754,17 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             reject(new Error('Connection disconnected before response received'));
           }
         });
-        
+
         // Send the message
         console.log('Posting message to port...');
         port.postMessage(chatMessage);
       });
 
       console.log('AI response completed, waiting 2 seconds before taking screenshot...');
-      
+
       // Wait 2 seconds for any UI changes to complete, then take screenshot
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // Now take screenshot AFTER the agent has completed and UI has settled
       let screenshotId: string | undefined;
       try {
@@ -726,7 +773,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         if (screenshotResult.success && screenshotResult.screenshotData) {
           // Save screenshot with result index for CSV matching
           const currentIndex = testResultIndexRef.current;
-          screenshotId = await saveScreenshot(screenshotResult.screenshotData, currentIndex, modelEntry.model);
+          screenshotId = await saveScreenshot(
+            screenshotResult.screenshotData,
+            currentIndex,
+            modelEntry.model
+          );
           console.log('Screenshot saved:', screenshotId);
         }
       } catch (error) {
@@ -751,7 +802,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         duration,
         success: true,
         screenshotId,
-        heliconeRequestId
+        heliconeRequestId,
       };
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -765,7 +816,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         timestamp: new Date(),
         duration,
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   };
@@ -791,13 +842,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
     // Create session subfolder
     try {
-      const sessionFolder = await fileSystemHandle.getDirectoryHandle(config.sessionId, { create: true });
+      const sessionFolder = await fileSystemHandle.getDirectoryHandle(config.sessionId, {
+        create: true,
+      });
       sessionFolderRef.current = sessionFolder;
       console.log('Created session folder:', config.sessionId);
     } catch (error) {
       console.error('Failed to create session folder:', error);
       toast.error('Failed to create session folder', {
-        description: error instanceof Error ? error.message : 'Unknown error'
+        description: error instanceof Error ? error.message : 'Unknown error',
       });
       return;
     }
@@ -810,8 +863,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
     setScreenshotPreviews({}); // Clear previous previews
     testResultIndexRef.current = 0; // Reset result index
 
-    const testQueue = config.prompts.flatMap(prompt =>
-      resolvedSelectedModels.map(modelEntry => ({ prompt, modelEntry }))
+    const testQueue = config.prompts.flatMap((prompt) =>
+      resolvedSelectedModels.map((modelEntry) => ({ prompt, modelEntry }))
     );
 
     const allResults: TestResult[] = [];
@@ -832,7 +885,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       const result = await executeTest(prompt, modelEntry);
       console.log('Test result:', result);
       allResults.push(result);
-      setResults(prev => [...prev, result]);
+      setResults((prev) => [...prev, result]);
 
       const progress = ((i + 1) / testQueue.length) * 100;
       setTestProgress(progress);
@@ -841,7 +894,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       // Wait for interval before next test (except for last test)
       if (i < testQueue.length - 1 && isRunningRef.current) {
         console.log(`Waiting ${config.intervalMs}ms before next test`);
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
           testTimeoutRef.current = setTimeout(resolve, config.intervalMs);
         });
       }
@@ -856,12 +909,14 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       try {
         const csvContent = buildResultsCsvFromResults(allResults);
         await saveResultsCsv(csvContent);
-        toast.success(`Tests completed: ${allResults.length} tests run. Results saved to output folder.`);
+        toast.success(
+          `Tests completed: ${allResults.length} tests run. Results saved to output folder.`
+        );
       } catch (error) {
         console.error('Failed to save results CSV:', error);
         toast.success(`Tests completed: ${allResults.length} tests run`);
         toast.warning('Failed to save results CSV', {
-          description: error instanceof Error ? error.message : 'Unknown error'
+          description: error instanceof Error ? error.message : 'Unknown error',
         });
       }
     } else {
@@ -880,7 +935,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
     // Disconnect test port
     if (testPortRef.current) {
-      try { testPortRef.current.disconnect(); } catch (e) { /* already disconnected */ }
+      try {
+        testPortRef.current.disconnect();
+      } catch (e) {
+        /* already disconnected */
+      }
       testPortRef.current = null;
     }
 
@@ -897,7 +956,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   // Build CSV from provided results array (for saving to filesystem)
   const buildResultsCsvFromResults = (resultsArray: TestResult[]) => {
     return [
-      ['Index', 'Timestamp', 'Prompt', 'Response', 'Provider', 'Model', 'Duration (ms)', 'Success', 'Error', 'Screenshot'],
+      [
+        'Index',
+        'Timestamp',
+        'Prompt',
+        'Response',
+        'Provider',
+        'Model',
+        'Duration (ms)',
+        'Success',
+        'Error',
+        'Screenshot',
+      ],
       ...resultsArray.map((result, index) => [
         (index + 1).toString(),
         result.timestamp.toISOString(),
@@ -908,9 +978,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
         result.duration.toString(),
         result.success.toString(),
         result.error || '',
-        result.screenshotId || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
+        result.screenshotId || '',
+      ]),
+    ]
+      .map((row) => row.join(','))
+      .join('\n');
   };
 
   const downloadPrompts = (format: 'csv' | 'json') => {
@@ -920,11 +992,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       return;
     }
     if (format === 'json') {
-      const payload = config.prompts.map((prompt) => (
+      const payload = config.prompts.map((prompt) =>
         prompt.description
           ? { text: prompt.text, description: prompt.description }
           : { text: prompt.text }
-      ));
+      );
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -937,7 +1009,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
     const rows = [
       ['prompt', 'description'],
-      ...config.prompts.map(prompt => [prompt.text, prompt.description || ''])
+      ...config.prompts.map((prompt) => [prompt.text, prompt.description || '']),
     ];
     const csvContent = rows
       .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
@@ -955,15 +1027,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [showPreviews, setShowPreviews] = useState(true);
 
   const toggleAllScreenshotPreviews = () => {
-    setShowPreviews(prev => !prev);
+    setShowPreviews((prev) => !prev);
   };
 
   // Close handler with confirmation when tests are running
   const handleClose = useCallback(() => {
     if (isRunning) {
-      const confirmStop = window.confirm(
-        'Tests are still running. Stop tests and close panel?'
-      );
+      const confirmStop = window.confirm('Tests are still running. Stop tests and close panel?');
       if (!confirmStop) return;
       stopTests();
     }
@@ -978,7 +1048,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   ): string => {
     if (completedResults.length === 0 || remainingCount === 0) return 'calculating...';
 
-    const avgDuration = completedResults.reduce((sum, r) => sum + r.duration, 0) / completedResults.length;
+    const avgDuration =
+      completedResults.reduce((sum, r) => sum + r.duration, 0) / completedResults.length;
     const totalMs = remainingCount * (avgDuration + intervalMs);
 
     const minutes = Math.floor(totalMs / 60000);
@@ -1004,14 +1075,17 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   }
 
   const remainingTests = Math.max(totalTests - currentTestIndex, 0);
-  const successRate = results.length > 0 ? (results.filter(r => r.success).length / results.length) * 100 : 0;
-  const currentPromptIndex = resolvedSelectedModels.length > 0
-    ? Math.floor(currentTestIndex / resolvedSelectedModels.length)
-    : 0;
+  const successRate =
+    results.length > 0 ? (results.filter((r) => r.success).length / results.length) * 100 : 0;
+  const currentPromptIndex =
+    resolvedSelectedModels.length > 0
+      ? Math.floor(currentTestIndex / resolvedSelectedModels.length)
+      : 0;
   const currentPrompt = config.prompts[currentPromptIndex];
-  const currentModelLabel = resolvedSelectedModels.length > 0
-    ? resolvedSelectedModels[currentTestIndex % resolvedSelectedModels.length]?.label
-    : undefined;
+  const currentModelLabel =
+    resolvedSelectedModels.length > 0
+      ? resolvedSelectedModels[currentTestIndex % resolvedSelectedModels.length]?.label
+      : undefined;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1022,7 +1096,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             <X className="h-5 w-5" />
           </Button>
         </CardHeader>
-        
+
         <CardContent className="flex-1 overflow-hidden">
           <Tabs defaultValue="setup" className="h-full flex flex-col">
             <TabsList className="grid w-full grid-cols-3">
@@ -1030,7 +1104,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
               <TabsTrigger value="prompts">Prompts</TabsTrigger>
               <TabsTrigger value="run">Run Tests</TabsTrigger>
             </TabsList>
-            
+
             {/* Setup Tab */}
             <TabsContent value="setup" className="flex-1 overflow-auto space-y-6 px-1">
               <div className="grid grid-cols-2 gap-6">
@@ -1047,7 +1121,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             {models.map((modelId) => {
                               const inputId = `model-${providerKey}-${modelId}`;
                               return (
-                                <label key={modelId} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                                <label
+                                  key={modelId}
+                                  htmlFor={inputId}
+                                  className="flex items-center gap-2 text-sm"
+                                >
                                   <input
                                     id={inputId}
                                     type="checkbox"
@@ -1073,7 +1151,11 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                               const value = `custom:${customProvider.id}:${customProvider.modelName}`;
                               const inputId = `model-custom-${customProvider.id}`;
                               return (
-                                <label key={value} htmlFor={inputId} className="flex items-center gap-2 text-sm">
+                                <label
+                                  key={value}
+                                  htmlFor={inputId}
+                                  className="flex items-center gap-2 text-sm"
+                                >
                                   <input
                                     id={inputId}
                                     type="checkbox"
@@ -1081,7 +1163,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                                     checked={config.selectedModels.includes(value)}
                                     onChange={() => toggleModelSelection(value)}
                                   />
-                                  <span className="truncate">{customProvider.name} - {customProvider.modelName}</span>
+                                  <span className="truncate">
+                                    {customProvider.name} - {customProvider.modelName}
+                                  </span>
                                 </label>
                               );
                             })}
@@ -1092,8 +1176,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </div>
 
                   <div className="overflow-visible">
-                    <Label htmlFor="mode" className="mb-2 block">Mode</Label>
-                    <Select value={config.modeSelection} onValueChange={(value) => updateConfig({ modeSelection: value })}>
+                    <Label htmlFor="mode" className="mb-2 block">
+                      Mode
+                    </Label>
+                    <Select
+                      value={config.modeSelection}
+                      onValueChange={(value) => updateConfig({ modeSelection: value })}
+                    >
                       <SelectTrigger id="mode">
                         <SelectValue />
                       </SelectTrigger>
@@ -1129,14 +1218,16 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       value={Math.round(config.intervalMs / 1000)}
                       onChange={(e) => {
                         const seconds = parseInt(e.target.value, 10);
-                        updateConfig({ intervalMs: (Number.isFinite(seconds) ? seconds : 5) * 1000 });
+                        updateConfig({
+                          intervalMs: (Number.isFinite(seconds) ? seconds : 5) * 1000,
+                        });
                       }}
                       min={VALIDATION.MIN_INTERVAL_MS / 1000}
                       max={VALIDATION.MAX_INTERVAL_MS / 1000}
                       step="1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="timeout" className="mb-2 block">
                       Test Timeout (s)
@@ -1147,27 +1238,31 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       value={Math.round(config.timeoutMs / 1000)}
                       onChange={(e) => {
                         const seconds = parseInt(e.target.value, 10);
-                        updateConfig({ timeoutMs: (Number.isFinite(seconds) ? seconds : 60) * 1000 });
+                        updateConfig({
+                          timeoutMs: (Number.isFinite(seconds) ? seconds : 60) * 1000,
+                        });
                       }}
                       min={VALIDATION.MIN_TIMEOUT_MS / 1000}
                       max={VALIDATION.MAX_TIMEOUT_MS / 1000}
                       step="5"
                     />
                     <p className="text-sm text-muted-foreground mt-1">
-                      How long to wait for each test to complete (10-300 seconds). Complex prompts may need longer timeouts.
+                      How long to wait for each test to complete (10-300 seconds). Complex prompts
+                      may need longer timeouts.
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-5">
                   <div>
                     <Label htmlFor="helicone-key" className="mb-2 block">
-                      Helicone API Key <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                      Helicone API Key{' '}
+                      <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </Label>
                     <div className="relative">
                       <Input
                         id="helicone-key"
-                        type={showApiKey ? "text" : "password"}
+                        type={showApiKey ? 'text' : 'password'}
                         value={config.heliconeApiKey}
                         onChange={(e) => updateConfig({ heliconeApiKey: e.target.value })}
                         placeholder="sk-..."
@@ -1179,20 +1274,17 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         size="icon"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowApiKey(!showApiKey)}
-                        title={showApiKey ? "Hide API key" : "Show API key"}
+                        title={showApiKey ? 'Hide API key' : 'Show API key'}
                       >
-                        {showApiKey ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="session-id" className="mb-2 block">
-                      Session ID <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
+                      Session ID{' '}
+                      <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
                     </Label>
                     <div className="flex gap-2 items-center">
                       <Input
@@ -1201,8 +1293,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         onChange={(e) => updateConfig({ sessionId: e.target.value })}
                         placeholder="test-session-..."
                       />
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="icon"
                         onClick={() => updateConfig({ sessionId: `test-session-${Date.now()}` })}
                         title="Generate new session ID"
@@ -1211,7 +1303,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       </Button>
                     </div>
                   </div>
-                  
+
                   {/* Output Folder Selection */}
                   <div className="p-4 bg-muted/50 border border-border rounded-md space-y-3">
                     <Label className="font-medium text-foreground">Output Folder</Label>
@@ -1231,7 +1323,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             // User cancelled the picker
                             if ((error as Error).name !== 'AbortError') {
                               toast.error('Failed to select folder', {
-                                description: error instanceof Error ? error.message : 'Unknown error'
+                                description:
+                                  error instanceof Error ? error.message : 'Unknown error',
                               });
                             }
                           }
@@ -1242,9 +1335,15 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </div>
                     {fileSystemHandle ? (
                       <div className="text-sm text-green-600 dark:text-green-400">
-                        <p>✓ Working folder: <span className="font-mono">{fileSystemHandle.name}/</span></p>
+                        <p>
+                          ✓ Working folder:{' '}
+                          <span className="font-mono">{fileSystemHandle.name}/</span>
+                        </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          Each test run creates: <span className="font-mono">{fileSystemHandle.name}/{config.sessionId}/</span>
+                          Each test run creates:{' '}
+                          <span className="font-mono">
+                            {fileSystemHandle.name}/{config.sessionId}/
+                          </span>
                         </p>
                       </div>
                     ) : (
@@ -1263,17 +1362,20 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         onClick={async () => {
                           try {
                             // Test Helicone API key by making a simple API call
-                            const response = await fetch('https://api.helicone.ai/v1/request/query', {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${config.heliconeApiKey}`,
-                                'Content-Type': 'application/json'
-                              },
-                              body: JSON.stringify({
-                                limit: 1,
-                                offset: 0
-                              })
-                            });
+                            const response = await fetch(
+                              'https://api.helicone.ai/v1/request/query',
+                              {
+                                method: 'POST',
+                                headers: {
+                                  Authorization: `Bearer ${config.heliconeApiKey}`,
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  limit: 1,
+                                  offset: 0,
+                                }),
+                              }
+                            );
 
                             if (response.ok) {
                               toast.success('Helicone API key is valid!');
@@ -1284,7 +1386,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             }
                           } catch (error) {
                             toast.error('Failed to connect to Helicone', {
-                              description: error instanceof Error ? error.message : 'Network error'
+                              description: error instanceof Error ? error.message : 'Network error',
                             });
                           }
                         }}
@@ -1295,26 +1397,37 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   )}
                 </div>
               </div>
-              
+
               <div className="border-t pt-6">
                 <h3 className="text-lg font-medium mb-4">Configuration Help</h3>
                 <div className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-start gap-2">
                     <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <div>
-                      <strong>Helicone API Key:</strong> Get your API key from <a href="https://helicone.ai" target="_blank" rel="noopener noreferrer" className="underline">helicone.ai</a>. This enables request logging and analytics.
+                      <strong>Helicone API Key:</strong> Get your API key from{' '}
+                      <a
+                        href="https://helicone.ai"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline"
+                      >
+                        helicone.ai
+                      </a>
+                      . This enables request logging and analytics.
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <div>
-                      <strong>Session ID:</strong> Groups related test requests together in Helicone for easier analysis. Each test run should use a unique session ID.
+                      <strong>Session ID:</strong> Groups related test requests together in Helicone
+                      for easier analysis. Each test run should use a unique session ID.
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <HelpCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <div>
-                      <strong>Output Folder:</strong> Select a folder where test results will be saved. Each test run saves:
+                      <strong>Output Folder:</strong> Select a folder where test results will be
+                      saved. Each test run saves:
                       <ul className="ml-4 mt-1 text-xs space-y-1">
                         <li>• Screenshots named with index (e.g., 0001_gpt-4.png)</li>
                         <li>• CSV file with all results (results_session-id.csv)</li>
@@ -1324,11 +1437,16 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 </div>
               </div>
             </TabsContent>
-            
+
             {/* Prompts Tab */}
-            <TabsContent value="prompts" className="flex-1 overflow-hidden flex flex-col space-y-4 px-1">
+            <TabsContent
+              value="prompts"
+              className="flex-1 overflow-hidden flex flex-col space-y-4 px-1"
+            >
               <div className="space-y-3">
-                <Label htmlFor="new-prompt" className="block">Add New Prompt</Label>
+                <Label htmlFor="new-prompt" className="block">
+                  Add New Prompt
+                </Label>
                 <div className="flex gap-3 items-end">
                   <Textarea
                     id="new-prompt"
@@ -1343,7 +1461,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   </Button>
                 </div>
               </div>
-              
+
               <div className="flex gap-2 items-center">
                 <input
                   ref={fileInputRef}
@@ -1360,19 +1478,21 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   Upload JSON array or CSV file with prompts
                 </span>
               </div>
-              
+
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-2">File Format Help</h3>
                 <div className="text-sm text-muted-foreground space-y-2">
                   <div>
-                    <strong>JSON format:</strong> Array of strings or objects with 'text' and optional 'description' fields
+                    <strong>JSON format:</strong> Array of strings or objects with 'text' and
+                    optional 'description' fields
                   </div>
                   <div>
-                    <strong>CSV format:</strong> First column should contain prompts, second column (optional) contains descriptions
+                    <strong>CSV format:</strong> First column should contain prompts, second column
+                    (optional) contains descriptions
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex-1 overflow-auto">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1407,7 +1527,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       )}
                     </div>
                   </div>
-                  
+
                   {pagedPrompts.map((prompt, index) => (
                     <Card key={prompt.id} className="p-3">
                       <div className="flex items-start justify-between gap-3">
@@ -1415,7 +1535,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           <div className="flex items-center gap-2 mb-1">
                             <Badge variant="secondary">#{promptsPageStart + index + 1}</Badge>
                             {prompt.description && (
-                              <span className="text-sm text-muted-foreground">{prompt.description}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {prompt.description}
+                              </span>
                             )}
                           </div>
                           <p className="text-sm">{prompt.text}</p>
@@ -1448,7 +1570,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setPromptsPage((prev) => Math.min(promptsPageCount, prev + 1))}
+                          onClick={() =>
+                            setPromptsPage((prev) => Math.min(promptsPageCount, prev + 1))
+                          }
                           disabled={promptsPage === promptsPageCount}
                         >
                           Next
@@ -1459,7 +1583,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 </div>
               </div>
             </TabsContent>
-            
+
             {/* Run Tests Tab */}
             <TabsContent value="run" className="flex-1 space-y-6 px-1">
               <div className="grid grid-cols-3 gap-4">
@@ -1476,13 +1600,18 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                   <div className="text-sm text-muted-foreground">Success Rate</div>
                 </Card>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Test Progress</h3>
                   <div className="flex gap-2">
                     {!isRunning ? (
-                      <Button onClick={runTests} disabled={config.prompts.length === 0 || resolvedSelectedModels.length === 0}>
+                      <Button
+                        onClick={runTests}
+                        disabled={
+                          config.prompts.length === 0 || resolvedSelectedModels.length === 0
+                        }
+                      >
                         <Play className="h-4 w-4 mr-2" />
                         Start Tests
                       </Button>
@@ -1498,9 +1627,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     </Button>
                   </div>
                 </div>
-                
+
                 <Progress value={testProgress} className="w-full" />
-                
+
                 {isRunning && currentTestIndex < totalTests && (
                   <Card className="p-4">
                     <div className="flex items-center justify-between mb-2">
@@ -1511,26 +1640,37 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                         </span>
                       </div>
                       <div className="flex items-center gap-2 font-mono text-sm">
-                        <span>{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                        <span>
+                          {Math.floor(elapsedTime / 60)}:
+                          {(elapsedTime % 60).toString().padStart(2, '0')}
+                        </span>
                         <span className="text-xs text-muted-foreground">
                           / {Math.floor(config.timeoutMs / 1000)}s
                         </span>
                       </div>
                     </div>
-                    <Progress value={(elapsedTime / (config.timeoutMs / 1000)) * 100} className="h-1 mb-2" />
+                    <Progress
+                      value={(elapsedTime / (config.timeoutMs / 1000)) * 100}
+                      className="h-1 mb-2"
+                    />
                     <p className="text-sm line-clamp-2">{currentPrompt?.text}</p>
                     {currentModelLabel && (
                       <p className="text-xs text-muted-foreground mt-1">{currentModelLabel}</p>
                     )}
                     {results.length > 0 && (
                       <p className="text-xs text-muted-foreground mt-2">
-                        Est. remaining: {formatEstimatedTime(results, Math.max(totalTests - currentTestIndex - 1, 0), config.intervalMs)}
+                        Est. remaining:{' '}
+                        {formatEstimatedTime(
+                          results,
+                          Math.max(totalTests - currentTestIndex - 1, 0),
+                          config.intervalMs
+                        )}
                       </p>
                     )}
                   </Card>
                 )}
               </div>
-              
+
               {/* Test Results */}
               <div className="flex-1 overflow-hidden flex flex-col space-y-2">
                 <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1538,13 +1678,20 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                     <h3 className="text-lg font-medium">Test Results ({results.length})</h3>
                     {fileSystemHandle && results.length > 0 && sessionFolderRef.current && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        📁 Results saved to: <span className="font-mono">{fileSystemHandle.name}/{sessionFolderRef.current.name}/</span>
+                        📁 Results saved to:{' '}
+                        <span className="font-mono">
+                          {fileSystemHandle.name}/{sessionFolderRef.current.name}/
+                        </span>
                       </p>
                     )}
                   </div>
                   {results.length > 0 && Object.keys(screenshotPreviews).length > 0 && (
                     <Button onClick={toggleAllScreenshotPreviews} variant="outline" size="sm">
-                      {showPreviews ? <EyeOff className="h-4 w-4 mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
+                      {showPreviews ? (
+                        <EyeOff className="h-4 w-4 mr-1.5" />
+                      ) : (
+                        <Eye className="h-4 w-4 mr-1.5" />
+                      )}
                       {showPreviews ? 'Hide Previews' : 'Show Previews'}
                     </Button>
                   )}
@@ -1553,12 +1700,16 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                 <div className="flex-1 overflow-auto">
                   <div className="space-y-2">
                     {pagedResults.map((result, index) => (
-                      <Card key={result.id} className={`p-4 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}>
+                      <Card
+                        key={result.id}
+                        className={`p-4 ${result.success ? 'border-primary/30' : 'border-destructive/30'}`}
+                      >
                         <div className="space-y-3">
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant={result.success ? "default" : "destructive"}>
-                                #{resultsPageStart + index + 1} - {result.success ? 'Success' : 'Failed'}
+                              <Badge variant={result.success ? 'default' : 'destructive'}>
+                                #{resultsPageStart + index + 1} -{' '}
+                                {result.success ? 'Success' : 'Failed'}
                               </Badge>
                               <span className="text-sm text-muted-foreground">
                                 {result.timestamp.toLocaleString()}
@@ -1566,7 +1717,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                               <span className="text-sm text-muted-foreground">
                                 {result.duration}ms
                               </span>
-                              <Badge variant="outline">{result.provider} {result.model}</Badge>
+                              <Badge variant="outline">
+                                {result.provider} {result.model}
+                              </Badge>
                             </div>
                             {result.screenshotId && (
                               <Badge variant="outline">
@@ -1589,13 +1742,20 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           ) : (
                             <div>
                               <h4 className="font-medium text-sm mb-1">Error:</h4>
-                              <p className="text-sm bg-destructive/10 p-2 rounded text-destructive">{result.error}</p>
+                              <p className="text-sm bg-destructive/10 p-2 rounded text-destructive">
+                                {result.error}
+                              </p>
                             </div>
                           )}
 
                           {result.screenshotId && (
                             <div>
-                              <h4 className="font-medium text-sm mb-1">Screenshot: <span className="font-mono text-xs text-muted-foreground">{result.screenshotId}</span></h4>
+                              <h4 className="font-medium text-sm mb-1">
+                                Screenshot:{' '}
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  {result.screenshotId}
+                                </span>
+                              </h4>
                               {showPreviews && screenshotPreviews[result.screenshotId] && (
                                 <div className="bg-muted/50 p-2 rounded">
                                   <img
@@ -1628,7 +1788,9 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setResultsPage((prev) => Math.min(resultsPageCount, prev + 1))}
+                            onClick={() =>
+                              setResultsPage((prev) => Math.min(resultsPageCount, prev + 1))
+                            }
                             disabled={resultsPage === resultsPageCount}
                           >
                             Next
@@ -1645,4 +1807,4 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       </Card>
     </div>
   );
-} 
+}

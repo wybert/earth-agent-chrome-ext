@@ -17,7 +17,7 @@ print('Entry 5: Geometry:', ee.Geometry.Point([0, 0]));
 print('Entry 6: Long text:', 'A'.repeat(100));
 print('Entry 7: Special chars: 你好 🌍');
 print('Entry 8: List:', ee.List([1, 2, 3]));
-print('Entry 9: Dictionary:', ee.Dictionary({a: 1, b: 2}));
+print('Entry 9: Dictionary:', ee.Dictionary({ a: 1, b: 2 }));
 print('Entry 10: Final entry');
 print('=== END TEST (10 entries total) ===');
 

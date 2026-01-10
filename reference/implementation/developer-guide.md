@@ -21,14 +21,14 @@ The project uses a **Service Layer Architecture** to unify tool logic between th
 
 ### Shared Service Layer (`src/lib/tools/services/`)
 
-| Service | Purpose |
-|---------|---------|
-| `weather-service.ts` | Open-Meteo integration |
-| `time-service.ts` | Date/time and wait logic |
-| `editor-service.ts` | Earth Engine code editor manipulation |
-| `gee-service.ts` | GEE execution, console, inspector |
-| `browser-service.ts` | Screenshots, snapshots, clicks |
-| `docs-service.ts` | Documentation search |
+| Service              | Purpose                               |
+| -------------------- | ------------------------------------- |
+| `weather-service.ts` | Open-Meteo integration                |
+| `time-service.ts`    | Date/time and wait logic              |
+| `editor-service.ts`  | Earth Engine code editor manipulation |
+| `gee-service.ts`     | GEE execution, console, inspector     |
+| `browser-service.ts` | Screenshots, snapshots, clicks        |
+| `docs-service.ts`    | Documentation search                  |
 
 ### Tool Consumers
 
@@ -38,6 +38,7 @@ The project uses a **Service Layer Architecture** to unify tool logic between th
 ## CORS Handling
 
 The extension handles CORS for Anthropic API by:
+
 1. Including `https://api.anthropic.com/*` in `host_permissions`
 2. Using `corsProxyFetch` in `chat-handler.ts` that:
    - Adds required headers (`anthropic-version`, `anthropic-dangerous-direct-browser-access`)
@@ -59,6 +60,7 @@ The extension handles CORS for Anthropic API by:
 ```
 
 **Notes:**
+
 - No `<all_urls>` for Chrome Web Store compliance
 - Screenshots only work on tabs matching host_permissions
 - Localhost permissions removed for store builds
@@ -66,6 +68,7 @@ The extension handles CORS for Anthropic API by:
 ## Storage Keys
 
 Settings persisted to `chrome.storage.local`:
+
 - `earth_engine_openai_api_key`
 - `earth_engine_anthropic_api_key`
 - `earth_engine_google_api_key`
@@ -114,12 +117,12 @@ Models are centrally defined in `src/constants/models.ts`:
 
 ## Helper Functions (`src/lib/utils.ts`)
 
-| Function | Purpose |
-|----------|---------|
-| `selectBestEarthEngineTab(tabs)` | Smart tab selection with priority |
-| `ensureContentScript(tabId)` | Content script readiness check |
-| `validateChromeAPIs()` | Chrome API availability check |
-| `createResilientFetch(options)` | Network retry with exponential backoff |
+| Function                         | Purpose                                |
+| -------------------------------- | -------------------------------------- |
+| `selectBestEarthEngineTab(tabs)` | Smart tab selection with priority      |
+| `ensureContentScript(tabId)`     | Content script readiness check         |
+| `validateChromeAPIs()`           | Chrome API availability check          |
+| `createResilientFetch(options)`  | Network retry with exponential backoff |
 
 ## TypeScript Configuration
 
@@ -158,6 +161,7 @@ Google Earth Engine Code Editor
 ### Configuration
 
 **Claude Code** (`~/.claude/settings.json`):
+
 ```json
 {
   "mcpServers": {
@@ -170,6 +174,7 @@ Google Earth Engine Code Editor
 ```
 
 **Cursor** (`~/.cursor/mcp.json`):
+
 ```json
 {
   "mcpServers": {

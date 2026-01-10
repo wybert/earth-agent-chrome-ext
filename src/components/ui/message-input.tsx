@@ -1,67 +1,92 @@
-import React from 'react'
-import { useEffect, useRef, useState, type ChangeEventHandler, type KeyboardEventHandler, type RefObject } from "react"
-import { AnimatePresence, motion } from "framer-motion"
-import { ArrowUp, Info, Loader2, Mic, Paperclip, Square, X } from "lucide-react"
-import { omit } from "remeda"
+import React from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEventHandler,
+  type KeyboardEventHandler,
+  type RefObject,
+} from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowUp, Info, Loader2, Mic, Paperclip, Square, X } from 'lucide-react';
+import { omit } from 'remeda';
 
-import { cn } from "@/lib/utils"
-import { useAudioRecording } from "@/hooks/use-audio-recording"
-import { useAutosizeTextArea } from "@/hooks/use-autosize-textarea"
-import { AudioVisualizer } from "@/components/ui/audio-visualizer"
-import { Button } from "@/components/ui/button"
-import { FilePreview } from "@/components/ui/file-preview"
-import { InterruptPrompt } from "@/components/ui/interrupt-prompt"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { AVAILABLE_MODELS, MODEL_DISPLAY_NAMES, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY, type ApiProvider } from "@/constants/models"
-import type { OpenAICompatibleConfig, Provider } from "@/types/extension"
+import { cn } from '@/lib/utils';
+import { useAudioRecording } from '@/hooks/use-audio-recording';
+import { useAutosizeTextArea } from '@/hooks/use-autosize-textarea';
+import { AudioVisualizer } from '@/components/ui/audio-visualizer';
+import { Button } from '@/components/ui/button';
+import { FilePreview } from '@/components/ui/file-preview';
+import { InterruptPrompt } from '@/components/ui/interrupt-prompt';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import {
+  AVAILABLE_MODELS,
+  MODEL_DISPLAY_NAMES,
+  OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
+  type ApiProvider,
+} from '@/constants/models';
+import type { OpenAICompatibleConfig, Provider } from '@/types/extension';
 
 // File upload validation constants
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_FILES_COUNT = 10 // Maximum 10 files
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILES_COUNT = 10; // Maximum 10 files
 const ALLOWED_FILE_TYPES = [
   // Images
-  'image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
   // Documents
-  'text/plain', 'text/csv', 'text/markdown',
+  'text/plain',
+  'text/csv',
+  'text/markdown',
   'application/pdf',
   'application/json',
   // Code files
-  'text/javascript', 'application/javascript',
-  'text/html', 'text/css',
-  'application/x-python', 'text/x-python',
-]
+  'text/javascript',
+  'application/javascript',
+  'text/html',
+  'text/css',
+  'application/x-python',
+  'text/x-python',
+];
 
-interface MessageInputBaseProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  value: string
-  submitOnEnter?: boolean
-  stop?: () => void
-  isGenerating: boolean
-  enableInterrupt?: boolean
-  transcribeAudio?: (blob: Blob) => Promise<string>
-  mode?: string
-  onModeChange?: (mode: string) => void
-  profiles?: Array<{ id: string; name: string }>
-  provider?: Provider
-  model?: string
-  onProviderChange?: (provider: Provider) => void
-  onModelChange?: (model: string) => void
+interface MessageInputBaseProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  value: string;
+  submitOnEnter?: boolean;
+  stop?: () => void;
+  isGenerating: boolean;
+  enableInterrupt?: boolean;
+  transcribeAudio?: (blob: Blob) => Promise<string>;
+  mode?: string;
+  onModeChange?: (mode: string) => void;
+  profiles?: Array<{ id: string; name: string }>;
+  provider?: Provider;
+  model?: string;
+  onProviderChange?: (provider: Provider) => void;
+  onModelChange?: (model: string) => void;
 }
 
 interface MessageInputWithoutAttachmentProps extends MessageInputBaseProps {
-  allowAttachments?: false
+  allowAttachments?: false;
 }
 
 interface MessageInputWithAttachmentsProps extends MessageInputBaseProps {
-  allowAttachments: true
-  files: File[] | null
-  setFiles: React.Dispatch<React.SetStateAction<File[] | null>>
+  allowAttachments: true;
+  files: File[] | null;
+  setFiles: React.Dispatch<React.SetStateAction<File[] | null>>;
 }
 
-type MessageInputProps =
-  | MessageInputWithoutAttachmentProps
-  | MessageInputWithAttachmentsProps
+type MessageInputProps = MessageInputWithoutAttachmentProps | MessageInputWithAttachmentsProps;
 
 export function MessageInput({
   placeholder,
@@ -83,118 +108,123 @@ export function MessageInput({
 }: MessageInputProps) {
   // Set placeholder based on mode
   const placeholderMode = mode === 'ask' ? 'ask' : 'do';
-  const defaultPlaceholder = placeholderMode === 'ask' ? 'Ask a question...' : 'What would you like me to do?';
+  const defaultPlaceholder =
+    placeholderMode === 'ask' ? 'Ask a question...' : 'What would you like me to do?';
   const effectivePlaceholder = placeholder || defaultPlaceholder;
 
-  const [isDragging, setIsDragging] = useState(false)
-  const [showInterruptPrompt, setShowInterruptPrompt] = useState(false)
-  const [fileError, setFileError] = useState<string | null>(null)
-  const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([])
+  const [isDragging, setIsDragging] = useState(false);
+  const [showInterruptPrompt, setShowInterruptPrompt] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
 
   // Load custom providers from storage
   useEffect(() => {
     chrome.storage.sync.get([OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY], (result) => {
-      const configs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || []
-      setCustomProviders(configs)
-    })
+      const configs: OpenAICompatibleConfig[] = result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+      setCustomProviders(configs);
+    });
 
     // Listen for changes to custom providers
-    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
       if (areaName === 'sync' && changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY]) {
-        const configs: OpenAICompatibleConfig[] = changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || []
-        setCustomProviders(configs)
+        const configs: OpenAICompatibleConfig[] =
+          changes[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY].newValue || [];
+        setCustomProviders(configs);
       }
-    }
+    };
 
-    chrome.storage.onChanged.addListener(handleStorageChange)
-    return () => chrome.storage.onChanged.removeListener(handleStorageChange)
-  }, [])
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
 
   // Get all models grouped by provider
   const allModelsGrouped = Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => ({
     provider: providerKey as ApiProvider,
-    models: models
-  }))
+    models: models,
+  }));
 
   // Get display name for built-in models
   const getModelDisplayName = (modelId: string) => {
-    return MODEL_DISPLAY_NAMES[modelId] || modelId
-  }
+    return MODEL_DISPLAY_NAMES[modelId] || modelId;
+  };
 
   // Get display name without parentheses for button
   const getModelDisplayNameShort = (modelId: string) => {
     // For custom providers, show just the provider name and model
     if (provider?.startsWith('custom:')) {
-      const configId = provider.replace('custom:', '')
-      const config = customProviders.find(c => c.id === configId)
+      const configId = provider.replace('custom:', '');
+      const config = customProviders.find((c) => c.id === configId);
       if (config) {
-        return `${config.name} - ${modelId}`
+        return `${config.name} - ${modelId}`;
       }
     }
 
-    const fullName = MODEL_DISPLAY_NAMES[modelId] || modelId
+    const fullName = MODEL_DISPLAY_NAMES[modelId] || modelId;
     // Remove everything in parentheses including the parentheses
-    return fullName.replace(/\s*\([^)]*\)/g, '').trim()
-  }
+    return fullName.replace(/\s*\([^)]*\)/g, '').trim();
+  };
 
   // Get provider name for display
   const getProviderDisplayName = (provider: string) => {
     const names: Record<string, string> = {
-      'openai': 'OpenAI',
-      'anthropic': 'Anthropic',
-      'google': 'Google',
+      openai: 'OpenAI',
+      anthropic: 'Anthropic',
+      google: 'Google',
       'z-ai': 'Z.AI',
-      'ollama': 'Ollama'
-    }
-    return names[provider] || provider
-  }
+      ollama: 'Ollama',
+    };
+    return names[provider] || provider;
+  };
 
   // Find which provider a model belongs to
   const findProviderForModel = (modelId: string): ApiProvider | null => {
     for (const [providerKey, models] of Object.entries(AVAILABLE_MODELS)) {
       if (models.includes(modelId)) {
-        return providerKey as ApiProvider
+        return providerKey as ApiProvider;
       }
     }
-    return null
-  }
+    return null;
+  };
 
   // Handle model change and save to storage
   const handleModelChange = (value: string) => {
     // Check if it's a custom provider (format: "custom:{id}:{model}")
     if (value.startsWith('custom:')) {
-      const parts = value.split(':')
+      const parts = value.split(':');
       if (parts.length === 3) {
-        const providerId = `custom:${parts[1]}`
-        const modelName = parts[2]
+        const providerId = `custom:${parts[1]}`;
+        const modelName = parts[2];
 
-        onModelChange?.(modelName)
-        onProviderChange?.(providerId as Provider)
+        onModelChange?.(modelName);
+        onProviderChange?.(providerId as Provider);
 
         chrome.storage.sync.set({
           earth_engine_llm_model: modelName,
-          earth_engine_llm_provider: providerId
-        })
-        return
+          earth_engine_llm_provider: providerId,
+        });
+        return;
       }
     }
 
     // Built-in provider model
-    onModelChange?.(value)
+    onModelChange?.(value);
     // Find the provider for this model and update both
-    const newProvider = findProviderForModel(value)
+    const newProvider = findProviderForModel(value);
     if (newProvider && onProviderChange) {
-      onProviderChange(newProvider)
+      onProviderChange(newProvider);
       // Save both to Chrome storage
       chrome.storage.sync.set({
         earth_engine_llm_model: value,
-        earth_engine_llm_provider: newProvider
-      })
+        earth_engine_llm_provider: newProvider,
+      });
     } else {
       // Just save the model
-      chrome.storage.sync.set({ earth_engine_llm_model: value })
+      chrome.storage.sync.set({ earth_engine_llm_model: value });
     }
-  }
+  };
 
   const {
     isListening,
@@ -207,156 +237,158 @@ export function MessageInput({
   } = useAudioRecording({
     transcribeAudio,
     onTranscriptionComplete: (text) => {
-      props.onChange?.({ target: { value: text } } as any)
+      props.onChange?.({ target: { value: text } } as any);
     },
-  })
+  });
 
   useEffect(() => {
     if (!isGenerating) {
-      setShowInterruptPrompt(false)
+      setShowInterruptPrompt(false);
     }
-  }, [isGenerating])
+  }, [isGenerating]);
 
   // Clear file error after 5 seconds
   useEffect(() => {
     if (fileError) {
-      const timer = setTimeout(() => setFileError(null), 5000)
-      return () => clearTimeout(timer)
+      const timer = setTimeout(() => setFileError(null), 5000);
+      return () => clearTimeout(timer);
     }
-  }, [fileError])
+  }, [fileError]);
 
-  const validateFiles = (files: File[], currentFiles: File[] | null): { valid: File[], error: string | null } => {
-    const currentCount = currentFiles?.length || 0
-    const totalCount = currentCount + files.length
+  const validateFiles = (
+    files: File[],
+    currentFiles: File[] | null
+  ): { valid: File[]; error: string | null } => {
+    const currentCount = currentFiles?.length || 0;
+    const totalCount = currentCount + files.length;
 
     // Check total file count
     if (totalCount > MAX_FILES_COUNT) {
       return {
         valid: [],
-        error: `Maximum ${MAX_FILES_COUNT} files allowed. You're trying to add ${files.length} file(s) but already have ${currentCount}.`
-      }
+        error: `Maximum ${MAX_FILES_COUNT} files allowed. You're trying to add ${files.length} file(s) but already have ${currentCount}.`,
+      };
     }
 
-    const validFiles: File[] = []
-    const errors: string[] = []
+    const validFiles: File[] = [];
+    const errors: string[] = [];
 
     for (const file of files) {
       // Check file size
       if (file.size > MAX_FILE_SIZE) {
-        errors.push(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB.`)
-        continue
+        errors.push(
+          `"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+        );
+        continue;
       }
 
       // Check file type
       if (!ALLOWED_FILE_TYPES.includes(file.type) && file.type !== '') {
-        errors.push(`"${file.name}" type (${file.type}) is not supported.`)
-        continue
+        errors.push(`"${file.name}" type (${file.type}) is not supported.`);
+        continue;
       }
 
       // File is valid
-      validFiles.push(file)
+      validFiles.push(file);
     }
 
     return {
       valid: validFiles,
-      error: errors.length > 0 ? errors.join(' ') : null
-    }
-  }
+      error: errors.length > 0 ? errors.join(' ') : null,
+    };
+  };
 
   const addFiles = (files: File[] | null) => {
     if (props.allowAttachments && files && files.length > 0) {
       props.setFiles((currentFiles) => {
-        const { valid, error } = validateFiles(files, currentFiles)
+        const { valid, error } = validateFiles(files, currentFiles);
 
         if (error) {
-          setFileError(error)
+          setFileError(error);
         }
 
         if (valid.length === 0) {
-          return currentFiles
+          return currentFiles;
         }
 
         if (currentFiles === null) {
-          return valid
+          return valid;
         }
 
-        return [...currentFiles, ...valid]
-      })
+        return [...currentFiles, ...valid];
+      });
     }
-  }
+  };
 
   const onDragOver = (event: React.DragEvent) => {
-    if (props.allowAttachments !== true) return
-    event.preventDefault()
-    setIsDragging(true)
-  }
+    if (props.allowAttachments !== true) return;
+    event.preventDefault();
+    setIsDragging(true);
+  };
 
   const onDragLeave = (event: React.DragEvent) => {
-    if (props.allowAttachments !== true) return
-    event.preventDefault()
-    setIsDragging(false)
-  }
+    if (props.allowAttachments !== true) return;
+    event.preventDefault();
+    setIsDragging(false);
+  };
 
   const onDrop = (event: React.DragEvent) => {
-    setIsDragging(false)
-    if (props.allowAttachments !== true) return
-    event.preventDefault()
-    const dataTransfer = event.dataTransfer
+    setIsDragging(false);
+    if (props.allowAttachments !== true) return;
+    event.preventDefault();
+    const dataTransfer = event.dataTransfer;
     if (dataTransfer.files.length) {
-      addFiles(Array.from(dataTransfer.files))
+      addFiles(Array.from(dataTransfer.files));
     }
-  }
+  };
 
   const onPaste = (event: React.ClipboardEvent) => {
-    const items = event.clipboardData?.items
-    if (!items) return
+    const items = event.clipboardData?.items;
+    if (!items) return;
 
-    const text = event.clipboardData.getData("text")
+    const text = event.clipboardData.getData('text');
     if (text && text.length > 500 && props.allowAttachments) {
-      event.preventDefault()
-      const blob = new Blob([text], { type: "text/plain" })
-      const file = new File([blob], "Pasted text", {
-        type: "text/plain",
+      event.preventDefault();
+      const blob = new Blob([text], { type: 'text/plain' });
+      const file = new File([blob], 'Pasted text', {
+        type: 'text/plain',
         lastModified: Date.now(),
-      })
-      addFiles([file])
-      return
+      });
+      addFiles([file]);
+      return;
     }
 
     const files = Array.from(items)
       .map((item) => item.getAsFile())
-      .filter((file) => file !== null)
+      .filter((file) => file !== null);
 
     if (props.allowAttachments && files.length > 0) {
-      addFiles(files)
+      addFiles(files);
     }
-  }
+  };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (submitOnEnter && event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault()
+    if (submitOnEnter && event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
 
       if (isGenerating && stop && enableInterrupt) {
         if (showInterruptPrompt) {
-          stop()
-          setShowInterruptPrompt(false)
-          event.currentTarget.form?.requestSubmit()
-        } else if (
-          props.value ||
-          (props.allowAttachments && props.files?.length)
-        ) {
-          setShowInterruptPrompt(true)
-          return
+          stop();
+          setShowInterruptPrompt(false);
+          event.currentTarget.form?.requestSubmit();
+        } else if (props.value || (props.allowAttachments && props.files?.length)) {
+          setShowInterruptPrompt(true);
+          return;
         }
       }
 
-      event.currentTarget.form?.requestSubmit()
+      event.currentTarget.form?.requestSubmit();
     }
 
-    onKeyDownProp?.(event)
-  }
+    onKeyDownProp?.(event);
+  };
 
-  const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     if (textAreaRef.current) {
@@ -368,8 +400,8 @@ export function MessageInput({
 
       let originalHeight = parseFloat(currentRef.dataset.originalHeight || '0');
       if (!originalHeight) {
-          originalHeight = currentRef.scrollHeight - borderAdjustment;
-          currentRef.dataset.originalHeight = String(originalHeight);
+        originalHeight = currentRef.scrollHeight - borderAdjustment;
+        currentRef.dataset.originalHeight = String(originalHeight);
       }
 
       currentRef.style.height = 'auto';
@@ -380,8 +412,7 @@ export function MessageInput({
     }
   }, [props.value]);
 
-  const showFileList =
-    props.allowAttachments && props.files && props.files.length > 0
+  const showFileList = props.allowAttachments && props.files && props.files.length > 0;
 
   return (
     <div
@@ -391,16 +422,10 @@ export function MessageInput({
       onDrop={onDrop}
     >
       {enableInterrupt && (
-        <InterruptPrompt
-          isOpen={showInterruptPrompt}
-          close={() => setShowInterruptPrompt(false)}
-        />
+        <InterruptPrompt isOpen={showInterruptPrompt} close={() => setShowInterruptPrompt(false)} />
       )}
 
-      <RecordingPrompt
-        isVisible={isRecording}
-        onStopRecording={stopRecording}
-      />
+      <RecordingPrompt isVisible={isRecording} onStopRecording={stopRecording} />
 
       <div className="relative flex w-full flex-col">
         {/* File upload error message */}
@@ -414,9 +439,7 @@ export function MessageInput({
             >
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                <div className="flex-1 text-sm text-destructive">
-                  {fileError}
-                </div>
+                <div className="flex-1 text-sm text-destructive">{fileError}</div>
                 <button
                   onClick={() => setFileError(null)}
                   className="text-destructive hover:text-destructive/80 transition-colors"
@@ -441,17 +464,15 @@ export function MessageInput({
                       file={file}
                       onRemove={() => {
                         props.setFiles((files) => {
-                          if (!files) return null
+                          if (!files) return null;
 
-                          const filtered = Array.from(files).filter(
-                            (f) => f !== file
-                          )
-                          if (filtered.length === 0) return null
-                          return filtered
-                        })
+                          const filtered = Array.from(files).filter((f) => f !== file);
+                          if (filtered.length === 0) return null;
+                          return filtered;
+                        });
                       }}
                     />
-                  )
+                  );
                 })}
               </AnimatePresence>
             </div>
@@ -469,12 +490,12 @@ export function MessageInput({
               onKeyDown={onKeyDown}
               data-onboarding="chat-input"
               className={cn(
-                "z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto",
+                'z-10 w-full grow resize-none rounded-xl border border-input bg-background p-3 pb-12 text-sm ring-offset-background transition-[border] placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-0 focus-visible:border-transparent disabled:cursor-not-allowed disabled:opacity-50 min-h-[120px] overflow-y-auto',
                 className
               )}
               {...(props.allowAttachments
-                ? omit(props, ["allowAttachments", "files", "setFiles"])
-                : omit(props, ["allowAttachments"]))}
+                ? omit(props, ['allowAttachments', 'files', 'setFiles'])
+                : omit(props, ['allowAttachments']))}
             />
           </div>
         </div>
@@ -495,7 +516,7 @@ export function MessageInput({
                     : mode === 'do'
                       ? 'Do'
                       : mode.startsWith('profile:')
-                        ? (profiles.find((p) => `profile:${p.id}` === mode)?.name || 'Profile')
+                        ? profiles.find((p) => `profile:${p.id}` === mode)?.name || 'Profile'
                         : mode}
                 </span>
               </SelectTrigger>
@@ -529,9 +550,7 @@ export function MessageInput({
                 {/* Built-in Providers */}
                 {allModelsGrouped.map(({ provider: providerKey, models }, groupIndex) => (
                   <React.Fragment key={providerKey}>
-                    {groupIndex > 0 && (
-                      <div className="border-t border-gray-600 my-1" />
-                    )}
+                    {groupIndex > 0 && <div className="border-t border-gray-600 my-1" />}
                     <div className="px-2 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                       {getProviderDisplayName(providerKey)}
                     </div>
@@ -567,73 +586,71 @@ export function MessageInput({
 
         {/* Right side - Action buttons */}
         <div className="flex gap-2">
-        {props.allowAttachments && (
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            className="h-7 w-7"
-            aria-label="Attach a file"
-            onClick={async () => {
-              const files = await showFileUploadDialog()
-              addFiles(files)
-            }}
-          >
-            <Paperclip className="h-3.5 w-3.5" />
-          </Button>
-        )}
-        {isSpeechSupported && (
-          <AnimatePresence>
-            {isRecording ? (
-              <motion.div
-                className="h-7 w-7"
-              >
+          {props.allowAttachments && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="h-7 w-7"
+              aria-label="Attach a file"
+              onClick={async () => {
+                const files = await showFileUploadDialog();
+                addFiles(files);
+              }}
+            >
+              <Paperclip className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {isSpeechSupported && (
+            <AnimatePresence>
+              {isRecording ? (
+                <motion.div className="h-7 w-7">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={cn('h-7 w-7', isListening && 'text-primary')}
+                    aria-label="Voice input"
+                    size="icon"
+                    onClick={toggleListening}
+                  >
+                    <Mic size={14} />
+                  </Button>
+                </motion.div>
+              ) : (
                 <Button
                   type="button"
                   variant="outline"
-                  className={cn("h-7 w-7", isListening && "text-primary")}
+                  className={cn('h-7 w-7', isListening && 'text-primary')}
                   aria-label="Voice input"
                   size="icon"
                   onClick={toggleListening}
                 >
                   <Mic size={14} />
                 </Button>
-              </motion.div>
-            ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className={cn("h-7 w-7", isListening && "text-primary")}
-            aria-label="Voice input"
-            size="icon"
-            onClick={toggleListening}
-          >
-                <Mic size={14} />
-          </Button>
-            )}
-          </AnimatePresence>
-        )}
-        {isGenerating && stop ? (
-          <Button
-            type="button"
-            size="icon"
-            className="h-7 w-7"
-            aria-label="Stop generating"
-            onClick={stop}
-          >
-            <Square className="h-2.5 w-2.5 animate-pulse" fill="currentColor" />
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            size="icon"
-            className="h-7 w-7 transition-opacity"
-            aria-label="Send message"
-            disabled={props.value === "" || isGenerating}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-        )}
+              )}
+            </AnimatePresence>
+          )}
+          {isGenerating && stop ? (
+            <Button
+              type="button"
+              size="icon"
+              className="h-7 w-7"
+              aria-label="Stop generating"
+              onClick={stop}
+            >
+              <Square className="h-2.5 w-2.5 animate-pulse" fill="currentColor" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="icon"
+              className="h-7 w-7 transition-opacity"
+              aria-label="Send message"
+              disabled={props.value === '' || isGenerating}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -650,9 +667,7 @@ export function MessageInput({
       {transcribeAudio && (
         <AnimatePresence>
           {isRecording ? (
-            <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center rounded-xl"
-            >
+            <motion.div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl">
               <AudioVisualizer
                 mediaRecorder={audioStream ? new MediaRecorder(audioStream) : null}
               />
@@ -670,7 +685,7 @@ export function MessageInput({
             <Button
               type="button"
               variant="outline"
-              className={cn("h-8 w-8", isListening && "text-primary")}
+              className={cn('h-8 w-8', isListening && 'text-primary')}
               aria-label="Voice input"
               size="icon"
               onClick={toggleListening}
@@ -681,12 +696,12 @@ export function MessageInput({
         </AnimatePresence>
       )}
     </div>
-  )
+  );
 }
-MessageInput.displayName = "MessageInput"
+MessageInput.displayName = 'MessageInput';
 
 interface FileUploadOverlayProps {
-  isDragging: boolean
+  isDragging: boolean;
 }
 
 function FileUploadOverlay({ isDragging }: FileUploadOverlayProps) {
@@ -706,30 +721,30 @@ function FileUploadOverlay({ isDragging }: FileUploadOverlayProps) {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }
 
 function showFileUploadDialog() {
-  const input = document.createElement("input")
+  const input = document.createElement('input');
 
-  input.type = "file"
-  input.multiple = true
+  input.type = 'file';
+  input.multiple = true;
   // Set accepted file types based on ALLOWED_FILE_TYPES
-  input.accept = ALLOWED_FILE_TYPES.join(',')
-  input.click()
+  input.accept = ALLOWED_FILE_TYPES.join(',');
+  input.click();
 
   return new Promise<File[] | null>((resolve) => {
     input.onchange = (e) => {
-      const files = (e.currentTarget as HTMLInputElement).files
+      const files = (e.currentTarget as HTMLInputElement).files;
 
       if (files) {
-        resolve(Array.from(files))
-        return
+        resolve(Array.from(files));
+        return;
       }
 
-      resolve(null)
-    }
-  })
+      resolve(null);
+    };
+  });
 }
 
 function TranscribingOverlay() {
@@ -750,21 +765,19 @@ function TranscribingOverlay() {
           transition={{
             duration: 1,
             repeat: Infinity,
-            repeatType: "reverse",
-            ease: "easeInOut",
+            repeatType: 'reverse',
+            ease: 'easeInOut',
           }}
         />
       </div>
-      <p className="mt-4 text-sm font-medium text-muted-foreground">
-        Transcribing audio...
-      </p>
+      <p className="mt-4 text-sm font-medium text-muted-foreground">Transcribing audio...</p>
     </motion.div>
-  )
+  );
 }
 
 interface RecordingPromptProps {
-  isVisible: boolean
-  onStopRecording: () => void
+  isVisible: boolean;
+  onStopRecording: () => void;
 }
 
 function RecordingPrompt({ isVisible, onStopRecording }: RecordingPromptProps) {
@@ -772,16 +785,16 @@ function RecordingPrompt({ isVisible, onStopRecording }: RecordingPromptProps) {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ top: 0, filter: "blur(5px)" }}
+          initial={{ top: 0, filter: 'blur(5px)' }}
           animate={{
             top: -40,
-            filter: "blur(0px)",
+            filter: 'blur(0px)',
             transition: {
-              type: "spring",
-              filter: { type: "tween" },
+              type: 'spring',
+              filter: { type: 'tween' },
             },
           }}
-          exit={{ top: 0, filter: "blur(5px)" }}
+          exit={{ top: 0, filter: 'blur(5px)' }}
           className="absolute left-1/2 flex -translate-x-1/2 cursor-pointer overflow-hidden whitespace-nowrap rounded-full border bg-background py-1 text-center text-sm text-muted-foreground"
           onClick={onStopRecording}
         >
@@ -792,15 +805,15 @@ function RecordingPrompt({ isVisible, onStopRecording }: RecordingPromptProps) {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }
 
 interface RecordingControlsProps {
-  isRecording: boolean
-  isTranscribing: boolean
-  audioStream: MediaStream | null
-  textAreaHeight: number
-  onStopRecording: () => void
+  isRecording: boolean;
+  isTranscribing: boolean;
+  audioStream: MediaStream | null;
+  textAreaHeight: number;
+  onStopRecording: () => void;
 }
 
 function RecordingControls({
@@ -817,10 +830,10 @@ function RecordingControls({
         style={{ height: textAreaHeight - 2 }}
       >
         <AudioVisualizer
-          // Removed props passed here since the component logic is commented out
+        // Removed props passed here since the component logic is commented out
         />
       </div>
-    )
+    );
   }
 
   if (isTranscribing) {
@@ -831,8 +844,8 @@ function RecordingControls({
       >
         <TranscribingOverlay />
       </div>
-    )
+    );
   }
 
-  return null
+  return null;
 }

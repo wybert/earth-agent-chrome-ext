@@ -19,7 +19,7 @@
     left: mapBounds.left,
     top: mapBounds.top,
     width: mapBounds.width,
-    height: mapBounds.height
+    height: mapBounds.height,
   });
 
   // 3. Calculate center point
@@ -35,7 +35,7 @@
     cancelable: true,
     view: window,
     clientX: centerX,
-    clientY: centerY
+    clientY: centerY,
   });
 
   const clicked = mapElement.dispatchEvent(clickEvent);
@@ -64,6 +64,6 @@
 
   return {
     mapFound: true,
-    clickAttempted: true
+    clickAttempted: true,
   };
 })();

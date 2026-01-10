@@ -1,8 +1,8 @@
-import { ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { ClassValue, clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
@@ -10,28 +10,27 @@ export function cn(...inputs: ClassValue[]) {
  * @returns Information about the current environment
  */
 export function detectEnvironment() {
-  const isBackground = typeof chrome !== 'undefined' &&
-                       chrome.runtime &&
-                       typeof chrome.runtime.getManifest === 'function' &&
-                       (chrome.extension?.getBackgroundPage?.() === window);
+  const isBackground =
+    typeof chrome !== 'undefined' &&
+    chrome.runtime &&
+    typeof chrome.runtime.getManifest === 'function' &&
+    chrome.extension?.getBackgroundPage?.() === window;
 
-  const isExtension = typeof chrome !== 'undefined' &&
-                      chrome.runtime &&
-                      !!chrome.runtime.id;
+  const isExtension = typeof chrome !== 'undefined' && chrome.runtime && !!chrome.runtime.id;
 
-  const isContentScript = isExtension &&
-                         !isBackground &&
-                         typeof document !== 'undefined';
+  const isContentScript = isExtension && !isBackground && typeof document !== 'undefined';
 
-  const isSidepanel = isExtension &&
-                     !isBackground &&
-                     typeof document !== 'undefined' &&
-                     window.location.pathname.includes('sidepanel.html');
+  const isSidepanel =
+    isExtension &&
+    !isBackground &&
+    typeof document !== 'undefined' &&
+    window.location.pathname.includes('sidepanel.html');
 
-  const isNodeJs = typeof window === 'undefined' &&
-                  typeof process !== 'undefined' &&
-                  !!process.versions &&
-                  !!process.versions.node;
+  const isNodeJs =
+    typeof window === 'undefined' &&
+    typeof process !== 'undefined' &&
+    !!process.versions &&
+    !!process.versions.node;
 
   return {
     isBackground,
@@ -39,7 +38,7 @@ export function detectEnvironment() {
     isSidepanel,
     isExtension,
     isNodeJs,
-    useBackgroundProxy: (isContentScript || isSidepanel) && !isBackground
+    useBackgroundProxy: (isContentScript || isSidepanel) && !isBackground,
   };
 }
 
@@ -60,21 +59,23 @@ export function selectBestEarthEngineTab(tabs: chrome.tabs.Tab[]): chrome.tabs.T
   console.log(`🔍 [Tab Selection] Found ${tabs.length} GEE tabs, selecting the best one...`);
 
   // 1. Try to find active tab in current window
-  const activeInCurrentWindow = tabs.find(tab => tab.active && tab.windowId);
+  const activeInCurrentWindow = tabs.find((tab) => tab.active && tab.windowId);
   if (activeInCurrentWindow) {
-    console.log(`✅ [Tab Selection] Selected active tab in current window: ${activeInCurrentWindow.id}`);
+    console.log(
+      `✅ [Tab Selection] Selected active tab in current window: ${activeInCurrentWindow.id}`
+    );
     return activeInCurrentWindow;
   }
 
   // 2. Try to find any active tab
-  const anyActive = tabs.find(tab => tab.active);
+  const anyActive = tabs.find((tab) => tab.active);
   if (anyActive) {
     console.log(`✅ [Tab Selection] Selected active tab: ${anyActive.id}`);
     return anyActive;
   }
 
   // 3. Find most recently accessed tab
-  const withLastAccessed = tabs.filter(tab => typeof tab.lastAccessed === 'number');
+  const withLastAccessed = tabs.filter((tab) => typeof tab.lastAccessed === 'number');
   if (withLastAccessed.length > 0) {
     const mostRecent = withLastAccessed.reduce((a, b) =>
       (a.lastAccessed || 0) > (b.lastAccessed || 0) ? a : b
@@ -92,7 +93,9 @@ export function selectBestEarthEngineTab(tabs: chrome.tabs.Tab[]): chrome.tabs.T
  * Ensures content script is loaded in the specified tab
  * Pings the content script first, and injects if not loaded
  */
-export async function ensureContentScript(tabId: number): Promise<{success: boolean, error?: string}> {
+export async function ensureContentScript(
+  tabId: number
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Try to ping the content script
     await new Promise<void>((resolve, reject) => {
@@ -113,18 +116,18 @@ export async function ensureContentScript(tabId: number): Promise<{success: bool
     try {
       await chrome.scripting.executeScript({
         target: { tabId },
-        files: ['content.js']
+        files: ['content.js'],
       });
       console.log(`✅ [Content Script] Injected successfully into tab ${tabId}`);
 
       // Wait for content script to initialize
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       return { success: true };
     } catch (injectError: any) {
       console.error(`❌ [Content Script] Failed to inject into tab ${tabId}:`, injectError);
       return {
         success: false,
-        error: `Failed to inject content script: ${injectError?.message || 'Unknown error'}`
+        error: `Failed to inject content script: ${injectError?.message || 'Unknown error'}`,
       };
     }
   }
@@ -133,18 +136,18 @@ export async function ensureContentScript(tabId: number): Promise<{success: bool
 /**
  * Validates that required Chrome APIs are available
  */
-export function validateChromeAPIs(): {success: boolean, error?: string} {
+export function validateChromeAPIs(): { success: boolean; error?: string } {
   if (typeof chrome === 'undefined' || !chrome.tabs) {
     return {
       success: false,
-      error: 'Chrome tabs API not available. Tool can only run in background script context.'
+      error: 'Chrome tabs API not available. Tool can only run in background script context.',
     };
   }
 
   if (!chrome.scripting) {
     return {
       success: false,
-      error: 'Chrome scripting API not available. Requires Manifest V3.'
+      error: 'Chrome scripting API not available. Requires Manifest V3.',
     };
   }
 
@@ -201,7 +204,7 @@ export function createResilientFetch(options: ResilientFetchOptions = {}): typeo
     shouldRetryResponse = defaultShouldRetryResponse,
   } = options;
 
-  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   return async function resilientFetch(input: FetchInput, init?: RequestInit): Promise<Response> {
     let attempt = 0;
@@ -219,7 +222,9 @@ export function createResilientFetch(options: ResilientFetchOptions = {}): typeo
         }
 
         const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        console.warn(`⚠️ [${label}] HTTP ${response.status} on attempt ${attempt}/${maxAttempts}. Retrying in ${delay}ms.`);
+        console.warn(
+          `⚠️ [${label}] HTTP ${response.status} on attempt ${attempt}/${maxAttempts}. Retrying in ${delay}ms.`
+        );
         await wait(delay);
         continue;
       } catch (error) {
@@ -229,7 +234,9 @@ export function createResilientFetch(options: ResilientFetchOptions = {}): typeo
         }
 
         const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        console.warn(`⚠️ [${label}] Fetch failed on attempt ${attempt}/${maxAttempts}: ${error instanceof Error ? error.message : String(error)}. Retrying in ${delay}ms...`);
+        console.warn(
+          `⚠️ [${label}] Fetch failed on attempt ${attempt}/${maxAttempts}: ${error instanceof Error ? error.message : String(error)}. Retrying in ${delay}ms...`
+        );
         await wait(delay);
       }
     }
@@ -253,4 +260,4 @@ function cloneRequestInit(init?: RequestInit): RequestInit | undefined {
   }
 
   return cloned;
-} 
+}

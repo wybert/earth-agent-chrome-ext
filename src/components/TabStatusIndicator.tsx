@@ -26,58 +26,55 @@ export function TabStatusIndicator() {
         console.error('[TabStatusIndicator] chrome.runtime is not available');
         setStatus({
           hasGEETab: false,
-          isActiveTab: false
+          isActiveTab: false,
         });
         return;
       }
 
       try {
-        chrome.runtime.sendMessage(
-          { type: 'GET_TARGET_TAB_STATUS' },
-          (response) => {
-            // Check for errors
-            if (chrome.runtime.lastError) {
-              console.error('[TabStatusIndicator] Error:', chrome.runtime.lastError);
-              setStatus({
-                hasGEETab: false,
-                isActiveTab: false
-              });
-              return;
-            }
-
-            console.log('[TabStatusIndicator] Response received:', response);
-
-            if (response && response.success) {
-              console.log('[TabStatusIndicator] Status updated:', {
-                hasGEETab: response.hasGEETab,
-                isActiveTab: response.isActiveTab,
-                selectedTabId: response.selectedTabId
-              });
-
-              setStatus({
-                hasGEETab: response.hasGEETab,
-                isActiveTab: response.isActiveTab,
-                selectedTabId: response.selectedTabId,
-                selectedTabTitle: response.selectedTabTitle,
-                selectedTabUrl: response.selectedTabUrl,
-                activeTabTitle: response.activeTabTitle,
-                activeTabUrl: response.activeTabUrl,
-                totalGEETabs: response.totalGEETabs
-              });
-            } else {
-              console.warn('[TabStatusIndicator] Response not successful:', response);
-              setStatus({
-                hasGEETab: false,
-                isActiveTab: false
-              });
-            }
+        chrome.runtime.sendMessage({ type: 'GET_TARGET_TAB_STATUS' }, (response) => {
+          // Check for errors
+          if (chrome.runtime.lastError) {
+            console.error('[TabStatusIndicator] Error:', chrome.runtime.lastError);
+            setStatus({
+              hasGEETab: false,
+              isActiveTab: false,
+            });
+            return;
           }
-        );
+
+          console.log('[TabStatusIndicator] Response received:', response);
+
+          if (response && response.success) {
+            console.log('[TabStatusIndicator] Status updated:', {
+              hasGEETab: response.hasGEETab,
+              isActiveTab: response.isActiveTab,
+              selectedTabId: response.selectedTabId,
+            });
+
+            setStatus({
+              hasGEETab: response.hasGEETab,
+              isActiveTab: response.isActiveTab,
+              selectedTabId: response.selectedTabId,
+              selectedTabTitle: response.selectedTabTitle,
+              selectedTabUrl: response.selectedTabUrl,
+              activeTabTitle: response.activeTabTitle,
+              activeTabUrl: response.activeTabUrl,
+              totalGEETabs: response.totalGEETabs,
+            });
+          } else {
+            console.warn('[TabStatusIndicator] Response not successful:', response);
+            setStatus({
+              hasGEETab: false,
+              isActiveTab: false,
+            });
+          }
+        });
       } catch (error) {
         console.error('[TabStatusIndicator] Exception:', error);
         setStatus({
           hasGEETab: false,
-          isActiveTab: false
+          isActiveTab: false,
         });
       }
     };

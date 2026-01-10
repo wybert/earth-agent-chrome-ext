@@ -3,6 +3,7 @@
 ## 📋 准备工作
 
 在开始之前，你需要从Google Cloud Console获取：
+
 1. **OAuth Client ID**
 2. **OAuth Client Secret**
 
@@ -78,12 +79,12 @@ curl -X POST https://oauth2.googleapis.com/token \
 3. 点击 `New repository secret`
 4. 添加以下secrets：
 
-| Secret名称 | 值 | 来源 |
-|-----------|-----|------|
-| `CHROME_CLIENT_ID` | 你的OAuth客户端ID | Google Cloud Console |
-| `CHROME_CLIENT_SECRET` | 你的OAuth客户端密钥 | Google Cloud Console |
-| `CHROME_REFRESH_TOKEN` | 刚刚获取的refresh token | 上述步骤 |
-| `CHROME_EXTENSION_ID` | 你的扩展ID | Chrome Web Store Dashboard |
+| Secret名称             | 值                      | 来源                       |
+| ---------------------- | ----------------------- | -------------------------- |
+| `CHROME_CLIENT_ID`     | 你的OAuth客户端ID       | Google Cloud Console       |
+| `CHROME_CLIENT_SECRET` | 你的OAuth客户端密钥     | Google Cloud Console       |
+| `CHROME_REFRESH_TOKEN` | 刚刚获取的refresh token | 上述步骤                   |
+| `CHROME_EXTENSION_ID`  | 你的扩展ID              | Chrome Web Store Dashboard |
 
 ## ✅ 验证
 
