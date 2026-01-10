@@ -63,12 +63,14 @@ import {
   Z_AI_API_KEY_STORAGE_KEY,
   API_PROVIDER_STORAGE_KEY,
   MODEL_STORAGE_KEY,
+  PERMISSION_NEEDED_STORAGE_KEY,
 } from '@/constants/models';
 import { loadProviderConfig, hasApiKeyConfigured } from '@/lib/config-utils';
 import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ShadowDiffCard } from '@/components/ui/ShadowDiffCard';
 import { EditDiffCard, type EditDiffData } from '@/components/ui/EditDiffCard';
+import { PermissionTip } from '@/components/ui/PermissionTip';
 
 // Define Zod schema for message responses (Restore)
 const MessageContentSchema = z.string().min(1);
@@ -177,9 +179,37 @@ export function ChatUI() {
   const [editDiff, setEditDiff] = useState<EditDiffData | null>(null);
   const [showEditDiff, setShowEditDiff] = useState(false);
 
+  // Permission Tip state (for auto-opened tabs)
+  const [showPermissionTip, setShowPermissionTip] = useState(false);
+
+  // Monitor permission state from session storage (Source of Truth)
+  useEffect(() => {
+    // Initial check on mount
+    chrome.storage.session.get([PERMISSION_NEEDED_STORAGE_KEY], (result) => {
+      if (result[PERMISSION_NEEDED_STORAGE_KEY]) {
+        console.log('Initial permission check: Tip needed');
+        setShowPermissionTip(true);
+      }
+    });
+
+    // Listen for changes (e.g. background script sets/clears it)
+    const storageListener = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === 'session' && changes[PERMISSION_NEEDED_STORAGE_KEY]) {
+        const newValue = changes[PERMISSION_NEEDED_STORAGE_KEY].newValue;
+        console.log('Permission needed state changed:', newValue);
+        setShowPermissionTip(!!newValue);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(storageListener);
+    return () => chrome.storage.onChanged.removeListener(storageListener);
+  }, []);
+
   // Restore port connection state and logic
   const [port, setPort] = useState<chrome.runtime.Port | null>(null);
-  // Important: the Port message listener is registered once; use a ref to avoid stale closures.
   const portRef = useRef<chrome.runtime.Port | null>(null);
   const [connectionAttempts, setConnectionAttempts] = useState(0);
   const MAX_CONNECTION_ATTEMPTS = 3;
@@ -645,6 +675,25 @@ export function ChatUI() {
     }
 
     switch (response.type) {
+      case 'INIT_RESPONSE':
+        // Initialization handled via storage listener now
+
+        break;
+
+      case 'ACTION_CLICKED':
+        // Redundant with storage listener, but harmless to keep as backup
+
+        setShowPermissionTip(false);
+
+        break;
+
+      case 'TAB_AUTO_OPENED':
+        // Redundant with storage listener, but harmless to keep as backup
+
+        setShowPermissionTip(true);
+
+        break;
+
       case 'CHAT_RESPONSE':
         try {
           const validationResult = ChatResponseSchema.safeParse(response);
@@ -1808,7 +1857,9 @@ export function ChatUI() {
           </div>
         </div>
 
-        {/* Token Usage Display - Right below header */}
+        {/* Permission Tip Card (Proactive Warning) */}
+        {showPermissionTip && <PermissionTip onDismiss={() => setShowPermissionTip(false)} />}
+
         <TokenUsageDisplay
           promptTokens={sessionTokenUsage.totalPromptTokens}
           completionTokens={sessionTokenUsage.totalCompletionTokens}

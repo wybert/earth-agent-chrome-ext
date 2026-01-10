@@ -59,3 +59,6 @@ export const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
 
 // Storage key for OpenAI Compatible provider configurations
 export const OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY = 'earth_engine_openai_compatible_configs';
+
+// Storage key for tracking if we need to request activeTab permission (session storage)
+export const PERMISSION_NEEDED_STORAGE_KEY = 'earth_agent_permission_needed';
