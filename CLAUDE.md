@@ -10,7 +10,7 @@ Earth Agent is a Chrome extension (Manifest V3) + MCP server for Google Earth En
 
 ```bash
 npm run build          # Build extension to dist/
-npm run format         # Format the code with Prettier 
+npm run format         # Format the code with Prettier
 npm run dev            # Watch mode for development
 npm run type-check     # TypeScript check
 npm test               # Run Jest tests
