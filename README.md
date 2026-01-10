@@ -25,6 +25,7 @@
 - [Usage Tips](#usage-tips)
 - [Troubleshooting & Help](docs/TROUBLESHOOTING.md)
 - [Privacy and Security](#privacy-and-security)
+- [Roadmap](roadmap.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](#contributing)
 
@@ -299,6 +300,10 @@ See **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** for solutions to common
 - **Regular updates**: Keep the extension updated for latest security features
 
 
+
+## Roadmap
+
+See [roadmap.md](roadmap.md) for our planned features and future development.
 
 ## Changelog
 

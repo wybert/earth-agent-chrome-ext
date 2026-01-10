@@ -105,6 +105,7 @@ DO NOT write temperal files like testing files or summary files in root folder, 
 - Architecture: `reference/implementation/architecture.md`
 - Deployment: `reference/deploy/`
 - API Models: `reference/api-models/`
+- History: `CHANGELOG.md` (version history and release notes)
 
 ---
 
