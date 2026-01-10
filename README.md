@@ -17,9 +17,13 @@
 - [Installation](#installation)
 - [MCP Server Support](#mcp-server-support-new)
 - [Configuration](#configuration)
+- [How to Use the Extension](#how-to-use-the-extension)
 - [Usage Examples & Prompts](#usage-examples--prompts)
-- [Available Tools](#available-tools--functions)
+- [Available Tools & Functions](#available-tools--functions)
+- [Usage Tips](#usage-tips)
 - [Troubleshooting](#troubleshooting)
+- [Privacy and Security](#privacy-and-security)
+- [Changelog](CHANGELOG.md)
 - [Contributing](#contributing)
 
 ## Features
@@ -366,6 +370,10 @@ Earth Agent provides a comprehensive set of tools available both in the Chrome E
 - **Regular updates**: Keep the extension updated for latest security features
 
 
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 ## Contributing
 
