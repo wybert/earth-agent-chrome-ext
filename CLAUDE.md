@@ -175,11 +175,12 @@ earth-agent-ai-sdk/
 │   ├── assets/           # Icons and images
 │   └── manifest.json     # Chrome extension manifest
 │
-├── docs/                   # Documentation (keep organized!)
-│   ├── debugging/         # Debug notes and snapshots
-│   ├── development/       # Development guides and plans
-│   ├── implementation/    # Implementation records and analysis
-│   └── testing/           # Test documentation
+├── docs/                   # Documentation
+│   ├── developers/        # Developer documentation
+│   │   ├── development/   # Development guides and plans
+│   │   ├── implementation/# Implementation records and analysis
+│   │   └── testing/       # Test documentation
+│   └── users/             # User documentation
 │
 ├── scripts/               # Utility scripts
 │   └── debug/            # Debug and testing scripts
@@ -213,10 +214,11 @@ This approach reduces file fragmentation while maintaining clear separation of c
 ### 📁 Where to Create New Files
 
 **Documentation Files** → `docs/`
-- Development plans, guides → `docs/development/`
-- Implementation notes, analysis → `docs/implementation/`
-- Test documentation → `docs/testing/`
-- Debug notes, snapshots → `docs/debugging/`
+- Landing Page → `docs/index.md` (Start here)
+- User guides → `docs/users/`
+- Development plans, guides → `docs/developers/development/`
+- Implementation notes, analysis → `docs/developers/implementation/`
+- Test documentation → `docs/developers/testing/`
 
 **Scripts** → `scripts/`
 - Debug/test scripts → `scripts/debug/`
@@ -225,6 +227,7 @@ This approach reduces file fragmentation while maintaining clear separation of c
 **Reference Materials** → `reference/`
 - API schemas, model definitions → `reference/api-models/`
 - Code examples → `reference/examples/`
+- High-level Guides & Architecture -> `reference/` (For user consumption)
 
 **Source Code** → `src/`
 - All application code must go in `src/` subdirectories
@@ -250,7 +253,7 @@ touch openai-models.json
 ```bash
 # Creating files in appropriate directories
 touch scripts/debug/test-new-feature.js
-touch docs/implementation/FEATURE-ANALYSIS.md
+touch docs/developers/implementation/FEATURE-ANALYSIS.md
 touch reference/api-models/openai-models.json
 ```
 
