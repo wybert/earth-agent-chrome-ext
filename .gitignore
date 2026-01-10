@@ -23,6 +23,7 @@ build/
 .idea/
 .vscode/
 .cursor/
+.claude/
 .gemini-clipboard/
 *.suo
 *.ntvs*
@@ -54,6 +55,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+tests/venv/
 
 # Temporary files
 *.tmp
@@ -68,3 +70,8 @@ __pycache__/
 # Uncomment if these are external dependencies:
 # mcp/browser-mcp/
 # mcp/playwright-mcp/
+
+# Temporary MCP development files
+# mcp-server/
+mcp-server/node_modules/
+mcp-server/dist/

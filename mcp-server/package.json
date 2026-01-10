@@ -1,0 +1,61 @@
+{
+  "name": "earth-agent-mcp",
+  "version": "1.0.1",
+  "description": "MCP Server for Earth Agent - exposes Google Earth Engine tools to AI assistants like Claude Code, Cursor, and Zed",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "earth-agent-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "test": "npm run test:all",
+    "test:all": "node test-startup.js && node test-websocket.js && node test-mcp-client.js && node validate-tools.js",
+    "test:startup": "node test-startup.js",
+    "test:websocket": "node test-websocket.js",
+    "test:mcp": "node test-mcp-client.js",
+    "test:tools": "node validate-tools.js",
+    "test:integration": "node test-integration.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "earth-engine",
+    "gee",
+    "google-earth-engine",
+    "ai-assistant",
+    "claude",
+    "cursor",
+    "zed"
+  ],
+  "author": "Earth Agent Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wybert/earth-agent-ai-sdk.git"
+  },
+  "homepage": "https://github.com/wybert/earth-agent-ai-sdk/tree/main/mcp-server",
+  "bugs": {
+    "url": "https://github.com/wybert/earth-agent-ai-sdk/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

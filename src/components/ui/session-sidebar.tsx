@@ -1,10 +1,16 @@
 import React from "react"
 import { formatDistanceToNow } from "date-fns"
-import { Plus, X, Edit2, Trash2, Copy, Pin, PinOff } from "lucide-react"
+import { Plus, X, Edit2, Trash2, Copy, Pin, PinOff, Download, Upload, ChevronDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export interface SidebarSession {
@@ -25,6 +31,9 @@ interface SessionSidebarProps {
   onDelete: (sessionId: string) => void
   onDuplicate: (sessionId: string) => void
   onTogglePin: (sessionId: string) => void
+  onExportSession?: (sessionId: string, format: 'json' | 'markdown') => void
+  onExportAll?: (format: 'json' | 'markdown') => void
+  onImport?: () => void
   className?: string
   showCloseButton?: boolean
   onClose?: () => void
@@ -39,6 +48,9 @@ export function SessionSidebar({
   onDelete,
   onDuplicate,
   onTogglePin,
+  onExportSession,
+  onExportAll,
+  onImport,
   className,
   showCloseButton,
   onClose,
@@ -141,6 +153,23 @@ export function SessionSidebar({
             <Button variant="ghost" size="icon" className="h-7 w-7" title="Duplicate" onClick={(event) => { event.stopPropagation(); onDuplicate(session.id) }}>
               <Copy className="h-3.5 w-3.5" />
             </Button>
+            {onExportSession && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" title="Export" onClick={(event) => event.stopPropagation()}>
+                    <Download className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" onClick={(event: React.MouseEvent) => event.stopPropagation()}>
+                  <DropdownMenuItem onClick={() => onExportSession(session.id, 'json')}>
+                    Export as JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExportSession(session.id, 'markdown')}>
+                    Export as Markdown
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <Button variant="ghost" size="icon" className="h-7 w-7" title={session.pinned ? "Unpin" : "Pin"} onClick={(event) => { event.stopPropagation(); onTogglePin(session.id) }}>
               {session.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
             </Button>
@@ -157,24 +186,59 @@ export function SessionSidebar({
     <div className={cn("flex h-full w-full flex-col border-r bg-muted/20", className)}>
       <div className="flex h-12 items-center justify-between border-b px-4">
         <h2 className="text-base font-semibold text-foreground">Chats</h2>
-        {showCloseButton && (
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        )}
+        <div className="flex items-center">
+          {showCloseButton && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onClose}
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
       </div>
-      <div className="border-b px-4 py-2">
+      <div className="flex items-center gap-2 border-b px-4 py-2">
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search chats"
-          className="h-8"
+          className="h-8 flex-1"
         />
+        {onImport && (
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onImport}
+            title="Import sessions"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+        )}
+        {onExportAll && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Export all sessions"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onExportAll('json')}>
+                Export All as JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExportAll('markdown')}>
+                Export All as Markdown
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
       <ScrollArea className="flex-1 px-4 py-3">
         {pinned.length > 0 && (

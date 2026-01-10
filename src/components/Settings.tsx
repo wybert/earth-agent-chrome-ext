@@ -9,10 +9,12 @@ import type { AgentProfile, ToolKey } from '@/types/extension';
 import {
   ACTIVE_PROFILE_ID_STORAGE_KEY,
   PROFILES_STORAGE_KEY,
+  PROFILE_LIMITS,
   TOOL_CATALOG,
   createEmptyProfile,
   migrateProfiles,
 } from '@/lib/profiles';
+import { toast } from 'sonner';
 
 // Storage keys
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
@@ -21,6 +23,7 @@ const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const PROJECT_NAME_STORAGE_KEY = 'earth_engine_project_name';
 const PROJECT_CONTEXT_STORAGE_KEY = 'earth_engine_project_context';
+const MCP_ENABLED_STORAGE_KEY = 'earth_agent_mcp_enabled';
 
 interface SettingsProps {
   onClose: () => void;
@@ -53,32 +56,105 @@ export function Settings({ onClose }: SettingsProps) {
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
 
-  // Load all data on mount
+  // MCP State
+  const [mcpEnabled, setMcpEnabled] = useState(true); // Default to true
+
+  // Load all data on mount (with migration from local to sync)
   useEffect(() => {
-    // Load API keys from sync storage
+    // Load all sync storage data
     chrome.storage.sync.get([
       OPENAI_API_KEY_STORAGE_KEY,
       ANTHROPIC_API_KEY_STORAGE_KEY,
       GOOGLE_API_KEY_STORAGE_KEY,
-      Z_AI_API_KEY_STORAGE_KEY
-    ], (result) => {
-      setOpenaiApiKey(result[OPENAI_API_KEY_STORAGE_KEY] || '');
-      setAnthropicApiKey(result[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
-      setGoogleApiKey(result[GOOGLE_API_KEY_STORAGE_KEY] || '');
-      setZAiApiKey(result[Z_AI_API_KEY_STORAGE_KEY] || '');
-    });
-
-    // Load project context from local storage
-    chrome.storage.local.get([
+      Z_AI_API_KEY_STORAGE_KEY,
+      PROJECT_NAME_STORAGE_KEY,
+      PROJECT_CONTEXT_STORAGE_KEY,
+      PROFILES_STORAGE_KEY,
       PROJECT_NAME_STORAGE_KEY,
       PROJECT_CONTEXT_STORAGE_KEY,
       PROFILES_STORAGE_KEY,
       ACTIVE_PROFILE_ID_STORAGE_KEY
-    ], (result) => {
-      setProjectName(result[PROJECT_NAME_STORAGE_KEY] || '');
-      setProjectContext(result[PROJECT_CONTEXT_STORAGE_KEY] || '');
-      setProfiles(migrateProfiles(result[PROFILES_STORAGE_KEY]));
-      setActiveProfileId(result[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
+    ], (syncResult) => {
+      // Load local MCP setting
+      chrome.storage.local.get([MCP_ENABLED_STORAGE_KEY], (localResult) => {
+        setMcpEnabled(localResult[MCP_ENABLED_STORAGE_KEY] !== false); // Default true
+      });
+
+      // Set API keys
+      setOpenaiApiKey(syncResult[OPENAI_API_KEY_STORAGE_KEY] || '');
+      setAnthropicApiKey(syncResult[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
+      setGoogleApiKey(syncResult[GOOGLE_API_KEY_STORAGE_KEY] || '');
+      setZAiApiKey(syncResult[Z_AI_API_KEY_STORAGE_KEY] || '');
+
+      // Check if we need to migrate from local storage
+      const hasProfilesInSync = syncResult[PROFILES_STORAGE_KEY] !== undefined;
+      const hasContextInSync = syncResult[PROJECT_NAME_STORAGE_KEY] !== undefined || syncResult[PROJECT_CONTEXT_STORAGE_KEY] !== undefined;
+
+      if (hasProfilesInSync && hasContextInSync) {
+        // Data already in sync, use it directly
+        setProjectName(syncResult[PROJECT_NAME_STORAGE_KEY] || '');
+        setProjectContext(syncResult[PROJECT_CONTEXT_STORAGE_KEY] || '');
+        setProfiles(migrateProfiles(syncResult[PROFILES_STORAGE_KEY]));
+        setActiveProfileId(syncResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null);
+      } else {
+        // Check local storage for data to migrate
+        chrome.storage.local.get([
+          PROJECT_NAME_STORAGE_KEY,
+          PROJECT_CONTEXT_STORAGE_KEY,
+          PROFILES_STORAGE_KEY,
+          ACTIVE_PROFILE_ID_STORAGE_KEY
+        ], (localResult) => {
+          const localProjectName = localResult[PROJECT_NAME_STORAGE_KEY] || '';
+          const localProjectContext = localResult[PROJECT_CONTEXT_STORAGE_KEY] || '';
+          const localProfiles = migrateProfiles(localResult[PROFILES_STORAGE_KEY]);
+          const localActiveProfileId = localResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null;
+
+          // Use sync data if available, otherwise use local data
+          const finalProjectName = syncResult[PROJECT_NAME_STORAGE_KEY] || localProjectName;
+          const finalProjectContext = syncResult[PROJECT_CONTEXT_STORAGE_KEY] || localProjectContext;
+          const finalProfiles = hasProfilesInSync ? migrateProfiles(syncResult[PROFILES_STORAGE_KEY]) : localProfiles;
+          const finalActiveProfileId = hasProfilesInSync ? (syncResult[ACTIVE_PROFILE_ID_STORAGE_KEY] || null) : localActiveProfileId;
+
+          setProjectName(finalProjectName);
+          setProjectContext(finalProjectContext);
+          setProfiles(finalProfiles);
+          setActiveProfileId(finalActiveProfileId);
+
+          // Migrate local data to sync if there's data to migrate
+          const dataToMigrate: Record<string, unknown> = {};
+          if (!hasContextInSync && (localProjectName || localProjectContext)) {
+            dataToMigrate[PROJECT_NAME_STORAGE_KEY] = localProjectName;
+            dataToMigrate[PROJECT_CONTEXT_STORAGE_KEY] = localProjectContext;
+          }
+          if (!hasProfilesInSync && localProfiles.length > 0) {
+            // Truncate profiles to fit sync limits
+            const truncatedProfiles = localProfiles.slice(0, PROFILE_LIMITS.MAX_PROFILES).map(p => ({
+              ...p,
+              name: p.name.slice(0, PROFILE_LIMITS.MAX_NAME_LENGTH),
+              prompt: p.prompt.slice(0, PROFILE_LIMITS.MAX_PROMPT_LENGTH)
+            }));
+            dataToMigrate[PROFILES_STORAGE_KEY] = truncatedProfiles;
+            dataToMigrate[ACTIVE_PROFILE_ID_STORAGE_KEY] = localActiveProfileId;
+          }
+
+          if (Object.keys(dataToMigrate).length > 0) {
+            chrome.storage.sync.set(dataToMigrate, () => {
+              if (chrome.runtime.lastError) {
+                console.error('Migration to sync storage failed:', chrome.runtime.lastError);
+              } else {
+                console.log('Successfully migrated data to sync storage');
+                // Clean up local storage after successful migration
+                chrome.storage.local.remove([
+                  PROJECT_NAME_STORAGE_KEY,
+                  PROJECT_CONTEXT_STORAGE_KEY,
+                  PROFILES_STORAGE_KEY,
+                  ACTIVE_PROFILE_ID_STORAGE_KEY
+                ]);
+              }
+            });
+          }
+        });
+      }
     });
   }, []);
 
@@ -123,8 +199,8 @@ export function Settings({ onClose }: SettingsProps) {
       return;
     }
 
-    // Save to local storage
-    chrome.storage.local.set({
+    // Save to sync storage (syncs across devices)
+    chrome.storage.sync.set({
       [PROJECT_NAME_STORAGE_KEY]: projectName,
       [PROJECT_CONTEXT_STORAGE_KEY]: projectContext
     }, () => {
@@ -147,8 +223,8 @@ export function Settings({ onClose }: SettingsProps) {
     setProjectName('');
     setProjectContext('');
 
-    // Clear from storage
-    chrome.storage.local.set({
+    // Clear from sync storage
+    chrome.storage.sync.set({
       [PROJECT_NAME_STORAGE_KEY]: '',
       [PROJECT_CONTEXT_STORAGE_KEY]: ''
     }, () => {
@@ -159,20 +235,36 @@ export function Settings({ onClose }: SettingsProps) {
   };
 
   const persistProfiles = (nextProfiles: AgentProfile[], nextActiveId: string | null) => {
-    chrome.storage.local.set(
+    // Validate and truncate profiles to fit sync storage limits
+    const truncatedProfiles = nextProfiles.slice(0, PROFILE_LIMITS.MAX_PROFILES).map(p => ({
+      ...p,
+      name: p.name.slice(0, PROFILE_LIMITS.MAX_NAME_LENGTH),
+      prompt: p.prompt.slice(0, PROFILE_LIMITS.MAX_PROMPT_LENGTH)
+    }));
+
+    chrome.storage.sync.set(
       {
-        [PROFILES_STORAGE_KEY]: nextProfiles,
+        [PROFILES_STORAGE_KEY]: truncatedProfiles,
         [ACTIVE_PROFILE_ID_STORAGE_KEY]: nextActiveId,
       },
       () => {
         if (chrome.runtime.lastError) {
           console.error('Error saving profiles:', chrome.runtime.lastError);
+          toast.error('Failed to save profiles', {
+            description: chrome.runtime.lastError.message
+          });
         }
       }
     );
   };
 
   const handleCreateProfile = () => {
+    // Check profile limit
+    if (profiles.length >= PROFILE_LIMITS.MAX_PROFILES) {
+      toast.error(`Maximum ${PROFILE_LIMITS.MAX_PROFILES} profiles allowed`);
+      return;
+    }
+
     const newProfile = createEmptyProfile();
     setProfiles((prev) => {
       const next = [newProfile, ...prev];
@@ -209,6 +301,17 @@ export function Settings({ onClose }: SettingsProps) {
     const has = profile.tools.includes(tool);
     const nextTools = has ? profile.tools.filter((t) => t !== tool) : [...profile.tools, tool];
     handleUpdateProfile(profileId, { tools: nextTools });
+  };
+
+  const handleToggleMCP = (enabled: boolean) => {
+    setMcpEnabled(enabled);
+    chrome.storage.local.set({ [MCP_ENABLED_STORAGE_KEY]: enabled }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving MCP setting:', chrome.runtime.lastError);
+        // Revert UI if save failed
+        setMcpEnabled(!enabled);
+      }
+    });
   };
 
   return (
@@ -355,6 +458,32 @@ export function Settings({ onClose }: SettingsProps) {
 
             {/* Divider */}
             <div className="border-t my-4"></div>
+
+            {/* External Integrations */}
+            <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-sm font-semibold mb-3">External Integrations</h3>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">MCP Server</span>
+                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">Beta</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">Allow external AI editors (Cursor, Claude Code) to control Earth Agent</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={mcpEnabled}
+                      onChange={(e) => handleToggleMCP(e.target.checked)}
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
 
             {/* OpenAI Compatible Providers */}
             <OpenAICompatibleSection />
@@ -546,7 +675,9 @@ Examples:
           <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
             <p className="flex items-center justify-between">
               <span>Version:</span>
-              <code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">1.0.0</code>
+              <code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs">
+                {chrome.runtime.getManifest().version}
+              </code>
             </p>
             <a
               href="https://github.com/wybert/earth-agent-chrome-ext"
