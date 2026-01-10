@@ -14,6 +14,8 @@
   ],
   "host_permissions": [
     "https://code.earthengine.google.com/*",
+    "https://code.earthengine.google.co.in/*",
+    "https://earthengine.google.com/*",
     "https://context7.com/*",
     "https://api.anthropic.com/*",
     "https://www.googleapis.com/upload/drive/v3/*",
