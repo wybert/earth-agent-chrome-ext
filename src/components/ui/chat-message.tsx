@@ -145,17 +145,25 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
   const avatar = (
     <div
       className={cn(
-        'flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full border shadow',
-        isUser ? 'bg-background' : 'bg-primary text-primary-foreground'
+        'flex h-8 w-8 shrink-0 select-none items-center justify-center overflow-hidden',
+        isUser ? '' : 'bg-transparent'
       )}
     >
-      <Icon className="h-5 w-5" />
+      {isUser ? (
+        <Icon className="h-5 w-5" />
+      ) : (
+        <img
+          src="assets/mydesign/Transparent Robot Earth.svg"
+          alt="Earth Agent"
+          className="h-full w-full object-cover"
+        />
+      )}
     </div>
   );
 
   return (
     <div className={cn('group flex items-start gap-3', isUser && 'justify-end')}>
-      {avatar}
+      {!isUser && avatar}
       <div
         className={cn('flex flex-col gap-2 flex-1 min-w-0', isUser ? 'items-end' : 'items-start')}
       >
