@@ -634,6 +634,7 @@ export function MessageInput({
             <Button
               type="button"
               size="icon"
+              variant="destructive"
               className="h-7 w-7"
               aria-label="Stop generating"
               onClick={stop}
