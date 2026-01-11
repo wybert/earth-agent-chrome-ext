@@ -170,7 +170,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
             <div key={toolInvocation.toolCallId || index} className="w-full max-w-full">
               <details
                 className="group/tool border-[0.5px] border-zinc-200 dark:border-zinc-800 rounded-lg bg-zinc-50/50 dark:bg-zinc-900/50 overflow-hidden"
-                open={defaultOpen}
+                open={false}
               >
                 <summary className="flex items-center gap-2 p-2 cursor-pointer list-none hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors text-sm">
                   {/* Status Icon */}
@@ -191,26 +191,22 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                 </summary>
 
                 <div className="p-2 border-t border-zinc-200 dark:border-zinc-800 text-xs">
-                  {/* Args (Hidden for screenshot to reduce clutter, visible for others) */}
-                  {!isScreenshot && (
-                    <div className="mb-2">
-                      <span className="font-semibold text-muted-foreground">Input:</span>
-                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-zinc-200/50 p-1.5 font-mono text-xs dark:bg-zinc-800/50">
-                        {JSON.stringify(toolInvocation.args, null, 2)}
-                      </pre>
-                    </div>
-                  )}
+                  {/* Args (Always visible when expanded) */}
+                  <div className="mb-2">
+                    <span className="font-semibold text-muted-foreground">Input:</span>
+                    <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-zinc-200/50 p-1.5 font-mono text-xs dark:bg-zinc-800/50">
+                      {JSON.stringify(toolInvocation.args, null, 2)}
+                    </pre>
+                  </div>
 
                   {/* Result */}
                   {toolInvocation.state === 'result' && (
                     <div>
-                      {!isScreenshot && (
-                        <span className="font-semibold text-muted-foreground">Output:</span>
-                      )}
+                      <span className="font-semibold text-muted-foreground">Output:</span>
 
                       {/* Screenshot Image */}
                       {isScreenshot && toolInvocation.result?.screenshotDataUrl ? (
-                        <div className="rounded overflow-hidden border-[0.5px] border-zinc-200 dark:border-zinc-800">
+                        <div className="mt-1 rounded overflow-hidden border-[0.5px] border-zinc-200 dark:border-zinc-800">
                           <img
                             src={toolInvocation.result.screenshotDataUrl}
                             alt="Screenshot"
