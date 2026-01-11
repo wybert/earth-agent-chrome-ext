@@ -23,7 +23,7 @@ export function EditDiffCard({
 }: {
   diff: EditDiffData;
   onUndo?: () => void;
-  onClose: () => void;
+  onClose?: () => void;
 }) {
   const { summary, hunks } = diff;
 
@@ -52,9 +52,11 @@ export function EditDiffCard({
               Undo
             </Button>
           )}
-          <Button size="sm" variant="ghost" onClick={onClose} className="h-7 w-7 p-0">
-            <X className="w-4 h-4" />
-          </Button>
+          {onClose && (
+            <Button size="sm" variant="ghost" onClick={onClose} className="h-7 w-7 p-0">
+              <X className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
 
