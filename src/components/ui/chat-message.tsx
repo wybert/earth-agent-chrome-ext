@@ -196,7 +196,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                 )}
                 {toolInvocation.result.screenshotDataUrl &&
                 toolInvocation.result.screenshotDataUrl.length > 50 ? (
-                  <div className="rounded overflow-hidden mt-2 border-[0.5px] border-zinc-200 dark:border-zinc-800">
+                  <div className="rounded overflow-hidden border-[0.5px] border-zinc-200 dark:border-zinc-800">
                     <img
                       src={toolInvocation.result.screenshotDataUrl}
                       alt="Screenshot"
@@ -296,7 +296,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                     <hr className="my-2 border-zinc-200 dark:border-zinc-700" />
                     <p className="text-sm font-semibold">Tool Result:</p>
                     {part.result.screenshotDataUrl && part.result.screenshotDataUrl.length > 50 ? (
-                      <div className="rounded overflow-hidden mt-2 border-[0.5px] border-zinc-200 dark:border-zinc-800">
+                      <div className="rounded overflow-hidden border-[0.5px] border-zinc-200 dark:border-zinc-800">
                         <img
                           src={part.result.screenshotDataUrl}
                           alt="Screenshot"
