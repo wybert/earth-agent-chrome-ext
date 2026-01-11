@@ -32,7 +32,12 @@ interface BubbleMessageProps extends VariantProps<typeof chatBubbleVariants> {
 
 function BubbleMessage({ content, isUser, animation, actions }: BubbleMessageProps) {
   return (
-    <div className={cn('group/message w-fit max-w-full flex flex-col gap-1')}>
+    <div
+      className={cn(
+        'group/message max-w-full flex flex-col gap-1',
+        isUser ? 'w-fit' : 'w-full'
+      )}
+    >
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
