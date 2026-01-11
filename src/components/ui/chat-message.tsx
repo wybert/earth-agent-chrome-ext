@@ -195,7 +195,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                   {!isScreenshot && (
                     <div className="mb-2">
                       <span className="font-semibold text-muted-foreground">Input:</span>
-                      <pre className="mt-1 overflow-x-auto rounded bg-zinc-200/50 p-1.5 font-mono text-xs dark:bg-zinc-800/50">
+                      <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-zinc-200/50 p-1.5 font-mono text-xs dark:bg-zinc-800/50">
                         {JSON.stringify(toolInvocation.args, null, 2)}
                       </pre>
                     </div>
@@ -220,7 +220,7 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                         </div>
                       ) : (
                         // Standard JSON result
-                        <pre className="mt-1 overflow-x-auto rounded bg-zinc-200/50 p-1.5 font-mono text-xs dark:bg-zinc-800/50">
+                        <pre className="mt-1 overflow-x-auto whitespace-pre-wrap break-all rounded bg-zinc-200/50 p-1.5 font-mono text-xs dark:bg-zinc-800/50">
                           {JSON.stringify(toolInvocation.result, null, 2)}
                         </pre>
                       )}
