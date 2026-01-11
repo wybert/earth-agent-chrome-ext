@@ -156,93 +156,110 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
       <div
         className={cn('flex flex-col gap-2 flex-1 min-w-0', isUser ? 'items-end' : 'items-start')}
       >
-        {/* 1. Tool Status Text (The "✅ screenshot" list) */}
-        {toolStatusText && <BubbleMessage content={toolStatusText} isUser={isUser} />}
-
-        {/* 2. Tool Invocations (The Images / Results) */}
-        {message.toolInvocations?.map((toolInvocation, index) => (
-          <div
-            key={toolInvocation.toolCallId || index}
-            className={cn(
-              'rounded-lg border-[0.5px] border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-zinc-100',
-              toolInvocation.toolName === 'screenshot' ? 'p-1' : 'p-3'
-            )}
-          >
-            {/* Conditional Header: Hide for screenshot */}
-            {toolInvocation.toolName !== 'screenshot' && (
-              <p className="text-sm font-semibold">
-                Tool Invocation:
-                <span className="ml-1 font-mono">{toolInvocation.toolName}</span>
-              </p>
-            )}
-            {/* Hide args for screenshot tool to reduce clutter */}
-            {toolInvocation.toolName !== 'screenshot' && (
-              <pre className="mt-2 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
-                {JSON.stringify(toolInvocation.args, null, 2)}
-              </pre>
-            )}
-            {toolInvocation.state === 'result' && toolInvocation.result && (
-              <>
-                {/* Conditional Result Header: Hide for screenshot with valid image */}
-                {!(
-                  toolInvocation.toolName === 'screenshot' &&
-                  toolInvocation.result.screenshotDataUrl &&
-                  toolInvocation.result.screenshotDataUrl.length > 50
-                ) && (
-                  <>
-                    <hr className="my-2 border-zinc-200 dark:border-zinc-700" />
-                    <p className="text-sm font-semibold">Tool Result:</p>
-                  </>
-                )}
-                {toolInvocation.result.screenshotDataUrl &&
-                toolInvocation.result.screenshotDataUrl.length > 50 ? (
-                  <div className="rounded overflow-hidden border-[0.5px] border-zinc-200 dark:border-zinc-800">
-                    <img
-                      src={toolInvocation.result.screenshotDataUrl}
-                      alt="Screenshot"
-                      className="max-w-full h-auto max-h-[200px]"
-                      loading="lazy"
-                    />
-                  </div>
-                ) : toolInvocation.result.content ? (
-                  <div className="mt-1">
-                    {Array.isArray(toolInvocation.result.content) ? (
-                      toolInvocation.result.content.map((contentPart: any, i: number) => {
-                        if (contentPart.type === 'text') {
-                          return (
-                            <div key={i} className="mb-2">
-                              {contentPart.text}
-                            </div>
-                          );
-                        } else if (contentPart.type === 'image') {
-                          return (
-                            <div key={i} className="rounded overflow-hidden mt-2">
-                              <img
-                                src={contentPart.data}
-                                alt="Tool result image"
-                                className="max-w-full h-auto max-h-[200px]"
-                                loading="lazy"
-                              />
-                            </div>
-                          );
-                        }
-                        return null;
-                      })
-                    ) : (
-                      <pre className="overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
-                        {JSON.stringify(toolInvocation.result, null, 2)}
-                      </pre>
-                    )}
-                  </div>
-                ) : (
-                  <pre className="mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
-                    {JSON.stringify(toolInvocation.result, null, 2)}
-                  </pre>
-                )}
-              </>
-            )}
+        {/* 1. Tool Status Text (The "✅ screenshot" list) - Now Collapsible */}
+        {toolStatusText && (
+          <div className="w-full max-w-full px-1">
+            <details className="group/details">
+              <summary className="list-none cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 py-1">
+                <SquareTerminal className="h-3.5 w-3.5" />
+                <span>Tool execution logs</span>
+                <span className="opacity-0 group-hover/details:opacity-100 transition-opacity ml-1 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 rounded">
+                  click to view
+                </span>
+              </summary>
+              <div className="mt-1 border-l-2 border-zinc-100 dark:border-zinc-800 ml-1.5 pl-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <BubbleMessage content={toolStatusText} isUser={isUser} />
+              </div>
+            </details>
           </div>
-        ))}
+        )}
+
+        {/* 2. Tool Invocations (Visual Results Only) */}
+        {message.toolInvocations
+          ?.filter((ti) => ti.toolName === 'screenshot') // Only show cards for visual tools
+          ?.map((toolInvocation, index) => (
+            <div
+              key={toolInvocation.toolCallId || index}
+              className={cn(
+                'rounded-lg border-[0.5px] border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-zinc-100',
+                toolInvocation.toolName === 'screenshot' ? 'p-1' : 'p-3'
+              )}
+            >
+              {/* Conditional Header: Hide for screenshot */}
+              {toolInvocation.toolName !== 'screenshot' && (
+                <p className="text-sm font-semibold">
+                  Tool Invocation:
+                  <span className="ml-1 font-mono">{toolInvocation.toolName}</span>
+                </p>
+              )}
+              {/* Hide args for screenshot tool to reduce clutter */}
+              {toolInvocation.toolName !== 'screenshot' && (
+                <pre className="mt-2 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                  {JSON.stringify(toolInvocation.args, null, 2)}
+                </pre>
+              )}
+              {toolInvocation.state === 'result' && toolInvocation.result && (
+                <>
+                  {/* Conditional Result Header: Hide for screenshot with valid image */}
+                  {!(
+                    toolInvocation.toolName === 'screenshot' &&
+                    toolInvocation.result.screenshotDataUrl &&
+                    toolInvocation.result.screenshotDataUrl.length > 50
+                  ) && (
+                    <>
+                      <hr className="my-2 border-zinc-200 dark:border-zinc-700" />
+                      <p className="text-sm font-semibold">Tool Result:</p>
+                    </>
+                  )}
+                  {toolInvocation.result.screenshotDataUrl &&
+                  toolInvocation.result.screenshotDataUrl.length > 50 ? (
+                    <div className="rounded overflow-hidden border-[0.5px] border-zinc-200 dark:border-zinc-800">
+                      <img
+                        src={toolInvocation.result.screenshotDataUrl}
+                        alt="Screenshot"
+                        className="max-w-full h-auto max-h-[200px]"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : toolInvocation.result.content ? (
+                    <div className="mt-1">
+                      {Array.isArray(toolInvocation.result.content) ? (
+                        toolInvocation.result.content.map((contentPart: any, i: number) => {
+                          if (contentPart.type === 'text') {
+                            return (
+                              <div key={i} className="mb-2">
+                                {contentPart.text}
+                              </div>
+                            );
+                          } else if (contentPart.type === 'image') {
+                            return (
+                              <div key={i} className="rounded overflow-hidden mt-2">
+                                <img
+                                  src={contentPart.data}
+                                  alt="Tool result image"
+                                  className="max-w-full h-auto max-h-[200px]"
+                                  loading="lazy"
+                                />
+                              </div>
+                            );
+                          }
+                          return null;
+                        })
+                      ) : (
+                        <pre className="overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                          {JSON.stringify(toolInvocation.result, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  ) : (
+                    <pre className="mt-1 overflow-x-auto rounded bg-zinc-200 p-2 font-mono text-xs dark:bg-zinc-800">
+                      {JSON.stringify(toolInvocation.result, null, 2)}
+                    </pre>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
 
         {/* 3. Assistant Response Text (Everything after markers) */}
         {assistantText && <BubbleMessage content={assistantText} isUser={isUser} />}
