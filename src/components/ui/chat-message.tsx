@@ -5,6 +5,7 @@ import { FileIcon, Loader2, SquareTerminal, User, ChevronRight, Check, X } from 
 
 import { cn } from '@/lib/utils';
 import { FilePreview } from '@/components/ui/file-preview';
+import { EditDiffCard } from '@/components/ui/EditDiffCard';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 
 const chatBubbleVariants = cva('relative rounded-lg px-3 py-2 text-base', {
@@ -213,6 +214,11 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                             className="max-w-full h-auto max-h-[200px] object-contain object-left-top"
                             loading="lazy"
                           />
+                        </div>
+                      ) : (toolInvocation.toolName === 'editCode' || toolInvocation.toolName === 'insertAtLine') &&
+                        toolInvocation.result?.diff ? (
+                        <div className="mt-2">
+                          <EditDiffCard diff={toolInvocation.result.diff} />
                         </div>
                       ) : (
                         // Standard JSON result
