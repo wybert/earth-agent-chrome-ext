@@ -967,46 +967,37 @@ export function ChatUI() {
 
                   if (existing) {
                     // Update the existing active call
-
                     existing.state = 'result';
-
                     existing.result = e.result;
-
+                    existing.duration = e.duration; // Capture duration for logging
                     // Mark as finished (remove from active tracking)
-
                     activeToolCalls.delete(toolName);
                   } else {
                     // Orphan finish event (missed start? or duplicate?), treat as standalone result
-
                     toolInvocations.push({
                       toolCallId: e.toolCallId || `call_${e.timestamp}`,
-
                       toolName: toolName,
-
                       args: e.args || {},
-
                       state: 'result',
-
                       result: e.result,
+                      duration: e.duration,
                     });
                   }
                 }
               });
 
-              // Build tool status section from all events in ref (Text fallback)
-              const toolStatusLines: string[] = [];
-              toolEventsRef.current.forEach((event) => {
-                if (event.type === 'tool_start') {
-                  toolStatusLines.push(`⏳ ${event.toolName}...`);
-                } else if (event.type === 'tool_finish') {
-                  const duration = event.duration
-                    ? ` (${(event.duration / 1000).toFixed(1)}s)`
-                    : '';
-                  if (event.result?.success === false) {
-                    const errorMsg = event.result.error || 'failed';
-                    toolStatusLines.push(`❌ ${event.toolName} - ${errorMsg}`);
+              // Generate status lines from the merged invocations to ensure single line per tool
+              const toolStatusLines = toolInvocations.map((inv) => {
+                if (inv.state === 'call') {
+                  return `⏳ ${inv.toolName}...`;
+                } else {
+                  // Result state
+                  const durationStr = inv.duration ? ` (${(inv.duration / 1000).toFixed(1)}s)` : '';
+                  if (inv.result?.success === false) {
+                    const errorMsg = inv.result.error || 'failed';
+                    return `❌ ${inv.toolName} - ${errorMsg}`;
                   } else {
-                    toolStatusLines.push(`✅ ${event.toolName}${duration}`);
+                    return `✅ ${inv.toolName}${durationStr}`;
                   }
                 }
               });
