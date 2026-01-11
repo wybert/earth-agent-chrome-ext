@@ -864,6 +864,15 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
               console.log(`   - Tool ID: ${toolId}`);
               console.log(`   - Args:`, toolCall.args);
 
+              // Emit tool_start event
+              const event = {
+                type: 'tool_start' as const,
+                toolCallId: toolId,
+                toolName: toolCall.toolName,
+                args: toolCall.args,
+                timestamp: Date.now(),
+              };
+              onToolEvent(event);
               // Special logging for code execution tools
               if (toolCall.toolName === 'editCode') {
                 const code = toolCall.args?.code || '';
@@ -957,6 +966,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 
               const event = {
                 type: 'tool_finish' as const,
+                toolCallId: toolId, // Include ID for correlation
                 toolName: toolCall.toolName,
                 args: toolCall.args,
                 result: eventResult,
