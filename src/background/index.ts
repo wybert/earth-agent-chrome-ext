@@ -2048,6 +2048,23 @@ chrome.runtime.onConnect.addListener((newPort) => {
       console.log('Clear code connection disconnected');
       disconnectedPorts.add(newPort);
     });
+  } else if (newPort.name === 'keep-alive') {
+    // Handle keep-alive connections from content scripts
+    // This keeps the service worker alive by maintaining an active port
+    console.log('[Keep-Alive] Content script connected');
+
+    newPort.onMessage.addListener((message: any) => {
+      // Simply acknowledge the heartbeat - the act of receiving keeps us alive
+      if (message.type === 'heartbeat') {
+        // No response needed, just log occasionally for debugging
+        // Don't log every heartbeat to avoid console spam
+      }
+    });
+
+    newPort.onDisconnect.addListener(() => {
+      console.log('[Keep-Alive] Content script disconnected');
+      disconnectedPorts.add(newPort);
+    });
   }
 });
 
