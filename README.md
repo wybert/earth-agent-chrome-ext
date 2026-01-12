@@ -124,7 +124,8 @@ Then:
 4. Go back to the chat page, select your preferred model
 5. Start chatting with Earth Engine!
 
-### Custom Instructions (AGENTS.md)
+<details>
+<summary><b>Custom Instructions (AGENTS.md)</b></summary>
 
 Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.md` to define project-specific rules for their AI coding assistants, Earth Agent allows you to set **Custom Instructions** to align the AI with your scientific or policy goals. Think of it as giving the agent a "Standard Operating Procedure" for your research. This is powerful for:
 
@@ -138,7 +139,10 @@ Just as software developers use files like `CLAUDE.md`, `GEMINI.md` or `AGENTS.m
 1. Open Extension Settings
 2. Use **Custom Instructions** to set global preferences
 
-### Agent Profiles (Custom Agents)
+</details>
+
+<details>
+<summary><b>Agent Profiles (Custom Agents)</b></summary>
 
 This allows you to create your own agent with specific system prompts and tool access for specific workflows or use cases. Each agent profile can have its own:
 
@@ -156,6 +160,8 @@ This allows you to create your own agent with specific system prompts and tool a
 1. Open Extension Settings
 2. Scroll to **Profiles** to create new agent personas
 
+</details>
+
 ## How to Use the Extension
 
 You can use this extension in two ways: through the MCP Server or inside the Earth Agent side panel. MCP servers expose the [same tools](##available-tools--functions) as the Earth Agent assistant. Check [MCP Server Support](#mcp-server-support-new) for details on using it as an MCP server. The following section will show you how to use it inside the Earth Agent side panel.
@@ -171,7 +177,8 @@ After configuration:
 > [!NOTE]
 > The agent can only see the code in temp/new scripts in the Google Earth Engine Code Editor for now. You should save it once you think the script is ready.
 
-### Ask Mode vs Do Mode
+<details>
+<summary><b>Ask Mode vs Do Mode</b></summary>
 
 The agent operates in two modes that you can switch between:
 
@@ -203,27 +210,29 @@ Full execution mode - the agent can take action:
 
 **Tip**: Start in Ask Mode when exploring new concepts, switch to Do Mode when ready to implement
 
+</details>
+
 ## Usage Examples & Prompts
 
-### 🌍 Getting Started
+🌍 Getting Started
 
 ```
 Help me create a simple map showing NDVI for California using Landsat data
 ```
 
-### 🛰️ Satellite Data Analysis
+🛰️ Satellite Data Analysis
 
 ```
 Find and display the latest Sentinel-2 image over New York City with less than 10% cloud cover
 ```
 
-### 📊 Data Processing (⚡ Requires Do Mode)
+📊 Data Processing (⚡ Requires Do Mode)
 
 ```
 Calculate zonal statistics for land use categories within protected areas and export the results to Drive
 ```
 
-### 🚀 Complex Workflow (⚡ Requires Do Mode)
+🚀 Complex Workflow (⚡ Requires Do Mode)
 
 ```
 I want to analyze deforestation in the Brazilian Amazon from 2000 to 2023.
@@ -235,7 +244,7 @@ Please create a complete workflow that:
 5. Exports the results for further analysis
 ```
 
-### 🔧 Debugging
+🔧 Debugging
 
 ```
 This code is running slowly, check my code for best practices and suggest improvements
@@ -292,19 +301,8 @@ See **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)** for solutions to common
 
 ## Privacy and Security
 
-### Data Handling
+We take your privacy seriously. Your API keys are stored securely in your browser using Chrome Sync and never share to our serever (even if we have one). Chat history and code remain local, it will sent to the LLM provider you choose. For full details on data handling and security practices, please read our [Privacy Policy](PRIVACY_POLICY.md).
 
-- **API Keys**: Stored securely in Chrome extension storage, never shared
-- **Chat History**: Kept locally in your browser, not sent to external servers
-- **Code and Data**: Only shared with your selected AI provider during active conversations
-- **Screenshots**: Stored locally or in your chosen location (Downloads, Google Drive)
-
-### Best Practices
-
-- **Keep API keys secure**: Don't share your extension settings or API keys
-- **Review generated code**: Always review code before running important analyses
-- **Use appropriate models**: Choose models based on your data sensitivity requirements
-- **Regular updates**: Keep the extension updated for latest security features
 
 ## Roadmap
 
