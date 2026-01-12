@@ -2,7 +2,7 @@
 
 ## More tools
 
-**Goal:** get more tools that could work with GEE avliable 
+**Goal:** get more tools that could work with GEE avliable
 
 ## Evaluation & Data
 
@@ -11,7 +11,6 @@
 - [ ] **Benchmarking**
   - Create a standard dataset of GEE tasks (simple queries to complex analyses).
   - Define metrics: Pass rate, Code efficiency, Number of turns to solve.
-
 
 ## 📊 Roadmap Visualization
 

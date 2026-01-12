@@ -33,10 +33,7 @@ interface BubbleMessageProps extends VariantProps<typeof chatBubbleVariants> {
 function BubbleMessage({ content, isUser, animation, actions }: BubbleMessageProps) {
   return (
     <div
-      className={cn(
-        'group/message max-w-full flex flex-col gap-1',
-        isUser ? 'w-fit' : 'w-full'
-      )}
+      className={cn('group/message max-w-full flex flex-col gap-1', isUser ? 'w-fit' : 'w-full')}
     >
       <motion.div
         layout
@@ -228,7 +225,8 @@ export function ChatMessage({ message, isLoading, actions }: ChatMessageProps) {
                             loading="lazy"
                           />
                         </div>
-                      ) : (toolInvocation.toolName === 'editCode' || toolInvocation.toolName === 'insertAtLine') &&
+                      ) : (toolInvocation.toolName === 'editCode' ||
+                          toolInvocation.toolName === 'insertAtLine') &&
                         toolInvocation.result?.diff ? (
                         <div className="mt-2">
                           <EditDiffCard diff={toolInvocation.result.diff} />
