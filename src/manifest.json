@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Earth Agent",
-  "version": "1.2.3",
+  "version": "1.3.0",
   "description": "AI-powered assistant for Google Earth Engine",
   "permissions": [
     "sidePanel",
@@ -24,7 +24,9 @@
   ],
   "oauth2": {
     "client_id": "487533687649-9a111neicvkt668dappa9gdcsjpm42sl.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/drive.file"]
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
   },
   "action": {
     "default_icon": {
@@ -40,8 +42,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://code.earthengine.google.com/*"],
-      "js": ["content.js"]
+      "matches": [
+        "https://code.earthengine.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ]
     }
   ],
   "icons": {
