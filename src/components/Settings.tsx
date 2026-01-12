@@ -60,9 +60,15 @@ export function Settings({ onClose }: SettingsProps) {
 
   // MCP State
   const [mcpEnabled, setMcpEnabled] = useState(true); // Default to true
+  const [hasMcpPermission, setHasMcpPermission] = useState(false);
 
   // Load all data on mount (with migration from local to sync)
   useEffect(() => {
+    // Check for MCP permission (localhost access)
+    chrome.permissions.contains({ origins: ['http://localhost:*/*'] }, (hasPermission) => {
+      setHasMcpPermission(hasPermission);
+    });
+
     // Load all sync storage data
     chrome.storage.sync.get(
       [
@@ -507,34 +513,36 @@ export function Settings({ onClose }: SettingsProps) {
             <div className="border-t my-4"></div>
 
             {/* External Integrations */}
-            <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-sm font-semibold mb-3">External Integrations</h3>
+            {hasMcpPermission && (
+              <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="text-sm font-semibold mb-3">External Integrations</h3>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">MCP Server</span>
-                    <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
-                      Beta
-                    </span>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">MCP Server</span>
+                      <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+                        Beta
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Allow external AI editors (Cursor, Claude Code) to control Earth Agent
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Allow external AI editors (Cursor, Claude Code) to control Earth Agent
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={mcpEnabled}
-                      onChange={(e) => handleToggleMCP(e.target.checked)}
-                    />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={mcpEnabled}
+                        onChange={(e) => handleToggleMCP(e.target.checked)}
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* OpenAI Compatible Providers */}
             <OpenAICompatibleSection />

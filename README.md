@@ -49,9 +49,14 @@
 
 ### Option 1: Install from Chrome Web Store (Easiest & Recommended)
 
+**Best for**: Standard users who want to use OpenAI, Anthropic, or Google Gemini.
+
 1.  Visit the [Earth Agent page on the Chrome Web Store](https://chromewebstore.google.com/detail/earth-agent/hmpjiipbhhnppfdahieaafhdgdmhaple).
 2.  Click "Add to Chrome".
 3.  The extension will be added to your browser and will appear in your Chrome toolbar.
+
+> [!NOTE]
+> The Web Store version does **not** support local connections (MCP Server or Ollama) due to store policies. For those features, use **Option 2**.
 
 <details>
 <summary><b>Option 2: Download from GitHub Releases</b></summary>
@@ -76,40 +81,7 @@
 
 </details>
 
-## MCP Server Support (New!)
 
-[![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
-
-Earth Agent now includes an **MCP Server** that lets you use all its Earth Engine tools directly from your favorite AI code tools like Claude Code, Cursor, OpenCode, OpenCode, or Zed.
-
-> [!IMPORTANT]
-> **Prerequisite**: You must install the [Chrome Extension](#installation) first! The MCP server relies on the extension to communicate with Earth Engine. After installing the Earth Agent Chrome extension, you need to go to settings and turn on the MCP server. It's better to keep the Earth Agent side panel open when you use the MCP server.
-
-Add the configuration to your `Claude Code`, `Cursor`, `Zed`, or other tools that support MCP server:
-
-<details open>
-<summary><b>Claude Code</b> (~/.claude/settings.json)</summary>
-
-```json
-{
-  "mcpServers": {
-    "earth-agent": {
-      "command": "npx",
-      "args": ["-y", "earth-agent-mcp"]
-    }
-  }
-}
-```
-
-</details>
-
-Then:
-
-1. **Open Chrome** with Earth Agent extension
-2. **Click the Earth Agent extension icon** in Chrome, wait it loads
-3. **Restart your AI code tool** - the MCP tools will be available!
-
-👉 **[Full MCP Server Documentation](./mcp-server/README.md)**
 
 ## Configuration
 
@@ -211,6 +183,43 @@ Full execution mode - the agent can take action:
 **Tip**: Start in Ask Mode when exploring new concepts, switch to Do Mode when ready to implement
 
 </details>
+
+## Developer & Advanced Usage
+
+### 🚀 MCP Server Support (Developer Version Only)
+
+[![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
+
+**Earth Agent** can work as a local [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server, allowing you to control Google Earth Engine directly from **Claude Code**, **Cursor**, **Zed**, or other AI editors.
+
+> [!WARNING]
+> **Availability Note**: The **Chrome Web Store version** of Earth Agent supports **Cloud AI only** (OpenAI, Anthropic, Google) due to browser security restrictions on `localhost` connections.
+>
+> To use the **MCP Server** (or local Ollama models), you must install the **Developer Version** from GitHub.
+
+#### How to Enable MCP Support
+
+1.  **Install the Developer Version**:
+    *   Download `earth-agent-extension.zip` from [GitHub Releases](https://github.com/wybert/earth-agent-chrome-ext/releases).
+    *   Unzip and install via `chrome://extensions/` > "Load unpacked".
+2.  **Enable in Settings**:
+    *   Open Earth Agent settings.
+    *   Find "External Integrations" and enable "MCP Server".
+3.  **Configure your Editor**:
+    *   Add the following to your MCP configuration (e.g., `~/.claude/settings.json`):
+
+    ```json
+    {
+      "mcpServers": {
+        "earth-agent": {
+          "command": "npx",
+          "args": ["-y", "earth-agent-mcp"]
+        }
+      }
+    }
+    ```
+
+👉 **[Full MCP Server Documentation](./mcp-server/README.md)**
 
 ## Usage Examples & Prompts
 

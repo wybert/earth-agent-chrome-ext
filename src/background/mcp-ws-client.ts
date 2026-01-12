@@ -429,69 +429,77 @@ export function connectToMCPServer(): void {
     return;
   }
 
-  if (isConnecting || (ws && ws.readyState === WebSocket.OPEN)) {
-    return;
-  }
+  // Check for permission first to avoid ERR_CONNECTION_REFUSED
+  chrome.permissions.contains({ origins: ['http://localhost:*/*'] }, (hasPermission) => {
+    if (!hasPermission) {
+      console.log('[MCP-WS] No localhost permission, skipping MCP connection');
+      return;
+    }
 
-  isConnecting = true;
+    if (isConnecting || (ws && ws.readyState === WebSocket.OPEN)) {
+      return;
+    }
 
-  try {
-    console.log(`[MCP-WS] Connecting to ${WS_URL}...`);
-    ws = new WebSocket(WS_URL);
+    isConnecting = true;
 
-    ws.onopen = () => {
-      console.log('[MCP-WS] Connected to MCP server');
+    try {
+      console.log(`[MCP-WS] Connecting to ${WS_URL}...`);
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('[MCP-WS] Connected to MCP server');
+        isConnecting = false;
+        reconnectAttempts = 0;
+        lastPongTime = Date.now(); // Reset pong time
+
+        // Send identification message
+        ws?.send(
+          JSON.stringify({
+            type: 'extension_connected',
+            timestamp: Date.now(),
+          })
+        );
+
+        // Start keep-alive mechanism
+        startKeepAlive();
+
+        // Notify listeners of connection status change
+        notifyStatusChange();
+      };
+
+      ws.onmessage = (event) => {
+        handleMessage(event.data);
+      };
+
+      ws.onclose = () => {
+        console.log('[MCP-WS] Disconnected from MCP server');
+        isConnecting = false;
+        ws = null;
+
+        // Stop keep-alive mechanism
+        stopKeepAlive();
+
+        notifyStatusChange();
+
+        // Only reconnect if MCP is still enabled
+        if (mcpEnabled) {
+          scheduleReconnect();
+        }
+      };
+
+      ws.onerror = () => {
+        // WebSocket errors are usually followed by close, so we just log
+        console.log('[MCP-WS] WebSocket error (MCP server may not be running)');
+        isConnecting = false;
+      };
+    } catch (error) {
+      console.error('[MCP-WS] Failed to create WebSocket:', error);
       isConnecting = false;
-      reconnectAttempts = 0;
-      lastPongTime = Date.now(); // Reset pong time
-
-      // Send identification message
-      ws?.send(
-        JSON.stringify({
-          type: 'extension_connected',
-          timestamp: Date.now(),
-        })
-      );
-
-      // Start keep-alive mechanism
-      startKeepAlive();
-
-      // Notify listeners of connection status change
-      notifyStatusChange();
-    };
-
-    ws.onmessage = (event) => {
-      handleMessage(event.data);
-    };
-
-    ws.onclose = () => {
-      console.log('[MCP-WS] Disconnected from MCP server');
-      isConnecting = false;
-      ws = null;
-
-      // Stop keep-alive mechanism
-      stopKeepAlive();
-
-      notifyStatusChange();
-
-      // Only reconnect if MCP is still enabled
       if (mcpEnabled) {
         scheduleReconnect();
       }
-    };
-
-    ws.onerror = () => {
-      // WebSocket errors are usually followed by close, so we just log
-      console.log('[MCP-WS] WebSocket error (MCP server may not be running)');
-      isConnecting = false;
-    };
-  } catch (error) {
-    console.error('[MCP-WS] Failed to create WebSocket:', error);
-    isConnecting = false;
-    if (mcpEnabled) {
-      scheduleReconnect();
     }
-  }
+  });
 }
 
 /**
