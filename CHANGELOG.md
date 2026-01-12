@@ -1,5 +1,22 @@
 # Changelog
 
+## [v1.3.0] - 2026-01-12
+
+### ✨ New Features
+
+- **Diff Cards**: Added visual diff views for `edit_code` tool outputs to easily verify code changes.
+- **Screenshot Previews**: Inline image previews for captured screenshots in the chat interface.
+- **Tool Folding**: Tool calls are now compacted and folded by default for a cleaner chat experience.
+- **UI Refresh**:
+  - Custom avatars for user and agent.
+  - Redesigned "Stop" button for better visibility.
+  - Improved layout for tool outputs and user messages.
+
+### 🛠️ Improvements
+
+- **MCP Server**: Enhanced connection stability.
+- **Documentation**: Updated README and Roadmap.
+
 ## [v1.2.3] - 2026-01-10
 
 ### 🔧 Fixes
