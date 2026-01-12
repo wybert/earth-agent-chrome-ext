@@ -218,6 +218,7 @@ export function ChatUI() {
   const [toolEvents, setToolEvents] = useState<
     Array<{
       type: string;
+      toolCallId?: string;
       toolName?: string;
       args?: any;
       result?: any;
@@ -228,6 +229,7 @@ export function ChatUI() {
   const toolEventsRef = useRef<
     Array<{
       type: string;
+      toolCallId?: string;
       toolName?: string;
       args?: any;
       result?: any;
@@ -929,20 +931,73 @@ export function ChatUI() {
                 }
               }
 
-              // Build tool status section from all events in ref
-              const toolStatusLines: string[] = [];
-              toolEventsRef.current.forEach((event) => {
-                if (event.type === 'tool_start') {
-                  toolStatusLines.push(`⏳ ${event.toolName}...`);
-                } else if (event.type === 'tool_finish') {
-                  const duration = event.duration
-                    ? ` (${(event.duration / 1000).toFixed(1)}s)`
-                    : '';
-                  if (event.result?.success === false) {
-                    const errorMsg = event.result.error || 'failed';
-                    toolStatusLines.push(`❌ ${event.toolName} - ${errorMsg}`);
+              // Build toolInvocations array for structured rendering (Stateful reconstruction)
+
+              // This handles cases where toolCallId is missing or mismatching between start/finish
+
+              const toolInvocations: any[] = [];
+
+              const activeToolCalls = new Map<string, any>(); // toolName -> current invocation
+
+              toolEventsRef.current.forEach((e) => {
+                const toolName = e.toolName || 'unknown';
+
+                if (e.type === 'tool_start') {
+                  // Always create a new invocation for start event
+
+                  const invocation = {
+                    toolCallId: e.toolCallId || `call_${e.timestamp}`,
+
+                    toolName: toolName,
+
+                    args: e.args || {},
+
+                    state: 'call',
+
+                    result: undefined,
+                  };
+
+                  toolInvocations.push(invocation);
+
+                  activeToolCalls.set(toolName, invocation);
+                } else if (e.type === 'tool_finish') {
+                  // Try to match with an active call
+
+                  const existing = activeToolCalls.get(toolName);
+
+                  if (existing) {
+                    // Update the existing active call
+                    existing.state = 'result';
+                    existing.result = e.result;
+                    existing.duration = e.duration; // Capture duration for logging
+                    // Mark as finished (remove from active tracking)
+                    activeToolCalls.delete(toolName);
                   } else {
-                    toolStatusLines.push(`✅ ${event.toolName}${duration}`);
+                    // Orphan finish event (missed start? or duplicate?), treat as standalone result
+                    toolInvocations.push({
+                      toolCallId: e.toolCallId || `call_${e.timestamp}`,
+                      toolName: toolName,
+                      args: e.args || {},
+                      state: 'result',
+                      result: e.result,
+                      duration: e.duration,
+                    });
+                  }
+                }
+              });
+
+              // Generate status lines from the merged invocations to ensure single line per tool
+              const toolStatusLines = toolInvocations.map((inv) => {
+                if (inv.state === 'call') {
+                  return `⏳ ${inv.toolName}...`;
+                } else {
+                  // Result state
+                  const durationStr = inv.duration ? ` (${(inv.duration / 1000).toFixed(1)}s)` : '';
+                  if (inv.result?.success === false) {
+                    const errorMsg = inv.result.error || 'failed';
+                    return `❌ ${inv.toolName} - ${errorMsg}`;
+                  } else {
+                    return `✅ ${inv.toolName}${durationStr}`;
                   }
                 }
               });
@@ -960,6 +1015,7 @@ export function ChatUI() {
               newMessages[lastMessageIndex] = {
                 ...currentMessage,
                 content: toolStatus + textContent,
+                toolInvocations: toolInvocations as any,
               };
               return newMessages;
             }

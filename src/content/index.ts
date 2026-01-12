@@ -550,6 +550,11 @@ if (shouldExecute && !messageListenerAdded) {
           handleGetMapInfo(sendResponse);
           return true; // Will respond asynchronously
 
+        case 'WAIT':
+          // Handle wait in content script to avoid service worker suspension
+          handleWait(message.payload?.seconds || 1, sendResponse);
+          return true; // Will respond asynchronously
+
         default:
           console.warn(`Unknown message type: ${message.type}`);
           sendResponse({ success: false, error: `Unknown message type: ${message.type}` });
@@ -703,6 +708,84 @@ if (shouldExecute && periodicCheckIntervalId === undefined) {
   console.log(
     `🛑 [Content Script][${INSTANCE_TIMESTAMP}] Skipping periodic check - instance should not execute`
   );
+}
+
+// Keep-alive heartbeat using port-based connection
+// This is more reliable than chrome.storage.local.get() for keeping service worker alive
+let keepAlivePort: chrome.runtime.Port | null = null;
+let keepAliveIntervalId: number | undefined;
+
+function startKeepAliveHeartbeat() {
+  if (isContextInvalidated || !shouldExecute) return;
+
+  // Clear any existing interval
+  if (keepAliveIntervalId !== undefined) {
+    clearInterval(keepAliveIntervalId);
+  }
+
+  // Create a new port connection every 20 seconds
+  // Port connections provide a "strong keep-alive" for the service worker
+  keepAliveIntervalId = window.setInterval(() => {
+    if (isContextInvalidated) {
+      if (keepAliveIntervalId !== undefined) {
+        clearInterval(keepAliveIntervalId);
+        keepAliveIntervalId = undefined;
+      }
+      return;
+    }
+
+    try {
+      // Close existing port if any
+      if (keepAlivePort) {
+        try {
+          keepAlivePort.disconnect();
+        } catch {
+          // Ignore disconnect errors
+        }
+      }
+
+      // Create a new port connection
+      keepAlivePort = chrome.runtime.connect({ name: 'keep-alive' });
+
+      // Send a heartbeat message
+      keepAlivePort.postMessage({ type: 'heartbeat', timestamp: Date.now() });
+
+      // Handle port disconnect
+      keepAlivePort.onDisconnect.addListener(() => {
+        keepAlivePort = null;
+        // Check if extension context was invalidated
+        if (chrome.runtime.lastError?.message?.includes('Extension context invalidated')) {
+          isContextInvalidated = true;
+          if (keepAliveIntervalId !== undefined) {
+            clearInterval(keepAliveIntervalId);
+            keepAliveIntervalId = undefined;
+          }
+        }
+      });
+    } catch (error) {
+      // If we can't connect, the extension context is likely invalidated
+      console.warn('[Keep-Alive] Failed to connect:', error);
+      isContextInvalidated = true;
+      if (keepAliveIntervalId !== undefined) {
+        clearInterval(keepAliveIntervalId);
+        keepAliveIntervalId = undefined;
+      }
+    }
+  }, 20000); // Every 20 seconds (less than Chrome's 30s timeout)
+
+  // Also do an immediate connection
+  try {
+    keepAlivePort = chrome.runtime.connect({ name: 'keep-alive' });
+    keepAlivePort.postMessage({ type: 'heartbeat', timestamp: Date.now() });
+    console.log(`✅ [Content Script][${INSTANCE_TIMESTAMP}] Started keep-alive heartbeat`);
+  } catch (error) {
+    console.warn('[Keep-Alive] Initial connection failed:', error);
+  }
+}
+
+// Start the keep-alive heartbeat if this instance should execute
+if (shouldExecute) {
+  startKeepAliveHeartbeat();
 }
 
 /**
@@ -2172,6 +2255,34 @@ async function handleClickByRefId(refId: string, sendResponse: (response: any) =
 }
 
 /**
+ * Handle wait request in content script (browser context)
+ * This prevents service worker suspension during the wait
+ */
+async function handleWait(seconds: number, sendResponse: (response: any) => void) {
+  try {
+    const waitTime = Math.max(0.5, Math.min(60, seconds)); // Clamp between 0.5 and 60
+    console.log(`[Content Script] Waiting for ${waitTime} seconds...`);
+
+    await new Promise((resolve) => setTimeout(resolve, waitTime * 1000));
+
+    console.log(`[Content Script] Wait complete: ${waitTime} seconds`);
+    sendResponse({
+      success: true,
+      data: {
+        waited: waitTime,
+        message: `Waited ${waitTime} seconds`,
+      },
+    });
+  } catch (error) {
+    console.error('Error during wait:', error);
+    sendResponse({
+      success: false,
+      error: `Error during wait: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
+}
+
+/**
  * Get map information including bounds, center point, and viewport dimensions
  */
 function handleGetMapInfo(sendResponse: (response: any) => void) {
@@ -2289,6 +2400,20 @@ window.addEventListener('beforeunload', () => {
   if (periodicCheckIntervalId !== undefined) {
     clearInterval(periodicCheckIntervalId);
     periodicCheckIntervalId = undefined;
+  }
+
+  // Clear the keep-alive interval and disconnect port
+  if (keepAliveIntervalId !== undefined) {
+    clearInterval(keepAliveIntervalId);
+    keepAliveIntervalId = undefined;
+  }
+  if (keepAlivePort) {
+    try {
+      keepAlivePort.disconnect();
+    } catch {
+      // Ignore disconnect errors
+    }
+    keepAlivePort = null;
   }
 
   // Remove our singleton marker

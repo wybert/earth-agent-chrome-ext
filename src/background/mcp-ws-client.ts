@@ -19,8 +19,10 @@ import * as DocsService from '../lib/tools/services/docs-service';
 // Configuration
 const WS_PORT = 3847;
 const WS_URL = `ws://localhost:${WS_PORT}`;
-const RECONNECT_INTERVAL = 5000; // 5 seconds
-const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONNECT_INTERVAL = 1000; // 1 second - aggressive reconnection
+const MAX_RECONNECT_ATTEMPTS = 30; // More attempts since we're faster
+const KEEP_ALIVE_INTERVAL = 20000; // 20 seconds - less than Chrome's 30s timeout
+const PING_TIMEOUT = 10000; // 10 seconds
 
 // Storage key for MCP enabled setting
 export const MCP_ENABLED_STORAGE_KEY = 'earth_agent_mcp_enabled';
@@ -31,6 +33,16 @@ let reconnectAttempts = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let isConnecting = false;
 let mcpEnabled = false; // Track if MCP is enabled
+
+// Keep-alive state
+let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
+let pingTimer: ReturnType<typeof setTimeout> | null = null;
+let lastPongTime = Date.now();
+let storageKeepAliveTimer: ReturnType<typeof setInterval> | null = null;
+
+// Constants for keep-alive
+const KEEP_ALIVE_ALARM_NAME = 'mcp-keep-alive';
+const STORAGE_KEEP_ALIVE_INTERVAL = 15000; // 15 seconds - storage access keeps SW alive
 
 /**
  * Request/Response types for MCP communication
@@ -62,6 +74,94 @@ interface MCPResponse {
 function sendResponse(response: MCPResponse): void {
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(response));
+  }
+}
+
+/**
+ * Start keep-alive mechanism to prevent service worker termination
+ * Uses multiple strategies:
+ * 1. WebSocket pings (keep connection active)
+ * 2. chrome.alarms (survives service worker restart)
+ * 3. chrome.storage access (keeps service worker alive)
+ */
+function startKeepAlive(): void {
+  // Stop any existing keep-alive
+  stopKeepAlive();
+
+  // Strategy 1: WebSocket pings
+  keepAliveTimer = setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      // Send a ping to keep the connection active
+      ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+      console.log('[MCP-WS] Sent keep-alive ping');
+
+      // Check if we received a pong recently
+      const timeSinceLastPong = Date.now() - lastPongTime;
+      if (timeSinceLastPong > PING_TIMEOUT * 2) {
+        console.warn('[MCP-WS] No pong received recently, connection may be stale');
+        // Trigger reconnection
+        if (ws) {
+          ws.close();
+        }
+      }
+    }
+  }, KEEP_ALIVE_INTERVAL);
+
+  // Strategy 2: Storage keep-alive (accessing chrome.storage keeps SW alive)
+  storageKeepAliveTimer = setInterval(() => {
+    // Read from storage to keep service worker alive
+    chrome.storage.local.get([MCP_ENABLED_STORAGE_KEY], () => {
+      // Silent read - just to keep SW active
+    });
+  }, STORAGE_KEEP_ALIVE_INTERVAL);
+
+  // Strategy 3: Set up chrome.alarms (persists across SW restarts)
+  if (typeof chrome !== 'undefined' && chrome.alarms) {
+    chrome.alarms.create(KEEP_ALIVE_ALARM_NAME, {
+      periodInMinutes: 1, // Check every minute
+    });
+
+    // Set up alarm listener
+    if (!chrome.alarms.onAlarm.hasListeners()) {
+      chrome.alarms.onAlarm.addListener((alarm) => {
+        if (alarm.name === KEEP_ALIVE_ALARM_NAME) {
+          console.log('[MCP-WS] Keep-alive alarm triggered');
+          // Ensure connection is still alive
+          if (!ws || ws.readyState !== WebSocket.OPEN) {
+            console.log('[MCP-WS] Connection lost, attempting to reconnect...');
+            connectToMCPServer();
+          }
+        }
+      });
+    }
+  }
+
+  console.log('[MCP-WS] Started keep-alive mechanism (WebSocket + Storage + Alarms)');
+}
+
+/**
+ * Stop keep-alive mechanism
+ */
+function stopKeepAlive(): void {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer);
+    keepAliveTimer = null;
+    console.log('[MCP-WS] Stopped WebSocket keep-alive');
+  }
+
+  if (storageKeepAliveTimer) {
+    clearInterval(storageKeepAliveTimer);
+    storageKeepAliveTimer = null;
+  }
+
+  if (pingTimer) {
+    clearTimeout(pingTimer);
+    pingTimer = null;
+  }
+
+  // Clear the alarm (guard against chrome.alarms being undefined)
+  if (typeof chrome !== 'undefined' && chrome.alarms) {
+    chrome.alarms.clear(KEEP_ALIVE_ALARM_NAME);
   }
 }
 
@@ -101,12 +201,6 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
       const { timezone } = args as { timezone?: string };
       return TimeService.getCurrentTime(timezone);
     }
-
-    case 'wait': {
-      const { seconds } = args as { seconds: number };
-      const _result = await TimeService.waitSeconds(seconds);
-      return { waited: seconds, message: `Waited ${seconds} seconds` };
-    }
   }
 
   // Tools that require GEE tab
@@ -115,6 +209,29 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
   const scriptId = 'current_editor';
 
   switch (name) {
+    case 'wait': {
+      // Send wait to content script to avoid service worker suspension
+      const { seconds } = args as { seconds: number };
+      const result = await new Promise<{ success: boolean; data?: any; error?: string }>(
+        (resolve) => {
+          chrome.tabs.sendMessage(
+            tabId,
+            { type: 'WAIT', payload: { seconds } },
+            (response) => {
+              if (chrome.runtime.lastError) {
+                resolve({ success: false, error: chrome.runtime.lastError.message });
+              } else {
+                resolve(response || { success: false, error: 'No response from content script' });
+              }
+            }
+          );
+        }
+      );
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to wait');
+      }
+      return result.data;
+    }
     case 'read_gee_code': {
       const result = await EditorService.readCode(tabId);
       if (!result.success || result.content === undefined) {
@@ -268,9 +385,10 @@ async function handleMessage(data: string): Promise<void> {
     return;
   }
 
-  // Handle ping messages
+  // Handle ping/pong messages
   if (request.type === 'ping') {
     console.log('[MCP-WS] Received ping from MCP server');
+    lastPongTime = Date.now(); // Update last pong time
     return;
   }
 
@@ -325,6 +443,7 @@ export function connectToMCPServer(): void {
       console.log('[MCP-WS] Connected to MCP server');
       isConnecting = false;
       reconnectAttempts = 0;
+      lastPongTime = Date.now(); // Reset pong time
 
       // Send identification message
       ws?.send(
@@ -333,6 +452,9 @@ export function connectToMCPServer(): void {
           timestamp: Date.now(),
         })
       );
+
+      // Start keep-alive mechanism
+      startKeepAlive();
 
       // Notify listeners of connection status change
       notifyStatusChange();
@@ -346,6 +468,10 @@ export function connectToMCPServer(): void {
       console.log('[MCP-WS] Disconnected from MCP server');
       isConnecting = false;
       ws = null;
+
+      // Stop keep-alive mechanism
+      stopKeepAlive();
+
       notifyStatusChange();
 
       // Only reconnect if MCP is still enabled
@@ -382,11 +508,15 @@ function scheduleReconnect(): void {
   }
 
   reconnectAttempts++;
-  const delay = RECONNECT_INTERVAL * Math.min(reconnectAttempts, 3); // Cap backoff at 3x
+  // Aggressive reconnection: start at 1s, cap at 5s (instead of 15s)
+  const delay = RECONNECT_INTERVAL * Math.min(reconnectAttempts, 5);
 
-  console.log(
-    `[MCP-WS] Scheduling reconnect in ${delay / 1000}s (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`
-  );
+  // Only log every 5th attempt to reduce spam
+  if (reconnectAttempts <= 3 || reconnectAttempts % 5 === 0) {
+    console.log(
+      `[MCP-WS] Scheduling reconnect in ${delay / 1000}s (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`
+    );
+  }
 
   reconnectTimer = setTimeout(() => {
     connectToMCPServer();
@@ -401,6 +531,9 @@ export function disconnectFromMCPServer(): void {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
+
+  // Stop keep-alive mechanism
+  stopKeepAlive();
 
   if (ws) {
     ws.close();

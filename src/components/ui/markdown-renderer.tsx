@@ -189,7 +189,10 @@ const components: Components = {
   blockquote: ({ node, ...props }: any) => (
     <blockquote className="mt-6 border-l-2 pl-6 italic [&>*]:text-muted-foreground" {...props} />
   ),
-  img: ({ node, ...props }: any) => <img className="rounded-md border" {...props} />,
+  img: ({ node, ...props }: any) => {
+    if (!props.src) return null;
+    return <img className="rounded-md border" {...props} />;
+  },
   hr: ({ node, ...props }: any) => <hr className="my-4 md:my-8" {...props} />,
   table: ({ node, ...props }: any) => <table className="my-6 w-full overflow-y-auto" {...props} />,
   tr: ({ node, ...props }: any) => <tr className="m-0 border-t p-0 even:bg-muted" {...props} />,

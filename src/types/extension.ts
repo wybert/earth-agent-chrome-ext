@@ -8,11 +8,21 @@ export interface MessagePart {
   size?: number;
 }
 
+// Tool invocation structure
+export interface ToolInvocation {
+  toolCallId: string;
+  toolName: string;
+  args: any;
+  state: 'call' | 'result';
+  result?: any;
+}
+
 export interface Message {
   id: string; // Required for AI SDK 5.0 compatibility
   role: string;
   content?: string;
   parts?: MessagePart[];
+  toolInvocations?: ToolInvocation[]; // For tool results
   tokenUsage?: TokenUsage; // Token usage for this message
 }
 
