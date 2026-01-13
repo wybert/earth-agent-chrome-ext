@@ -25,6 +25,7 @@ build/
 .cursor/
 .claude/
 .gemini-clipboard/
+.windsurfrules
 *.suo
 *.ntvs*
 *.njsproj
