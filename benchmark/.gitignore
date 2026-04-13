@@ -1,0 +1,7 @@
+data/*.parquet
+data/_hf_cache/
+results/*
+!results/.gitkeep
+__pycache__/
+*.pyc
+.venv/

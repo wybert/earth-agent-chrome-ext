@@ -1,0 +1,31 @@
+# Reflexion-style prompt template for UnivEARTH benchmark.
+# Encourages the agent to reflect on errors and retry up to 3 times.
+# Note: the actual reflexion loop relies on the agent's own multi-turn capability.
+# This template only injects the instruction.
+
+[template]
+name = "reflexion"
+description = "Zero-shot prompt augmented with explicit reflection-and-retry instructions."
+
+system = """You are an Earth observation analyst with access to Google Earth Engine (GEE).
+Answer Yes/No questions about Earth observation by writing and running GEE code. When code
+fails, reflect on the failure mode and try a different approach."""
+
+user = """Question: {question}
+
+Workflow with self-reflection (up to 3 attempts):
+1. Identify the relevant dataset (use geeDocs to search if uncertain)
+2. Write and run GEE JavaScript code that produces a quantitative result
+3. Read the console output
+4. If the code failed:
+   - Reflect: was it a wrong asset name? wrong date range? geometry issue? syntax?
+   - Try a different dataset or fix the bug
+   - Retry (you have up to 3 attempts total)
+5. Once you have evidence (or have exhausted attempts), decide
+
+IMPORTANT FORMAT REQUIREMENT:
+Your final line MUST be exactly one of:
+ANSWER: Yes
+ANSWER: No
+
+Even if all attempts failed, emit one of the two ANSWER lines using your best judgment."""

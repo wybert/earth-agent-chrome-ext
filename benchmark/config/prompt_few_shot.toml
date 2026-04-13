@@ -1,0 +1,78 @@
+# 3-shot prompt template for UnivEARTH benchmark.
+# Three worked examples (drawn from outside the benchmark to avoid contamination)
+# are concatenated before the actual question.
+
+[template]
+name = "few_shot"
+description = "3-shot prompt with worked examples that demonstrate the expected workflow."
+
+system = """You are an Earth observation analyst with access to Google Earth Engine (GEE).
+Your task is to answer Yes/No questions about Earth observation phenomena by writing and
+running GEE JavaScript code, then interpreting the results."""
+
+# The full user prompt body. {question} is the variable; the rest is the few-shot exemplar.
+user = """Below are three worked examples showing how to use GEE to answer Yes/No questions.
+
+--- Example 1 ---
+Question: Was the average NDVI in Iowa farmland higher in July 2020 than in July 2010?
+
+Approach: Load MODIS NDVI (MOD13Q1), filter by date and a polygon over Iowa, compute the
+mean NDVI for each July, then compare.
+
+```javascript
+var iowa = ee.Geometry.Rectangle([-96.6, 40.4, -90.1, 43.5]);
+var ndvi = ee.ImageCollection('MODIS/061/MOD13Q1').select('NDVI');
+var july2020 = ndvi.filterDate('2020-07-01', '2020-07-31').mean();
+var july2010 = ndvi.filterDate('2010-07-01', '2010-07-31').mean();
+var v2020 = july2020.reduceRegion(ee.Reducer.mean(), iowa, 250).get('NDVI');
+var v2010 = july2010.reduceRegion(ee.Reducer.mean(), iowa, 250).get('NDVI');
+print('NDVI July 2020:', v2020);
+print('NDVI July 2010:', v2010);
+```
+Console: NDVI July 2020: 6821, NDVI July 2010: 6502. 2020 > 2010 → Yes.
+ANSWER: Yes
+
+--- Example 2 ---
+Question: Was the surface temperature of Lake Tahoe colder in January 2022 than January 2015?
+
+Approach: Use MODIS LST (MOD11A2) over a Lake Tahoe polygon for both Januarys.
+
+```javascript
+var tahoe = ee.Geometry.Rectangle([-120.18, 38.93, -119.92, 39.25]);
+var lst = ee.ImageCollection('MODIS/061/MOD11A2').select('LST_Day_1km');
+var jan22 = lst.filterDate('2022-01-01','2022-01-31').mean()
+              .multiply(0.02).subtract(273.15);
+var jan15 = lst.filterDate('2015-01-01','2015-01-31').mean()
+              .multiply(0.02).subtract(273.15);
+print('Jan2022 LST:', jan22.reduceRegion(ee.Reducer.mean(), tahoe, 1000));
+print('Jan2015 LST:', jan15.reduceRegion(ee.Reducer.mean(), tahoe, 1000));
+```
+Console: Jan2022 ≈ 4.1 °C, Jan2015 ≈ 5.7 °C. 2022 colder than 2015 → Yes.
+ANSWER: Yes
+
+--- Example 3 ---
+Question: Did the burned area in California in August 2018 exceed 10,000 km²?
+
+Approach: Use the MODIS Burned Area product (MCD64A1) and sum burned pixels over CA.
+
+```javascript
+var ca = ee.FeatureCollection('TIGER/2018/States')
+           .filter(ee.Filter.eq('NAME','California'));
+var ba = ee.ImageCollection('MODIS/061/MCD64A1').select('BurnDate')
+           .filterDate('2018-08-01','2018-08-31').max();
+var area = ba.gt(0).multiply(ee.Image.pixelArea())
+             .reduceRegion(ee.Reducer.sum(), ca.geometry(), 500, null, null, true);
+print('Burned area m^2:', area);
+```
+Console: 7.4e9 m² ≈ 7,400 km². Less than 10,000 → No.
+ANSWER: No
+
+--- Now answer the real question ---
+
+Question: {question}
+
+Use the same approach: identify the dataset, write and run GEE code, read the console
+output, decide. End with exactly one line:
+ANSWER: Yes
+or
+ANSWER: No"""

@@ -1,0 +1,45 @@
+# UnivEARTH Benchmark Configuration
+# Single source of truth for all benchmark runs.
+
+[dataset]
+# HuggingFace dataset repo
+repo_id = "AaronKao/UnivEARTH"
+# Local cache path (relative to benchmark/)
+parquet_path = "data/univearth.parquet"
+expected_rows = 140
+
+[paths]
+# All session outputs go under this directory
+results_dir = "results"
+
+[run]
+# Question subset: empty list = all 140; otherwise list of post_id strings
+post_id_subset = []
+# Sort key (deterministic ordering)
+sort_by = "post_id"
+
+[type1]
+# Default settings recorded in the prompt JSON description for traceability
+default_mode = "do"
+recommended_timeout_ms = 180000   # 3 minutes per question
+recommended_interval_ms = 10000   # 10 seconds between tests
+
+[type2]
+# External agent command. {prompt} is the placeholder for the rendered question.
+# Example for Claude Code (non-interactive):
+agent_command = ["claude", "--print", "--allowedTools", "mcp__earth-agent-mcp__*"]
+# Total wall-clock budget per question
+timeout_seconds = 300
+# Whether to call the MCP reset tool between questions
+reset_between_runs = true
+# Earth Agent MCP WebSocket URL (used only for state reset)
+mcp_ws_url = "ws://localhost:3847"
+
+[type2.env]
+# Optional env vars passed to agent subprocess. Override per-run via CLI flag.
+# ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
+
+[prompt]
+# Active prompt template: zero_shot | few_shot | reflexion
+template = "zero_shot"
+template_dir = "config"

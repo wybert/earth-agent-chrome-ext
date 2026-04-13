@@ -34,8 +34,8 @@ import { PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles } from '@
 const VALIDATION = {
   MIN_INTERVAL_MS: 1000, // 1 second minimum
   MAX_INTERVAL_MS: 300000, // 5 minutes maximum
-  MIN_TIMEOUT_MS: 10000, // 10 seconds minimum
-  MAX_TIMEOUT_MS: 300000, // 5 minutes maximum
+  MIN_TIMEOUT_MS: 60000, // 1 minute minimum
+  MAX_TIMEOUT_MS: 7200000, // 120 minutes maximum
   MAX_PROMPTS: 1000, // Rate limiting
   MAX_PREVIEW_COUNT: 10, // Maximum screenshot previews in memory
   DRIVE_ID_PATTERN: /^[a-zA-Z0-9_-]{10,50}$/,
@@ -700,7 +700,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
       const response = await new Promise<string>((resolve, reject) => {
         const timeout = setTimeout(() => {
           console.log(`Test timeout reached after ${config.timeoutMs}ms`);
-          reject(new Error(`Test timeout after ${config.timeoutMs / 1000} seconds`));
+          reject(new Error(`Test timeout after ${Math.round(config.timeoutMs / 60000)} minutes`));
         }, config.timeoutMs);
 
         // Create isolated session for each test to prevent conversation memory carryover
@@ -1230,24 +1230,24 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
                   <div>
                     <Label htmlFor="timeout" className="mb-2 block">
-                      Test Timeout (s)
+                      Test Timeout (min)
                     </Label>
                     <Input
                       id="timeout"
                       type="number"
-                      value={Math.round(config.timeoutMs / 1000)}
+                      value={Math.round(config.timeoutMs / 60000)}
                       onChange={(e) => {
-                        const seconds = parseInt(e.target.value, 10);
+                        const minutes = parseInt(e.target.value, 10);
                         updateConfig({
-                          timeoutMs: (Number.isFinite(seconds) ? seconds : 60) * 1000,
+                          timeoutMs: (Number.isFinite(minutes) ? minutes : 1) * 60000,
                         });
                       }}
-                      min={VALIDATION.MIN_TIMEOUT_MS / 1000}
-                      max={VALIDATION.MAX_TIMEOUT_MS / 1000}
-                      step="5"
+                      min={VALIDATION.MIN_TIMEOUT_MS / 60000}
+                      max={VALIDATION.MAX_TIMEOUT_MS / 60000}
+                      step="1"
                     />
                     <p className="text-sm text-muted-foreground mt-1">
-                      How long to wait for each test to complete (10-300 seconds). Complex prompts
+                      How long to wait for each test to complete (1-120 minutes). Complex prompts
                       may need longer timeouts.
                     </p>
                   </div>
@@ -1645,7 +1645,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                           {(elapsedTime % 60).toString().padStart(2, '0')}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          / {Math.floor(config.timeoutMs / 1000)}s
+                          / {Math.floor(config.timeoutMs / 60000)}:{((config.timeoutMs % 60000) / 1000).toString().padStart(2, '0')}
                         </span>
                       </div>
                     </div>
