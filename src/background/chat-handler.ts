@@ -24,8 +24,8 @@ export type { ToolEventCallback, Provider };
 
 // Default models configuration (for built-in providers only)
 export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-sonnet-4-5-20250929',
+  openai: 'gpt-5.4',
+  anthropic: 'claude-sonnet-4-6',
   google: 'gemini-2.5-pro',
   'z-ai': 'glm-4.7',
 };

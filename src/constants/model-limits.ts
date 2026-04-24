@@ -5,6 +5,12 @@
 
 export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   // OpenAI Models
+  'gpt-5.4-pro': 400000,
+  'gpt-5.4': 400000,
+  'gpt-5.4-mini': 400000,
+  'gpt-5.4-nano': 400000,
+  'gpt-5.3-chat-latest': 400000,
+  'gpt-5.3-codex': 400000,
   'gpt-5.2': 128000,
   'gpt-5.2-pro': 128000,
   'gpt-5.2-chat-latest': 128000,
@@ -15,6 +21,8 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'gpt-4o-mini': 128000,
 
   // Anthropic Models
+  'claude-opus-4-7': 200000,
+  'claude-sonnet-4-6': 200000,
   'claude-opus-4-5-20251101': 200000,
   'claude-sonnet-4-5-20250929': 200000,
   'claude-haiku-4-5-20251001': 200000,
@@ -22,10 +30,14 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'claude-3-5-haiku-20241022': 200000,
 
   // Google Models
-  'gemini-3-pro-preview': 2000000, // 2M context window
+  'gemini-3.1-pro-preview': 2000000,
+  'gemini-3.1-flash-lite-preview': 1000000,
+  'gemini-pro-latest': 2000000,
+  'gemini-flash-latest': 1000000,
+  'gemini-3-pro-preview': 2000000,
   'gemini-3-flash-preview': 1000000,
-  'gemini-2.5-pro': 2000000, // 2M context window
-  'gemini-2.5-flash': 1000000, // 1M context window
+  'gemini-2.5-pro': 2000000,
+  'gemini-2.5-flash': 1000000,
 
   // Z.AI / GLM Models
   'glm-4.7': 128000,
