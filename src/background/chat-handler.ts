@@ -272,11 +272,11 @@ export async function handleChatRequest(
 
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
         console.log('🔍 [Chat Handler] Configuring Anthropic with Helicone observability');
-        anthropicConfig.baseURL = 'https://anthropic.helicone.ai';
+        anthropicConfig.baseURL = 'https://anthropic.helicone.ai/v1';
         anthropicConfig.headers = heliconeHeaders;
       } else {
-        // Set the correct baseURL for the Anthropic API, without the version path
-        anthropicConfig.baseURL = 'https://api.anthropic.com';
+        // AI SDK v6 Anthropic appends `/messages` to baseURL, so baseURL must include `/v1`.
+        anthropicConfig.baseURL = 'https://api.anthropic.com/v1';
       }
 
       llmProvider = createAnthropic(anthropicConfig);
@@ -708,6 +708,32 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
           console.error(`❌ [Chat Handler] Error stack:`, error.stack);
         }
 
+        // AI SDK AI_APICallError has the real error details in these fields
+        if (error?.statusCode !== undefined) {
+          console.error(`❌ [Chat Handler] API statusCode: ${error.statusCode}`);
+        }
+        if (error?.url) {
+          console.error(`❌ [Chat Handler] API URL: ${error.url}`);
+        }
+        if (error?.responseBody) {
+          console.error(`❌ [Chat Handler] API responseBody:`, error.responseBody);
+        }
+        if (error?.data) {
+          console.error(`❌ [Chat Handler] API data:`, error.data);
+        }
+        if (error?.cause) {
+          console.error(`❌ [Chat Handler] API cause:`, error.cause);
+        }
+        if (error?.requestBodyValues) {
+          try {
+            const req = error.requestBodyValues;
+            console.error(`❌ [Chat Handler] Request model: ${req?.model}`);
+            console.error(
+              `❌ [Chat Handler] Request has system in messages: ${Array.isArray(req?.messages) && req.messages.some((m: any) => m?.role === 'system')}`
+            );
+          } catch {}
+        }
+
         // Log specific information based on error type
         if (error?.message?.includes('fetch')) {
           console.error(`❌ [Chat Handler] Network fetch error detected. Possible causes:`);
@@ -749,18 +775,20 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     // content comes first and exceeds 1024/2048 tokens — no config needed. Anthropic: explicit
     // via cacheControl breakpoint on a system-role message (required; not active by default).
     if (provider === 'anthropic') {
+      // 1h TTL so the cache survives both slow GEE computations (single question may
+      // stretch past 5 min) and the gap between consecutive benchmark questions.
       streamOptions.messages = [
         {
           role: 'system',
           content: finalSystemPrompt,
           providerOptions: {
-            anthropic: { cacheControl: { type: 'ephemeral' } },
+            anthropic: { cacheControl: { type: 'ephemeral', ttl: '1h' } },
           },
         },
         ...formattedMessages,
       ];
       delete streamOptions.system;
-      console.log('💾 [Chat Handler] Enabled Anthropic prompt cache on system message');
+      console.log('💾 [Chat Handler] Enabled Anthropic prompt cache on system message (1h TTL)');
     }
 
     // Newer reasoning-style models deprecate or reject the `temperature` parameter.
@@ -839,7 +867,92 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     );
     streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
-    streamOptions.stopWhen = stepCountIs(50); // Allow up to 50 reasoning/tool steps
+    // Cap reasoning/tool steps per question. 25 is enough for most GEE workflows while
+    // capping runaway cost on pathological loops (observed: Haiku used 53 steps on one
+    // question and still failed). Higher cap benefits quality marginally, hurts cost a lot.
+    streamOptions.stopWhen = stepCountIs(25);
+
+    // Anthropic tool-definition caching: mark the LAST tool with cacheControl so the
+    // breakpoint covers all tool definitions (~15K tokens). Combined with the system
+    // cache above, this captures the entire static prefix (system + tools) once per hour.
+    if (provider === 'anthropic') {
+      const toolEntries = Object.entries(effectiveToolsToUse);
+      if (toolEntries.length > 0) {
+        const lastIdx = toolEntries.length - 1;
+        const [lastName, lastTool] = toolEntries[lastIdx];
+        const lastToolAny = lastTool as any;
+        toolEntries[lastIdx] = [
+          lastName,
+          {
+            ...lastToolAny,
+            providerOptions: {
+              ...(lastToolAny.providerOptions || {}),
+              anthropic: {
+                ...(lastToolAny.providerOptions?.anthropic || {}),
+                cacheControl: { type: 'ephemeral', ttl: '1h' },
+              },
+            },
+          },
+        ];
+        streamOptions.tools = Object.fromEntries(toolEntries);
+        console.log(
+          `💾 [Chat Handler] Enabled Anthropic tool-definition cache (last tool: ${lastName}, 1h TTL)`
+        );
+      }
+    }
+
+    // Tool-call repair: salvage malformed tool calls (e.g. Claude occasionally emits
+    // invalid JSON like `{"x": 432, 222, "y": 222}`). Without this, the bad tool_use
+    // lands in message history and Anthropic rejects the next request with a 400
+    // (`tool_use.input: Input should be a valid dictionary`).
+    streamOptions.experimental_repairToolCall = async ({
+      toolCall,
+      error,
+    }: {
+      toolCall: { toolName: string; input: unknown; [key: string]: unknown };
+      error?: { message?: string };
+    }) => {
+      console.warn(
+        `🔧 [Tool Repair] Attempting to fix tool call: ${toolCall.toolName} | error: ${error?.message}`
+      );
+      console.warn(`  Input (type=${typeof toolCall.input}):`, toolCall.input);
+
+      // Empty/null/undefined input → empty object (covers no-param tools)
+      if (toolCall.input == null || toolCall.input === '') {
+        console.warn(`  → Replaced empty input with {}`);
+        return { ...toolCall, input: {} };
+      }
+
+      // String input → try to JSON.parse
+      if (typeof toolCall.input === 'string') {
+        try {
+          const parsed = JSON.parse(toolCall.input);
+          console.warn(`  → Parsed stringified JSON`);
+          return { ...toolCall, input: parsed };
+        } catch {
+          // Salvage `"key": value` pairs from malformed JSON
+          const kvPattern =
+            /"(\w+)"\s*:\s*(-?\d+(?:\.\d+)?|"(?:[^"\\]|\\.)*"|true|false|null)/g;
+          const pairs: Record<string, unknown> = {};
+          let match: RegExpExecArray | null;
+          while ((match = kvPattern.exec(toolCall.input as string)) !== null) {
+            const [, key, raw] = match;
+            try {
+              pairs[key] = JSON.parse(raw);
+            } catch {
+              pairs[key] = raw;
+            }
+          }
+          if (Object.keys(pairs).length > 0) {
+            console.warn(`  → Salvaged key-value pairs:`, pairs);
+            return { ...toolCall, input: pairs };
+          }
+        }
+      }
+
+      console.warn(`  → Repair failed, skipping this tool call`);
+      return null; // abort — agent will respond without this tool call
+    };
 
     // For Anthropic models, add special headers for browser usage
     if (provider === 'anthropic') {
