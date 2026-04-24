@@ -763,6 +763,18 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       console.log('💾 [Chat Handler] Enabled Anthropic prompt cache on system message');
     }
 
+    // Newer reasoning-style models deprecate or reject the `temperature` parameter.
+    // Anthropic Claude 4.6+ / 5.x errors out; OpenAI GPT-5 series silently ignores it.
+    const modelRejectsTemperature =
+      /^claude-(opus|sonnet|haiku)-4-[6-9]($|-)/.test(effectiveModel) ||
+      /^claude-(opus|sonnet|haiku)-[5-9]-/.test(effectiveModel);
+    if (modelRejectsTemperature) {
+      delete streamOptions.temperature;
+      console.log(
+        `🌡️  [Chat Handler] Removed temperature param (not supported by ${effectiveModel})`
+      );
+    }
+
     // Create all AI tools with event callback
     const {
       // Utility tools
