@@ -744,6 +744,25 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       },
     };
 
+    // Enable prompt caching on the system message to reduce cost on repeated tool-call turns.
+    // OpenAI: automatic (no config needed). Google Gemini 2.5: implicit caching when system
+    // content comes first and exceeds 1024/2048 tokens — no config needed. Anthropic: explicit
+    // via cacheControl breakpoint on a system-role message (required; not active by default).
+    if (provider === 'anthropic') {
+      streamOptions.messages = [
+        {
+          role: 'system',
+          content: finalSystemPrompt,
+          providerOptions: {
+            anthropic: { cacheControl: { type: 'ephemeral' } },
+          },
+        },
+        ...formattedMessages,
+      ];
+      delete streamOptions.system;
+      console.log('💾 [Chat Handler] Enabled Anthropic prompt cache on system message');
+    }
+
     // Create all AI tools with event callback
     const {
       // Utility tools

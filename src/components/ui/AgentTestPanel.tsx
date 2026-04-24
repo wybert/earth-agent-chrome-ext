@@ -129,6 +129,8 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [promptText, setPromptText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [heliconeTestStatus, setHeliconeTestStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [heliconeTestMessage, setHeliconeTestMessage] = useState('');
   const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
   const [profiles, setProfiles] = useState<AgentProfile[]>([]);
   const [downloadFormat, setDownloadFormat] = useState<string>('');
@@ -494,7 +496,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           const data = JSON.parse(text);
           if (Array.isArray(data)) {
             prompts = data.map((item, index) => ({
-              id: `uploaded-${index}`,
+              id: (typeof item === 'object' && item.id) ? item.id : `uploaded-${index}`,
               text: typeof item === 'string' ? item : item.text || item.prompt || '',
               description:
                 typeof item === 'object' ? item.description : `Uploaded prompt ${index + 1}`,
@@ -717,6 +719,13 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
           profileId: modeConfig.profileId,
           profilePrompt: modeConfig.profilePrompt,
           profileTools: modeConfig.profileTools,
+          heliconeHeaders: config.heliconeApiKey
+            ? {
+                'Helicone-Auth': `Bearer ${config.heliconeApiKey}`,
+                'Helicone-Session-Id': config.sessionId,
+                'Helicone-Session-Name': `benchmark-${prompt.id}`,
+              }
+            : undefined,
         };
 
         console.log('Sending chat message:', chatMessage);
@@ -1359,40 +1368,49 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                       <Button
                         variant="outline"
                         size="sm"
+                        className={
+                          heliconeTestStatus === 'success'
+                            ? 'border-green-500 text-green-600'
+                            : heliconeTestStatus === 'error'
+                              ? 'border-red-500 text-red-600'
+                              : ''
+                        }
                         onClick={async () => {
+                          setHeliconeTestStatus('pending');
+                          setHeliconeTestMessage('Testing...');
                           try {
-                            // Test Helicone API key by making a simple API call
-                            const response = await fetch(
-                              'https://api.helicone.ai/v1/request/query',
-                              {
-                                method: 'POST',
-                                headers: {
-                                  Authorization: `Bearer ${config.heliconeApiKey}`,
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  limit: 1,
-                                  offset: 0,
-                                }),
-                              }
-                            );
+                            const result = await chrome.runtime.sendMessage({
+                              type: 'TEST_HELICONE',
+                              apiKey: config.heliconeApiKey,
+                            });
 
-                            if (response.ok) {
-                              toast.success('Helicone API key is valid!');
-                            } else if (response.status === 401) {
-                              toast.error('Invalid Helicone API key');
+                            if (result?.success) {
+                              setHeliconeTestStatus('success');
+                              setHeliconeTestMessage('API key is valid');
+                            } else if (result?.status === 401) {
+                              setHeliconeTestStatus('error');
+                              setHeliconeTestMessage('Invalid API key');
                             } else {
-                              toast.warning(`Helicone responded with status ${response.status}`);
+                              setHeliconeTestStatus('error');
+                              setHeliconeTestMessage(result?.error || 'Connection failed');
                             }
                           } catch (error) {
-                            toast.error('Failed to connect to Helicone', {
-                              description: error instanceof Error ? error.message : 'Network error',
-                            });
+                            setHeliconeTestStatus('error');
+                            setHeliconeTestMessage(error instanceof Error ? error.message : 'Network error');
                           }
                         }}
                       >
                         Test Helicone
                       </Button>
+                      {heliconeTestMessage && (
+                        <p className={`text-xs mt-1 ${
+                          heliconeTestStatus === 'success' ? 'text-green-600' :
+                          heliconeTestStatus === 'error' ? 'text-red-600' :
+                          'text-muted-foreground'
+                        }`}>
+                          {heliconeTestMessage}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

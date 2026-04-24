@@ -363,6 +363,28 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
   console.log('Background script received message:', message);
 
   switch (message.type) {
+    case 'TEST_HELICONE':
+      // Test Helicone API key from background (avoids CORS in side panel)
+      (async () => {
+        try {
+          const response = await fetch('https://api.helicone.ai/v1/request/query', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${(message as any).apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ limit: 1, offset: 0 }),
+          });
+          sendResponse({ success: response.ok, status: response.status });
+        } catch (error) {
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Network error',
+          });
+        }
+      })();
+      return true; // Async sendResponse
+
     case 'INIT':
       // Handle initialization
       sendResponse({ status: 'initialized' });
@@ -780,8 +802,8 @@ chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse
           // Take the screenshot
           try {
             const dataUrl = await chrome.tabs.captureVisibleTab(activeTab.windowId, {
-              format: 'png',
-              quality: 100,
+              format: 'jpeg',
+              quality: 60,
             });
 
             if (!dataUrl) {

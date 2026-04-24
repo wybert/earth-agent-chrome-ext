@@ -41,11 +41,12 @@ def make_session_dir(session_name: str, results_root: Path) -> Path:
 
 def build_prompt_payload(df) -> list[dict]:
     payload: list[dict] = []
-    for row in df.iter_rows(named=True):
+    for idx, row in enumerate(df.iter_rows(named=True), start=1):
         description = (
             f"Q{row['post_id']} | tag={row['tag']} | gt={row['answer']}"
         )
-        payload.append({"text": row["rendered_prompt"], "description": description})
+        prompt_id = f"q{idx:03d}-{row['post_id']}"
+        payload.append({"id": prompt_id, "text": row["rendered_prompt"], "description": description})
     return payload
 
 
