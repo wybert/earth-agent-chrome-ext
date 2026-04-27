@@ -1603,7 +1603,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
             </TabsContent>
 
             {/* Run Tests Tab */}
-            <TabsContent value="run" className="flex-1 space-y-6 px-1">
+            <TabsContent value="run" className="flex-1 overflow-auto space-y-6 px-1">
               <div className="grid grid-cols-3 gap-4">
                 <Card className="p-4">
                   <div className="text-2xl font-bold">{totalTests}</div>

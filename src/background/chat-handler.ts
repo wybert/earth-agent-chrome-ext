@@ -867,10 +867,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     );
     streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
-    // Cap reasoning/tool steps per question. 25 is enough for most GEE workflows while
-    // capping runaway cost on pathological loops (observed: Haiku used 53 steps on one
-    // question and still failed). Higher cap benefits quality marginally, hurts cost a lot.
-    streamOptions.stopWhen = stepCountIs(25);
+    streamOptions.stopWhen = stepCountIs(100); // Allow up to 100 reasoning/tool steps
 
     // Anthropic tool-definition caching: mark the LAST tool with cacheControl so the
     // breakpoint covers all tool definitions (~15K tokens). Combined with the system
