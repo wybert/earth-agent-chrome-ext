@@ -110,6 +110,29 @@ it('accepts existing system messages and image attachments', async () => {
   );
 });
 
+it.each([
+  ['openai', 'gpt-6-astra'],
+  ['anthropic', 'claude-fable-5-1'],
+  ['anthropic', 'claude-fable-5'],
+  ['anthropic', 'claude-opus-5'],
+  ['anthropic', 'claude-sonnet-5'],
+  ['anthropic', 'claude-opus-4-8'],
+] as const)('omits unsupported temperature for %s/%s', async (provider, model) => {
+  const doStream = installModel([textChunks]);
+  const response = await handleChatRequest(messages, 'sk-test-key', provider, model);
+  expect(await response.text()).toContain('Hello from SDK 7');
+  expect(doStream.mock.calls[0][0].temperature).toBeUndefined();
+});
+
+it('preserves temperature for Haiku 4.5', async () => {
+  const doStream = installModel([textChunks]);
+  const response = await handleChatRequest(
+    messages, 'sk-test-key', 'anthropic', 'claude-haiku-4-5-20251001'
+  );
+  await response.text();
+  expect(doStream.mock.calls[0][0].temperature).toBe(0.7);
+});
+
 it('repairs malformed tool input, reports results, and totals usage across steps', async () => {
   const doStream = installModel([
     [

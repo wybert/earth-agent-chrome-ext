@@ -10,7 +10,6 @@ import {
 import type {
   Message,
   Provider,
-  BuiltInProvider,
   OpenAICompatibleConfig,
 } from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
@@ -23,7 +22,7 @@ import {
   GEE_SYSTEM_PROMPT,
 } from '../lib/prompts/gee-prompts';
 import { createAITools, type ToolEventCallback } from '../lib/tools/ai-tools';
-import { OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '../constants/models';
+import { DEFAULT_MODELS, OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY } from '../constants/models';
 import { estimatePromptTokens } from '../lib/utils/token-counter';
 import { getModelContextLimit } from '../constants/model-limits';
 
@@ -31,12 +30,7 @@ import { getModelContextLimit } from '../constants/model-limits';
 export type { ToolEventCallback, Provider };
 
 // Default models configuration (for built-in providers only)
-export const DEFAULT_MODELS: Record<BuiltInProvider, string> = {
-  openai: 'gpt-5.4',
-  anthropic: 'claude-sonnet-4-6',
-  google: 'gemini-2.5-pro',
-  'z-ai': 'glm-4.7',
-};
+export { DEFAULT_MODELS };
 
 const NETWORK_RETRY_ATTEMPTS = 3;
 const NETWORK_RETRY_BASE_DELAY_MS = 700;
@@ -804,7 +798,8 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     // Anthropic Claude 4.6+ / 5.x errors out; OpenAI GPT-5 series silently ignores it.
     const modelRejectsTemperature =
       /^claude-(opus|sonnet|haiku)-4-[6-9]($|-)/.test(effectiveModel) ||
-      /^claude-(opus|sonnet|haiku)-[5-9]-/.test(effectiveModel);
+      /^claude-(fable|opus|sonnet|haiku)-[5-9]($|-)/.test(effectiveModel) ||
+      /^gpt-6-astra($|-)/.test(effectiveModel);
     if (modelRejectsTemperature) {
       delete streamOptions.temperature;
       console.log(
