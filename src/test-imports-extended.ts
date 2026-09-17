@@ -1,13 +1,13 @@
-import { OpenAI } from 'openai';
+import { createOpenAI } from '@ai-sdk/openai';
 
-// Simple test function to ensure OpenAI SDK imports are working
+// Smoke-check the OpenAI provider used by the extension without making API requests.
 export async function testAIImports() {
   try {
-    // Test OpenAI client instantiation
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+    const provider = createOpenAI({
+      apiKey: 'sk-import-test',
     });
-    console.log('OpenAI SDK import successful');
+    provider('gpt-5.4');
+    console.log('AI SDK OpenAI provider import successful');
 
     return { success: true };
   } catch (error) {

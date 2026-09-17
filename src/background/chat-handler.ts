@@ -1,4 +1,12 @@
-import { ModelMessage, streamText, tool, TextPart, ImagePart, FilePart, stepCountIs } from 'ai';
+import {
+  ModelMessage,
+  streamText,
+  TextPart,
+  FilePart,
+  isStepCount,
+  createTextStreamResponse,
+  toTextStream,
+} from 'ai';
 import type {
   Message,
   Provider,
@@ -7,7 +15,7 @@ import type {
 } from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGoogle } from '@ai-sdk/google';
 import { createResilientFetch } from '../lib/utils';
 import {
   GEE_ASK_MODE_PROMPT,
@@ -191,7 +199,7 @@ export async function handleChatRequest(
     let llmProvider:
       | ReturnType<typeof createOpenAI>
       | ReturnType<typeof createAnthropic>
-      | ReturnType<typeof createGoogleGenerativeAI>;
+      | ReturnType<typeof createGoogle>;
     let effectiveModel: string;
     let forceChatCompletions = false;
     let customProviderSupportsImages: boolean | undefined; // For custom providers: multimodal support flag
@@ -275,7 +283,7 @@ export async function handleChatRequest(
         anthropicConfig.baseURL = 'https://anthropic.helicone.ai/v1';
         anthropicConfig.headers = heliconeHeaders;
       } else {
-        // AI SDK v6 Anthropic appends `/messages` to baseURL, so baseURL must include `/v1`.
+        // The Anthropic provider appends `/messages` to baseURL, which must include `/v1`.
         anthropicConfig.baseURL = 'https://api.anthropic.com/v1';
       }
 
@@ -328,7 +336,7 @@ export async function handleChatRequest(
       });
 
       try {
-        llmProvider = createGoogleGenerativeAI(googleConfig);
+        llmProvider = createGoogle(googleConfig);
         console.log(`✅ [Chat Handler] Google provider created successfully`);
       } catch (error) {
         console.error(`❌ [Chat Handler] Failed to create Google provider:`, error);
@@ -538,7 +546,7 @@ export async function handleChatRequest(
           console.log('Multi-modal message parts types:', msg.parts.map((p) => p.type).join(', '));
 
           // Build an array of properly-typed parts
-          const formattedParts: (TextPart | ImagePart)[] = [];
+          const formattedParts: (TextPart | FilePart)[] = [];
 
           for (const part of msg.parts) {
             if (part.type === 'text' && part.text) {
@@ -562,10 +570,10 @@ export async function handleChatRequest(
               }
 
               formattedParts.push({
-                type: 'image',
-                image: imageData,
-                mimeType: part.mimeType,
-              } as ImagePart);
+                type: 'file',
+                data: imageData,
+                mediaType: part.mimeType,
+              });
             }
           }
 
@@ -575,7 +583,16 @@ export async function handleChatRequest(
               `Created formatted message with ${formattedParts.length} parts:`,
               formattedParts.map((p) => p.type).join(', ')
             );
-            return { role: msg.role, content: formattedParts as any };
+            if (msg.role === 'system') {
+              return {
+                role: 'system',
+                content: formattedParts
+                  .filter((part): part is TextPart => part.type === 'text')
+                  .map((part) => part.text)
+                  .join('\n'),
+              };
+            }
+            return { role: msg.role, content: formattedParts };
           } else {
             console.warn('No valid parts found in multi-modal message');
           }
@@ -673,11 +690,14 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       ? (llmProvider as ReturnType<typeof createOpenAI>).chat(effectiveModel as any)
       : llmProvider(effectiveModel);
 
-    let streamOptions: any = {
+    const streamOptions: Parameters<typeof streamText>[0] = {
       model: modelForProvider,
-      // Temporarily remove system prompt for Ollama to match curl format
-      system: finalSystemPrompt,
-      messages: formattedMessages,
+      // SDK 7 accepts system messages through instructions, not the chat history.
+      instructions: [
+        { role: 'system', content: finalSystemPrompt },
+        ...formattedMessages.filter((message) => message.role === 'system'),
+      ],
+      messages: formattedMessages.filter((message) => message.role !== 'system'),
       temperature: 0.7,
       maxRetries: 3,
       // Provider-specific options for sequential tool execution
@@ -744,26 +764,16 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         }
       },
       // Add callbacks to track tool execution for debugging
-      onStepStart: ({ toolCalls }: { toolCalls?: any[] }) => {
-        if (toolCalls && toolCalls.length > 0) {
-          toolCalls.forEach((toolCall: any) => {
-            console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, {
-              args: toolCall.args,
-            });
-          });
-        }
+      onToolExecutionStart: ({ toolCall }) => {
+        console.log(`🛠️ [Tool Start] ${toolCall.toolName}`, { args: toolCall.input });
       },
-      onStepFinish: ({ toolCalls, toolResults }: { toolCalls?: any[]; toolResults?: any[] }) => {
+      onStepEnd: ({ toolCalls, toolResults }) => {
         if (toolCalls && toolCalls.length > 0) {
           toolCalls.forEach((toolCall: any, index: number) => {
             const result = toolResults?.[index];
             console.log(`✅ [Tool Finish] ${toolCall.toolName}`, {
               success: result ? 'completed' : 'no result',
-              resultPreview: result
-                ? typeof result === 'string'
-                  ? result.substring(0, 100)
-                  : JSON.stringify(result).substring(0, 100)
-                : 'none',
+              resultPreview: result ? JSON.stringify(result).substring(0, 100) : 'none',
             });
           });
         }
@@ -777,7 +787,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     if (provider === 'anthropic') {
       // 1h TTL so the cache survives both slow GEE computations (single question may
       // stretch past 5 min) and the gap between consecutive benchmark questions.
-      streamOptions.messages = [
+      streamOptions.instructions = [
         {
           role: 'system',
           content: finalSystemPrompt,
@@ -785,9 +795,8 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
             anthropic: { cacheControl: { type: 'ephemeral', ttl: '1h' } },
           },
         },
-        ...formattedMessages,
+        ...formattedMessages.filter((message) => message.role === 'system'),
       ];
-      delete streamOptions.system;
       console.log('💾 [Chat Handler] Enabled Anthropic prompt cache on system message (1h TTL)');
     }
 
@@ -867,7 +876,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     );
     streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
-    streamOptions.stopWhen = stepCountIs(100); // Allow up to 100 reasoning/tool steps
+    streamOptions.stopWhen = isStepCount(100); // Allow up to 100 reasoning/tool steps
 
     // Anthropic tool-definition caching: mark the LAST tool with cacheControl so the
     // breakpoint covers all tool definitions (~15K tokens). Combined with the system
@@ -902,13 +911,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     // invalid JSON like `{"x": 432, 222, "y": 222}`). Without this, the bad tool_use
     // lands in message history and Anthropic rejects the next request with a 400
     // (`tool_use.input: Input should be a valid dictionary`).
-    streamOptions.experimental_repairToolCall = async ({
-      toolCall,
-      error,
-    }: {
-      toolCall: { toolName: string; input: unknown; [key: string]: unknown };
-      error?: { message?: string };
-    }) => {
+    streamOptions.experimental_repairToolCall = async ({ toolCall, error }) => {
       console.warn(
         `🔧 [Tool Repair] Attempting to fix tool call: ${toolCall.toolName} | error: ${error?.message}`
       );
@@ -917,7 +920,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Empty/null/undefined input → empty object (covers no-param tools)
       if (toolCall.input == null || toolCall.input === '') {
         console.warn(`  → Replaced empty input with {}`);
-        return { ...toolCall, input: {} };
+        return { ...toolCall, input: '{}' };
       }
 
       // String input → try to JSON.parse
@@ -925,11 +928,10 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         try {
           const parsed = JSON.parse(toolCall.input);
           console.warn(`  → Parsed stringified JSON`);
-          return { ...toolCall, input: parsed };
+          return { ...toolCall, input: JSON.stringify(parsed) };
         } catch {
           // Salvage `"key": value` pairs from malformed JSON
-          const kvPattern =
-            /"(\w+)"\s*:\s*(-?\d+(?:\.\d+)?|"(?:[^"\\]|\\.)*"|true|false|null)/g;
+          const kvPattern = /"(\w+)"\s*:\s*(-?\d+(?:\.\d+)?|"(?:[^"\\]|\\.)*"|true|false|null)/g;
           const pairs: Record<string, unknown> = {};
           let match: RegExpExecArray | null;
           while ((match = kvPattern.exec(toolCall.input as string)) !== null) {
@@ -942,7 +944,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
           }
           if (Object.keys(pairs).length > 0) {
             console.warn(`  → Salvaged key-value pairs:`, pairs);
-            return { ...toolCall, input: pairs };
+            return { ...toolCall, input: JSON.stringify(pairs) };
           }
         }
       }
@@ -987,52 +989,19 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
         // Track tool start times for duration calculation
         const toolStartTimes = new Map<string, number>();
 
-        // Note: tool_start events are sent manually by each tool's execute function
-        // This ensures they're sent before the tool actually starts executing
-        streamOptions.onStepStart = ({ toolCalls }: { toolCalls?: any[] }) => {
-          console.log('🔧 [Chat Handler] ========== onStepStart CALLED ==========');
-          console.log('🔧 [Chat Handler] Timestamp:', new Date().toISOString());
-          console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
-          console.log('🔧 [Chat Handler] toolCalls:', JSON.stringify(toolCalls, null, 2));
-
-          // Record start times for each tool
-          if (toolCalls && toolCalls.length > 0) {
-            toolCalls.forEach((toolCall: any, index: number) => {
-              const toolId = toolCall.toolCallId || `${toolCall.toolName}_${index}`;
-              toolStartTimes.set(toolId, Date.now());
-
-              console.log(`🛠️ [Tool Start][${index + 1}/${toolCalls.length}] ${toolCall.toolName}`);
-              console.log(`   - Tool ID: ${toolId}`);
-              console.log(`   - Args:`, toolCall.args);
-
-              // Emit tool_start event
-              const event = {
-                type: 'tool_start' as const,
-                toolCallId: toolId,
-                toolName: toolCall.toolName,
-                args: toolCall.args,
-                timestamp: Date.now(),
-              };
-              onToolEvent(event);
-              // Special logging for code execution tools
-              if (toolCall.toolName === 'editCode') {
-                const code = toolCall.args?.code || '';
-                console.log(`   - Code length: ${code.length} characters`);
-                console.log(`   - Code preview: ${code.substring(0, 100)}...`);
-              }
-            });
-          }
-          console.log('🔧 [Chat Handler] ========== onStepStart END ==========');
+        // Tools emit their own start events; this callback records SDK execution timing.
+        streamOptions.onToolExecutionStart = ({ toolCall }) => {
+          toolStartTimes.set(toolCall.toolCallId, Date.now());
         };
 
-        streamOptions.onStepFinish = ({
+        streamOptions.onStepEnd = ({
           toolCalls,
           toolResults,
         }: {
           toolCalls?: any[];
           toolResults?: any[];
         }) => {
-          console.log('🔧 [Chat Handler] ========== onStepFinish CALLED ==========');
+          console.log('🔧 [Chat Handler] ========== onStepEnd CALLED ==========');
           console.log('🔧 [Chat Handler] Timestamp:', new Date().toISOString());
           console.log('🔧 [Chat Handler] Number of tool calls:', toolCalls?.length || 0);
           console.log('🔧 [Chat Handler] Number of tool results:', toolResults?.length || 0);
@@ -1109,7 +1078,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
                 type: 'tool_finish' as const,
                 toolCallId: toolId, // Include ID for correlation
                 toolName: toolCall.toolName,
-                args: toolCall.args,
+                args: toolCall.input,
                 result: eventResult,
                 duration, // Add duration in milliseconds
                 timestamp: Date.now(),
@@ -1120,16 +1089,18 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
               onToolEvent(event);
             });
           } else {
-            console.log('🔧 [Chat Handler] onStepFinish called but no toolCalls found');
+            console.log('🔧 [Chat Handler] onStepEnd called but no toolCalls found');
           }
-          console.log('🔧 [Chat Handler] ========== onStepFinish END ==========');
+          console.log('🔧 [Chat Handler] ========== onStepEnd END ==========');
         };
       } else {
         console.log('🔧 [Chat Handler] onToolEvent callback is NOT provided');
       }
 
       // Estimate token usage before making the API call
-      const systemPrompt = (streamOptions.system as string) || '';
+      const systemPrompt = Array.isArray(streamOptions.instructions)
+        ? streamOptions.instructions.map((message) => message.content).join('\n\n')
+        : finalSystemPrompt;
       const toolCount = Object.keys(toolsToUse).length;
       const tokenEstimate = estimatePromptTokens(systemPrompt, messages, toolCount);
 
@@ -1158,6 +1129,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Use streamText for AI generation with tools
       // streamText returns the result object synchronously. The async work happens when the stream is consumed.
       const result = streamText(streamOptions);
+      const textResponse = createTextStreamResponse({
+        stream: toTextStream({ stream: result.stream }),
+      });
 
       console.timeEnd('streamText execution');
       console.log(
@@ -1183,9 +1157,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
             );
             controller.enqueue(estimateChunk);
             // Get the original text stream
-            const originalStream = result.toTextStreamResponse().body;
+            const originalStream = textResponse.body;
             if (!originalStream) {
-              throw new Error('No response body from toTextStreamResponse');
+              throw new Error('No response body from createTextStreamResponse');
             }
 
             const reader = originalStream.getReader();
@@ -1249,7 +1223,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       });
 
       return new Response(customErrorHandlingStream, {
-        headers: result.toTextStreamResponse().headers,
+        headers: textResponse.headers,
       });
     } catch (streamError: any) {
       console.timeEnd('streamText execution');

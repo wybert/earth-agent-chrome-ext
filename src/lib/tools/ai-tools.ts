@@ -1457,7 +1457,7 @@ WORKFLOW:
         type: 'content',
         value: [
           { type: 'text', text: 'Here is the screenshot of the current browser tab:' },
-          { type: 'media', mediaType: 'image/jpeg', data: base64Data },
+          { type: 'file-data', mediaType: 'image/jpeg', data: base64Data },
         ],
       };
     },

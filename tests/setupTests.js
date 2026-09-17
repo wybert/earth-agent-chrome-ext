@@ -1,9 +1,12 @@
 // Jest global setup for Chrome extension tests
 // Provides a minimal chrome mock and enables fetch mocking.
 
+// Keep native Web Response streams in Node-environment integration tests.
+const nativeWebFetch = typeof Response === 'undefined' ? null : { Response, Request, Headers };
 const fetchMock = require('jest-fetch-mock');
 
 fetchMock.enableMocks();
+if (nativeWebFetch) Object.assign(global, nativeWebFetch);
 
 // Silence noisy console output during tests
 jest.spyOn(console, 'log').mockImplementation(() => {});
