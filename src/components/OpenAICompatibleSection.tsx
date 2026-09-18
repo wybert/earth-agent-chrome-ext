@@ -29,11 +29,23 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
   const [modelName, setModelName] = useState(config.modelName);
   const [supportsImages, setSupportsImages] = useState(config.supportsImages ?? false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [permissionError, setPermissionError] = useState('');
 
   const isValid = name.trim() && baseURL.trim() && modelName.trim();
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isValid) return;
+    setPermissionError('');
+    try {
+      const url = new URL(baseURL.trim());
+      if (url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname)) {
+        const granted = await chrome.permissions.request({ origins: [`http://${url.hostname}/*`] });
+        if (!granted) { setPermissionError('Allow local access to use this provider.'); return; }
+      }
+    } catch {
+      setPermissionError('Check the provider URL and local access permission.');
+      return;
+    }
 
     onSave({
       ...config,
@@ -80,6 +92,7 @@ function ConfigCard({ config, expanded, onToggle, onSave, onDelete }: ConfigCard
       {/* Expanded Form */}
       {expanded && (
         <div className="p-4 border-t space-y-3">
+          {permissionError && <p role="alert" className="text-xs text-red-600">{permissionError}</p>}
           {/* Provider Name */}
           <div>
             <label className="text-sm mb-1 block">Provider Name *</label>

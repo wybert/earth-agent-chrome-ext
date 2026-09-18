@@ -15,6 +15,7 @@ import {
   migrateProfiles,
 } from '@/lib/profiles';
 import { toast } from 'sonner';
+import { LocalMCPSettings } from './LocalMCPSettings';
 
 // Storage keys
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
@@ -23,7 +24,6 @@ const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
 const PROJECT_NAME_STORAGE_KEY = 'earth_engine_project_name';
 const PROJECT_CONTEXT_STORAGE_KEY = 'earth_engine_project_context';
-const MCP_ENABLED_STORAGE_KEY = 'earth_agent_mcp_enabled';
 
 interface SettingsProps {
   onClose: () => void;
@@ -58,17 +58,8 @@ export function Settings({ onClose }: SettingsProps) {
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
 
-  // MCP State
-  const [mcpEnabled, setMcpEnabled] = useState(true); // Default to true
-  const [hasMcpPermission, setHasMcpPermission] = useState(false);
-
   // Load all data on mount (with migration from local to sync)
   useEffect(() => {
-    // Check for MCP permission (localhost access)
-    chrome.permissions.contains({ origins: ['http://localhost:*/*'] }, (hasPermission) => {
-      setHasMcpPermission(hasPermission);
-    });
-
     // Load all sync storage data
     chrome.storage.sync.get(
       [
@@ -85,11 +76,6 @@ export function Settings({ onClose }: SettingsProps) {
         ACTIVE_PROFILE_ID_STORAGE_KEY,
       ],
       (syncResult) => {
-        // Load local MCP setting
-        chrome.storage.local.get([MCP_ENABLED_STORAGE_KEY], (localResult) => {
-          setMcpEnabled(localResult[MCP_ENABLED_STORAGE_KEY] !== false); // Default true
-        });
-
         // Set API keys
         setOpenaiApiKey(syncResult[OPENAI_API_KEY_STORAGE_KEY] || '');
         setAnthropicApiKey(syncResult[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
@@ -332,17 +318,6 @@ export function Settings({ onClose }: SettingsProps) {
     handleUpdateProfile(profileId, { tools: nextTools });
   };
 
-  const handleToggleMCP = (enabled: boolean) => {
-    setMcpEnabled(enabled);
-    chrome.storage.local.set({ [MCP_ENABLED_STORAGE_KEY]: enabled }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Error saving MCP setting:', chrome.runtime.lastError);
-        // Revert UI if save failed
-        setMcpEnabled(!enabled);
-      }
-    });
-  };
-
   // Helper to render the status icon
   const renderStatusIcon = (provider: string) => {
     const status = saveStatus[provider];
@@ -512,37 +487,7 @@ export function Settings({ onClose }: SettingsProps) {
             {/* Divider */}
             <div className="border-t my-4"></div>
 
-            {/* External Integrations */}
-            {hasMcpPermission && (
-              <div className="pt-4 mt-4 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-semibold mb-3">External Integrations</h3>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">MCP Server</span>
-                      <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
-                        Beta
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Allow external AI editors (Cursor, Claude Code) to control Earth Agent
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={mcpEnabled}
-                        onChange={(e) => handleToggleMCP(e.target.checked)}
-                      />
-                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
+            <LocalMCPSettings />
 
             {/* OpenAI Compatible Providers */}
             <OpenAICompatibleSection />

@@ -5,7 +5,7 @@ import { Message, ExtensionMessage } from '../types/extension';
 import { click as executeToolClick, ClickParams, ClickResponse } from '../lib/tools/browser/click';
 import { shadowWorkspaceSingleton } from './shadow-workspace';
 import { getEditorContent, setEditorContent } from './editor-helpers';
-import { connectToMCPServer, initMCPFromStorage } from './mcp-ws-client';
+import { initMCPFromStorage } from './mcp-ws-client';
 
 // Types for messages between components
 interface MessageBase {
@@ -81,7 +81,7 @@ const PERMISSION_NEEDED_KEY = 'earth_agent_permission_needed';
 // Initialize MCP WebSocket connection for external AI tool integration
 // This allows Claude Code, Zed, and other tools to use Earth Agent's functionality
 console.log('[Background] Initializing MCP WebSocket client...');
-initMCPFromStorage();
+void initMCPFromStorage().catch(error => console.error('[MCP] Initialization failed:', error));
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
@@ -360,6 +360,8 @@ function pingContentScript(tabId: number, timeout = CONTENT_SCRIPT_PING_TIMEOUT)
 
 // Handle messages from content script or side panel
 chrome.runtime.onMessage.addListener((message: MessageBase, sender, sendResponse) => {
+  // The local MCP lifecycle listener owns these asynchronous responses.
+  if (message.type === 'GET_LOCAL_MCP_STATUS' || message.type === 'RECONNECT_LOCAL_MCP') return;
   console.log('Background script received message:', message);
 
   switch (message.type) {

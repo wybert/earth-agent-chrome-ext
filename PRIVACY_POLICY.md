@@ -1,7 +1,7 @@
 # Privacy Policy for Earth Agent Chrome Extension
 
 **Effective Date:** May 25, 2025  
-**Last Updated:** May 25, 2025
+**Last Updated:** September 18, 2026
 
 ## Overview
 
@@ -45,6 +45,13 @@ Earth Agent is a Chrome extension that provides AI-powered assistance for Google
 - **How:** Temporarily processed and sent to AI services for analysis
 - **Purpose:** To analyze images or documents in the context of your Earth Engine questions
 - **Retention:** Not permanently stored locally; sent to AI providers as needed
+
+### Local MCP Integration (Optional)
+
+- Local MCP is off until enabled. A paired external Agent can read, modify and execute Earth Engine code and request page snapshots or screenshots using your browser session.
+- The extension communicates with the connector on `127.0.0.1`. No Earth Agent relay/backend is used. Tool results go to your external Agent, which may send them to its own AI provider according to its settings and privacy policy. Weather and documentation tools may contact their existing external data services.
+- A random pairing key and connector port are stored in `chrome.storage.local`, not Chrome Sync. The copied Agent configuration also contains the pairing key; keep it private. The extension does not share GEE login cookies with the connector.
+- Disable MCP to disconnect, or reset the pairing key to revoke the old configuration. Operations already started in Earth Engine may continue. Pairing data remains until reset or uninstall; remove copied credentials from your Agent configuration separately.
 
 ### Future Data Collection (Planned Features)
 

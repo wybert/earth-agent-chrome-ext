@@ -56,7 +56,7 @@
 3.  The extension will be added to your browser and will appear in your Chrome toolbar.
 
 > [!NOTE]
-> The Web Store version does **not** support local connections (MCP Server or Ollama) due to store policies. For those features, use **Option 2**.
+> The 1.3.1 build includes opt-in local MCP and local-provider permissions. Public availability depends on publishing the matching connector and Chrome Web Store release; older store versions may not show this setup.
 
 <details>
 <summary><b>Option 2: Download from GitHub Releases</b></summary>
@@ -186,40 +186,18 @@ Full execution mode - the agent can take action:
 
 ## Developer & Advanced Usage
 
-### 🚀 MCP Server Support (Developer Version Only)
+### 🚀 Local MCP Server Support
 
-[![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
+Connect a local MCP-capable Agent to your logged-in Earth Engine browser without an Earth Agent backend.
 
-**Earth Agent** can work as a local [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server, allowing you to control Google Earth Engine directly from **Claude Code**, **Cursor**, **Zed**, or other AI editors.
+1. Install Node.js 22+ and extension version 1.3.1.
+2. Open **Settings → Local MCP**, enable it and approve local access.
+3. Use **Save & copy MCP configuration**. Merge the generated entry into your Agent's MCP settings and restart its connector. The configuration contains a private pairing key.
+4. Open Earth Engine, sign in, and ask your Agent to read the current editor code. You do not need an AI API key in the extension for MCP-only use.
 
-> [!WARNING]
-> **Availability Note**: The **Chrome Web Store version** of Earth Agent supports **Cloud AI only** (OpenAI, Anthropic, Google) due to browser security restrictions on `localhost` connections.
->
-> To use the **MCP Server** (or local Ollama models), you must install the **Developer Version** from GitHub.
+The Agent starts the connector automatically after configuration. MCP is opt-in; Settings shows pairing/connection status, GEE tab availability, retry and key reset controls.
 
-#### How to Enable MCP Support
-
-1.  **Install the Developer Version**:
-    *   Download `earth-agent-extension.zip` from [GitHub Releases](https://github.com/wybert/earth-agent-chrome-ext/releases).
-    *   Unzip and install via `chrome://extensions/` > "Load unpacked".
-2.  **Enable in Settings**:
-    *   Open Earth Agent settings.
-    *   Find "External Integrations" and enable "MCP Server".
-3.  **Configure your Editor**:
-    *   Add the following to your MCP configuration (e.g., `~/.claude/settings.json`):
-
-    ```json
-    {
-      "mcpServers": {
-        "earth-agent": {
-          "command": "npx",
-          "args": ["-y", "earth-agent-mcp"]
-        }
-      }
-    }
-    ```
-
-👉 **[Full MCP Server Documentation](./mcp-server/README.md)**
+**Release note:** The generated configuration pins `earth-agent-mcp@1.3.1`. Publish that package before distributing this extension version. Until then, use the local-build configuration in the [MCP guide](./mcp-server/README.md). Web Store submission/review remains a separate release step.
 
 ## Usage Examples & Prompts
 

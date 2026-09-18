@@ -1,219 +1,92 @@
-# Earth Agent MCP Server
+# Earth Agent Local MCP Connector
 
-[![npm version](https://badge.fury.io/js/earth-agent-mcp.svg)](https://www.npmjs.com/package/earth-agent-mcp)
+A local stdio MCP server connecting your Agent to the Earth Agent Chrome extension. No Earth Agent backend, account or extension AI API key is required.
 
-MCP (Model Context Protocol) server that exposes Google Earth Engine tools to AI assistants like Claude Code, Zed Editor, and Cursor.
+## Setup (1.3.1)
 
-## Installation
+Requires Node.js 22+, Chrome 116+, extension 1.3.1, and an Agent that supports local stdio MCP servers.
 
-```bash
-# No installation needed! Just use npx in your editor config.
-# Or install globally:
-npm install -g earth-agent-mcp
-```
+1. In extension **Settings → Local MCP**, click **Enable MCP and allow local access**.
+2. Click **Save & copy MCP configuration**. Merge its `earth-agent` entry with the other servers in your client's MCP settings; do not overwrite unrelated configuration.
+3. Restart the connector in your Agent. The client launches it; no separate terminal needs to stay open.
+4. Open `https://code.earthengine.google.com/` and sign in.
+5. Check Settings says the paired connector is connected, then ask your Agent to read the editor.
 
-## Architecture
-
-```
-┌─────────────────────┐
-│   Claude Code       │
-│   Zed / Cursor      │
-└─────────┬───────────┘
-          │ MCP Protocol (stdio)
-          │ Standard input/output
-          ▼
-┌─────────────────────┐
-│   MCP Server        │  ← Node.js process
-│   (this package)    │
-│                     │
-│   WebSocket Server  │
-│   Port 3847         │
-└─────────┬───────────┘
-          │ WebSocket (ws://localhost:3847)
-          │ Bidirectional communication
-          ▼
-┌─────────────────────┐
-│  Chrome Extension   │  ← Connects automatically
-│  (Background Script)│     No configuration needed
-└─────────┬───────────┘
-          │ Chrome APIs
-          │ (tabs, scripting)
-          ▼
-┌─────────────────────┐
-│  Google Earth Engine│  ← Browser tab
-│  Code Editor        │
-└─────────────────────┘
-```
-
-### How It Works
-
-1. **MCP Server** starts and creates a WebSocket server on port 3847
-2. **Chrome Extension** automatically connects to `ws://localhost:3847` when loaded
-3. **Claude Code/Zed** connects to MCP Server via stdio (standard MCP protocol)
-4. When a tool is called:
-   - Claude Code → MCP Server (stdio)
-   - MCP Server → Extension (WebSocket)
-   - Extension → Earth Engine (Chrome APIs)
-   - Results flow back the same path
-
-### Chrome Extension Behavior
-
-- **No configuration needed** in the extension
-- Automatically attempts to connect when extension loads
-- If MCP Server is not running, silently retries a few times then stops
-- Normal extension functionality is not affected
-
-### Configuration
-
-- **Enabled by Default**: The MCP connection is enabled automatically when you install the extension.
-- **Settings Toggle**: You can turn the MCP server connection on/off in the extension Settings > External Integrations.
-- **Keep Side Panel Open**: For the most reliable connection, we recommend keeping the Earth Agent side panel open while using MCP tools. This prevents Chrome from putting the background connection to sleep.
-
----
-
-## Running the Server
-
-### Option 1: Using npx (Easiest - No Build Required)
-
-Just add the configuration to your editor - no cloning or building needed!
-
-<details>
-<summary><b>Claude Code</b> (~/.claude/settings.json)</summary>
+The generated configuration uses this shape (copy real values from Settings):
 
 ```json
 {
   "mcpServers": {
     "earth-agent": {
       "command": "npx",
-      "args": ["-y", "earth-agent-mcp"]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Cursor</b> (~/.cursor/mcp.json)</summary>
-
-```json
-{
-  "mcpServers": {
-    "earth-agent": {
-      "command": "npx",
-      "args": ["-y", "earth-agent-mcp"]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Zed</b> (~/.config/zed/settings.json)</summary>
-
-```json
-{
-  "context_servers": {
-    "earth-agent": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "earth-agent-mcp"]
+      "args": ["-y", "earth-agent-mcp@1.3.1"],
+      "env": {
+        "EARTH_AGENT_TOKEN": "<64-character pairing key from Settings>",
+        "EARTH_AGENT_EXTENSION_ID": "<extension ID from Settings>",
+        "EARTH_AGENT_WS_PORT": "3847"
       }
     }
   }
 }
 ```
 
-</details>
+Clients have different configuration formats. Use their local stdio MCP setup UI, carrying over `command`, `args` and `env`. The copied JSON is an `mcpServers` template, not a universal file to paste into every client. If `npx` is not found, use its absolute executable path available to the client.
 
-Then restart your editor and you're ready to go!
+The configuration contains a secret. Do not commit it, post screenshots of it, or share it. Enabling MCP grants the paired client access to read, edit and execute GEE code and request browser screenshots.
 
----
+## Local development / before npm publication
 
-### Option 2: Using Antigravity
+The 1.3.1 package and matching extension must be published separately before the generated npx setup works for public users. This source change does not publish either one.
 
-1.  **Ensure Config Exists**: The `antigravity.json` file in the root directory contains the configuration.
-2.  **Load Configuration**:
-    ```bash
-    # Load configuration into Antigravity
-    antigravity load-config ./antigravity.json
-    ```
+Run `npm ci` and `npm run build` in `mcp-server/`. In the copied configuration, keep `env` unchanged and replace:
 
----
+- `command`: absolute path to your Node.js executable.
+- `args`: a one-element array containing the absolute path to `mcp-server/dist/index.js`.
 
-### Option 3: Build from Source
+Build the root extension with `npm run build` and load `dist/` for local verification. Its unpacked extension ID may differ from the store ID; copy the configuration from that installed extension.
 
-If you want to modify the server or run a local version:
+## Connection and security
 
-1.  **Build the Server**:
+```text
+Agent → MCP stdio → local connector → authenticated WebSocket → extension → GEE
+```
 
-    ```bash
-    cd mcp-server
-    npm install
-    npm run build
-    ```
+- Listens only on `127.0.0.1`, not the LAN.
+- Checks the Chrome extension Origin and a cryptographically random pairing key before accepting browser results or sending tool requests.
+- MCP is off by default. Existing enabled settings without a key require explicit setup.
+- Optional local permissions are preserved in store packaging, requested by a user click. Store approval is not guaranteed by packaging.
+- Heartbeat messages run every 20 seconds. Transient failures retry with backoff; a Chrome alarm provides recovery after worker suspension. Authentication rejection requires configuration correction and a manual retry.
+- Browser tool operations are serialized. Queued operations from a disconnected session are discarded. Already running GEE operations cannot be rolled back by disconnecting.
+- One connector per port and one paired browser per connector. A second browser cannot take over an active connection. Port conflicts produce an error and never kill other processes.
+- Multiple independent Agents require separate Chrome profiles with different matching ports/keys, or stopping the first connector before switching. Shared multi-client multiplexing is not implemented.
+- Results remain between the extension and local connector until passed to the external Agent, which may forward them to its AI provider. Weather/documentation tools retain their existing external service calls.
 
-2.  **Configure your editor** (example for Claude Code):
+## Diagnostics
 
-    ```json
-    {
-      "mcpServers": {
-        "earth-agent": {
-          "command": "node",
-          "args": ["/path/to/earth-agent-ai-sdk/mcp-server/dist/index.js"]
-        }
-      }
-    }
-    ```
+| Symptom | Action |
+| --- | --- |
+| Permission required | Enable MCP from Settings and approve local access. |
+| Pairing required/rejected | Copy current configuration, restart the connector, then Retry connection. Old 1.3.0 connectors are incompatible. |
+| Waiting for connector | Check Node.js 22+, the Agent's MCP logs, package availability and matching port. |
+| Port in use | Stop the known other connector in its owning Agent, or change the port in Settings and copy the new configuration. |
+| Another browser connected | Use the intended browser profile, or separate ports/profiles. |
+| No GEE tab | Open Earth Engine and sign in. Multiple GEE tabs use the extension's existing best-tab selection. |
+| Browser sleeps/restarts | Reopen Chrome; recovery is automatic while enabled. Use Retry if needed. |
+| Tool times out/disconnects | Inspect GEE before retrying; the original operation may already have executed. |
 
-    _Note: Replace `/path/to/...` with your actual absolute path._
+**Reset pairing key** disables MCP and revokes the old key. Copy the new configuration and restart the connector before enabling again. **Disable MCP / Disconnect** immediately stops the connection and discards queued browser work.
 
-3.  **Restart your editor**: The server will start automatically.
+## Verification and release
 
----
+Run `npm test` here for real WebSocket authentication, origin rejection, port collision, heartbeat, disconnect and MCP stdio roundtrip tests. Root tests cover extension lifecycle and store-manifest transformation.
 
-### Option 4: Manual Run (For Testing/Debugging)
+Release checklist:
 
-1.  **Start the Server**:
-
-    ```bash
-    cd mcp-server
-    npm start
-    # OR
-    npx earth-agent-mcp
-    ```
-
-    You should see:
-
-    ```
-    [MCP] Starting Earth Agent MCP Server...
-    [MCP] WebSocket server listening on port 3847
-    [MCP] MCP Server running. Waiting for connections...
-    ```
-
----
-
-### Option 5: Development Mode
-
-For trying out changes to the MCP server code:
-
-1.  **Watch Mode**:
-
-    ```bash
-    cd mcp-server
-    npm run dev
-    ```
-
-    This recompiles automatically on file changes.
-
-2.  **Run Server**:
-    In a separate terminal:
-    ```bash
-    npm start
-    ```
-
----
+1. Pass root type-check, tests and build, plus connector tests.
+2. Verify the flow manually with the target desktop clients and Chrome (fresh install, permission denied/granted, sleep/restart, key reset, Windows/macOS/Linux paths).
+3. Publish connector 1.3.1 to npm before distributing the extension that references it.
+4. Submit the matching extension and updated privacy/permission descriptions to the Chrome Web Store.
+5. Repeat the fresh-install flow against the published packages. No Node-free installer is included in this release.
 
 ## Available Tools (17 Total)
 
@@ -292,80 +165,3 @@ Here's the documentation for Sentinel-2 data in Google Earth Engine...
 ```
 
 ---
-
-## Troubleshooting
-
-### Server Fails to Start
-
-- Ensure `npm run build` has been run.
-- Check Node.js version (18+ required).
-- Check if port 3847 is in use: `lsof -i :3847`.
-
-### "Chrome extension not connected" (Most Common Issue)
-
-This error occurs when the MCP server can't communicate with the Chrome extension. The most common cause is **multiple MCP server instances** competing for the same WebSocket port.
-
-#### What Happens
-
-When you have multiple Claude Code sessions (or Cursor/Zed instances), each may spawn its own MCP server process. However, **only one can bind to port 3847**:
-
-```
-┌─────────────────┐     stdio      ┌─────────────────┐
-│  Claude Code    │◄──────────────►│  MCP Server A   │ ← Claude Code talks to this
-└─────────────────┘                │  (no WS port!)  │   but it failed to bind 3847
-                                   └─────────────────┘
-
-┌─────────────────┐                ┌─────────────────┐
-│ Chrome Extension│◄──────────────►│  MCP Server B   │ ← Extension connects here
-└─────────────────┘   WebSocket    │  (port 3847)    │   but Claude Code isn't using it
-                                   └─────────────────┘
-```
-
-#### Solution: Kill All Instances and Restart
-
-1. **Find and kill all MCP server processes**:
-
-   ```bash
-   # Find processes
-   ps aux | grep "earth-agent.*index.js" | grep -v grep
-
-   # Kill all instances
-   pkill -f "earth-agent.*index.js"
-   ```
-
-2. **Verify port 3847 is free**:
-
-   ```bash
-   lsof -i :3847
-   # Should return nothing
-   ```
-
-3. **Restart your AI assistant** (Claude Code, Cursor, or Zed) - it will spawn a fresh MCP server that can properly bind to port 3847.
-
-4. **Reload the Chrome extension** (optional but recommended):
-   - Go to `chrome://extensions/`
-   - Click the refresh icon on Earth Agent
-   - Or toggle the extension off and on
-
-5. **Verify connection**:
-   ```bash
-   # Check that the server is listening AND has a connection
-   lsof -i :3847
-   # Should show both LISTEN and ESTABLISHED connections
-   ```
-
-#### Additional Checks
-
-1. Ensure the Earth Agent extension is **installed and enabled**.
-2. **Keep the Earth Agent side panel open** - Chrome may put background connections to sleep.
-3. Check extension background console (right-click extension > "Service Worker") for `[MCP-WS] Connected`.
-
-### "No Google Earth Engine tab found"
-
-You must have [code.earthengine.google.com](https://code.earthengine.google.com) open in a tab for GEE tools to function.
-
-## Environment Variables
-
-| Variable              | Default | Description           |
-| --------------------- | ------- | --------------------- |
-| `EARTH_AGENT_WS_PORT` | `3847`  | WebSocket server port |

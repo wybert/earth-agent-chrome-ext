@@ -81,7 +81,7 @@ jobs:
 
       - name: Clean manifest for Chrome Web Store
         run: |
-          echo "Removing localhost permissions from manifest..."
+          echo "Preparing opt-in local integration permissions..."
           node scripts/prepare-manifest-for-store.js
           echo ""
           echo "Verifying cleaned manifest:"
