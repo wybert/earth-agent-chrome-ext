@@ -19,6 +19,7 @@ import * as DocsService from './services/docs-service';
 import { shadowWorkspaceSingleton } from '@/background/shadow-workspace';
 import { getEditorContent, setEditorContent } from '@/background/editor-helpers';
 import { Provider } from '@/types/extension';
+import { createMapTools } from './map-tools';
 
 // Tool event callback type (used by chat-handler)
 export type ToolEventCallback = (event: {
@@ -2228,6 +2229,7 @@ Returns the coordinates of the inspected location along with all available data.
   // Note: Shadow tools are kept internally but NOT exposed to LLM
   // The simplified readCode/editCode/undoEdit tools wrap the shadow workspace
   return {
+    mapTools: createMapTools(getActiveEarthEngineTabId, onToolEvent, supportsMultimodal),
     // Utility tools
     weatherTool,
     dateTimeTool,

@@ -64,6 +64,24 @@ function createMCPServer(bridge: LocalBridge): Server {
       const result = await bridge.send(name, args || {});
 
       // Format result based on tool type
+      if (name === 'map_screenshot') {
+        const { screenshotDataUrl, ...metadata } = result as {
+          screenshotDataUrl: string;
+          [key: string]: unknown;
+        };
+        if (!screenshotDataUrl?.startsWith('data:image/png;base64,'))
+          throw new Error('Invalid map screenshot.');
+        return {
+          content: [
+            { type: 'text' as const, text: JSON.stringify(metadata) },
+            {
+              type: 'image' as const,
+              data: screenshotDataUrl.split(',')[1],
+              mimeType: 'image/png',
+            },
+          ],
+        };
+      }
       if (name === 'gee_screenshot') {
         // Screenshot returns base64 image
         const imageData = result as { data?: string; mimeType?: string };
@@ -107,12 +125,11 @@ function createMCPServer(bridge: LocalBridge): Server {
   return server;
 }
 
-
 async function main(): Promise<void> {
   const bridge = new LocalBridge(
     Number(process.env.EARTH_AGENT_WS_PORT || '3847'),
     process.env.EARTH_AGENT_TOKEN || '',
-    process.env.EARTH_AGENT_EXTENSION_ID || '',
+    process.env.EARTH_AGENT_EXTENSION_ID || ''
   );
   await bridge.start();
   const server = createMCPServer(bridge);
@@ -126,15 +143,23 @@ async function main(): Promise<void> {
     await server.close();
     clearTimeout(timeout);
   };
-  process.stdin.on('end', () => { void shutdown(); });
-  process.stdin.on('close', () => { void shutdown(); });
-  process.on('SIGINT', () => { void shutdown(); });
-  process.on('SIGTERM', () => { void shutdown(); });
+  process.stdin.on('end', () => {
+    void shutdown();
+  });
+  process.stdin.on('close', () => {
+    void shutdown();
+  });
+  process.on('SIGINT', () => {
+    void shutdown();
+  });
+  process.on('SIGTERM', () => {
+    void shutdown();
+  });
   await server.connect(new StdioServerTransport());
   console.error('[MCP] Ready. Waiting for the paired Chrome extension.');
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error('[MCP]', error instanceof Error ? error.message : 'Startup failed');
   process.exit(1);
 });

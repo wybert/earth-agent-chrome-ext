@@ -7,11 +7,7 @@ import {
   createTextStreamResponse,
   toTextStream,
 } from 'ai';
-import type {
-  Message,
-  Provider,
-  OpenAICompatibleConfig,
-} from '../types/extension';
+import type { Message, Provider, OpenAICompatibleConfig } from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogle } from '@ai-sdk/google';
@@ -809,6 +805,7 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 
     // Create all AI tools with event callback
     const {
+      mapTools,
       // Utility tools
       weatherTool,
       dateTimeTool,
@@ -835,6 +832,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 
     // Read-only tools for "ask" mode
     const readOnlyTools = {
+      mapInspect: mapTools.mapInspect,
+      mapConvert: mapTools.mapConvert,
+      mapScreenshot: mapTools.mapScreenshot,
       weather: weatherTool,
       dateTime: dateTimeTool,
       wait: waitTool, // Wait for long-running operations
@@ -851,6 +851,9 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
 
     // Write tools for "do" mode (includes all read-only tools plus these)
     const writeTools = {
+      mapAnnotate: mapTools.mapAnnotate,
+      mapInteract: mapTools.mapInteract,
+      mapGeometry: mapTools.mapGeometry,
       editCode: editCodeTool,
       writeCode: writeCodeTool,
       undoEdit: undoEditTool,

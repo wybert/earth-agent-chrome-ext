@@ -88,7 +88,11 @@ Release checklist:
 4. Submit the matching extension and updated privacy/permission descriptions to the Chrome Web Store.
 5. Repeat the fresh-install flow against the published packages. No Node-free installer is included in this release.
 
-## Available Tools (17 Total)
+## Available Tools (23 Total)
+
+### Map Coordinates and Drawing (6, experimental)
+
+`map_inspect`, `map_convert`, `map_screenshot`, `map_annotate`, `map_interact`, and `map_geometry` share the extension's map implementation. Connect the map from extension Settings before use. See [map setup, coordinate contracts and verification](../docs/map-spatial-interaction.md). These tools require the connector built from this checkout; an older npm package will not list them.
 
 ### Utility Tools (3)
 

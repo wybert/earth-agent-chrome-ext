@@ -85,6 +85,10 @@
 
 ## Configuration
 
+### Experimental map coordinates and drawing
+
+The development branch includes geographic map context, coordinate-aware screenshots, Agent annotations, user-confirmed drawing, and Agent-owned native GEE geometries. Connect your map through **Settings → Map coordinates & drawing** first. See [setup, tool contracts, limitations and the real-GEE validation checklist](docs/map-spatial-interaction.md). This feature is not automatically enabled by installing the extension.
+
 > [!TIP]
 > You do not have to do this if you only want to use Earth Agent as MCP server. If you want to use it directly in your browser without external agents tools, you need to do this.
 

@@ -5,6 +5,8 @@
  * for use by Claude Code, Zed, Cursor, and other AI assistants.
  */
 
+import { mapTools } from './map-tools.js';
+
 export interface ToolDefinition {
   description: string;
   inputSchema: {
@@ -15,6 +17,7 @@ export interface ToolDefinition {
 }
 
 export const tools: Record<string, ToolDefinition> = {
+  ...mapTools,
   // ==========================================
   // Utility Tools
   // ==========================================

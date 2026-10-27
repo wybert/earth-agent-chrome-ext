@@ -19,6 +19,42 @@ export interface ToolCatalogItem {
 }
 
 export const TOOL_CATALOG: ToolCatalogItem[] = [
+  {
+    key: 'mapInspect',
+    label: 'Map Context',
+    description: 'Read geography, annotations and interaction status',
+    kind: 'read',
+  },
+  {
+    key: 'mapConvert',
+    label: 'Map Coordinates',
+    description: 'Convert geographic and screen coordinates',
+    kind: 'read',
+  },
+  {
+    key: 'mapScreenshot',
+    label: 'Map Screenshot',
+    description: 'Capture map with exact coordinate metadata',
+    kind: 'read',
+  },
+  {
+    key: 'mapAnnotate',
+    label: 'Map Annotations',
+    description: 'Draw and manage Agent overlays',
+    kind: 'write',
+  },
+  {
+    key: 'mapInteract',
+    label: 'Map Interaction',
+    description: 'Ask user to draw, edit and confirm geometry',
+    kind: 'write',
+  },
+  {
+    key: 'mapGeometry',
+    label: 'GEE Geometry',
+    description: 'Manage Agent-owned native drawing layers',
+    kind: 'write',
+  },
   // Utility tools
   {
     key: 'weather',

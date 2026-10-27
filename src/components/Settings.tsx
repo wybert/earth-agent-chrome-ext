@@ -16,6 +16,7 @@ import {
 } from '@/lib/profiles';
 import { toast } from 'sonner';
 import { LocalMCPSettings } from './LocalMCPSettings';
+import { MapConnectionSettings } from './MapConnectionSettings';
 
 // Storage keys
 const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
@@ -488,6 +489,7 @@ export function Settings({ onClose }: SettingsProps) {
             <div className="border-t my-4"></div>
 
             <LocalMCPSettings />
+            <MapConnectionSettings />
 
             {/* OpenAI Compatible Providers */}
             <OpenAICompatibleSection />

@@ -1,0 +1,9 @@
+# Earth Agent: Enabling Agentic Geospatial Analysis in Google Earth Engine
+
+## Abstract
+
+Google Earth Engine (GEE) is one of the most widely used cloud-based geospatial analysis platforms, yet its complex programming interface and steep learning curve limit efficient adoption by a broader community of geoscience researchers. Recent advances in large language models (LLMs), particularly in code generation and tool use, have created new opportunities for natural language-driven geospatial analysis. This study presents Earth Agent, an open-source system that introduces the LLM agent paradigm into the GEE Code Editor. Through a Chrome browser extension and a Model Context Protocol (MCP) server, the system enables LLMs to directly perceive and manipulate the GEE runtime environment, allowing users to complete end-to-end analytical workflows through natural language conversation, including code authoring, execution and debugging, map interpretation, and data retrieval.
+
+Unlike existing code generation approaches, the core innovation of Earth Agent lies in establishing a closed-loop interaction capability between LLMs and the GEE editor. The agent can not only generate code, but also execute it, observe runtime results, and iteratively revise its output accordingly, thereby enabling autonomous multi-step geoscience analysis workflows. The system has been released on the Chrome Web Store and published as open source. Future work will develop a standardized benchmark for GEE tasks, covering difficulty levels from simple data queries to complex multi-step analyses. This benchmark will systematically evaluate the capabilities of different LLMs in geospatial code generation, tool use, and autonomous task completion, providing a quantifiable reference framework for the development of AI agents in the geosciences.
+
+**Keywords:** Google Earth Engine; large language models; intelligent agent; natural language geospatial analysis; benchmark

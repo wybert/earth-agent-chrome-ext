@@ -17,6 +17,17 @@ import * as BrowserService from '../lib/tools/services/browser-service';
 import * as DocsService from '../lib/tools/services/docs-service';
 
 import { MCPConnection } from './mcp-connection';
+import { executeMapTool } from '../lib/tools/services/map-service';
+import type { MapToolName } from '../lib/map/contracts';
+
+const mapToolNames: Record<string, MapToolName> = {
+  map_inspect: 'mapInspect',
+  map_convert: 'mapConvert',
+  map_annotate: 'mapAnnotate',
+  map_interact: 'mapInteract',
+  map_geometry: 'mapGeometry',
+  map_screenshot: 'mapScreenshot',
+};
 
 interface MCPToolRequest {
   id: string;
@@ -68,23 +79,22 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
   const tabId = tab.id!;
   const scriptId = 'current_editor';
 
+  if (Object.prototype.hasOwnProperty.call(mapToolNames, name))
+    return executeMapTool(tabId, mapToolNames[name], args);
+
   switch (name) {
     case 'wait': {
       // Send wait to content script to avoid service worker suspension
       const { seconds } = args as { seconds: number };
       const result = await new Promise<{ success: boolean; data?: any; error?: string }>(
         (resolve) => {
-          chrome.tabs.sendMessage(
-            tabId,
-            { type: 'WAIT', payload: { seconds } },
-            (response) => {
-              if (chrome.runtime.lastError) {
-                resolve({ success: false, error: chrome.runtime.lastError.message });
-              } else {
-                resolve(response || { success: false, error: 'No response from content script' });
-              }
+          chrome.tabs.sendMessage(tabId, { type: 'WAIT', payload: { seconds } }, (response) => {
+            if (chrome.runtime.lastError) {
+              resolve({ success: false, error: chrome.runtime.lastError.message });
+            } else {
+              resolve(response || { success: false, error: 'No response from content script' });
             }
-          );
+          });
         }
       );
       if (!result.success) {
@@ -231,7 +241,6 @@ async function handleMCPTool(request: MCPToolRequest): Promise<unknown> {
       throw new Error(`Unknown tool: ${name}`);
   }
 }
-
 
 const connection = new MCPConnection(handleMCPTool);
 export const initMCPFromStorage = () => connection.init();

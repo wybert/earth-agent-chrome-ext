@@ -104,7 +104,23 @@ test(
     t.after(() => client.close());
     await client.connect(transport);
     const listed = await client.listTools();
-    assert.equal(listed.tools.length, 17);
+    assert.equal(listed.tools.length, 23);
+    const interactionSchema = listed.tools.find((tool) => tool.name === 'map_interact').inputSchema;
+    assert.ok(interactionSchema.properties.layerId);
+    assert.equal(interactionSchema.properties.annotationId, undefined);
+    for (const name of [
+      'map_inspect',
+      'map_convert',
+      'map_annotate',
+      'map_interact',
+      'map_geometry',
+      'map_screenshot',
+    ]) {
+      assert.ok(
+        listed.tools.some((tool) => tool.name === name),
+        `Missing ${name}`
+      );
+    }
     const offline = await client.callTool({ name: 'read_gee_code', arguments: {} });
     assert.equal(offline.isError, true);
     const ws = await connect(port);
@@ -112,12 +128,43 @@ test(
     t.after(() => ws.terminate());
     ws.on('message', (raw) => {
       const request = JSON.parse(raw);
-      if (request.type === 'tool')
-        ws.send(JSON.stringify({ id: request.id, success: true, result: { code: 'print(1)' } }));
+      if (request.type === 'tool') {
+        const result =
+          request.name === 'map_screenshot'
+            ? {
+                screenshotDataUrl: 'data:image/png;base64,aGVsbG8=',
+                frame: { mapId: 'test', revision: 'r1' },
+              }
+            : ['map_geometry', 'map_interact'].includes(request.name)
+              ? { echoed: request.args }
+              : { code: 'print(1)' };
+        ws.send(JSON.stringify({ id: request.id, success: true, result }));
+      }
     });
     const result = await client.callTool({ name: 'read_gee_code', arguments: {} });
     assert.notEqual(result.isError, true);
     assert.match(result.content[0].text, /print\(1\)/);
+    const geometry = { action: 'create', geometry: { type: 'Point', coordinates: [1, 2] } };
+    const mapResult = await client.callTool({ name: 'map_geometry', arguments: geometry });
+    assert.deepEqual(JSON.parse(mapResult.content[0].text).echoed, geometry);
+    const interaction = {
+      action: 'request',
+      layerId: 'ea-owned-layer',
+      message: 'Adjust the draft',
+    };
+    const interactionResult = await client.callTool({
+      name: 'map_interact',
+      arguments: interaction,
+    });
+    assert.deepEqual(JSON.parse(interactionResult.content[0].text).echoed, interaction);
+    const imageResult = await client.callTool({ name: 'map_screenshot', arguments: {} });
+    assert.equal(imageResult.content[0].type, 'text');
+    assert.equal(JSON.parse(imageResult.content[0].text).frame.revision, 'r1');
+    assert.deepEqual(imageResult.content[1], {
+      type: 'image',
+      data: 'aGVsbG8=',
+      mimeType: 'image/png',
+    });
     const unknown = await client.callTool({ name: 'unknown_tool', arguments: {} });
     assert.equal(unknown.isError, true);
   }

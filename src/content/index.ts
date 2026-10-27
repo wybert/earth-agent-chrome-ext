@@ -12,6 +12,7 @@ interface Message {
 import { GetMapLayersResponse, MapLayer } from '@/lib/tools/earth-engine/getMapLayers';
 import { snapshot, SnapshotResponse } from '@/lib/tools/browser/snapshot';
 import { showClickIndicator } from './dom-helpers';
+import { dispatchMapAction, disposeMapRuntime } from './map/runtime';
 
 // Singleton pattern to prevent multiple content script instances
 const CONTENT_SCRIPT_ID = 'earth-engine-ai-assistant-content-script';
@@ -75,6 +76,8 @@ if ((window as any)[CONTENT_SCRIPT_ID]) {
 
 // Mark this instance as the active one ONLY if we should execute
 if (shouldExecute) {
+  (window as any)[CONTENT_SCRIPT_ID + '_disposeMap']?.();
+  (window as any)[CONTENT_SCRIPT_ID + '_disposeMap'] = disposeMapRuntime;
   (window as any)[CONTENT_SCRIPT_ID] = INSTANCE_TIMESTAMP;
   (window as any)[CONTENT_SCRIPT_ID + '_shouldExecute'] = true;
   console.log(`✅ [Content Script] Registered as active instance: ${INSTANCE_TIMESTAMP}`);
@@ -437,6 +440,20 @@ if (shouldExecute && !messageListenerAdded) {
 
     try {
       switch (message.type) {
+        case 'MAP_ACTION':
+          if (sender.id !== chrome.runtime.id) {
+            sendResponse({ success: false, error: 'Unauthorized map request.' });
+            return false;
+          }
+          void dispatchMapAction(message.payload?.name, message.payload?.args).then(
+            (data) => sendResponse({ success: true, data }),
+            (error) =>
+              sendResponse({
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
+              })
+          );
+          return true;
         case 'PING':
           console.log('Received PING from background script, responding...');
           sendResponse({

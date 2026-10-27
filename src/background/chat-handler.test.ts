@@ -127,7 +127,10 @@ it.each([
 it('preserves temperature for Haiku 4.5', async () => {
   const doStream = installModel([textChunks]);
   const response = await handleChatRequest(
-    messages, 'sk-test-key', 'anthropic', 'claude-haiku-4-5-20251001'
+    messages,
+    'sk-test-key',
+    'anthropic',
+    'claude-haiku-4-5-20251001'
   );
   await response.text();
   expect(doStream.mock.calls[0][0].temperature).toBe(0.7);
@@ -196,4 +199,66 @@ it('encodes screenshot tool results as SDK 7 file data', async () => {
       { type: 'file-data', mediaType: 'image/jpeg', data: 'aGVsbG8=' },
     ]),
   });
+});
+
+it.each(['ask', 'do'] as const)('exposes map mutations only in do mode (%s)', async (mode) => {
+  const doStream = installModel([textChunks]);
+  const response = await handleChatRequest(
+    messages,
+    'sk-test-key',
+    'openai',
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    mode
+  );
+  await response.text();
+  const names = doStream.mock.calls[0][0].tools!.map((t) => t.name);
+  expect(names).toEqual(expect.arrayContaining(['mapInspect', 'mapConvert', 'mapScreenshot']));
+  for (const name of ['mapAnnotate', 'mapInteract', 'mapGeometry'])
+    expect(names.includes(name)).toBe(mode === 'do');
+});
+
+it('preserves custom profile allowlists for new map tools', async () => {
+  const doStream = installModel([textChunks]);
+  const response = await handleChatRequest(
+    messages,
+    'sk-test-key',
+    'openai',
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    'do',
+    { tools: ['mapInspect'] }
+  );
+  await response.text();
+  expect(doStream.mock.calls[0][0].tools!.map((t) => t.name)).toEqual(['mapInspect']);
+});
+
+it('sends map screenshot metadata with SDK image content, omitting images for text-only providers', async () => {
+  const result = {
+    success: true,
+    data: {
+      frame: { width: 2400 },
+      context: { mapId: 'map' },
+      screenshotDataUrl: 'data:image/png;base64,aGVsbG8=',
+    },
+  };
+  const images = createAITools(undefined, { provider: 'openai' }).mapTools.mapScreenshot;
+  const text = createAITools(undefined, { provider: 'z-ai' }).mapTools.mapScreenshot;
+  expect(await images.toModelOutput!({ toolCallId: 'map', input: {}, output: result })).toEqual({
+    type: 'content',
+    value: [
+      {
+        type: 'text',
+        text: JSON.stringify({ frame: result.data.frame, context: result.data.context }),
+      },
+      { type: 'file-data', mediaType: 'image/png', data: 'aGVsbG8=' },
+    ],
+  });
+  expect(await text.toModelOutput!({ toolCallId: 'map', input: {}, output: result })).toMatchObject(
+    { type: 'text' }
+  );
 });

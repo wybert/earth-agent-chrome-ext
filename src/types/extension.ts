@@ -77,6 +77,12 @@ export interface ExtensionMessage {
 
 // Tool keys exposed to the LLM (and selectable in custom profiles)
 export type ToolKey =
+  | 'mapInspect'
+  | 'mapConvert'
+  | 'mapScreenshot'
+  | 'mapAnnotate'
+  | 'mapInteract'
+  | 'mapGeometry'
   // Utility tools
   | 'weather'
   | 'dateTime'
