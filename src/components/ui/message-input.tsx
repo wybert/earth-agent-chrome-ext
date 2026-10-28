@@ -28,9 +28,15 @@ import {
 } from '@/components/ui/select';
 import {
   AVAILABLE_MODELS,
+  DEFAULT_KIMI_API_MODE,
+  getDefaultKimiModelForMode,
+  getKimiModelsForMode,
+  KIMI_API_MODE_STORAGE_KEY,
   MODEL_DISPLAY_NAMES,
   OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
+  normalizeKimiApiMode,
   type ApiProvider,
+  type KimiApiMode,
 } from '@/constants/models';
 import type { OpenAICompatibleConfig, Provider } from '@/types/extension';
 
@@ -116,6 +122,8 @@ export function MessageInput({
   const [showInterruptPrompt, setShowInterruptPrompt] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
+  const [kimiApiMode, setKimiApiMode] = useState<KimiApiMode>(DEFAULT_KIMI_API_MODE);
+  const [kimiApiModeLoaded, setKimiApiModeLoaded] = useState(false);
 
   // Load custom providers from storage
   useEffect(() => {
@@ -140,10 +148,28 @@ export function MessageInput({
     return () => chrome.storage.onChanged.removeListener(handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    chrome.storage.sync.get([KIMI_API_MODE_STORAGE_KEY], (result) => {
+      setKimiApiMode(normalizeKimiApiMode(result[KIMI_API_MODE_STORAGE_KEY]));
+      setKimiApiModeLoaded(true);
+    });
+
+    const handleKimiModeChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === 'sync' && changes[KIMI_API_MODE_STORAGE_KEY]) {
+        setKimiApiMode(normalizeKimiApiMode(changes[KIMI_API_MODE_STORAGE_KEY].newValue));
+      }
+    };
+    chrome.storage.onChanged.addListener(handleKimiModeChange);
+    return () => chrome.storage.onChanged.removeListener(handleKimiModeChange);
+  }, []);
+
   // Get all models grouped by provider
   const allModelsGrouped = Object.entries(AVAILABLE_MODELS).map(([providerKey, models]) => ({
     provider: providerKey as ApiProvider,
-    models: models,
+    models: providerKey === 'kimi' ? getKimiModelsForMode(kimiApiMode) : models,
   }));
 
   // Get display name for built-in models
@@ -174,6 +200,8 @@ export function MessageInput({
       anthropic: 'Anthropic',
       google: 'Google',
       'z-ai': 'Z.AI',
+      mimo: 'Xiaomi MiMo',
+      kimi: 'Moonshot Kimi',
       ollama: 'Ollama',
     };
     return names[provider] || provider;
@@ -225,6 +253,13 @@ export function MessageInput({
       chrome.storage.sync.set({ earth_engine_llm_model: value });
     }
   };
+
+  useEffect(() => {
+    if (!kimiApiModeLoaded || provider !== 'kimi' || !model) return;
+    if (!getKimiModelsForMode(kimiApiMode).includes(model)) {
+      handleModelChange(getDefaultKimiModelForMode(kimiApiMode));
+    }
+  }, [kimiApiMode, kimiApiModeLoaded, model, provider]);
 
   const {
     isListening,

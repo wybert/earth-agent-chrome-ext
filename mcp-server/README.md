@@ -7,7 +7,7 @@ A local stdio MCP server connecting your Agent to the Earth Agent Chrome extensi
 Requires Node.js 22+, Chrome 116+, extension 1.3.2, and an Agent that supports local stdio MCP servers.
 
 1. In extension **Settings → Local MCP**, click **Enable MCP and allow local access**.
-2. Click **Save & copy MCP configuration**. Merge its `earth-agent` entry with the other servers in your client's MCP settings; do not overwrite unrelated configuration.
+2. Click **Copy MCP setup**. Merge its `earth-agent` entry with the other servers in your client's MCP settings; do not overwrite unrelated configuration. The extension's port defaults to `3847`; adjust it under **Advanced connection settings** only if needed.
 3. Restart the connector in your Agent. The client launches it; no separate terminal needs to stay open.
 4. Open `https://code.earthengine.google.com/` and sign in.
 5. Check Settings says the local connector is connected, then ask your Agent to read the editor.

@@ -18,7 +18,6 @@ export function LocalMCPSettings() {
   const [status, setStatus] = useState<(MCPStatus & { geeTabs?: number }) | null>(null);
   const [feedback, setFeedback] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -128,16 +127,24 @@ export function LocalMCPSettings() {
           </p>
         )}
       </div>
-      <label className="block text-xs">
-        Local connector port
-        <Input
-          type="number"
-          min={1024}
-          max={65535}
-          value={port}
-          onChange={(event) => setPort(event.target.value)}
-        />
-      </label>
+      <details className="space-y-2 text-xs">
+        <summary className="cursor-pointer text-muted-foreground">
+          Advanced connection settings
+        </summary>
+        <label className="block">
+          Local connector port
+          <Input
+            type="number"
+            min={1024}
+            max={65535}
+            value={port}
+            onChange={(event) => setPort(event.target.value)}
+          />
+        </label>
+        <p className="text-muted-foreground">
+          Keep the default unless another local MCP connector already uses this port.
+        </p>
+      </details>
       <div className="flex gap-2 flex-wrap">
         <Button
           type="button"
@@ -152,7 +159,7 @@ export function LocalMCPSettings() {
             })
           }
         >
-          Save & copy MCP configuration
+          Copy MCP setup
         </Button>
         <Button
           type="button"
@@ -175,21 +182,9 @@ export function LocalMCPSettings() {
           Open Earth Engine
         </Button>
       </div>
-      <Button type="button" variant="outline" onClick={() => setShowConfig(!showConfig)}>
-        {showConfig ? 'Hide configuration' : 'Show configuration for manual copy'}
-      </Button>
-      {showConfig && (
-        <textarea
-          aria-label="MCP configuration"
-          readOnly
-          value={config}
-          className="w-full h-64 font-mono text-xs border rounded p-2 bg-background"
-        />
-      )}
       <p className="text-xs text-muted-foreground">
-        One connector per port. If another Agent uses this port, stop its connector or use a
-        separate Chrome profile and matching port. The connector never stops unrelated processes.
-        Browser operations already started may continue after disconnect.
+        You only need to paste this setup into your Agent once. One connector can use each port;
+        browser operations already started may continue after disconnect.
       </p>
       {feedback && (
         <p className="text-xs" role="status">

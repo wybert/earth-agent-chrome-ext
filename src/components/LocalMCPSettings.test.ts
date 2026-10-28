@@ -62,7 +62,7 @@ it('requests local permission and copies a configuration without a pairing key',
   expect(chrome.permissions.request).toHaveBeenCalledWith({ origins: ['http://127.0.0.1/*'] });
   expect(settings[MCP_ENABLED_STORAGE_KEY]).toBe(true);
   expect(container.querySelector('textarea')).toBeNull();
-  await click('Save & copy');
+  await click('Copy MCP setup');
   const config = JSON.parse((navigator.clipboard.writeText as jest.Mock).mock.calls[0][0]);
   expect(config.mcpServers['earth-agent'].env).toEqual({
     EARTH_AGENT_EXTENSION_ID: chrome.runtime.id,
@@ -77,7 +77,7 @@ it('requests local permission and copies a configuration without a pairing key',
 it('removes the legacy pairing key when saving the tokenless configuration', async () => {
   settings = { [MCP_ENABLED_STORAGE_KEY]: true, [MCP_LEGACY_TOKEN_STORAGE_KEY]: 'a'.repeat(64) };
   await render();
-  await click('Save & copy');
+  await click('Copy MCP setup');
   expect(chrome.storage.local.remove).toHaveBeenCalledWith(MCP_LEGACY_TOKEN_STORAGE_KEY);
   expect(settings[MCP_LEGACY_TOKEN_STORAGE_KEY]).toBeUndefined();
   expect(container.textContent).not.toContain('Reset pairing key');

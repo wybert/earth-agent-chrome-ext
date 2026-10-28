@@ -6,6 +6,9 @@
 export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   // OpenAI Models
   'gpt-6-astra': 1050000,
+  'gpt-6.1-sol': 1050000,
+  'gpt-6.1-terra': 1050000,
+  'gpt-6-luna': 1050000,
   'gpt-5.6-sol': 1050000,
   'gpt-5.6-terra': 1050000,
   'gpt-5.6-luna': 1050000,
@@ -26,6 +29,9 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
 
   // Anthropic Models
   'claude-fable-5-1': 1000000,
+  'claude-opus-5-5': 1000000,
+  'claude-sonnet-5-5': 1000000,
+  'claude-haiku-5-5': 1000000,
   'claude-fable-5': 1000000,
   'claude-opus-5': 1000000,
   'claude-sonnet-5': 1000000,
@@ -57,6 +63,17 @@ export const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   'glm-5.2': 1000000,
   'glm-4.7': 128000,
   'glm-4.6': 128000,
+
+  // Xiaomi MiMo Models
+  'mimo-v2.6-pro': 1000000,
+  'mimo-v2.6-flash': 1000000,
+  'mimo-v2.6-pro-ultraspeed': 1000000,
+
+  // Moonshot Kimi Models
+  'kimi-k3.1-pro': 1000000,
+  'kimi-k3.1-pro-highspeed': 1000000,
+  'kimi-k3': 1000000,
+  'kimi-k2.6': 262144,
 };
 
 /**

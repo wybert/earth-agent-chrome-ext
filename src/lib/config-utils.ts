@@ -4,6 +4,8 @@ import {
   ANTHROPIC_API_KEY_STORAGE_KEY,
   GOOGLE_API_KEY_STORAGE_KEY,
   Z_AI_API_KEY_STORAGE_KEY,
+  MIMO_API_KEY_STORAGE_KEY,
+  KIMI_API_KEY_STORAGE_KEY,
   API_PROVIDER_STORAGE_KEY,
   MODEL_STORAGE_KEY,
   OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
@@ -30,6 +32,10 @@ export function getApiKeyStorageKey(provider: Provider): string | null {
       return GOOGLE_API_KEY_STORAGE_KEY;
     case 'z-ai':
       return Z_AI_API_KEY_STORAGE_KEY;
+    case 'mimo':
+      return MIMO_API_KEY_STORAGE_KEY;
+    case 'kimi':
+      return KIMI_API_KEY_STORAGE_KEY;
     default:
       return null; // Custom providers use config.apiKey
   }
@@ -47,6 +53,8 @@ export async function loadProviderConfig(): Promise<ProviderConfig> {
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
         Z_AI_API_KEY_STORAGE_KEY,
+        MIMO_API_KEY_STORAGE_KEY,
+        KIMI_API_KEY_STORAGE_KEY,
         API_PROVIDER_STORAGE_KEY,
         MODEL_STORAGE_KEY,
         OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,

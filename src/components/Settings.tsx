@@ -3,7 +3,18 @@ import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Check, X, Eye, EyeOff, ExternalLink, Shield } from 'lucide-react';
-import { type ApiProvider } from '@/constants/models';
+import {
+  type ApiProvider,
+  API_PROVIDER_STORAGE_KEY,
+  DEFAULT_KIMI_API_MODE,
+  getDefaultKimiModelForMode,
+  KIMI_API_MODE_STORAGE_KEY,
+  MIMO_API_KEY_STORAGE_KEY,
+  MIMO_TOKEN_PLAN_REGION_STORAGE_KEY,
+  KIMI_API_KEY_STORAGE_KEY,
+  MODEL_STORAGE_KEY,
+  normalizeKimiApiMode,
+} from '@/constants/models';
 import { OpenAICompatibleSection } from './OpenAICompatibleSection';
 import type { AgentProfile, ToolKey } from '@/types/extension';
 import {
@@ -36,12 +47,18 @@ export function Settings({ onClose }: SettingsProps) {
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
   const [googleApiKey, setGoogleApiKey] = useState('');
   const [zAiApiKey, setZAiApiKey] = useState('');
+  const [mimoApiKey, setMimoApiKey] = useState('');
+  const [mimoTokenPlanRegion, setMimoTokenPlanRegion] = useState('cn');
+  const [kimiApiKey, setKimiApiKey] = useState('');
+  const [kimiApiMode, setKimiApiMode] = useState(DEFAULT_KIMI_API_MODE);
 
   // Show/hide API keys
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showGoogleKey, setShowGoogleKey] = useState(false);
   const [showZAiKey, setShowZAiKey] = useState(false);
+  const [showMimoKey, setShowMimoKey] = useState(false);
+  const [showKimiKey, setShowKimiKey] = useState(false);
 
   // Status
   const [saveStatus, setSaveStatus] = useState<
@@ -68,6 +85,10 @@ export function Settings({ onClose }: SettingsProps) {
         ANTHROPIC_API_KEY_STORAGE_KEY,
         GOOGLE_API_KEY_STORAGE_KEY,
         Z_AI_API_KEY_STORAGE_KEY,
+        MIMO_API_KEY_STORAGE_KEY,
+        MIMO_TOKEN_PLAN_REGION_STORAGE_KEY,
+        KIMI_API_KEY_STORAGE_KEY,
+        KIMI_API_MODE_STORAGE_KEY,
         PROJECT_NAME_STORAGE_KEY,
         PROJECT_CONTEXT_STORAGE_KEY,
         PROFILES_STORAGE_KEY,
@@ -82,6 +103,10 @@ export function Settings({ onClose }: SettingsProps) {
         setAnthropicApiKey(syncResult[ANTHROPIC_API_KEY_STORAGE_KEY] || '');
         setGoogleApiKey(syncResult[GOOGLE_API_KEY_STORAGE_KEY] || '');
         setZAiApiKey(syncResult[Z_AI_API_KEY_STORAGE_KEY] || '');
+        setMimoApiKey(syncResult[MIMO_API_KEY_STORAGE_KEY] || '');
+        setMimoTokenPlanRegion(syncResult[MIMO_TOKEN_PLAN_REGION_STORAGE_KEY] || 'cn');
+        setKimiApiKey(syncResult[KIMI_API_KEY_STORAGE_KEY] || '');
+        setKimiApiMode(normalizeKimiApiMode(syncResult[KIMI_API_MODE_STORAGE_KEY]));
 
         // Check if we need to migrate from local storage
         const hasProfilesInSync = syncResult[PROFILES_STORAGE_KEY] !== undefined;
@@ -183,6 +208,10 @@ export function Settings({ onClose }: SettingsProps) {
       storageData[GOOGLE_API_KEY_STORAGE_KEY] = trimmedApiKey;
     } else if (provider === 'z-ai') {
       storageData[Z_AI_API_KEY_STORAGE_KEY] = trimmedApiKey;
+    } else if (provider === 'mimo') {
+      storageData[MIMO_API_KEY_STORAGE_KEY] = trimmedApiKey;
+    } else if (provider === 'kimi') {
+      storageData[KIMI_API_KEY_STORAGE_KEY] = trimmedApiKey;
     }
 
     chrome.storage.sync.set(storageData, () => {
@@ -198,6 +227,34 @@ export function Settings({ onClose }: SettingsProps) {
       setTimeout(() => {
         setSaveStatus((prev) => ({ ...prev, [provider]: 'idle' }));
       }, 2000);
+    });
+  };
+
+  const handleSaveMimoTokenPlanRegion = (region: string) => {
+    setMimoTokenPlanRegion(region);
+    chrome.storage.sync.set({ [MIMO_TOKEN_PLAN_REGION_STORAGE_KEY]: region }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving MiMo Token Plan region:', chrome.runtime.lastError);
+        toast.error('Failed to save MiMo Token Plan region');
+      }
+    });
+  };
+
+  const handleSaveKimiApiMode = (mode: string) => {
+    const normalizedMode = normalizeKimiApiMode(mode);
+    setKimiApiMode(normalizedMode);
+    chrome.storage.sync.set({ [KIMI_API_MODE_STORAGE_KEY]: normalizedMode }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Error saving Kimi API mode:', chrome.runtime.lastError);
+        toast.error('Failed to save Kimi API mode');
+        return;
+      }
+
+      chrome.storage.sync.get([API_PROVIDER_STORAGE_KEY], (result) => {
+        if (result[API_PROVIDER_STORAGE_KEY] === 'kimi') {
+          chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: getDefaultKimiModelForMode(normalizedMode) });
+        }
+      });
     });
   };
 
@@ -453,6 +510,127 @@ export function Settings({ onClose }: SettingsProps) {
                   </button>
                 </div>
               </div>
+            </div>
+
+            {/* Xiaomi MiMo */}
+            <div>
+              <label className="text-sm mb-1 block">
+                Xiaomi MiMo API Key{' '}
+                <a
+                  href="https://platform.xiaomimimo.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs underline"
+                >
+                  Get key
+                </a>
+              </label>
+              <div className="relative">
+                <Input
+                  type={showMimoKey ? 'text' : 'password'}
+                  value={mimoApiKey}
+                  onChange={(e) => setMimoApiKey(e.target.value)}
+                  onBlur={() => handleSaveApiKey('mimo', mimoApiKey)}
+                  placeholder="MiMo API key"
+                  className="pr-16"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
+                  {renderStatusIcon('mimo')}
+                  <button
+                    type="button"
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onClick={() => setShowMimoKey(!showMimoKey)}
+                    aria-label={
+                      showMimoKey ? 'Hide Xiaomi MiMo API key' : 'Show Xiaomi MiMo API key'
+                    }
+                  >
+                    {showMimoKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              { /^(?:tp-|ttp-)/i.test(mimoApiKey.trim()) ? (
+                <div className="mt-3">
+                  <label htmlFor="mimo-token-plan-region" className="text-sm mb-1 block">
+                    Token Plan region
+                  </label>
+                  <select
+                    id="mimo-token-plan-region"
+                    value={mimoTokenPlanRegion}
+                    onChange={(event) => handleSaveMimoTokenPlanRegion(event.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="cn">China</option>
+                    <option value="sgp">Singapore</option>
+                    <option value="ams">Europe</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Used automatically for tp- / ttp- Token Plan keys. Choose the region shown on your MiMo Token Plan page.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Moonshot Kimi */}
+            <div>
+              <label className="text-sm mb-1 block">
+                Kimi API Key{' '}
+                <a
+                  href={
+                    kimiApiMode.startsWith('coding')
+                      ? 'https://www.kimi.com/code/console'
+                      : kimiApiMode.endsWith('cn')
+                        ? 'https://platform.moonshot.cn'
+                        : 'https://platform.kimi.ai'
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs underline"
+                >
+                  Get key
+                </a>
+              </label>
+              <div className="relative">
+                <Input
+                  type={showKimiKey ? 'text' : 'password'}
+                  value={kimiApiKey}
+                  onChange={(e) => setKimiApiKey(e.target.value)}
+                  onBlur={() => handleSaveApiKey('kimi', kimiApiKey)}
+                  placeholder="Kimi API key"
+                  className="pr-16"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-2">
+                  {renderStatusIcon('kimi')}
+                  <button
+                    type="button"
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    onClick={() => setShowKimiKey(!showKimiKey)}
+                    aria-label={
+                      showKimiKey ? 'Hide Moonshot Kimi API key' : 'Show Moonshot Kimi API key'
+                    }
+                  >
+                    {showKimiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3">
+                <label htmlFor="kimi-api-mode" className="text-sm mb-1 block">
+                  Kimi service
+                </label>
+                <select
+                  id="kimi-api-mode"
+                  value={kimiApiMode}
+                  onChange={(event) => handleSaveKimiApiMode(event.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="open-platform-cn">Open Platform · China (pay-as-you-go)</option>
+                  <option value="open-platform-global">Open Platform · Global (pay-as-you-go)</option>
+                  <option value="coding-cn">Kimi Code · China subscription</option>
+                  <option value="coding-global">Kimi Code · Global subscription</option>
+                </select>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Use a key from the selected Kimi service. Kimi Code subscription keys and Open Platform pay-as-you-go keys use separate endpoints.
+              </p>
             </div>
 
             {/* Z.AI */}

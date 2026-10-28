@@ -22,10 +22,15 @@ import { screenshot } from '@/lib/tools/browser/screenshot';
 import { chromeServices } from '@/lib/services/chrome-storage-service';
 import {
   AVAILABLE_MODELS,
+  DEFAULT_KIMI_API_MODE,
   DEFAULT_MODELS,
+  getKimiModelsForMode,
+  KIMI_API_MODE_STORAGE_KEY,
   MODEL_DISPLAY_NAMES,
+  normalizeKimiApiMode,
   OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
   type ApiProvider,
+  type KimiApiMode,
 } from '@/constants/models';
 import type { AgentProfile, OpenAICompatibleConfig, Provider } from '@/types/extension';
 import { PROFILES_STORAGE_KEY, inferBaseModeFromTools, migrateProfiles } from '@/lib/profiles';
@@ -107,6 +112,8 @@ const PROVIDER_LABELS: Record<string, string> = {
   anthropic: 'Anthropic',
   google: 'Google',
   'z-ai': 'Z.AI',
+  mimo: 'Xiaomi MiMo',
+  kimi: 'Moonshot Kimi',
 };
 
 const DEFAULT_SELECTED_MODELS = [DEFAULT_MODELS.openai];
@@ -132,6 +139,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
   const [heliconeTestStatus, setHeliconeTestStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const [heliconeTestMessage, setHeliconeTestMessage] = useState('');
   const [customProviders, setCustomProviders] = useState<OpenAICompatibleConfig[]>([]);
+  const [kimiApiMode, setKimiApiMode] = useState<KimiApiMode>(DEFAULT_KIMI_API_MODE);
   const [profiles, setProfiles] = useState<AgentProfile[]>([]);
   const [downloadFormat, setDownloadFormat] = useState<string>('');
   const [promptsPage, setPromptsPage] = useState(1);
@@ -298,6 +306,24 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
 
     chrome.storage.onChanged.addListener(handleStorageChange);
     return () => chrome.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    chrome.storage.sync.get([KIMI_API_MODE_STORAGE_KEY], (result) => {
+      setKimiApiMode(normalizeKimiApiMode(result[KIMI_API_MODE_STORAGE_KEY]));
+    });
+
+    const handleKimiModeChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === 'sync' && changes[KIMI_API_MODE_STORAGE_KEY]) {
+        setKimiApiMode(normalizeKimiApiMode(changes[KIMI_API_MODE_STORAGE_KEY].newValue));
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleKimiModeChange);
+    return () => chrome.storage.onChanged.removeListener(handleKimiModeChange);
   }, []);
 
   useEffect(() => {
@@ -1127,7 +1153,7 @@ export default function AgentTestPanel({ isOpen, onClose }: AgentTestPanelProps)
                             {getProviderDisplayName(providerKey)}
                           </div>
                           <div className="grid grid-cols-2 gap-2">
-                            {models.map((modelId) => {
+                            {(providerKey === 'kimi' ? getKimiModelsForMode(kimiApiMode) : models).map((modelId) => {
                               const inputId = `model-${providerKey}-${modelId}`;
                               return (
                                 <label

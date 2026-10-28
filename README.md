@@ -196,7 +196,7 @@ Connect a local MCP-capable Agent to your logged-in Earth Engine browser without
 
 1. Install Node.js 22+ and extension version 1.3.2.
 2. Open **Settings → Local MCP**, enable it and approve local access.
-3. Use **Save & copy MCP configuration**. Merge the generated entry into your Agent's MCP settings and restart its connector. It contains only the extension ID and local port; no pairing token is required.
+3. Use **Copy MCP setup** once. Merge the generated entry into your Agent's MCP settings and restart its connector. It contains only the extension ID and local port; no pairing token is required. The port setting is available under **Advanced connection settings** if needed.
 4. Open Earth Engine, sign in, and ask your Agent to read the current editor code. You do not need an AI API key in the extension for MCP-only use.
 
 The Agent starts the connector automatically after configuration. MCP is opt-in; Settings shows connection status, GEE tab availability and retry controls.

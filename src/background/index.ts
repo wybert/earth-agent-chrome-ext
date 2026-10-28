@@ -15,7 +15,7 @@ interface MessageBase {
 }
 
 // Provider type for API providers
-type Provider = 'openai' | 'anthropic' | 'google';
+type Provider = 'openai' | 'anthropic' | 'google' | 'z-ai' | 'mimo' | 'kimi';
 
 // Store active port connections
 let port: chrome.runtime.Port | null = null;
@@ -72,6 +72,8 @@ const OPENAI_API_KEY_STORAGE_KEY = 'earth_engine_openai_api_key';
 const ANTHROPIC_API_KEY_STORAGE_KEY = 'earth_engine_anthropic_api_key';
 const GOOGLE_API_KEY_STORAGE_KEY = 'earth_engine_google_api_key';
 const Z_AI_API_KEY_STORAGE_KEY = 'earth_engine_z_ai_api_key';
+const MIMO_API_KEY_STORAGE_KEY = 'earth_engine_mimo_api_key';
+const KIMI_API_KEY_STORAGE_KEY = 'earth_engine_kimi_api_key';
 const API_PROVIDER_STORAGE_KEY = 'earth_engine_llm_provider'; // Key for storing the provider choice
 // Key for storing the model choice
 const MODEL_STORAGE_KEY = 'earth_engine_llm_model';
@@ -2215,6 +2217,8 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
             ANTHROPIC_API_KEY_STORAGE_KEY,
             GOOGLE_API_KEY_STORAGE_KEY,
             Z_AI_API_KEY_STORAGE_KEY,
+            MIMO_API_KEY_STORAGE_KEY,
+            KIMI_API_KEY_STORAGE_KEY,
             API_PROVIDER_STORAGE_KEY,
             MODEL_STORAGE_KEY,
           ],
@@ -2252,6 +2256,10 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
               });
             } else if (provider === 'z-ai') {
               apiKey = result[Z_AI_API_KEY_STORAGE_KEY] || '';
+            } else if (provider === 'mimo') {
+              apiKey = result[MIMO_API_KEY_STORAGE_KEY] || '';
+            } else if (provider === 'kimi') {
+              apiKey = result[KIMI_API_KEY_STORAGE_KEY] || '';
             }
 
             console.log(`[${requestId}] Using provider: ${provider}, model: ${model || 'default'}`);
