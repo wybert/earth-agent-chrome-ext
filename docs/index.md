@@ -43,3 +43,6 @@ We welcome contributions!
 
 - **[Contributing Guidelines](../CONTRIBUTING.md)**  
   Rules and standards for contributing to the codebase.
+
+- **[Kimi / MiMo Multimodal Screenshot Integration](kimi-mimo-multimodal.md)**
+  Developer notes on OpenAI-compatible multipart tool results, provider endpoints, and screenshot validation.

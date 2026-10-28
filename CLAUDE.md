@@ -75,8 +75,13 @@ Google Earth Engine Code Editor
 
 ## AI Providers
 
-Built-in: OpenAI, Anthropic, Google Gemini, ZAI (GLM)
+Built-in: OpenAI, Anthropic, Google Gemini, ZAI (GLM), Kimi, MiMo
 Custom: Any OpenAI-compatible API (DeepSeek, Together AI, Ollama, etc.)
+
+Before changing Kimi/MiMo provider integration or screenshot image flow, read
+[`docs/kimi-mimo-multimodal.md`](docs/kimi-mimo-multimodal.md). Kimi and MiMo use
+the `@ai-sdk/openai-compatible` multipart tool-content capability; vision support
+for user images alone does not guarantee screenshot tool results reach the model.
 
 ## Code Style
 
@@ -128,6 +133,7 @@ answer extractor, and scoring logic:
 
 - Developer Guide: `reference/implementation/developer-guide.md` (messaging, tools, debugging)
 - Architecture: `reference/implementation/architecture.md`
+- Kimi/MiMo multimodal screenshots: `docs/kimi-mimo-multimodal.md` (provider adapter, multipart tool results, endpoints, and validation notes)
 - Deployment: `reference/deploy/`
 - API Models: `reference/api-models/`
 - History: `CHANGELOG.md` (version history and release notes)
