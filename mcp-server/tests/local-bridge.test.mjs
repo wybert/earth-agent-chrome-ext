@@ -8,7 +8,6 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { fileURLToPath } from 'node:url';
 
-const token = 'a'.repeat(64);
 const extensionId = 'a'.repeat(32);
 const origin = `chrome-extension://${extensionId}`;
 async function freePort() {
@@ -19,33 +18,33 @@ async function freePort() {
   await new Promise((resolve) => server.close(resolve));
   return port;
 }
-async function connect(port, key = token) {
+async function connect(port, type = 'connect') {
   const ws = new WebSocket(`ws://127.0.0.1:${port}`, { origin });
   await once(ws, 'open');
-  ws.send(JSON.stringify({ type: 'authenticate', token: key }));
+  ws.send(JSON.stringify({ type }));
   return ws;
 }
 
-test('validates required pairing configuration', () => {
-  assert.throws(() => new LocalBridge(3847, '', extensionId), /TOKEN/);
-  assert.throws(() => new LocalBridge(80, token, extensionId), /PORT/);
-  assert.throws(() => new LocalBridge(3847, token, '*'), /EXTENSION_ID/);
+test('validates listener port and extension identity without requiring a pairing token', () => {
+  assert.throws(() => new LocalBridge(80, extensionId), /PORT/);
+  assert.throws(() => new LocalBridge(3847, '*'), /EXTENSION_ID/);
+  assert.doesNotThrow(() => new LocalBridge(3847, extensionId));
 });
 
 test(
-  'authenticates, keeps alive, rejects takeover and fails pending calls on disconnect',
+  'connects from the extension origin, keeps alive, rejects takeover and fails pending calls on disconnect',
   { timeout: 10000 },
   async (t) => {
     const port = await freePort();
-    const bridge = new LocalBridge(port, token, extensionId);
+    const bridge = new LocalBridge(port, extensionId);
     await bridge.start();
     t.after(() => bridge.close());
     await assert.rejects(bridge.send('read_gee_code', {}), /not connected/);
-    const bad = await connect(port, 'b'.repeat(64));
+    const bad = await connect(port, 'invalid');
     assert.equal((await once(bad, 'close'))[0], 4001);
     assert.equal(bridge.connected, false);
     const ws = await connect(port);
-    assert.equal(JSON.parse((await once(ws, 'message'))[0]).type, 'authenticated');
+    assert.equal(JSON.parse((await once(ws, 'message'))[0]).type, 'connected');
     assert.equal(bridge.connected, true);
     ws.send(JSON.stringify({ type: 'ping' }));
     assert.equal(JSON.parse((await once(ws, 'message'))[0]).type, 'pong');
@@ -69,17 +68,17 @@ test(
   { timeout: 10000 },
   async (t) => {
     const port = await freePort();
-    const bridge = new LocalBridge(port, token, extensionId);
+    const bridge = new LocalBridge(port, extensionId);
     await bridge.start();
     t.after(() => bridge.close());
     const ws = new WebSocket(`ws://127.0.0.1:${port}`, { origin: 'https://evil.example' });
     const [error] = await once(ws, 'error');
     assert.match(error.message, /403/);
-    const competing = new LocalBridge(port, token, extensionId);
+    const competing = new LocalBridge(port, extensionId);
     await assert.rejects(competing.start(), /No processes were stopped/);
     await competing.close();
     const good = await connect(port);
-    assert.equal(JSON.parse((await once(good, 'message'))[0]).type, 'authenticated');
+    assert.equal(JSON.parse((await once(good, 'message'))[0]).type, 'connected');
     good.close();
   }
 );
@@ -95,7 +94,6 @@ test(
       env: {
         ...process.env,
         EARTH_AGENT_WS_PORT: String(port),
-        EARTH_AGENT_TOKEN: token,
         EARTH_AGENT_EXTENSION_ID: extensionId,
       },
       stderr: 'pipe',

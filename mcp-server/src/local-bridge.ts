@@ -1,4 +1,4 @@
-import { timingSafeEqual, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 
 export class LocalBridge {
@@ -15,15 +15,10 @@ export class LocalBridge {
 
   constructor(
     private port: number,
-    private token: string,
     private extensionId: string
   ) {
     if (!Number.isInteger(port) || port < 1024 || port > 65535)
       throw new Error('EARTH_AGENT_WS_PORT must be an integer from 1024 to 65535.');
-    if (!/^[a-f0-9]{64}$/.test(token))
-      throw new Error(
-        'Missing/invalid EARTH_AGENT_TOKEN. Copy the paired configuration from Earth Agent Settings.'
-      );
     if (!/^[a-p]{32}$/.test(extensionId))
       throw new Error(
         'Missing/invalid EARTH_AGENT_EXTENSION_ID. Copy the configuration from Earth Agent Settings.'
@@ -44,7 +39,7 @@ export class LocalBridge {
     });
     this.server = server;
     server.on('connection', (socket) => {
-      let authenticated = false;
+      let connected = false;
       const timeout = setTimeout(() => socket.close(4001, 'Pairing timed out'), 5000);
       socket.on('error', () => {});
       socket.on('message', (raw) => {
@@ -59,16 +54,9 @@ export class LocalBridge {
           socket.close(4001, 'Invalid message');
           return;
         }
-        if (!authenticated) {
-          const candidate =
-            typeof message.token === 'string' ? Buffer.from(message.token) : Buffer.alloc(0);
-          const expected = Buffer.from(this.token);
-          if (
-            message.type !== 'authenticate' ||
-            candidate.length !== expected.length ||
-            !timingSafeEqual(candidate, expected)
-          ) {
-            socket.close(4001, 'Pairing rejected');
+        if (!connected) {
+          if (message.type !== 'connect') {
+            socket.close(4001, 'Invalid connector handshake');
             return;
           }
           if (this.extension && this.extension.readyState !== WebSocket.CLOSED) {
@@ -76,9 +64,9 @@ export class LocalBridge {
             return;
           }
           clearTimeout(timeout);
-          authenticated = true;
+          connected = true;
           this.extension = socket;
-          socket.send(JSON.stringify({ type: 'authenticated' }));
+          socket.send(JSON.stringify({ type: 'connected' }));
           return;
         }
         if (message.type === 'ping') {
@@ -129,7 +117,7 @@ export class LocalBridge {
     const socket = this.extension;
     if (!socket || !this.connected)
       throw new Error(
-        'Browser not connected. Enable Local MCP in Earth Agent Settings, allow local access, and copy the paired configuration. No extension AI API key is needed.'
+        'Browser not connected. Enable Local MCP in Earth Agent Settings, allow local access, and start the connector with the matching extension ID and port. No extension AI API key is needed.'
       );
     if (this.pending.size >= 32)
       throw new Error('Too many pending browser operations. Wait for current work to complete.');

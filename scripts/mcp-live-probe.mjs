@@ -18,10 +18,13 @@ const transport = new StdioClientTransport({
   env: { ...process.env, ...connection.env },
   stderr: 'pipe',
 });
-// Only print server status text, with the configured token removed defensively.
-transport.stderr?.on('data', (chunk) =>
-  process.stderr.write(String(chunk).split(connection.env.EARTH_AGENT_TOKEN).join('[REDACTED]'))
+// Support legacy local configurations without requiring or printing their token.
+const legacySecrets = [connection.env.EARTH_AGENT_TOKEN].filter(
+  (value) => typeof value === 'string' && value.length > 0
 );
+const redactLegacySecrets = (value) =>
+  legacySecrets.reduce((text, secret) => text.split(secret).join('[REDACTED]'), String(value));
+transport.stderr?.on('data', (chunk) => process.stderr.write(redactLegacySecrets(chunk)));
 await client.connect(transport);
 const listed = await client.listTools();
 console.log(JSON.stringify({ ready: true, tools: listed.tools.map((tool) => tool.name) }));
@@ -56,11 +59,11 @@ try {
             : part
         ),
       };
-      console.log(JSON.stringify(safe).split(connection.env.EARTH_AGENT_TOKEN).join('[REDACTED]'));
+      console.log(redactLegacySecrets(JSON.stringify(safe)));
     } catch (error) {
       console.log(
         JSON.stringify({
-          error: String(error).split(connection.env.EARTH_AGENT_TOKEN).join('[REDACTED]'),
+          error: redactLegacySecrets(error),
         })
       );
     }

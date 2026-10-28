@@ -56,7 +56,7 @@
 3.  The extension will be added to your browser and will appear in your Chrome toolbar.
 
 > [!NOTE]
-> The 1.3.1 build includes opt-in local MCP and local-provider permissions. Public availability depends on publishing the matching connector and Chrome Web Store release; older store versions may not show this setup.
+> The 1.3.2 build includes opt-in local MCP and local-provider permissions. Public availability depends on publishing the matching connector and Chrome Web Store release; older store versions may not show this setup.
 
 <details>
 <summary><b>Option 2: Download from GitHub Releases</b></summary>
@@ -194,14 +194,14 @@ Full execution mode - the agent can take action:
 
 Connect a local MCP-capable Agent to your logged-in Earth Engine browser without an Earth Agent backend.
 
-1. Install Node.js 22+ and extension version 1.3.1.
+1. Install Node.js 22+ and extension version 1.3.2.
 2. Open **Settings → Local MCP**, enable it and approve local access.
-3. Use **Save & copy MCP configuration**. Merge the generated entry into your Agent's MCP settings and restart its connector. The configuration contains a private pairing key.
+3. Use **Save & copy MCP configuration**. Merge the generated entry into your Agent's MCP settings and restart its connector. It contains only the extension ID and local port; no pairing token is required.
 4. Open Earth Engine, sign in, and ask your Agent to read the current editor code. You do not need an AI API key in the extension for MCP-only use.
 
-The Agent starts the connector automatically after configuration. MCP is opt-in; Settings shows pairing/connection status, GEE tab availability, retry and key reset controls.
+The Agent starts the connector automatically after configuration. MCP is opt-in; Settings shows connection status, GEE tab availability and retry controls.
 
-**Release note:** The generated configuration pins `earth-agent-mcp@1.3.1`. Publish that package before distributing this extension version. Until then, use the local-build configuration in the [MCP guide](./mcp-server/README.md). Web Store submission/review remains a separate release step.
+**Release note:** The generated configuration pins `earth-agent-mcp@1.3.2`. Publish that package before distributing this extension version. Until then, use the local-build configuration in the [MCP guide](./mcp-server/README.md). Web Store submission/review remains a separate release step.
 
 ## Usage Examples & Prompts
 

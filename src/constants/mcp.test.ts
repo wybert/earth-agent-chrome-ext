@@ -7,11 +7,10 @@ it('keeps connector, extension and generated configuration versions synchronized
   expect(require('../manifest.json').version).toBe(MCP_CONNECTOR_VERSION);
 });
 
-it('generates a pinned, paired stdio configuration with matching port', () => {
-  const config = createMCPConfig('secret', 3848, 'extension-id').mcpServers['earth-agent'];
-  expect(config.args).toEqual(['-y', 'earth-agent-mcp@1.3.1']);
+it('generates an origin-validated stdio configuration without a pairing secret', () => {
+  const config = createMCPConfig(3848, 'extension-id').mcpServers['earth-agent'];
+  expect(config.args).toEqual(['-y', 'earth-agent-mcp@1.3.2']);
   expect(config.env).toEqual({
-    EARTH_AGENT_TOKEN: 'secret',
     EARTH_AGENT_EXTENSION_ID: 'extension-id',
     EARTH_AGENT_WS_PORT: '3848',
   });

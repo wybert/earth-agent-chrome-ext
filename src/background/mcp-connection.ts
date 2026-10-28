@@ -1,6 +1,6 @@
 import {
   MCP_ENABLED_STORAGE_KEY,
-  MCP_TOKEN_STORAGE_KEY,
+  MCP_LEGACY_TOKEN_STORAGE_KEY,
   MCP_PORT_STORAGE_KEY,
   MCP_DEFAULT_PORT,
   MCP_ORIGIN,
@@ -14,7 +14,6 @@ export interface MCPStatus {
   state:
     | 'disabled'
     | 'permission-required'
-    | 'pairing-required'
     | 'connecting'
     | 'connected'
     | 'waiting'
@@ -25,7 +24,7 @@ export interface MCPStatus {
 
 const ALARM = 'earth-agent-mcp-reconnect';
 
-/** Local bridge lifecycle. Never execute requests until the token handshake succeeds. */
+/** Local bridge lifecycle. Only the configured extension origin can establish a connection. */
 export class MCPConnection {
   private socket: WebSocket | null = null;
   private generation = 0;
@@ -84,9 +83,9 @@ export class MCPConnection {
     const generation = this.generation;
     const settings = await chrome.storage.local.get([
       MCP_ENABLED_STORAGE_KEY,
-      MCP_TOKEN_STORAGE_KEY,
       MCP_PORT_STORAGE_KEY,
     ]);
+    await chrome.storage.local.remove(MCP_LEGACY_TOKEN_STORAGE_KEY);
     if (generation !== this.generation) return;
     this.status.enabled = settings[MCP_ENABLED_STORAGE_KEY] === true;
     if (!this.status.enabled) {
@@ -95,9 +94,8 @@ export class MCPConnection {
       return;
     }
     const port = Number(settings[MCP_PORT_STORAGE_KEY] ?? MCP_DEFAULT_PORT);
-    const token = settings[MCP_TOKEN_STORAGE_KEY];
-    if (!validMCPPort(port) || typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) {
-      this.update('pairing-required', 'Generate a connection configuration in Settings.');
+    if (!validMCPPort(port)) {
+      this.update('rejected', 'Choose a valid local connector port in Settings.');
       return;
     }
     this.status.port = port;
@@ -112,14 +110,14 @@ export class MCPConnection {
     this.update('connecting', 'Connecting to the local MCP connector…');
     const socket = new WebSocket(`ws://127.0.0.1:${port}`);
     this.socket = socket;
-    let authenticated = false;
+    let connected = false;
     let queue = Promise.resolve();
     const current = () => this.socket === socket && generation === this.generation;
     this.handshake = setTimeout(() => {
       if (current()) socket.close();
     }, 10000);
     socket.onopen = () => {
-      if (current()) socket.send(JSON.stringify({ type: 'authenticate', token }));
+      if (current()) socket.send(JSON.stringify({ type: 'connect' }));
     };
     socket.onmessage = (event) => {
       if (!current()) return;
@@ -130,13 +128,13 @@ export class MCPConnection {
         return;
       }
       if (!message || typeof message !== 'object') return;
-      if (!authenticated) {
-        if (message.type !== 'authenticated') return;
-        authenticated = true;
+      if (!connected) {
+        if (message.type !== 'connected') return;
+        connected = true;
         clearTimeout(this.handshake);
         this.attempts = 0;
         this.lastPong = Date.now();
-        this.update('connected', 'Paired local connector connected.');
+        this.update('connected', 'Local connector connected.');
         this.heartbeat = setInterval(() => {
           if (!current()) return;
           if (Date.now() - this.lastPong > 45000) {
@@ -189,8 +187,8 @@ export class MCPConnection {
         this.update(
           'rejected',
           event.code === 4001
-            ? 'Pairing rejected. Copy the current configuration and restart the Agent connector.'
-            : 'Connector already paired to another browser. Use a different port.'
+            ? 'Connector handshake rejected. Check the extension ID and restart the Agent connector.'
+            : 'Connector already connected to another browser. Use a different port.'
         );
         void chrome.alarms.clear(ALARM);
         return;
@@ -225,7 +223,7 @@ export class MCPConnection {
     chrome.storage.onChanged.addListener((changes, area) => {
       if (
         area === 'local' &&
-        [MCP_ENABLED_STORAGE_KEY, MCP_TOKEN_STORAGE_KEY, MCP_PORT_STORAGE_KEY].some(
+        [MCP_ENABLED_STORAGE_KEY, MCP_PORT_STORAGE_KEY].some(
           (key) => key in changes
         )
       )

@@ -1,5 +1,5 @@
 import { MCPConnection } from './mcp-connection';
-import { MCP_ENABLED_STORAGE_KEY, MCP_TOKEN_STORAGE_KEY } from '../constants/mcp';
+import { MCP_ENABLED_STORAGE_KEY, MCP_LEGACY_TOKEN_STORAGE_KEY } from '../constants/mcp';
 
 class FakeSocket {
   static OPEN = 1;
@@ -28,7 +28,7 @@ beforeEach(() => {
   jest.useFakeTimers();
   FakeSocket.instances = [];
   (globalThis as any).WebSocket = FakeSocket;
-  settings = { [MCP_ENABLED_STORAGE_KEY]: true, [MCP_TOKEN_STORAGE_KEY]: 'a'.repeat(64) };
+  settings = { [MCP_ENABLED_STORAGE_KEY]: true };
   (chrome.storage as any).onChanged = { addListener: jest.fn(), removeListener: jest.fn() };
   (chrome.storage.local.get as jest.Mock).mockImplementation(async () => settings);
   (chrome as any).permissions = {
@@ -48,18 +48,16 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-it('defaults off; requires pairing and local permission', async () => {
+it('defaults off and requires local permission without a pairing token', async () => {
   settings = {};
   await connection.connect();
   expect(connection.status.state).toBe('disabled');
   settings[MCP_ENABLED_STORAGE_KEY] = true;
-  await connection.connect();
-  expect(connection.status.state).toBe('pairing-required');
-  settings[MCP_TOKEN_STORAGE_KEY] = 'a'.repeat(64);
   (chrome.permissions.contains as jest.Mock).mockResolvedValue(false);
   await connection.connect();
   expect(connection.status.state).toBe('permission-required');
   expect(FakeSocket.instances).toHaveLength(0);
+  expect(chrome.storage.local.remove).toHaveBeenCalledWith(MCP_LEGACY_TOKEN_STORAGE_KEY);
 });
 
 it('registers wakeup and settings listeners and only answers trusted extension pages', async () => {
@@ -84,18 +82,16 @@ it('registers wakeup and settings listeners and only answers trusted extension p
   expect(chrome.alarms.clear).toHaveBeenCalled();
 });
 
-it('ignores unpaired tool requests, authenticates and serializes operations', async () => {
+it('ignores pre-handshake tool requests, connects without a token and serializes operations', async () => {
   await connection.connect();
   const socket = FakeSocket.instances[0];
   socket.onopen?.();
-  expect(socket.send).toHaveBeenCalledWith(
-    JSON.stringify({ type: 'authenticate', token: 'a'.repeat(64) })
-  );
+  expect(socket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'connect' }));
   const request = { type: 'tool', id: '1', name: 'read_gee_code', args: {} };
   socket.message(request);
   await flush();
   expect(execute).not.toHaveBeenCalled();
-  socket.message({ type: 'authenticated' });
+  socket.message({ type: 'connected' });
   let release!: () => void;
   execute.mockImplementationOnce(
     () =>
@@ -135,7 +131,7 @@ it('retries refused connections but stops on rejected pairing', async () => {
 it('does not reconnect or execute queued work after disabling', async () => {
   await connection.connect();
   const socket = FakeSocket.instances[0];
-  socket.message({ type: 'authenticated' });
+  socket.message({ type: 'connected' });
   socket.message({ type: 'tool', id: '1', name: 'run_gee_code', args: {} });
   settings[MCP_ENABLED_STORAGE_KEY] = false;
   await connection.reset();

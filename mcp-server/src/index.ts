@@ -28,7 +28,7 @@ function createMCPServer(bridge: LocalBridge): Server {
   const server = new Server(
     {
       name: 'earth-agent',
-      version: '1.3.1',
+      version: '1.3.2',
     },
     {
       capabilities: {
@@ -128,7 +128,6 @@ function createMCPServer(bridge: LocalBridge): Server {
 async function main(): Promise<void> {
   const bridge = new LocalBridge(
     Number(process.env.EARTH_AGENT_WS_PORT || '3847'),
-    process.env.EARTH_AGENT_TOKEN || '',
     process.env.EARTH_AGENT_EXTENSION_ID || ''
   );
   await bridge.start();
@@ -156,7 +155,7 @@ async function main(): Promise<void> {
     void shutdown();
   });
   await server.connect(new StdioServerTransport());
-  console.error('[MCP] Ready. Waiting for the paired Chrome extension.');
+  console.error('[MCP] Ready. Waiting for the configured Chrome extension.');
 }
 
 main().catch((error) => {

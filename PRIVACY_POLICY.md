@@ -48,10 +48,10 @@ Earth Agent is a Chrome extension that provides AI-powered assistance for Google
 
 ### Local MCP Integration (Optional)
 
-- Local MCP is off until enabled. A paired external Agent can read, modify and execute Earth Engine code and request page snapshots or screenshots using your browser session.
+- Local MCP is off until enabled. The configured external Agent can read, modify and execute Earth Engine code and request page snapshots or screenshots using your browser session.
 - The extension communicates with the connector on `127.0.0.1`. No Earth Agent relay/backend is used. Tool results go to your external Agent, which may send them to its own AI provider according to its settings and privacy policy. Weather and documentation tools may contact their existing external data services.
-- A random pairing key and connector port are stored in `chrome.storage.local`, not Chrome Sync. The copied Agent configuration also contains the pairing key; keep it private. The extension does not share GEE login cookies with the connector.
-- Disable MCP to disconnect, or reset the pairing key to revoke the old configuration. Operations already started in Earth Engine may continue. Pairing data remains until reset or uninstall; remove copied credentials from your Agent configuration separately.
+- The local connector port is stored in `chrome.storage.local`, not Chrome Sync. The Agent configuration contains the extension ID and port, but no pairing secret. The extension does not share GEE login cookies with the connector.
+- The connector listens only on `127.0.0.1` and checks the Chrome extension Origin. This blocks ordinary web pages, but local processes running as the same computer user can forge an Origin header; only run trusted local Agents. Disable MCP to disconnect. Operations already started in Earth Engine may continue.
 
 ### Future Data Collection (Planned Features)
 
