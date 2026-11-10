@@ -13,10 +13,10 @@
     "dev": "npm run watch",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist",
+    "setup": "bash scripts/dev-setup.sh",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:map-browser": "node scripts/test-map-browser.cjs",
-    "test:context7": "ts-node -r tsconfig-paths/register src/examples/testContext7Tools.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

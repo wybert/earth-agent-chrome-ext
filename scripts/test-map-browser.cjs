@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 const webpack = require('webpack');
 const http = require('node:http');
 
@@ -232,7 +232,22 @@ async function main() {
       });
     }
     if (server) await new Promise((resolve) => server.close(resolve));
-    fs.rmSync(temporary, { recursive: true, force: true });
+    // Chrome's zygote and crash handler can outlive the parent and keep
+    // recreating profile files after the exit event.
+    const profileDir = path.join(temporary, 'profile');
+    let cleanupError;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      try {
+        fs.rmSync(temporary, { recursive: true, force: true });
+        cleanupError = undefined;
+        break;
+      } catch (error) {
+        cleanupError = error;
+        spawnSync('pkill', ['-f', profileDir], { stdio: 'ignore' });
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+    if (cleanupError) throw cleanupError;
   }
 }
 main().catch((error) => {
