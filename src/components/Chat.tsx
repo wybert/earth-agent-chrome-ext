@@ -65,7 +65,8 @@ import {
   MODEL_STORAGE_KEY,
   PERMISSION_NEEDED_STORAGE_KEY,
 } from '@/constants/models';
-import { loadProviderConfig, hasApiKeyConfigured } from '@/lib/config-utils';
+import { loadProviderConfig, readApiKeyForProvider } from '@/lib/config-utils';
+import { describeMissingProviderKey } from '@/lib/provider-selection';
 import { WelcomeModal, OnboardingTour } from '@/components/Onboarding';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { ShadowDiffCard } from '@/components/ui/ShadowDiffCard';
@@ -155,7 +156,11 @@ export function ChatUI() {
   const [apiProvider, setApiProvider] = useState<Provider>('openai');
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
+  const [activityStatus, setActivityStatus] = useState<string | null>(null);
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
+  const providerRef = useRef<Provider>('openai');
+  const modelRef = useRef('');
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
@@ -348,16 +353,39 @@ export function ChatUI() {
   const activeSession = activeSessionId ? sessions[activeSessionId] : null;
   const activeSessionTitle = activeSession?.meta.title || 'Chat';
 
+  const applyLoadedConfig = useCallback(
+    (config: { provider: string; apiKey: string; model: string }) => {
+      const reason = describeMissingProviderKey(config.provider, !!config.apiKey);
+      providerRef.current = config.provider as Provider;
+      modelRef.current = config.model;
+      setApiConfigured(!reason);
+      setApiKey(config.apiKey);
+      setApiProvider(config.provider as Provider);
+      setSelectedModel(config.model);
+      setFallbackMode(!!reason);
+      setFallbackReason(reason);
+      if (reason) setError(new Error(reason));
+    },
+    []
+  );
+
+  const syncFallbackForProvider = useCallback(async (provider: string) => {
+    const apiKey = await readApiKeyForProvider(provider);
+    const reason = describeMissingProviderKey(provider, !!apiKey);
+    setApiConfigured(!reason);
+    setApiKey(apiKey);
+    setFallbackMode(!!reason);
+    setFallbackReason(reason);
+    if (reason) setError(new Error(reason));
+    else setError(null);
+  }, []);
+
   // Restore API config check useEffect
   useEffect(() => {
     loadProviderConfig().then((config) => {
-      const hasKey = hasApiKeyConfigured(config);
+      const hasKey = !!config.apiKey;
       const isCustomProvider = config.provider.startsWith('custom:');
-
-      setApiConfigured(hasKey);
-      setApiKey(config.apiKey);
-      setApiProvider(config.provider as any);
-      setSelectedModel(config.model);
+      applyLoadedConfig(config);
 
       // Save the default model to storage if none was set
       chrome.storage.sync.get([MODEL_STORAGE_KEY], (result) => {
@@ -661,9 +689,9 @@ export function ChatUI() {
   // Restore background message handler
   const handleResponse = (response: any) => {
     // Don't set isLocalLoading to false here - it should only be set to false
-    // when streaming actually ends (CHAT_STREAM_END) or there's an error
+    // when streaming actually ends (CHAT_STREAM_END) or there's an error.
+    // Fallback stays until a provider with a saved key is selected.
     setError(null);
-    setFallbackMode(false);
 
     // Remove verbose logging of every chunk message
     // Only log non-stream chunks for debugging
@@ -796,7 +824,11 @@ export function ChatUI() {
           });
         }
         break;
+      case 'CHAT_STATUS':
+        setActivityStatus(typeof response.status === 'string' ? response.status : null);
+        break;
       case 'CHAT_STREAM_END':
+        setActivityStatus(null);
         setIsLocalLoading(false);
         setMessages((prevMessages) => {
           const lastMessageIndex = prevMessages.length - 1;
@@ -1152,6 +1184,7 @@ export function ChatUI() {
           userFriendlyMessage = `❌ **Error**\n\n${errorMessage}`;
         }
 
+        setActivityStatus(null);
         setError(new Error(userFriendlyMessage));
         setIsLocalLoading(false);
         const errorAssistantMessage: Message = {
@@ -1163,7 +1196,15 @@ export function ChatUI() {
           const placeholderIndex = prev.findIndex((m) => m.id.startsWith('assistant-placeholder-'));
           if (placeholderIndex !== -1) {
             const newMessages = [...prev];
-            newMessages[placeholderIndex] = errorAssistantMessage;
+            const existing = prev[placeholderIndex];
+            const existingContent = existing.content?.trim() ? existing.content : '';
+            newMessages[placeholderIndex] = {
+              ...errorAssistantMessage,
+              toolInvocations: existing.toolInvocations,
+              content: existingContent
+                ? `${existingContent}\n\n${userFriendlyMessage}`
+                : userFriendlyMessage,
+            };
             return newMessages;
           } else {
             return [...prev, errorAssistantMessage];
@@ -1336,8 +1377,8 @@ export function ChatUI() {
           message: input.trim(),
           messages: messagesForApi,
           attachments: imageAttachments.length > 0 ? imageAttachments : undefined,
-          provider: config.provider,
-          model: config.model,
+          provider: (providerRef.current || config.provider) as Provider,
+          model: modelRef.current || config.model,
           ...(() => {
             const cfg = resolveModeAndProfile();
             return {
@@ -1415,8 +1456,8 @@ export function ChatUI() {
           type: 'CHAT_MESSAGE',
           message: lastUserMessage.content,
           messages: messagesForApi,
-          provider: config.provider,
-          model: config.model,
+          provider: (providerRef.current || config.provider) as Provider,
+          model: modelRef.current || config.model,
           ...(() => {
             const cfg = resolveModeAndProfile();
             return {
@@ -1468,17 +1509,6 @@ export function ChatUI() {
   const append = useCallback((message: Message) => {
     setMessages((prev) => [...prev, message]);
   }, []);
-
-  // Restore retry handler
-  const handleRetryAPI = useCallback(() => {
-    setError(null);
-    setFallbackMode(false);
-    if (!port) {
-      setConnectionAttempts((prev) => prev + 1);
-    } else {
-      port.postMessage({ type: 'PING' });
-    }
-  }, [port]);
 
   const handleShadowUndo = useCallback(() => {
     if (!port) return;
@@ -1740,21 +1770,11 @@ export function ChatUI() {
   // Restore simple local fallback handler
   const handleLocalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLocalLoading) return;
-    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-    setIsLocalLoading(true);
-    setTimeout(() => {
-      const response = 'Fallback mode active.';
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsLocalLoading(false);
-    }, 500);
+    const reason =
+      fallbackReason ||
+      'No API key is saved for the active provider. Save a key in Settings, or choose a model whose provider already has a key.';
+    setFallbackReason(reason);
+    setError(new Error(reason));
   };
 
   // --- Render Logic ---
@@ -1764,12 +1784,7 @@ export function ChatUI() {
         onClose={() => {
           setShowSettings(false);
           loadProviderConfig().then((config) => {
-            const hasKey = hasApiKeyConfigured(config);
-
-            setApiConfigured(hasKey);
-            setApiKey(config.apiKey);
-            setApiProvider(config.provider as any);
-            setSelectedModel(config.model);
+            applyLoadedConfig(config);
 
             // Save the default model to storage if none was set
             chrome.storage.sync.get([MODEL_STORAGE_KEY], (result) => {
@@ -1777,13 +1792,6 @@ export function ChatUI() {
                 chrome.storage.sync.set({ [MODEL_STORAGE_KEY]: config.model });
               }
             });
-
-            if (hasKey && fallbackMode) {
-              handleRetryAPI();
-            } else if (!hasKey) {
-              setError(new Error('API Key not configured.'));
-              setFallbackMode(true);
-            }
           });
         }}
       />
@@ -1944,6 +1952,19 @@ export function ChatUI() {
             </div>
           )}
           <div className="flex-1 relative flex flex-col min-h-0 overflow-hidden">
+            {(fallbackReason || (fallbackMode && error)) && (
+              <div
+                role="alert"
+                className="mx-3 mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+              >
+                {fallbackReason || error?.message}
+              </div>
+            )}
+            {activityStatus && currentLoading && (
+              <div className="px-3 pt-2 text-xs text-muted-foreground" role="status">
+                {activityStatus}
+              </div>
+            )}
             <Chat
               messages={displayMessages as any}
               input={input}
@@ -1960,8 +1981,15 @@ export function ChatUI() {
               profiles={profiles.map((p) => ({ id: p.id, name: p.name }))}
               provider={apiProvider}
               model={selectedModel}
-              onProviderChange={setApiProvider}
-              onModelChange={setSelectedModel}
+              onProviderChange={(provider) => {
+                providerRef.current = provider;
+                setApiProvider(provider);
+                void syncFallbackForProvider(provider);
+              }}
+              onModelChange={(model) => {
+                modelRef.current = model;
+                setSelectedModel(model);
+              }}
               className="flex-1 min-h-0"
               diffSummary={
                 editDiff?.summary
@@ -1989,8 +2017,6 @@ export function ChatUI() {
                 />
               </div>
             ) : null}
-
-            {/* Error display is shown in the chat stream; no fallback banner */}
           </div>
         </div>
 
