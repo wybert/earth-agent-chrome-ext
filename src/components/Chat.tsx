@@ -157,7 +157,6 @@ export function ChatUI() {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [fallbackMode, setFallbackMode] = useState(false); // Restore fallback state
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
-  const [activityStatus, setActivityStatus] = useState<string | null>(null);
   const [isLocalLoading, setIsLocalLoading] = useState(false); // Restore loading state
   const providerRef = useRef<Provider>('openai');
   const modelRef = useRef('');
@@ -824,11 +823,7 @@ export function ChatUI() {
           });
         }
         break;
-      case 'CHAT_STATUS':
-        setActivityStatus(typeof response.status === 'string' ? response.status : null);
-        break;
       case 'CHAT_STREAM_END':
-        setActivityStatus(null);
         setIsLocalLoading(false);
         setMessages((prevMessages) => {
           const lastMessageIndex = prevMessages.length - 1;
@@ -1184,7 +1179,6 @@ export function ChatUI() {
           userFriendlyMessage = `❌ **Error**\n\n${errorMessage}`;
         }
 
-        setActivityStatus(null);
         setError(new Error(userFriendlyMessage));
         setIsLocalLoading(false);
         const errorAssistantMessage: Message = {
@@ -1196,15 +1190,7 @@ export function ChatUI() {
           const placeholderIndex = prev.findIndex((m) => m.id.startsWith('assistant-placeholder-'));
           if (placeholderIndex !== -1) {
             const newMessages = [...prev];
-            const existing = prev[placeholderIndex];
-            const existingContent = existing.content?.trim() ? existing.content : '';
-            newMessages[placeholderIndex] = {
-              ...errorAssistantMessage,
-              toolInvocations: existing.toolInvocations,
-              content: existingContent
-                ? `${existingContent}\n\n${userFriendlyMessage}`
-                : userFriendlyMessage,
-            };
+            newMessages[placeholderIndex] = errorAssistantMessage;
             return newMessages;
           } else {
             return [...prev, errorAssistantMessage];
@@ -1958,11 +1944,6 @@ export function ChatUI() {
                 className="mx-3 mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950"
               >
                 {fallbackReason || error?.message}
-              </div>
-            )}
-            {activityStatus && currentLoading && (
-              <div className="px-3 pt-2 text-xs text-muted-foreground" role="status">
-                {activityStatus}
               </div>
             )}
             <Chat

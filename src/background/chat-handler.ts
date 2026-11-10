@@ -1,4 +1,12 @@
-import { ModelMessage, streamText, TextPart, FilePart, isStepCount } from 'ai';
+import {
+  ModelMessage,
+  streamText,
+  TextPart,
+  FilePart,
+  isStepCount,
+  createTextStreamResponse,
+  toTextStream,
+} from 'ai';
 import type { Message, Provider, OpenAICompatibleConfig } from '../types/extension';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
@@ -26,7 +34,6 @@ import {
 } from '../constants/models';
 import { estimatePromptTokens } from '../lib/utils/token-counter';
 import { getModelContextLimit } from '../constants/model-limits';
-import { withKimiToolReasoning } from './kimi-messages';
 
 // Re-export ToolEventCallback and Provider for backwards compatibility
 export type { ToolEventCallback, Provider };
@@ -527,18 +534,11 @@ export async function handleChatRequest(
         apiKey,
         baseURL: isMimo ? mimoBaseURL : compatibleBaseURL,
         supportsMultiPartToolContent: true,
-        fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
-          const resilientFetch = createResilientFetch({
-            label: `ChatHandler:${isMimo ? 'MiMo' : 'Kimi'}`,
-            maxAttempts: NETWORK_RETRY_ATTEMPTS,
-            baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
-          });
-          const body =
-            !isMimo && typeof init?.body === 'string'
-              ? withKimiToolReasoning(init.body)
-              : init?.body;
-          return resilientFetch(input, init ? { ...init, body } : init);
-        }) as typeof fetch,
+        fetch: createResilientFetch({
+          label: `ChatHandler:${isMimo ? 'MiMo' : 'Kimi'}`,
+          maxAttempts: NETWORK_RETRY_ATTEMPTS,
+          baseDelayMs: NETWORK_RETRY_BASE_DELAY_MS,
+        }),
       };
       if (heliconeHeaders && heliconeHeaders['Helicone-Auth']) {
         compatibleConfig.headers = heliconeHeaders;
@@ -1000,11 +1000,6 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
     streamOptions.tools = effectiveToolsToUse;
     streamOptions.toolChoice = 'auto';
     streamOptions.stopWhen = isStepCount(100); // Allow up to 100 reasoning/tool steps
-    // Kimi/MiMo thinking models spend the output budget on reasoning_content first.
-    // The documented floor is 16000 tokens so the answer after a tool call is not truncated away.
-    if (provider === 'kimi' || provider === 'mimo') {
-      streamOptions.maxOutputTokens = 16000;
-    }
     // Anthropic tool-definition caching: mark the LAST tool with cacheControl so the
     // breakpoint covers all tool definitions (~15K tokens). Combined with the system
     // cache above, this captures the entire static prefix (system + tools) once per hour.
@@ -1256,18 +1251,22 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
       // Use streamText for AI generation with tools
       // streamText returns the result object synchronously. The async work happens when the stream is consumed.
       const result = streamText(streamOptions);
+      const textResponse = createTextStreamResponse({
+        stream: toTextStream({ stream: result.stream }),
+      });
 
       console.timeEnd('streamText execution');
-      console.log(`✅ [Chat Handler] Completed streamText call. Reading the model stream.`);
+      console.log(
+        `✅ [Chat Handler] Completed streamText call. Converting to text stream response.`
+      );
 
-      // Read result.stream directly. Piping it through toTextStream drops reasoning
-      // and error parts, so a Kimi thinking step after a tool call looks like a hang.
+      // Create a custom stream that wraps the AI SDK stream and catches errors
       const encoder = new TextEncoder();
       const customErrorHandlingStream = new ReadableStream({
         async start(controller) {
-          const enqueue = (text: string) => controller.enqueue(encoder.encode(text));
           try {
-            enqueue(
+            // Send token estimate as the first chunk
+            const estimateChunk = encoder.encode(
               `data: ${JSON.stringify({
                 type: 'token_estimate',
                 estimate: {
@@ -1278,95 +1277,75 @@ IMPORTANT: Execute tools ONE AT A TIME. After calling a tool, wait for its resul
                 },
               })}\n\n`
             );
+            controller.enqueue(estimateChunk);
+            // Get the original text stream
+            const originalStream = textResponse.body;
+            if (!originalStream) {
+              throw new Error('No response body from createTextStreamResponse');
+            }
 
-            const reader = result.stream.getReader();
-            let sawText = false;
-            let sawTool = false;
-            let reasoning = '';
-            let announcedThinking = false;
+            const reader = originalStream.getReader();
+            const decoder = new TextDecoder();
 
+            // Read from the original stream
             while (true) {
               const { done, value } = await reader.read();
-              if (done) break;
-              const part = value as {
-                type?: string;
-                text?: string;
-                delta?: string;
-                error?: { message?: string } | string;
-              };
-              const piece = part.text || part.delta || '';
-              if (part.type === 'text-delta' && piece) {
-                sawText = true;
-                enqueue(piece);
-              } else if (part.type === 'reasoning-delta' && piece) {
-                reasoning += piece;
-                if (!announcedThinking) {
-                  announcedThinking = true;
-                  enqueue(
-                    `data: ${JSON.stringify({ type: 'assistant_status', text: 'Thinking…' })}\n\n`
-                  );
+
+              if (done) {
+                // Before closing, send token usage information
+                try {
+                  const usage = await result.usage;
+                  if (usage) {
+                    console.log(`📊 [Chat Handler] Token usage:`, usage);
+                    const usageChunk = encoder.encode(
+                      `data: ${JSON.stringify({
+                        type: 'token_usage',
+                        usage: {
+                          promptTokens: usage.inputTokens || 0,
+                          completionTokens: usage.outputTokens || 0,
+                          totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
+                        },
+                      })}\n\n`
+                    );
+                    controller.enqueue(usageChunk);
+                  }
+                } catch (usageError) {
+                  console.warn(`⚠️ [Chat Handler] Could not get token usage:`, usageError);
                 }
-              } else if (part.type === 'tool-call' || part.type === 'tool-result') {
-                sawTool = true;
-                // Reasoning before the tool call is not the answer. Only reasoning from
-                // the step after the tool can stand in when the model sends no content.
-                if (part.type === 'tool-result') reasoning = '';
-              } else if (part.type === 'error') {
-                const message =
-                  typeof part.error === 'string'
-                    ? part.error
-                    : part.error?.message || 'The model request failed.';
-                streamError = { message };
+
+                // Check if there was an error captured by onError
+                if (streamError) {
+                  console.log(
+                    `❌ [Chat Handler] Sending captured error to frontend:`,
+                    streamError.message
+                  );
+                  const errorChunk = encoder.encode(
+                    `error:${JSON.stringify({ error: streamError.message })}\n`
+                  );
+                  controller.enqueue(errorChunk);
+                }
+                controller.close();
+                break;
               }
-            }
 
-            if (!sawText && reasoning.trim()) {
-              sawText = true;
-              enqueue(reasoning);
-            } else if (!sawText && sawTool && !streamError) {
-              streamError = {
-                message: 'The model finished without a reply after the tool call.',
-              };
+              // Forward the chunk
+              controller.enqueue(value);
             }
-
-            try {
-              const usage = await result.usage;
-              if (usage) {
-                console.log(`📊 [Chat Handler] Token usage:`, usage);
-                enqueue(
-                  `data: ${JSON.stringify({
-                    type: 'token_usage',
-                    usage: {
-                      promptTokens: usage.inputTokens || 0,
-                      completionTokens: usage.outputTokens || 0,
-                      totalTokens: (usage.inputTokens || 0) + (usage.outputTokens || 0),
-                    },
-                  })}\n\n`
-                );
-              }
-            } catch (usageError) {
-              console.warn(`⚠️ [Chat Handler] Could not get token usage:`, usageError);
-            }
-
-            if (streamError) {
-              console.log(
-                `❌ [Chat Handler] Sending captured error to frontend:`,
-                streamError.message
-              );
-              enqueue(`error:${JSON.stringify({ error: streamError.message })}\n`);
-            }
-            controller.close();
           } catch (error: any) {
+            // If an error occurs during streaming, send it to the frontend
             console.error(`❌ [Chat Handler] Stream error caught:`, error);
+
+            // Create an error message in the stream format
             const errorMessage = error?.message || String(error);
-            enqueue(`error:${JSON.stringify({ error: errorMessage })}\n`);
+            const errorChunk = encoder.encode(`error:${JSON.stringify({ error: errorMessage })}\n`);
+            controller.enqueue(errorChunk);
             controller.close();
           }
         },
       });
 
       return new Response(customErrorHandlingStream, {
-        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        headers: textResponse.headers,
       });
     } catch (streamError: any) {
       console.timeEnd('streamText execution');

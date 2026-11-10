@@ -1,5 +1,4 @@
 import { handleChatRequest } from './chat-handler';
-import { createChatStreamParser, flushChatStreamParser, pushChatStreamChunk } from './chat-stream';
 import { selectBestEarthEngineTab } from '../lib/utils';
 import { resolveLibraryId, getDocumentation } from '../lib/tools/context7';
 import { Message, ExtensionMessage } from '../types/extension';
@@ -2373,31 +2372,7 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
     // Process the simple text stream from response
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8', { fatal: false });
-    const streamParser = createChatStreamParser();
     console.log(`[${requestId}] Reading text stream...`);
-
-    const dispatchStreamEvents = (
-      events: ReturnType<typeof pushChatStreamChunk>
-    ): boolean => {
-      for (const event of events) {
-        if (event.type === 'error') {
-          console.error(`[${requestId}] Received error from stream:`, event.message);
-          safePostMessage({ type: 'ERROR', requestId, error: event.message });
-          safePostMessage({ type: 'CHAT_STREAM_END', requestId });
-          return false;
-        }
-        if (event.type === 'text' && event.text) {
-          safePostMessage({ type: 'CHAT_STREAM_CHUNK', requestId, chunk: event.text });
-        } else if (event.type === 'token_usage') {
-          safePostMessage({ type: 'TOKEN_USAGE', requestId, usage: event.usage });
-        } else if (event.type === 'token_estimate') {
-          safePostMessage({ type: 'TOKEN_ESTIMATE', requestId, estimate: event.estimate });
-        } else if (event.type === 'status') {
-          safePostMessage({ type: 'CHAT_STATUS', requestId, status: event.text });
-        }
-      }
-      return true;
-    };
 
     try {
       while (true) {
@@ -2413,7 +2388,6 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
         if (done) {
           console.log(`[${requestId}] Text stream finished.`);
-          if (!dispatchStreamEvents(flushChatStreamParser(streamParser))) break;
           if (
             !safePostMessage({
               type: 'CHAT_STREAM_END',
@@ -2427,8 +2401,65 @@ async function handleChatMessage(message: any, port: chrome.runtime.Port) {
 
         // Decode the chunk with streaming flag to handle partial UTF-8 sequences
         const chunk = decoder.decode(value, { stream: !done });
-        if (chunk && !dispatchStreamEvents(pushChatStreamChunk(streamParser, chunk))) {
-          break;
+
+        if (chunk) {
+          // Avoid sending empty chunks if decoder yields them
+          // Check if this is an error message from the stream
+          if (chunk.startsWith('error:')) {
+            try {
+              const errorData = JSON.parse(chunk.substring(6)); // Remove 'error:' prefix
+              console.error(`[${requestId}] Received error from stream:`, errorData.error);
+              safePostMessage({
+                type: 'ERROR',
+                requestId,
+                error: errorData.error,
+              });
+              break; // Stop processing the stream after error
+            } catch (parseError) {
+              console.error(`[${requestId}] Failed to parse error message:`, chunk);
+            }
+          } else if (chunk.startsWith('data: ')) {
+            // Check if this is a data message (e.g., token usage, token estimate)
+            try {
+              const data = JSON.parse(chunk.substring(6)); // Remove 'data: ' prefix
+              if (data.type === 'token_usage' && data.usage) {
+                console.log(`📊 [${requestId}] Received token usage:`, data.usage);
+                safePostMessage({
+                  type: 'TOKEN_USAGE',
+                  requestId,
+                  usage: data.usage,
+                });
+              } else if (data.type === 'token_estimate' && data.estimate) {
+                console.log(`📊 [${requestId}] Received token estimate:`, data.estimate);
+                safePostMessage({
+                  type: 'TOKEN_ESTIMATE',
+                  requestId,
+                  estimate: data.estimate,
+                });
+              } else {
+                // Unknown data type, treat as normal chunk
+                safePostMessage({
+                  type: 'CHAT_STREAM_CHUNK',
+                  requestId,
+                  chunk: chunk,
+                });
+              }
+            } catch (parseError) {
+              // If parsing fails, treat as normal chunk
+              safePostMessage({
+                type: 'CHAT_STREAM_CHUNK',
+                requestId,
+                chunk: chunk,
+              });
+            }
+          } else {
+            // Normal chunk, forward to frontend
+            safePostMessage({
+              type: 'CHAT_STREAM_CHUNK',
+              requestId,
+              chunk: chunk,
+            });
+          }
         }
       }
     } catch (streamError) {
