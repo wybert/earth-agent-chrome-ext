@@ -6,6 +6,7 @@ import { Check, X, Eye, EyeOff, ExternalLink, Shield } from 'lucide-react';
 import {
   type ApiProvider,
   API_PROVIDER_STORAGE_KEY,
+  AVAILABLE_MODELS,
   DEFAULT_KIMI_API_MODE,
   getDefaultKimiModelForMode,
   KIMI_API_MODE_STORAGE_KEY,
@@ -25,6 +26,7 @@ import {
   createEmptyProfile,
   migrateProfiles,
 } from '@/lib/profiles';
+import { modelForProviderSwitch } from '@/lib/provider-selection';
 import { toast } from 'sonner';
 import { LocalMCPSettings } from './LocalMCPSettings';
 import { MapConnectionSettings } from './MapConnectionSettings';
@@ -51,6 +53,8 @@ export function Settings({ onClose }: SettingsProps) {
   const [mimoTokenPlanRegion, setMimoTokenPlanRegion] = useState('cn');
   const [kimiApiKey, setKimiApiKey] = useState('');
   const [kimiApiMode, setKimiApiMode] = useState(DEFAULT_KIMI_API_MODE);
+  const [activeProvider, setActiveProvider] = useState<ApiProvider>('openai');
+  const [activeModel, setActiveModel] = useState('');
 
   // Show/hide API keys
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
@@ -89,6 +93,8 @@ export function Settings({ onClose }: SettingsProps) {
         MIMO_TOKEN_PLAN_REGION_STORAGE_KEY,
         KIMI_API_KEY_STORAGE_KEY,
         KIMI_API_MODE_STORAGE_KEY,
+        API_PROVIDER_STORAGE_KEY,
+        MODEL_STORAGE_KEY,
         PROJECT_NAME_STORAGE_KEY,
         PROJECT_CONTEXT_STORAGE_KEY,
         PROFILES_STORAGE_KEY,
@@ -107,6 +113,11 @@ export function Settings({ onClose }: SettingsProps) {
         setMimoTokenPlanRegion(syncResult[MIMO_TOKEN_PLAN_REGION_STORAGE_KEY] || 'cn');
         setKimiApiKey(syncResult[KIMI_API_KEY_STORAGE_KEY] || '');
         setKimiApiMode(normalizeKimiApiMode(syncResult[KIMI_API_MODE_STORAGE_KEY]));
+        const storedProvider = syncResult[API_PROVIDER_STORAGE_KEY];
+        if (storedProvider && storedProvider in AVAILABLE_MODELS) {
+          setActiveProvider(storedProvider as ApiProvider);
+        }
+        setActiveModel(syncResult[MODEL_STORAGE_KEY] || '');
 
         // Check if we need to migrate from local storage
         const hasProfilesInSync = syncResult[PROFILES_STORAGE_KEY] !== undefined;
@@ -192,6 +203,25 @@ export function Settings({ onClose }: SettingsProps) {
       }
     );
   }, []);
+
+  const handleActiveProviderChange = (provider: ApiProvider) => {
+    const model = modelForProviderSwitch(provider, activeModel, normalizeKimiApiMode(kimiApiMode));
+    setActiveProvider(provider);
+    setActiveModel(model);
+    chrome.storage.sync.set(
+      {
+        [API_PROVIDER_STORAGE_KEY]: provider,
+        [MODEL_STORAGE_KEY]: model,
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          toast.error('Failed to save the active provider');
+          return;
+        }
+        toast.success('Active provider saved. Return to chat to use it.');
+      }
+    );
+  };
 
   const handleSaveApiKey = (provider: ApiProvider, apiKey: string) => {
     const trimmedApiKey = apiKey.trim();
@@ -426,7 +456,29 @@ export function Settings({ onClose }: SettingsProps) {
 
         {/* API Keys Section */}
         <div className="pt-2">
-          <h3 className="text-sm font-semibold mb-1">API Keys</h3>
+          <h3 className="text-sm font-semibold mb-1">Active provider</h3>
+          <p className="text-xs text-gray-500 mb-2">
+            Saving a key does not switch which provider answers chat. Choose it here, or pick one of
+            its models in the chat box.
+          </p>
+          <label htmlFor="active-provider" className="sr-only">
+            Active provider
+          </label>
+          <select
+            id="active-provider"
+            aria-label="Active provider"
+            value={activeProvider}
+            onChange={(event) => handleActiveProviderChange(event.target.value as ApiProvider)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="google">Google</option>
+            <option value="z-ai">Z.AI</option>
+            <option value="mimo">Xiaomi MiMo</option>
+            <option value="kimi">Kimi</option>
+          </select>
+          <h3 className="text-sm font-semibold mb-1 mt-4">API Keys</h3>
           <p className="text-xs text-gray-500 mb-3">
             Your API keys are stored securely in Chrome's synced storage and are never sent to our
             servers. Keys are saved automatically when you click outside the field.

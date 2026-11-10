@@ -26,6 +26,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import { providerForModel } from '@/lib/provider-selection';
 import {
   AVAILABLE_MODELS,
   DEFAULT_KIMI_API_MODE,
@@ -207,15 +208,7 @@ export function MessageInput({
     return names[provider] || provider;
   };
 
-  // Find which provider a model belongs to
-  const findProviderForModel = (modelId: string): ApiProvider | null => {
-    for (const [providerKey, models] of Object.entries(AVAILABLE_MODELS)) {
-      if (models.includes(modelId)) {
-        return providerKey as ApiProvider;
-      }
-    }
-    return null;
-  };
+  const findProviderForModel = (modelId: string): ApiProvider | null => providerForModel(modelId);
 
   // Handle model change and save to storage
   const handleModelChange = (value: string) => {

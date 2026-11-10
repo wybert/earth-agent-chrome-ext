@@ -94,3 +94,31 @@ export async function loadProviderConfig(): Promise<ProviderConfig> {
 export function hasApiKeyConfigured(config: ProviderConfig): boolean {
   return !!config.apiKey;
 }
+
+/** Read the saved key for a specific provider, including one the composer just selected. */
+export function readApiKeyForProvider(provider: string): Promise<string> {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(
+      [
+        OPENAI_API_KEY_STORAGE_KEY,
+        ANTHROPIC_API_KEY_STORAGE_KEY,
+        GOOGLE_API_KEY_STORAGE_KEY,
+        Z_AI_API_KEY_STORAGE_KEY,
+        MIMO_API_KEY_STORAGE_KEY,
+        KIMI_API_KEY_STORAGE_KEY,
+        OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY,
+      ],
+      (result) => {
+        if (provider.startsWith('custom:')) {
+          const configs: OpenAICompatibleConfig[] =
+            result[OPENAI_COMPATIBLE_CONFIGS_STORAGE_KEY] || [];
+          const customId = provider.slice('custom:'.length);
+          resolve(configs.find((config) => config.id === customId)?.apiKey || '');
+          return;
+        }
+        const storageKey = getApiKeyStorageKey(provider as Provider);
+        resolve(storageKey ? result[storageKey] || '' : '');
+      }
+    );
+  });
+}

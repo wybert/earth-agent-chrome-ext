@@ -6,7 +6,7 @@ Thank you for your interest in contributing to **Earth Engine Agent**! We welcom
 
 ### Prerequisites
 
-- **Node.js**: (Latest LTS recommended)
+- **Node.js**: 22 or newer (CI uses 24)
 - **npm**: (Included with Node.js)
 - **Google Earth Engine Account**: Access to the [Code Editor](https://code.earthengine.google.com/).
 
@@ -17,10 +17,11 @@ Thank you for your interest in contributing to **Earth Engine Agent**! We welcom
    git clone https://github.com/YOUR-USERNAME/earth-agent-ai-sdk.git
    cd earth-agent-ai-sdk
    ```
-2. **Install Dependencies**.
+2. **Install Dependencies**. Node.js 22 or newer is required (`engines` and the MCP guide). CI uses Node 24.
    ```bash
-   npm install
+   npm run setup
    ```
+   That installs the extension with `npm ci --legacy-peer-deps` (same as GitHub Actions) and installs `mcp-server/` with `npm ci`.
 
 ## 🛠️ Development Workflow
 
